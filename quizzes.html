@@ -163,7 +163,7 @@ var mqQuestions = [], mqCurrent = 0, mqScore = 0, mqSelected = null, mqResults =
 async function loadQuizzes() {
   var container = document.getElementById('quizzes-container');
   try {
-    var res = await fetch(SUPABASE_URL + '/rest/v1/quizzes?is_published=eq.true&select=id,title,slug,description,category,questions&order=category.asc,created_at.desc', {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/quizzes?is_published=eq.true&select=id,title,slug,description,category,questions,articles!inner(audience)&articles.audience=eq.coach&order=category.asc,created_at.desc', {
       headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
     });
     allQuizzes = await res.json();
