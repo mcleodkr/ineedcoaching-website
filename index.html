@@ -75,7 +75,15 @@ h1 em { color: var(--gold); font-style: italic; }
 </head>
 <body>
 
-<div class="container">
+<nav style="position:fixed;top:0;left:0;right:0;z-index:300;display:flex;align-items:center;justify-content:space-between;padding:14px 52px;background:rgba(26,30,46,0.95);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);">
+  <a href="/" style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:var(--warm);text-decoration:none;"><span style="color:var(--gold);font-style:italic;">i</span>need<span style="color:var(--gold);font-style:italic;">coaching</span>.org</a>
+  <div style="display:flex;align-items:center;gap:20px;">
+    <a href="https://www.ineedtherapy.org/find-a-match.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s;">Find Your Person</a>
+    <a href="https://www.ineedtherapy.org/ineedtherapy-profile-form.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;background:var(--gold);color:var(--navy);padding:8px 18px;border-radius:50px;text-decoration:none;">List Your Practice</a>
+  </div>
+</nav>
+
+<div class="container" style="padding-top:80px;">
   <div class="eyebrow"><span class="eyebrow-dot"></span>Coaching Marketplace</div>
   <h1>Find your coach.<br><em>Build your practice.</em></h1>
   <p class="subtext">The place where people looking for direction find coaches ready to help. And where coaches find the clients who need exactly what they offer.</p>
@@ -102,6 +110,13 @@ h1 em { color: var(--gold); font-style: italic; }
     <div class="value-card">
       <h3>Just real people.</h3>
       <p>Finding each other. That is how it should work.</p>
+    </div>
+  </div>
+
+  <div id="articles-section" style="margin-bottom:48px;">
+    <div style="font-size:0.63rem;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:var(--gold);margin-bottom:20px;">Latest for Coaches</div>
+    <div id="articles-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;text-align:left;">
+      <p style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:0.85rem;">Loading articles...</p>
     </div>
   </div>
 
@@ -144,6 +159,25 @@ async function submitSignup() {
     msg.textContent = 'Network error. Please try again.';
   }
 }
+
+// Load coach articles
+(async function() {
+  var grid = document.getElementById('articles-grid');
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/articles?audience=eq.coach&order=created_at.desc&limit=6&select=title,slug,meta_description', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
+    });
+    var articles = await res.json();
+    if (!articles || !articles.length) { grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:0.85rem;">Articles coming soon.</p>'; return; }
+    grid.innerHTML = articles.map(function(a) {
+      var href = 'https://www.ineedtherapy.org/article.html?slug=' + encodeURIComponent(a.slug);
+      return '<a href="' + href + '" target="_blank" style="display:block;padding:20px;border:1.5px solid var(--border);border-radius:12px;text-decoration:none;transition:all 0.2s;" onmouseover="this.style.borderColor=\'#c49a3c\'" onmouseout="this.style.borderColor=\'#2a2e3e\'">' +
+        '<div style="font-size:0.9rem;font-weight:700;color:var(--warm);line-height:1.4;margin-bottom:6px;">' + a.title + '</div>' +
+        '<div style="font-size:0.78rem;color:var(--muted);line-height:1.5;margin-bottom:8px;">' + (a.meta_description || '') + '</div>' +
+        '<span style="font-size:0.75rem;font-weight:700;color:var(--gold);">Read &rarr;</span></a>';
+    }).join('');
+  } catch(e) { grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:0.85rem;">Articles coming soon.</p>'; }
+})();
 </script>
 </body>
 </html>
