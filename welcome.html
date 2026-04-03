@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Welcome | ineedcoaching.org</title>
+<meta name="description" content="Sign in or create your account on ineedcoaching.org">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #1a1e2e; --gold: #c49a3c; --gold-lt: #faf3e0; --warm: #faf8f4;
+  --white: #ffffff; --muted: #8a8a9a; --border: #2a2e3e;
+  --r: 14px; --r-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--navy); color: var(--warm); min-height: 100vh; display: flex; flex-direction: column; }
+
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; align-items: center; justify-content: space-between; padding: 14px 52px; background: rgba(26,30,46,0.95); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
+.logo { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--warm); text-decoration: none; }
+.logo-i { color: var(--gold); font-style: italic; }
+.logo-coaching { color: var(--gold); font-style: italic; }
+
+.welcome-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 120px 24px 80px; }
+
+.welcome-card { max-width: 420px; width: 100%; background: rgba(255,255,255,0.03); border: 1.5px solid var(--border); border-radius: var(--r); padding: 48px 40px; text-align: center; }
+
+.welcome-card h1 { font-family: 'Playfair Display', serif; font-size: 1.8rem; color: var(--warm); margin-bottom: 8px; line-height: 1.2; }
+.welcome-card h1 em { color: var(--gold); font-style: italic; }
+
+.welcome-sub { font-size: 0.88rem; color: var(--muted); line-height: 1.6; margin-bottom: 32px; }
+
+.welcome-form { display: flex; flex-direction: column; gap: 14px; }
+
+.welcome-form input[type="email"] {
+  width: 100%; padding: 14px 18px; border: 1.5px solid var(--border); border-radius: var(--r-sm);
+  background: rgba(255,255,255,0.05); color: var(--warm); font-family: 'Cabinet Grotesk', sans-serif;
+  font-size: 0.9rem; outline: none; transition: border-color 0.2s;
+}
+.welcome-form input[type="email"]:focus { border-color: var(--gold); }
+.welcome-form input[type="email"]::placeholder { color: var(--muted); }
+
+.welcome-form button {
+  width: 100%; padding: 14px; background: var(--gold); color: var(--navy); border: none;
+  border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem;
+  font-weight: 700; cursor: pointer; transition: all 0.2s;
+}
+.welcome-form button:hover { background: #d4a94c; }
+.welcome-form button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.welcome-msg { font-size: 0.82rem; color: var(--gold); margin-top: 16px; min-height: 20px; }
+
+.welcome-footer { font-size: 0.72rem; color: var(--muted); margin-top: 24px; }
+.welcome-footer a { color: var(--gold); text-decoration: none; }
+
+footer { padding: 28px 52px; border-top: 1px solid var(--border); display: flex; justify-content: center; }
+.f-note { font-size: 0.68rem; color: var(--muted); }
+
+@media (max-width: 768px) {
+  nav { padding: 12px 20px; }
+  .welcome-card { padding: 36px 24px; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="/"><span class="logo-i">i</span>need<span class="logo-coaching">coaching</span>.org</a>
+</nav>
+
+<div class="welcome-wrap">
+  <div class="welcome-card">
+    <h1>Welcome back.<br><em>Create your space.</em></h1>
+    <p class="welcome-sub">Sign in with a magic link. No password needed.</p>
+    <form class="welcome-form" id="magicForm" onsubmit="return false;">
+      <input type="email" id="magic-email" placeholder="Your email address" required>
+      <button type="button" id="magic-btn" onclick="sendMagicLink()">Send magic link</button>
+    </form>
+    <div class="welcome-msg" id="magic-msg"></div>
+    <p class="welcome-footer">Part of the <a href="https://www.ineedtherapy.org">ineedtherapy.org</a> ecosystem</p>
+  </div>
+</div>
+
+<footer>
+  <span class="f-note">Not a crisis service — In crisis? Call or text 988</span>
+</footer>
+
+<script>
+const SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+
+// Check if already logged in
+(function() {
+  var token = localStorage.getItem('sb_access_token');
+  if (token) { window.location.href = '/dashboard.html'; return; }
+
+  // Check for magic link callback in hash
+  var hash = window.location.hash;
+  if (hash && hash.includes('access_token')) {
+    var params = new URLSearchParams(hash.substring(1));
+    var accessToken = params.get('access_token');
+    if (accessToken) {
+      localStorage.setItem('sb_access_token', accessToken);
+      var refreshToken = params.get('refresh_token');
+      if (refreshToken) localStorage.setItem('sb_refresh_token', refreshToken);
+      window.location.href = '/dashboard.html';
+      return;
+    }
+  }
+})();
+
+async function sendMagicLink() {
+  var email = document.getElementById('magic-email').value.trim();
+  var msg = document.getElementById('magic-msg');
+  var btn = document.getElementById('magic-btn');
+
+  if (!email) { msg.textContent = 'Please enter your email.'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  msg.textContent = '';
+
+  try {
+    var res = await fetch(SUPABASE_URL + '/auth/v1/magiclink', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': ANON_KEY
+      },
+      body: JSON.stringify({
+        email: email,
+        options: {
+          emailRedirectTo: window.location.origin + '/dashboard.html'
+        }
+      })
+    });
+
+    if (res.ok) {
+      msg.textContent = 'Check your inbox. A magic link is on its way.';
+      btn.textContent = 'Link sent';
+    } else {
+      var err = await res.json().catch(function() { return {}; });
+      msg.textContent = err.msg || err.message || 'Something went wrong. Please try again.';
+      btn.disabled = false;
+      btn.textContent = 'Send magic link';
+    }
+  } catch(e) {
+    msg.textContent = 'Network error. Please try again.';
+    btn.disabled = false;
+    btn.textContent = 'Send magic link';
+  }
+}
+</script>
+</body>
+</html>

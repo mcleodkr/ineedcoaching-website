@@ -33,72 +33,132 @@
 :root {
   --navy: #1a1e2e; --gold: #c49a3c; --gold-lt: #faf3e0; --warm: #faf8f4;
   --white: #ffffff; --muted: #8a8a9a; --border: #2a2e3e;
+  --r: 14px; --r-sm: 8px;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
-body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--navy); color: var(--warm); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--navy); color: var(--warm); overflow-x: hidden; }
 
-.container { max-width: 680px; width: 100%; text-align: center; }
+/* NAV */
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; align-items: center; justify-content: space-between; padding: 14px 52px; background: rgba(26,30,46,0.95); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
+.logo { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--warm); text-decoration: none; }
+.logo-i { color: var(--gold); font-style: italic; }
+.logo-coaching { color: var(--gold); font-style: italic; }
+.nav-links { display: flex; align-items: center; gap: 22px; list-style: none; }
+.nav-links a { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.nav-links a:hover { color: var(--gold); }
+.nav-pill { background: var(--gold); color: var(--navy) !important; padding: 8px 18px; border-radius: 50px; }
+.nav-pill:hover { background: #d4a94c !important; }
 
-.eyebrow { font-size: 0.63rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin-bottom: 24px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-.eyebrow-dot { width: 7px; height: 7px; background: var(--gold); border-radius: 50%; }
+/* HERO */
+.hero { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 120px 40px 80px; position: relative; overflow: hidden; }
+.hero::before { content: ''; position: absolute; width: 500px; height: 500px; background: radial-gradient(circle, rgba(196,154,60,0.08) 0%, transparent 70%); top: -100px; right: -100px; pointer-events: none; }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 0.63rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin-bottom: 24px; }
+.eyebrow-dot { width: 7px; height: 7px; background: var(--gold); border-radius: 50%; animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.6); } }
+.hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(2.6rem, 5vw, 4.2rem); line-height: 1.08; letter-spacing: -0.02em; color: var(--warm); margin-bottom: 24px; }
+.hero h1 em { color: var(--gold); font-style: italic; }
+.hero-sub { font-size: 1rem; line-height: 1.75; color: var(--muted); max-width: 540px; margin: 0 auto 48px; }
+.hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.btn-primary { display: inline-flex; align-items: center; gap: 8px; background: var(--gold); color: var(--navy); padding: 14px 32px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem; font-weight: 700; text-decoration: none; transition: all 0.2s; border: none; cursor: pointer; }
+.btn-primary:hover { background: #d4a94c; transform: translateY(-2px); }
+.btn-outline { display: inline-flex; align-items: center; gap: 8px; background: transparent; color: var(--warm); padding: 14px 32px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem; font-weight: 700; text-decoration: none; transition: all 0.2s; border: 1.5px solid var(--border); }
+.btn-outline:hover { border-color: var(--gold); color: var(--gold); }
 
-h1 { font-family: 'Playfair Display', serif; font-size: clamp(2.4rem, 5vw, 4rem); line-height: 1.08; letter-spacing: -0.02em; color: var(--warm); margin-bottom: 24px; }
-h1 em { color: var(--gold); font-style: italic; }
+/* VALUES */
+.values-section { padding: 80px 80px; }
+.values-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 960px; margin: 0 auto; }
+.value-card { padding: 32px 24px; border: 1.5px solid var(--border); border-radius: var(--r); transition: border-color 0.2s; }
+.value-card:hover { border-color: var(--gold); }
+.value-card h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--gold); margin-bottom: 10px; }
+.value-card p { font-size: 0.84rem; color: var(--muted); line-height: 1.65; }
 
-.subtext { font-size: 1rem; line-height: 1.75; color: var(--muted); max-width: 520px; margin: 0 auto 48px; }
+/* ARTICLES */
+.articles-section { padding: 80px 80px; }
+.section-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 36px; max-width: 1100px; margin-left: auto; margin-right: auto; }
+.section-title { font-family: 'Playfair Display', serif; font-size: clamp(1.8rem, 3vw, 2.6rem); color: var(--warm); line-height: 1.1; }
+.section-title em { color: var(--gold); font-style: italic; }
+.filter-pills { display: flex; flex-wrap: wrap; gap: 8px; max-width: 1100px; margin: 0 auto 32px; }
+.filter-pill { padding: 8px 18px; border-radius: 50px; border: 1.5px solid var(--border); background: transparent; color: var(--muted); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.filter-pill:hover { border-color: var(--gold); color: var(--warm); }
+.filter-pill.active { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+.articles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 1100px; margin: 0 auto; }
+.article-card { display: block; padding: 28px 24px; border: 1.5px solid var(--border); border-radius: var(--r); text-decoration: none; transition: all 0.25s; }
+.article-card:hover { border-color: var(--gold); transform: translateY(-4px); box-shadow: 0 12px 36px rgba(196,154,60,0.08); }
+.article-card .card-category { font-size: 0.63rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
+.article-card .card-title { font-size: 0.95rem; font-weight: 700; color: var(--warm); line-height: 1.4; margin-bottom: 8px; }
+.article-card .card-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.6; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.article-card .card-read { font-size: 0.75rem; font-weight: 700; color: var(--gold); }
 
-.signup-form { display: flex; gap: 10px; max-width: 520px; margin: 0 auto 20px; flex-wrap: wrap; }
-.signup-form input[type="email"] { flex: 1; min-width: 200px; padding: 14px 18px; border: 1.5px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.05); color: var(--warm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.88rem; outline: none; transition: border-color 0.2s; }
-.signup-form input[type="email"]:focus { border-color: var(--gold); }
-.signup-form input[type="email"]::placeholder { color: var(--muted); }
-.signup-form select { padding: 14px 14px; border: 1.5px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.05); color: var(--warm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.88rem; outline: none; cursor: pointer; }
-.signup-form select option { background: var(--navy); color: var(--warm); }
-.signup-form button { padding: 14px 28px; background: var(--gold); color: var(--navy); border: none; border-radius: 8px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
-.signup-form button:hover { background: #d4a94c; }
+/* COMMONS */
+.commons-section { padding: 80px 80px; }
+.commons-card { max-width: 800px; margin: 0 auto; background: rgba(255,255,255,0.03); border: 1.5px solid var(--border); border-radius: var(--r); padding: 48px; text-align: center; transition: border-color 0.2s; }
+.commons-card:hover { border-color: var(--gold); }
+.commons-card .eyebrow { margin-bottom: 16px; }
+.commons-card h2 { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--warm); margin-bottom: 12px; line-height: 1.2; }
+.commons-card h2 em { color: var(--gold); font-style: italic; }
+.commons-card p { font-size: 0.9rem; color: var(--muted); line-height: 1.7; margin-bottom: 28px; max-width: 520px; margin-left: auto; margin-right: auto; }
 
-.signup-msg { font-size: 0.82rem; color: var(--gold); margin-bottom: 48px; min-height: 20px; }
+/* SPRIXLE */
+.sprixle-section { padding: 0 80px 80px; }
+.sprixle-card { max-width: 800px; margin: 0 auto; background: rgba(255,255,255,0.03); border: 1.5px solid var(--border); border-radius: var(--r); padding: 48px; text-align: center; transition: border-color 0.2s; }
+.sprixle-card:hover { border-color: var(--gold); }
+.sprixle-card h2 { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--warm); margin-bottom: 12px; line-height: 1.2; }
+.sprixle-card h2 em { color: var(--gold); font-style: italic; }
+.sprixle-card p { font-size: 0.9rem; color: var(--muted); line-height: 1.7; margin-bottom: 28px; max-width: 520px; margin-left: auto; margin-right: auto; }
 
-.values { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 48px; }
-.value-card { padding: 28px 20px; border: 1.5px solid var(--border); border-radius: 12px; }
-.value-card h3 { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--gold); margin-bottom: 8px; }
-.value-card p { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
-
+/* FOOTER */
+footer { padding: 40px 80px; border-top: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.footer-logo { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--warm); text-decoration: none; }
 .footer-note { font-size: 0.72rem; color: var(--muted); }
 .footer-note a { color: var(--gold); text-decoration: none; }
+.footer-crisis { font-size: 0.68rem; color: var(--muted); margin-top: 4px; }
 
-@media (max-width: 600px) {
-  .values { grid-template-columns: 1fr; }
-  .signup-form { flex-direction: column; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 768px) {
+  nav { padding: 12px 20px; }
+  .nav-links { gap: 12px; }
+  .nav-links a { font-size: 0.7rem; }
+  .hero { padding: 100px 24px 60px; }
+  .values-section, .articles-section, .commons-section, .sprixle-section { padding: 60px 24px; }
+  .values-grid { grid-template-columns: 1fr; }
+  .articles-grid { grid-template-columns: 1fr; }
+  .section-header { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .filter-pills { gap: 6px; }
+  footer { padding: 32px 24px; }
+  .hero-ctas { flex-direction: column; align-items: center; }
 }
 </style>
 </head>
 <body>
 
-<nav style="position:fixed;top:0;left:0;right:0;z-index:300;display:flex;align-items:center;justify-content:space-between;padding:14px 52px;background:rgba(26,30,46,0.95);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);">
-  <a href="/" style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:var(--warm);text-decoration:none;"><span style="color:var(--gold);font-style:italic;">i</span>need<span style="color:var(--gold);font-style:italic;">coaching</span>.org</a>
-  <div style="display:flex;align-items:center;gap:20px;">
-    <a href="https://www.ineedtherapy.org/find-a-match.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s;">Find Your Person</a>
-    <a href="https://www.ineedtherapy.org/ineedtherapy-profile-form.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;background:var(--gold);color:var(--navy);padding:8px 18px;border-radius:50px;text-decoration:none;">List Your Practice</a>
+<nav>
+  <a class="logo" href="/"><span class="logo-i">i</span>need<span class="logo-coaching">coaching</span>.org</a>
+  <div class="nav-links">
+    <a href="https://www.ineedtherapy.org/find-a-match.html">Find Your Person</a>
+    <a href="#articles">Articles</a>
+    <a href="/quizzes.html">Quizzes</a>
+    <a href="/dashboard.html">Dashboard</a>
+    <a href="https://www.ineedtherapy.org/ineedtherapy-profile-form.html" class="nav-pill">List Your Practice</a>
+    <a href="/welcome.html" class="nav-pill" id="nav-login-btn">Login</a>
   </div>
 </nav>
 
-<div class="container" style="padding-top:80px;">
-  <div class="eyebrow"><span class="eyebrow-dot"></span>Coaching Marketplace</div>
+<!-- HERO -->
+<section class="hero">
+  <div class="eyebrow"><span class="eyebrow-dot"></span> Coaching Marketplace</div>
   <h1>Find your coach.<br><em>Build your practice.</em></h1>
-  <p class="subtext">The place where people looking for direction find coaches ready to help. And where coaches find the clients who need exactly what they offer.</p>
+  <p class="hero-sub">The place where people looking for direction find coaches ready to help. And where coaches find the clients who need exactly what they offer. No commissions. No algorithms. Just real people.</p>
+  <div class="hero-ctas">
+    <a href="https://www.ineedtherapy.org/find-a-match.html" class="btn-primary">Find Your Person &rarr;</a>
+    <a href="#articles" class="btn-outline">Browse Articles</a>
+  </div>
+</section>
 
-  <form class="signup-form" id="signupForm" onsubmit="return false;">
-    <input type="email" id="signup-email" placeholder="Your email" required>
-    <select id="signup-role">
-      <option value="coach">I am a Coach</option>
-      <option value="explorer">Someone looking for a coach</option>
-    </select>
-    <button type="button" onclick="submitSignup()">Get early access</button>
-  </form>
-  <div class="signup-msg" id="signupMsg"></div>
-
-  <div class="values">
+<!-- VALUES -->
+<section class="values-section">
+  <div class="values-grid">
     <div class="value-card">
       <h3>No commissions.</h3>
       <p>You keep what you earn. We connect. You handle the rest.</p>
@@ -112,72 +172,111 @@ h1 em { color: var(--gold); font-style: italic; }
       <p>Finding each other. That is how it should work.</p>
     </div>
   </div>
+</section>
 
-  <div id="articles-section" style="margin-bottom:48px;">
-    <div style="font-size:0.63rem;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:var(--gold);margin-bottom:20px;">Latest for Coaches</div>
-    <div id="articles-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;text-align:left;">
-      <p style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:0.85rem;">Loading articles...</p>
-    </div>
+<!-- ARTICLES -->
+<section class="articles-section" id="articles">
+  <div class="section-header">
+    <h2 class="section-title">Articles for <em>coaches</em></h2>
   </div>
+  <div class="filter-pills" id="filter-pills">
+    <button class="filter-pill active" data-cat="all">All</button>
+    <button class="filter-pill" data-cat="Coaching and Growth">Coaching and Growth</button>
+    <button class="filter-pill" data-cat="Getting Clients">Getting Clients</button>
+    <button class="filter-pill" data-cat="Niche and Positioning">Niche and Positioning</button>
+    <button class="filter-pill" data-cat="Business of Coaching">Business of Coaching</button>
+  </div>
+  <div class="articles-grid" id="articles-grid">
+    <p style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:0.85rem;">Loading articles...</p>
+  </div>
+</section>
 
+<!-- THE COMMONS -->
+<section class="commons-section">
+  <div class="commons-card">
+    <div class="eyebrow"><span class="eyebrow-dot"></span> The Commons</div>
+    <h2>Find your match on <em>The Commons</em></h2>
+    <p>The shared request board across all ineed sites. Real people posting what they need. Real providers responding. No middleman.</p>
+    <a href="https://www.ineedtherapy.org/find-a-match.html" class="btn-primary">Browse The Commons &rarr;</a>
+  </div>
+</section>
+
+<!-- SPRIXLE -->
+<section class="sprixle-section">
+  <div class="sprixle-card">
+    <div class="eyebrow"><span class="eyebrow-dot"></span> Sprixle</div>
+    <h2>Continue your journey on <em>Sprixle</em></h2>
+    <p>Private journaling, pattern tracking, and AI companion. Free to start.</p>
+    <a href="https://www.sprixle.com" target="_blank" class="btn-primary">Try Sprixle &rarr;</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <a class="footer-logo" href="/"><span style="color:var(--gold);font-style:italic;">i</span>need<span style="color:var(--gold);font-style:italic;">coaching</span>.org</a>
   <p class="footer-note">A project from <a href="https://www.ineedtherapy.org">ineedtherapy.org</a></p>
-</div>
+  <p class="footer-crisis">Not a crisis service — In crisis? Call or text 988</p>
+</footer>
 
 <script>
 const SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
 const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
 
-async function submitSignup() {
-  var email = document.getElementById('signup-email').value.trim();
-  var role = document.getElementById('signup-role').value;
-  var msg = document.getElementById('signupMsg');
-  if (!email) { msg.textContent = 'Please enter your email.'; return; }
+// Session check — swap Login to Dashboard if logged in
+(function() {
+  var token = localStorage.getItem('sb_access_token');
+  if (token) {
+    var btn = document.getElementById('nav-login-btn');
+    if (btn) { btn.textContent = 'Dashboard'; btn.href = '/dashboard.html'; }
+  }
+})();
 
+// Articles
+var allArticles = [];
+
+async function loadArticles() {
+  var grid = document.getElementById('articles-grid');
   try {
-    var res = await fetch(SUPABASE_URL + '/rest/v1/explorer_profiles', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': ANON_KEY,
-        'Authorization': 'Bearer ' + ANON_KEY,
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({
-        email: email,
-        role: role,
-        audience: 'coaching',
-        source: 'ineedcoaching.org'
-      })
+    var res = await fetch(SUPABASE_URL + '/rest/v1/articles?audience=eq.coach&order=created_at.desc&limit=50&select=title,slug,meta_description,category', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
     });
-    if (res.ok || res.status === 409) {
-      msg.textContent = 'You are on the list. We will reach out when we launch.';
-      document.getElementById('signup-email').value = '';
-    } else {
-      msg.textContent = 'Something went wrong. Please try again.';
+    allArticles = await res.json();
+    if (!allArticles || !allArticles.length) {
+      grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:0.85rem;">Articles coming soon.</p>';
+      return;
     }
+    renderArticles('all');
   } catch(e) {
-    msg.textContent = 'Network error. Please try again.';
+    grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:0.85rem;">Articles coming soon.</p>';
   }
 }
 
-// Load coach articles
-(async function() {
+function renderArticles(category) {
   var grid = document.getElementById('articles-grid');
-  try {
-    var res = await fetch(SUPABASE_URL + '/rest/v1/articles?audience=eq.coach&order=created_at.desc&limit=6&select=title,slug,meta_description', {
-      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
-    });
-    var articles = await res.json();
-    if (!articles || !articles.length) { grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:0.85rem;">Articles coming soon.</p>'; return; }
-    grid.innerHTML = articles.map(function(a) {
-      var href = 'https://www.ineedtherapy.org/article.html?slug=' + encodeURIComponent(a.slug);
-      return '<a href="' + href + '" target="_blank" style="display:block;padding:20px;border:1.5px solid var(--border);border-radius:12px;text-decoration:none;transition:all 0.2s;" onmouseover="this.style.borderColor=\'#c49a3c\'" onmouseout="this.style.borderColor=\'#2a2e3e\'">' +
-        '<div style="font-size:0.9rem;font-weight:700;color:var(--warm);line-height:1.4;margin-bottom:6px;">' + a.title + '</div>' +
-        '<div style="font-size:0.78rem;color:var(--muted);line-height:1.5;margin-bottom:8px;">' + (a.meta_description || '') + '</div>' +
-        '<span style="font-size:0.75rem;font-weight:700;color:var(--gold);">Read &rarr;</span></a>';
-    }).join('');
-  } catch(e) { grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:0.85rem;">Articles coming soon.</p>'; }
-})();
+  var filtered = category === 'all' ? allArticles : allArticles.filter(function(a) { return a.category === category; });
+  if (!filtered.length) {
+    grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:0.85rem;">No articles in this category yet.</p>';
+    return;
+  }
+  grid.innerHTML = filtered.map(function(a) {
+    return '<a href="/article.html?slug=' + encodeURIComponent(a.slug) + '" class="article-card">' +
+      '<div class="card-category">' + (a.category || 'Coaching') + '</div>' +
+      '<div class="card-title">' + a.title + '</div>' +
+      '<div class="card-desc">' + (a.meta_description || '') + '</div>' +
+      '<span class="card-read">Read &rarr;</span></a>';
+  }).join('');
+}
+
+// Filter pills
+document.getElementById('filter-pills').addEventListener('click', function(e) {
+  var pill = e.target.closest('.filter-pill');
+  if (!pill) return;
+  document.querySelectorAll('.filter-pill').forEach(function(p) { p.classList.remove('active'); });
+  pill.classList.add('active');
+  renderArticles(pill.dataset.cat);
+});
+
+loadArticles();
 </script>
 </body>
 </html>

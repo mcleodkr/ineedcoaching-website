@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loading... | ineedcoaching.org</title>
+<meta name="description" content="">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #1a1e2e; --gold: #c49a3c; --gold-lt: #faf3e0; --warm: #faf8f4;
+  --white: #ffffff; --muted: #8a8a9a; --border: #2a2e3e;
+  --r: 14px; --r-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--navy); color: var(--warm); }
+
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; align-items: center; justify-content: space-between; padding: 14px 52px; background: rgba(26,30,46,0.95); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
+.logo { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--warm); text-decoration: none; }
+.logo-i { color: var(--gold); font-style: italic; }
+.logo-coaching { color: var(--gold); font-style: italic; }
+.nav-back { font-size: 0.78rem; font-weight: 700; color: var(--muted); text-decoration: none; display: flex; align-items: center; gap: 6px; transition: color 0.2s; }
+.nav-back:hover { color: var(--gold); }
+
+.article-wrap { max-width: 720px; margin: 0 auto; padding: 120px 40px 80px; }
+
+.article-tag { display: inline-block; font-size: 0.63rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); background: rgba(196,154,60,0.15); padding: 5px 12px; border-radius: 20px; margin-bottom: 24px; }
+
+.article-title { font-family: 'Playfair Display', serif; font-size: clamp(1.8rem, 4vw, 2.8rem); line-height: 1.15; letter-spacing: -0.02em; color: var(--warm); margin-bottom: 20px; }
+
+.article-meta { font-size: 0.78rem; color: var(--muted); margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+
+/* TOOLBAR */
+.article-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 36px; flex-wrap: wrap; }
+.save-article-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--gold); color: var(--navy); padding: 10px 22px; border-radius: 50px; border: none; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.save-article-btn:hover { background: #d4a94c; }
+.save-article-btn.saved { background: var(--gold-lt); color: var(--gold); pointer-events: none; }
+.share-wrap { position: relative; }
+.share-btn { display: inline-flex; align-items: center; gap: 8px; background: transparent; color: var(--warm); padding: 10px 22px; border-radius: 50px; border: 1.5px solid var(--border); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.share-btn:hover { border-color: var(--gold); color: var(--gold); }
+.share-menu { display: none; position: absolute; top: 44px; left: 0; background: var(--navy); border: 1.5px solid var(--border); border-radius: var(--r-sm); box-shadow: 0 8px 24px rgba(0,0,0,0.3); min-width: 220px; z-index: 100; overflow: hidden; }
+.share-menu.open { display: block; }
+.share-menu a, .share-menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 16px; border: none; background: none; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.82rem; font-weight: 600; color: var(--warm); cursor: pointer; text-decoration: none; text-align: left; transition: background 0.15s; }
+.share-menu a:hover, .share-menu button:hover { background: rgba(196,154,60,0.1); }
+
+/* QUICK ANSWER */
+.quick-answer { border-left: 3px solid var(--gold); background: rgba(250,243,224,0.06); border-radius: 0 var(--r-sm) var(--r-sm) 0; padding: 24px; margin-bottom: 36px; }
+.quick-answer-label { font-size: 0.63rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
+.quick-answer p { font-size: 0.92rem; line-height: 1.75; color: var(--warm); }
+
+/* IF THIS IS YOU */
+.if-this-is-you { margin-bottom: 36px; }
+.if-this-is-you-label { font-size: 0.63rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 14px; }
+.if-this-is-you ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.if-this-is-you li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.88rem; color: var(--warm); line-height: 1.6; }
+.if-this-is-you li::before { content: '\2713'; color: var(--gold); font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+
+/* KEY INSIGHTS */
+.key-insights { background: rgba(196,154,60,0.08); border: 1px solid rgba(196,154,60,0.2); border-radius: var(--r); padding: 28px; margin-bottom: 36px; }
+.key-insights-label { font-size: 0.63rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 14px; font-variant: small-caps; }
+.key-insights ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.key-insights li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.88rem; color: var(--warm); line-height: 1.6; }
+.key-insights li::before { content: '\2726'; color: var(--gold); flex-shrink: 0; margin-top: 2px; }
+
+/* QUIZ EMBED */
+.quiz-embed { margin: 40px 0; border: 1.5px solid var(--border); border-radius: var(--r); overflow: hidden; }
+.quiz-embed-header { background: rgba(255,255,255,0.03); padding: 28px 32px; border-bottom: 1px solid var(--border); }
+.quiz-embed-eyebrow { font-size: 0.63rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
+.quiz-embed-title { font-family: 'Playfair Display', serif; font-style: italic; font-size: 1.3rem; color: var(--warm); line-height: 1.2; }
+.quiz-embed-desc { font-size: 0.82rem; color: var(--muted); margin-top: 6px; line-height: 1.6; }
+.quiz-embed-body { padding: 32px; }
+.qe-progress { height: 3px; background: var(--border); border-radius: 2px; margin-bottom: 28px; overflow: hidden; }
+.qe-progress-fill { height: 100%; background: var(--gold); border-radius: 2px; transition: width 0.4s ease; width: 0%; }
+.qe-question { font-family: 'Playfair Display', serif; font-size: 1.15rem; font-style: italic; color: var(--warm); margin-bottom: 20px; line-height: 1.4; }
+.qe-options { display: flex; flex-direction: column; gap: 8px; }
+.qe-opt { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 2px solid var(--border); border-radius: var(--r-sm); cursor: pointer; background: transparent; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.88rem; font-weight: 500; color: var(--warm); transition: all 0.15s; text-align: left; width: 100%; }
+.qe-opt:hover { border-color: var(--gold); background: rgba(196,154,60,0.08); }
+.qe-opt.selected { border-color: var(--gold); background: rgba(196,154,60,0.12); font-weight: 700; }
+.qe-opt-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); flex-shrink: 0; transition: all 0.15s; }
+.qe-opt.selected .qe-opt-dot { background: var(--gold); border-color: var(--gold); }
+.qe-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); }
+.qe-counter { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
+.qe-btn-next { background: var(--gold); color: var(--navy); padding: 10px 24px; border-radius: 50px; border: none; cursor: pointer; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; font-weight: 700; transition: all 0.2s; }
+.qe-btn-next:hover { background: #d4a94c; }
+.qe-btn-next:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* QUIZ RESULT */
+.qe-result-card { background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: var(--r); padding: 36px; margin-top: 4px; position: relative; overflow: hidden; }
+.qe-result-bg-char { position: absolute; top: -10px; right: 10px; font-size: 7rem; line-height: 1; opacity: 0.12; pointer-events: none; user-select: none; }
+.qe-result-type { font-size: 0.63rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
+.qe-result-name { font-family: 'Playfair Display', serif; font-size: clamp(1.4rem, 3vw, 2rem); font-style: italic; color: var(--warm); margin-bottom: 16px; line-height: 1.15; }
+.qe-result-desc { font-size: 0.86rem; line-height: 1.75; color: var(--muted); margin-bottom: 24px; }
+.qe-prompt-label { font-size: 0.63rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
+.qe-prompt-text { font-family: 'Playfair Display', serif; font-style: italic; font-size: 1rem; color: rgba(250,248,244,0.85); line-height: 1.5; padding: 14px; border-left: 3px solid var(--gold); background: rgba(196,154,60,0.06); border-radius: 0 var(--r-sm) var(--r-sm) 0; margin-bottom: 18px; }
+.qe-journal { width: 100%; min-height: 110px; padding: 14px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--warm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.88rem; resize: vertical; outline: none; transition: border-color 0.2s; line-height: 1.6; }
+.qe-journal::placeholder { color: var(--muted); }
+.qe-journal:focus { border-color: var(--gold); }
+.qe-privacy { font-size: 0.72rem; color: var(--muted); margin-bottom: 10px; }
+.qe-retake button { background: none; border: none; font-size: 0.78rem; color: var(--muted); cursor: pointer; font-family: inherit; text-decoration: underline; transition: color 0.2s; margin-top: 14px; }
+.qe-retake button:hover { color: var(--warm); }
+
+/* ARTICLE BODY */
+.article-body { font-size: 1rem; line-height: 1.8; color: var(--warm); }
+.article-body h1, .article-body h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; margin: 40px 0 16px; color: var(--warm); }
+.article-body h3 { font-family: 'Playfair Display', serif; font-size: 1.15rem; margin: 32px 0 12px; color: var(--warm); }
+.article-body p { margin-bottom: 20px; }
+.article-body ul, .article-body ol { margin: 0 0 20px 24px; }
+.article-body li { margin-bottom: 8px; line-height: 1.7; }
+.article-body strong { font-weight: 700; }
+.article-body em { font-style: italic; }
+.article-body blockquote { border-left: 3px solid var(--gold); padding: 16px 20px; margin: 28px 0; background: rgba(196,154,60,0.08); border-radius: 0 var(--r-sm) var(--r-sm) 0; font-style: italic; color: var(--gold-lt); }
+
+/* THREE-DOOR CTA */
+.three-doors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 60px; }
+.door-card { padding: 28px 20px; border: 1.5px solid var(--border); border-radius: var(--r); text-decoration: none; text-align: center; transition: all 0.25s; display: block; }
+.door-card:hover { border-color: var(--gold); transform: translateY(-4px); }
+.door-icon { font-size: 1.6rem; display: block; margin-bottom: 10px; }
+.door-label { font-size: 0.63rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
+.door-title { font-family: 'Playfair Display', serif; font-size: 0.95rem; color: var(--warm); margin-bottom: 6px; }
+.door-desc { font-size: 0.75rem; color: var(--muted); line-height: 1.5; }
+
+footer { background: rgba(255,255,255,0.02); padding: 28px 52px; display: flex; justify-content: space-between; align-items: center; margin-top: 80px; border-top: 1px solid var(--border); }
+.f-logo { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--warm); text-decoration: none; }
+.f-note { font-size: 0.68rem; color: var(--muted); }
+
+.error-wrap { text-align: center; padding: 80px 40px; }
+.error-wrap h2 { font-family: 'Playfair Display', serif; font-size: 1.8rem; margin-bottom: 12px; color: var(--warm); }
+.error-wrap p { color: var(--muted); margin-bottom: 24px; }
+.btn-cta { display: inline-flex; align-items: center; gap: 8px; background: var(--gold); color: var(--navy); padding: 12px 28px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.88rem; font-weight: 700; text-decoration: none; transition: all 0.2s; }
+.btn-cta:hover { background: #d4a94c; }
+
+.loading-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 16px; }
+.loading-dot { width: 8px; height: 8px; background: var(--gold); border-radius: 50%; animation: dotpulse 1.2s ease-in-out infinite; }
+.loading-dot:nth-child(2) { animation-delay: 0.2s; }
+.loading-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dotpulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1); } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 768px) {
+  nav { padding: 12px 20px; }
+  .article-wrap { padding: 100px 20px 60px; }
+  .three-doors { grid-template-columns: 1fr; }
+  footer { padding: 20px; flex-direction: column; gap: 10px; text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="/"><span class="logo-i">i</span>need<span class="logo-coaching">coaching</span>.org</a>
+  <a class="nav-back" href="/#articles">&larr; Back to Articles</a>
+</nav>
+
+<div class="article-wrap" id="article-wrap">
+  <div class="loading" style="text-align:center;padding:40px 0;">
+    <div class="loading-dots">
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+    </div>
+    <p style="color:var(--muted);">Loading article...</p>
+  </div>
+</div>
+
+<footer>
+  <a class="f-logo" href="/"><span style="color:var(--gold);font-style:italic;">i</span>need<span style="color:var(--gold);font-style:italic;">coaching</span>.org</a>
+  <span class="f-note">Not a crisis service — In crisis? Call or text 988</span>
+</footer>
+
+<script>
+const SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+
+function getSlug() {
+  return new URLSearchParams(window.location.search).get('slug') || '';
+}
+
+function formatContent(content) {
+  if (!content) return '';
+  if (content.includes('<p>') || content.includes('<h2>')) return content;
+  return content.split('\n\n').map(function(para) {
+    if (para.startsWith('# ')) return '<h1>' + para.slice(2) + '</h1>';
+    if (para.startsWith('## ')) return '<h2>' + para.slice(3) + '</h2>';
+    if (para.startsWith('### ')) return '<h3>' + para.slice(4) + '</h3>';
+    if (para.startsWith('> ')) return '<blockquote>' + para.slice(2) + '</blockquote>';
+    if (para.trim()) return '<p>' + para.replace(/\n/g, '<br>') + '</p>';
+    return '';
+  }).join('');
+}
+
+// Quiz state
+var qeQuestions = [], qeCurrent = 0, qeScore = 0, qeSelected = null, qeCurrentResult = null;
+var _quizResults = [];
+
+function qeInit(questions) {
+  qeQuestions = questions; qeCurrent = 0; qeScore = 0; qeRender();
+}
+
+function qeRender() {
+  var q = qeQuestions[qeCurrent];
+  document.getElementById('qe-q').textContent = q.question;
+  document.getElementById('qe-counter').textContent = (qeCurrent + 1) + ' of ' + qeQuestions.length;
+  document.getElementById('qe-progress').style.width = ((qeCurrent / qeQuestions.length) * 100) + '%';
+  qeSelected = null;
+  var nextBtn = document.getElementById('qe-next');
+  nextBtn.disabled = true;
+  nextBtn.textContent = qeCurrent === qeQuestions.length - 1 ? 'See my result \u2192' : 'Next \u2192';
+  document.getElementById('qe-opts').innerHTML = q.answers.map(function(a, i) {
+    return '<button class="qe-opt" onclick="qeSelect(this, ' + q.scores[i] + ')"><span class="qe-opt-dot"></span>' + a + '</button>';
+  }).join('');
+}
+
+function qeSelect(btn, score) {
+  document.querySelectorAll('#quiz-embed .qe-opt').forEach(function(b) { b.classList.remove('selected'); });
+  btn.classList.add('selected');
+  qeSelected = score;
+  document.getElementById('qe-next').disabled = false;
+}
+
+function qeNext() {
+  if (qeSelected === null) return;
+  qeScore += qeSelected;
+  qeCurrent++;
+  if (qeCurrent < qeQuestions.length) { qeRender(); return; }
+  document.getElementById('qe-progress').style.width = '100%';
+  document.getElementById('qe-question-wrap').style.display = 'none';
+  var maxScore = qeQuestions.length * 3;
+  var pct = qeScore / maxScore;
+  var bucket = pct < 0.35 ? 'low' : pct < 0.65 ? 'mid' : 'high';
+  if (_quizResults && _quizResults.length > 0) {
+    qeCurrentResult = _quizResults.find(function(r) { return r.range === bucket; }) || _quizResults[1] || _quizResults[0];
+  } else {
+    qeCurrentResult = { name: 'Your Result', bg: '\u2726', desc: 'Thank you for completing this self-assessment.', prompt: 'What stood out to you most?' };
+  }
+  document.getElementById('qe-result-wrap').style.display = 'block';
+  document.getElementById('qe-result-wrap').innerHTML =
+    '<div class="qe-result-card">' +
+      '<div class="qe-result-bg-char">' + (qeCurrentResult.bg || '\u2726') + '</div>' +
+      '<div class="qe-result-type">Your result</div>' +
+      '<div class="qe-result-name">' + qeCurrentResult.name + '</div>' +
+      '<div class="qe-result-desc">' + qeCurrentResult.desc + '</div>' +
+      '<div class="qe-prompt-label">A prompt to sit with</div>' +
+      '<div class="qe-prompt-text">' + qeCurrentResult.prompt + '</div>' +
+      '<div class="qe-privacy">Your response is private and not saved.</div>' +
+      '<textarea class="qe-journal" placeholder="Write whatever comes to mind. Take your time."></textarea>' +
+      '<div class="qe-retake"><button onclick="qeRetake()">Take this quiz again</button></div>' +
+    '</div>';
+  document.getElementById('qe-result-wrap').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function qeRetake() {
+  document.getElementById('qe-result-wrap').style.display = 'none';
+  document.getElementById('qe-question-wrap').style.display = 'block';
+  qeCurrent = 0; qeScore = 0; qeSelected = null;
+  document.getElementById('qe-progress').style.width = '0%';
+  qeRender();
+}
+
+function renderQuizEmbed(quiz) {
+  var questions = quiz.questions || [];
+  if (!questions.length) return '';
+  if (quiz.results) _quizResults = quiz.results;
+  return '<div style="margin-bottom:12px;"><p style="font-size:0.88rem;color:var(--muted);line-height:1.65;">Take this 2-minute check-in to see where you actually are right now.</p></div>' +
+    '<div class="quiz-embed" id="quiz-embed">' +
+      '<div class="quiz-embed-header">' +
+        '<div class="quiz-embed-eyebrow">Self-Assessment</div>' +
+        '<div class="quiz-embed-title">' + quiz.title + '</div>' +
+        '<div class="quiz-embed-desc">' + (quiz.description || 'A quick check-in \u2014 takes about 2 minutes.') + '</div>' +
+      '</div>' +
+      '<div class="quiz-embed-body">' +
+        '<div class="qe-progress"><div class="qe-progress-fill" id="qe-progress"></div></div>' +
+        '<div id="qe-question-wrap">' +
+          '<div class="qe-question" id="qe-q"></div>' +
+          '<div class="qe-options" id="qe-opts"></div>' +
+          '<div class="qe-nav"><span class="qe-counter" id="qe-counter"></span><button class="qe-btn-next" id="qe-next" disabled onclick="qeNext()">Next \u2192</button></div>' +
+        '</div>' +
+        '<div id="qe-result-wrap" style="display:none;"></div>' +
+      '</div>' +
+    '</div>';
+}
+
+// Save article
+async function saveArticle(slug, title) {
+  var token = localStorage.getItem('sb_access_token');
+  if (!token) { window.location.href = '/welcome.html'; return; }
+  try {
+    var userRes = await fetch(SUPABASE_URL + '/auth/v1/user', {
+      headers: { 'Authorization': 'Bearer ' + token, 'apikey': ANON_KEY }
+    });
+    if (!userRes.ok) { window.location.href = '/welcome.html'; return; }
+    var user = await userRes.json();
+    var email = user.email;
+    await fetch(SUPABASE_URL + '/rest/v1/saved_articles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ user_email: email, article_slug: slug, article_title: title, source: 'ineedcoaching.org' })
+    });
+    var btn = document.getElementById('save-btn');
+    if (btn) { btn.textContent = '\u2713 Saved'; btn.classList.add('saved'); }
+  } catch(e) { /* silent */ }
+}
+
+// Share
+function toggleShare() {
+  var menu = document.getElementById('share-menu');
+  menu.classList.toggle('open');
+}
+function copyLink() {
+  navigator.clipboard.writeText(window.location.href);
+  document.getElementById('share-menu').classList.remove('open');
+  var btn = document.querySelector('.share-btn');
+  btn.textContent = 'Copied!';
+  setTimeout(function() { btn.textContent = 'Share'; }, 2000);
+}
+function shareLinkedIn() {
+  window.open('https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(window.location.href), '_blank');
+  document.getElementById('share-menu').classList.remove('open');
+}
+function shareX() {
+  window.open('https://twitter.com/intent/tweet?url=' + encodeURIComponent(window.location.href) + '&text=' + encodeURIComponent(document.title), '_blank');
+  document.getElementById('share-menu').classList.remove('open');
+}
+
+// Close share menu on outside click
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.share-wrap')) {
+    var menu = document.getElementById('share-menu');
+    if (menu) menu.classList.remove('open');
+  }
+});
+
+async function loadArticle() {
+  var slug = getSlug();
+  var wrap = document.getElementById('article-wrap');
+
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/articles?slug=eq.' + slug + '&select=title,slug,meta_description,quick_answer,if_this_is_you,content,id,audience,key_insights,category&limit=1', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
+    });
+    var data = await res.json();
+
+    if (!data || data.length === 0) {
+      wrap.innerHTML = '<div class="error-wrap"><h2>Article not found</h2><p>This article may have moved or been updated.</p><a href="/#articles" class="btn-cta">&larr; Back to Articles</a></div>';
+      return;
+    }
+
+    var article = data[0];
+    document.title = article.title + ' | ineedcoaching.org';
+    if (article.meta_description) document.querySelector('meta[name="description"]').content = article.meta_description;
+
+    var html = '';
+
+    // 1. Title and meta
+    html += '<div class="article-tag">' + (article.category || 'Coaching') + '</div>';
+    html += '<h1 class="article-title">' + article.title + '</h1>';
+    html += '<div class="article-meta">' + (article.meta_description || '') + '</div>';
+
+    // 2. Save and Share toolbar
+    html += '<div class="article-toolbar">' +
+      '<button class="save-article-btn" id="save-btn" onclick="saveArticle(\'' + article.slug.replace(/'/g, "\\'") + '\', \'' + article.title.replace(/'/g, "\\'") + '\')">Save</button>' +
+      '<div class="share-wrap"><button class="share-btn" onclick="toggleShare()">Share</button>' +
+      '<div class="share-menu" id="share-menu">' +
+        '<button onclick="copyLink()">Copy link</button>' +
+        '<a href="#" onclick="shareLinkedIn();return false;">Share on LinkedIn</a>' +
+        '<a href="#" onclick="shareX();return false;">Share on X</a>' +
+      '</div></div></div>';
+
+    // 3. Quick Answer
+    if (article.quick_answer) {
+      html += '<div class="quick-answer"><div class="quick-answer-label">Quick Answer</div><p>' + article.quick_answer + '</p></div>';
+    }
+
+    // 4. If This Is You
+    if (article.if_this_is_you) {
+      var items = article.if_this_is_you.split('|').map(function(s) { return s.trim(); }).filter(Boolean);
+      if (items.length) {
+        html += '<div class="if-this-is-you"><div class="if-this-is-you-label">If This Is You</div><ul>' +
+          items.map(function(item) { return '<li>' + item + '</li>'; }).join('') + '</ul></div>';
+      }
+    }
+
+    // 5. Key Insights
+    if (article.key_insights && article.key_insights.length) {
+      html += '<div class="key-insights"><div class="key-insights-label">KEY INSIGHTS</div><ul>' +
+        article.key_insights.map(function(ki) { return '<li>' + ki + '</li>'; }).join('') + '</ul></div>';
+    }
+
+    // 6. Quiz embed — placeholder, will be filled async
+    html += '<div id="quiz-embed-slot"></div>';
+
+    // 7. Article content
+    html += '<div class="article-body">' + formatContent(article.content) + '</div>';
+
+    // 8. Three-door CTA
+    html += '<div class="three-doors">' +
+      '<a href="https://www.ineedtherapy.org/burnout-reset.html" class="door-card" target="_blank">' +
+        '<span class="door-icon">&#x1F525;</span>' +
+        '<div class="door-label">Reset</div>' +
+        '<div class="door-title">Burnout Reset</div>' +
+        '<div class="door-desc">A 5-day guided journey to disengage from what is not working.</div>' +
+      '</a>' +
+      '<a href="https://www.sprixle.com" class="door-card" target="_blank">' +
+        '<span class="door-icon">&#x2728;</span>' +
+        '<div class="door-label">Journal</div>' +
+        '<div class="door-title">Sprixle</div>' +
+        '<div class="door-desc">Private journaling, pattern tracking, and AI companion. Free to start.</div>' +
+      '</a>' +
+      '<a href="/#articles" class="door-card">' +
+        '<span class="door-icon">&#x1F4DA;</span>' +
+        '<div class="door-label">Explore</div>' +
+        '<div class="door-title">Find a Coach</div>' +
+        '<div class="door-desc">Browse articles and resources for coaches and clients.</div>' +
+      '</a>' +
+    '</div>';
+
+    wrap.innerHTML = html;
+
+    // Load quiz embed
+    loadQuizEmbed(article);
+
+  } catch(e) {
+    wrap.innerHTML = '<div class="error-wrap"><h2>Something went wrong</h2><p>Please try again later.</p><a href="/" class="btn-cta">&larr; Home</a></div>';
+  }
+}
+
+async function loadQuizEmbed(article) {
+  var slot = document.getElementById('quiz-embed-slot');
+  if (!slot) return;
+
+  try {
+    // Try by related_article_id first
+    var res = await fetch(SUPABASE_URL + '/rest/v1/quizzes?related_article_id=eq.' + article.id + '&select=id,title,slug,description,questions,results,category&limit=1', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
+    });
+    var quizzes = await res.json();
+
+    // Fallback: check content for QUIZ_SLUG comment
+    if ((!quizzes || !quizzes.length) && article.content) {
+      var match = article.content.match(/<!--\s*QUIZ_SLUG:\s*(\S+)\s*-->/);
+      if (match) {
+        var slugRes = await fetch(SUPABASE_URL + '/rest/v1/quizzes?slug=eq.' + match[1] + '&select=id,title,slug,description,questions,results,category&limit=1', {
+          headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
+        });
+        quizzes = await slugRes.json();
+      }
+    }
+
+    if (quizzes && quizzes.length) {
+      slot.innerHTML = renderQuizEmbed(quizzes[0]);
+      qeInit(quizzes[0].questions);
+    }
+  } catch(e) { /* no quiz, that's fine */ }
+}
+
+loadArticle();
+</script>
+</body>
+</html>

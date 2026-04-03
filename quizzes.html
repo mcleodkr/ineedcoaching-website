@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quizzes | ineedcoaching.org</title>
+<meta name="description" content="Self-assessments and check-ins to help you understand where you are right now.">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #1a1e2e; --gold: #c49a3c; --gold-lt: #faf3e0; --warm: #faf8f4;
+  --white: #ffffff; --muted: #8a8a9a; --border: #2a2e3e;
+  --r: 14px; --r-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--navy); color: var(--warm); min-height: 100vh; }
+
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; align-items: center; justify-content: space-between; padding: 14px 52px; background: rgba(26,30,46,0.95); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
+.logo { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--warm); text-decoration: none; }
+.logo-i { color: var(--gold); font-style: italic; }
+.logo-coaching { color: var(--gold); font-style: italic; }
+.nav-links { display: flex; align-items: center; gap: 22px; list-style: none; }
+.nav-links a { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.nav-links a:hover { color: var(--gold); }
+.nav-pill { background: var(--gold); color: var(--navy) !important; padding: 8px 18px; border-radius: 50px; }
+.nav-pill:hover { background: #d4a94c !important; }
+
+.page-wrap { max-width: 960px; margin: 0 auto; padding: 120px 40px 80px; }
+
+.page-header { text-align: center; margin-bottom: 56px; }
+.page-header .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 0.63rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin-bottom: 16px; }
+.eyebrow-dot { width: 7px; height: 7px; background: var(--gold); border-radius: 50%; }
+.page-header h1 { font-family: 'Playfair Display', serif; font-size: clamp(2rem, 4vw, 3rem); color: var(--warm); margin-bottom: 12px; }
+.page-header h1 em { color: var(--gold); font-style: italic; }
+.page-header p { font-size: 0.92rem; color: var(--muted); line-height: 1.7; max-width: 520px; margin: 0 auto; }
+
+.category-group { margin-bottom: 48px; }
+.category-label { font-size: 0.63rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+
+.quiz-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+
+.quiz-card { padding: 28px 24px; border: 1.5px solid var(--border); border-radius: var(--r); cursor: pointer; transition: all 0.25s; }
+.quiz-card:hover { border-color: var(--gold); transform: translateY(-3px); box-shadow: 0 10px 30px rgba(196,154,60,0.08); }
+.quiz-card-title { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--warm); margin-bottom: 8px; line-height: 1.3; }
+.quiz-card-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.6; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.quiz-card-meta { font-size: 0.72rem; color: var(--gold); font-weight: 700; }
+
+/* MODAL */
+.modal-overlay { display: none; position: fixed; inset: 0; z-index: 500; background: rgba(26,30,46,0.92); backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 40px; }
+.modal-overlay.open { display: flex; }
+.modal-content { max-width: 660px; width: 100%; max-height: 90vh; overflow-y: auto; background: var(--navy); border: 1.5px solid var(--border); border-radius: var(--r); }
+.modal-close { position: absolute; top: 16px; right: 20px; background: none; border: none; color: var(--muted); font-size: 1.4rem; cursor: pointer; z-index: 10; transition: color 0.2s; }
+.modal-close:hover { color: var(--warm); }
+
+/* QUIZ EMBED (reused in modal) */
+.quiz-embed-header { background: rgba(255,255,255,0.03); padding: 28px 32px; border-bottom: 1px solid var(--border); position: relative; }
+.quiz-embed-eyebrow { font-size: 0.63rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
+.quiz-embed-title { font-family: 'Playfair Display', serif; font-style: italic; font-size: 1.3rem; color: var(--warm); line-height: 1.2; }
+.quiz-embed-desc { font-size: 0.82rem; color: var(--muted); margin-top: 6px; line-height: 1.6; }
+.quiz-embed-body { padding: 32px; }
+.qe-progress { height: 3px; background: var(--border); border-radius: 2px; margin-bottom: 28px; overflow: hidden; }
+.qe-progress-fill { height: 100%; background: var(--gold); border-radius: 2px; transition: width 0.4s ease; width: 0%; }
+.qe-question { font-family: 'Playfair Display', serif; font-size: 1.15rem; font-style: italic; color: var(--warm); margin-bottom: 20px; line-height: 1.4; }
+.qe-options { display: flex; flex-direction: column; gap: 8px; }
+.qe-opt { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 2px solid var(--border); border-radius: var(--r-sm); cursor: pointer; background: transparent; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.88rem; font-weight: 500; color: var(--warm); transition: all 0.15s; text-align: left; width: 100%; }
+.qe-opt:hover { border-color: var(--gold); background: rgba(196,154,60,0.08); }
+.qe-opt.selected { border-color: var(--gold); background: rgba(196,154,60,0.12); font-weight: 700; }
+.qe-opt-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); flex-shrink: 0; transition: all 0.15s; }
+.qe-opt.selected .qe-opt-dot { background: var(--gold); border-color: var(--gold); }
+.qe-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); }
+.qe-counter { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
+.qe-btn-next { background: var(--gold); color: var(--navy); padding: 10px 24px; border-radius: 50px; border: none; cursor: pointer; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; font-weight: 700; transition: all 0.2s; }
+.qe-btn-next:hover { background: #d4a94c; }
+.qe-btn-next:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.qe-result-card { background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: var(--r); padding: 36px; margin-top: 4px; position: relative; overflow: hidden; }
+.qe-result-bg-char { position: absolute; top: -10px; right: 10px; font-size: 7rem; line-height: 1; opacity: 0.12; pointer-events: none; user-select: none; }
+.qe-result-type { font-size: 0.63rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
+.qe-result-name { font-family: 'Playfair Display', serif; font-size: clamp(1.4rem, 3vw, 2rem); font-style: italic; color: var(--warm); margin-bottom: 16px; line-height: 1.15; }
+.qe-result-desc { font-size: 0.86rem; line-height: 1.75; color: var(--muted); margin-bottom: 24px; }
+.qe-prompt-label { font-size: 0.63rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
+.qe-prompt-text { font-family: 'Playfair Display', serif; font-style: italic; font-size: 1rem; color: rgba(250,248,244,0.85); line-height: 1.5; padding: 14px; border-left: 3px solid var(--gold); background: rgba(196,154,60,0.06); border-radius: 0 var(--r-sm) var(--r-sm) 0; margin-bottom: 18px; }
+.qe-journal { width: 100%; min-height: 110px; padding: 14px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: var(--r-sm); color: var(--warm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.88rem; resize: vertical; outline: none; transition: border-color 0.2s; line-height: 1.6; }
+.qe-journal::placeholder { color: var(--muted); }
+.qe-journal:focus { border-color: var(--gold); }
+.qe-privacy { font-size: 0.72rem; color: var(--muted); margin-bottom: 10px; }
+.qe-retake button { background: none; border: none; font-size: 0.78rem; color: var(--muted); cursor: pointer; font-family: inherit; text-decoration: underline; transition: color 0.2s; margin-top: 14px; }
+.qe-retake button:hover { color: var(--warm); }
+
+.loading-msg { text-align: center; padding: 40px; color: var(--muted); font-size: 0.88rem; }
+
+footer { padding: 40px 80px; border-top: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.footer-logo { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--warm); text-decoration: none; }
+.footer-note { font-size: 0.72rem; color: var(--muted); }
+.footer-note a { color: var(--gold); text-decoration: none; }
+.footer-crisis { font-size: 0.68rem; color: var(--muted); }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 768px) {
+  nav { padding: 12px 20px; }
+  .nav-links { gap: 12px; }
+  .page-wrap { padding: 100px 20px 60px; }
+  .quiz-grid { grid-template-columns: 1fr; }
+  .modal-overlay { padding: 20px; }
+  footer { padding: 32px 24px; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="/"><span class="logo-i">i</span>need<span class="logo-coaching">coaching</span>.org</a>
+  <div class="nav-links">
+    <a href="/#articles">Articles</a>
+    <a href="/dashboard.html">Dashboard</a>
+    <a href="/welcome.html" class="nav-pill" id="nav-login-btn">Login</a>
+  </div>
+</nav>
+
+<div class="page-wrap">
+  <div class="page-header">
+    <div class="eyebrow"><span class="eyebrow-dot"></span> Self-Assessments</div>
+    <h1>Check in with <em>yourself.</em></h1>
+    <p>Quick, thoughtful quizzes to help you understand where you are and what you might need next.</p>
+  </div>
+  <div id="quizzes-container">
+    <p class="loading-msg">Loading quizzes...</p>
+  </div>
+</div>
+
+<!-- Quiz Modal -->
+<div class="modal-overlay" id="quiz-modal">
+  <div class="modal-content" id="modal-content">
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <div id="modal-quiz-wrap"></div>
+  </div>
+</div>
+
+<footer>
+  <a class="footer-logo" href="/"><span style="color:var(--gold);font-style:italic;">i</span>need<span style="color:var(--gold);font-style:italic;">coaching</span>.org</a>
+  <p class="footer-note">A project from <a href="https://www.ineedtherapy.org">ineedtherapy.org</a></p>
+  <p class="footer-crisis">Not a crisis service — In crisis? Call or text 988</p>
+</footer>
+
+<script>
+const SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+
+// Session check
+(function() {
+  var token = localStorage.getItem('sb_access_token');
+  if (token) {
+    var btn = document.getElementById('nav-login-btn');
+    if (btn) { btn.textContent = 'Dashboard'; btn.href = '/dashboard.html'; }
+  }
+})();
+
+var allQuizzes = [];
+var mqQuestions = [], mqCurrent = 0, mqScore = 0, mqSelected = null, mqResults = [];
+
+async function loadQuizzes() {
+  var container = document.getElementById('quizzes-container');
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/quizzes?is_published=eq.true&select=id,title,slug,description,category,questions&order=category.asc,created_at.desc', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
+    });
+    allQuizzes = await res.json();
+    if (!allQuizzes || !allQuizzes.length) {
+      container.innerHTML = '<p class="loading-msg">Quizzes coming soon.</p>';
+      return;
+    }
+
+    // Group by category
+    var grouped = {};
+    allQuizzes.forEach(function(q) {
+      var cat = q.category || 'General';
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(q);
+    });
+
+    var html = '';
+    Object.keys(grouped).forEach(function(cat) {
+      html += '<div class="category-group">';
+      html += '<div class="category-label">' + cat + '</div>';
+      html += '<div class="quiz-grid">';
+      grouped[cat].forEach(function(quiz, idx) {
+        var qCount = (quiz.questions && quiz.questions.length) || 0;
+        html += '<div class="quiz-card" onclick="openQuiz(' + allQuizzes.indexOf(quiz) + ')">' +
+          '<div class="quiz-card-title">' + quiz.title + '</div>' +
+          '<div class="quiz-card-desc">' + (quiz.description || '') + '</div>' +
+          '<div class="quiz-card-meta">' + qCount + ' question' + (qCount !== 1 ? 's' : '') + ' &middot; ~2 min</div>' +
+        '</div>';
+      });
+      html += '</div></div>';
+    });
+
+    container.innerHTML = html;
+  } catch(e) {
+    container.innerHTML = '<p class="loading-msg">Could not load quizzes. Please try again later.</p>';
+  }
+}
+
+function openQuiz(index) {
+  var quiz = allQuizzes[index];
+  if (!quiz || !quiz.questions || !quiz.questions.length) return;
+
+  mqQuestions = quiz.questions;
+  mqResults = quiz.results || [];
+  mqCurrent = 0; mqScore = 0; mqSelected = null;
+
+  var wrap = document.getElementById('modal-quiz-wrap');
+  wrap.innerHTML =
+    '<div class="quiz-embed-header">' +
+      '<div class="quiz-embed-eyebrow">Self-Assessment</div>' +
+      '<div class="quiz-embed-title">' + quiz.title + '</div>' +
+      '<div class="quiz-embed-desc">' + (quiz.description || 'A quick check-in.') + '</div>' +
+    '</div>' +
+    '<div class="quiz-embed-body">' +
+      '<div class="qe-progress"><div class="qe-progress-fill" id="mq-progress"></div></div>' +
+      '<div id="mq-question-wrap">' +
+        '<div class="qe-question" id="mq-q"></div>' +
+        '<div class="qe-options" id="mq-opts"></div>' +
+        '<div class="qe-nav"><span class="qe-counter" id="mq-counter"></span><button class="qe-btn-next" id="mq-next" disabled onclick="mqNext()">Next \u2192</button></div>' +
+      '</div>' +
+      '<div id="mq-result-wrap" style="display:none;"></div>' +
+    '</div>';
+
+  document.getElementById('quiz-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  mqRender();
+}
+
+function mqRender() {
+  var q = mqQuestions[mqCurrent];
+  document.getElementById('mq-q').textContent = q.question;
+  document.getElementById('mq-counter').textContent = (mqCurrent + 1) + ' of ' + mqQuestions.length;
+  document.getElementById('mq-progress').style.width = ((mqCurrent / mqQuestions.length) * 100) + '%';
+  mqSelected = null;
+  var nextBtn = document.getElementById('mq-next');
+  nextBtn.disabled = true;
+  nextBtn.textContent = mqCurrent === mqQuestions.length - 1 ? 'See my result \u2192' : 'Next \u2192';
+  document.getElementById('mq-opts').innerHTML = q.answers.map(function(a, i) {
+    return '<button class="qe-opt" onclick="mqSelect(this, ' + q.scores[i] + ')"><span class="qe-opt-dot"></span>' + a + '</button>';
+  }).join('');
+}
+
+function mqSelect(btn, score) {
+  document.querySelectorAll('#mq-opts .qe-opt').forEach(function(b) { b.classList.remove('selected'); });
+  btn.classList.add('selected');
+  mqSelected = score;
+  document.getElementById('mq-next').disabled = false;
+}
+
+function mqNext() {
+  if (mqSelected === null) return;
+  mqScore += mqSelected;
+  mqCurrent++;
+  if (mqCurrent < mqQuestions.length) { mqRender(); return; }
+  document.getElementById('mq-progress').style.width = '100%';
+  document.getElementById('mq-question-wrap').style.display = 'none';
+
+  var maxScore = mqQuestions.length * 3;
+  var pct = mqScore / maxScore;
+  var bucket = pct < 0.35 ? 'low' : pct < 0.65 ? 'mid' : 'high';
+
+  var result;
+  if (mqResults && mqResults.length > 0) {
+    result = mqResults.find(function(r) { return r.range === bucket; }) || mqResults[1] || mqResults[0];
+  } else {
+    result = { name: 'Your Result', bg: '\u2726', desc: 'Thank you for completing this assessment.', prompt: 'What stood out to you most?' };
+  }
+
+  document.getElementById('mq-result-wrap').style.display = 'block';
+  document.getElementById('mq-result-wrap').innerHTML =
+    '<div class="qe-result-card">' +
+      '<div class="qe-result-bg-char">' + (result.bg || '\u2726') + '</div>' +
+      '<div class="qe-result-type">Your result</div>' +
+      '<div class="qe-result-name">' + result.name + '</div>' +
+      '<div class="qe-result-desc">' + result.desc + '</div>' +
+      '<div class="qe-prompt-label">A prompt to sit with</div>' +
+      '<div class="qe-prompt-text">' + result.prompt + '</div>' +
+      '<div class="qe-privacy">Your response is private and not saved.</div>' +
+      '<textarea class="qe-journal" placeholder="Write whatever comes to mind. Take your time."></textarea>' +
+      '<div class="qe-retake"><button onclick="mqRetake()">Take this quiz again</button></div>' +
+    '</div>';
+}
+
+function mqRetake() {
+  document.getElementById('mq-result-wrap').style.display = 'none';
+  document.getElementById('mq-question-wrap').style.display = 'block';
+  mqCurrent = 0; mqScore = 0; mqSelected = null;
+  document.getElementById('mq-progress').style.width = '0%';
+  mqRender();
+}
+
+function closeModal() {
+  document.getElementById('quiz-modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Close on overlay click
+document.getElementById('quiz-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// Close on Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeModal();
+});
+
+loadQuizzes();
+</script>
+</body>
+</html>

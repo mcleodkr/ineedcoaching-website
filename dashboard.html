@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard | ineedcoaching.org</title>
+<meta name="description" content="Your personal dashboard on ineedcoaching.org">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #1a1e2e; --gold: #c49a3c; --gold-lt: #faf3e0; --warm: #faf8f4;
+  --white: #ffffff; --muted: #8a8a9a; --border: #2a2e3e;
+  --r: 14px; --r-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--navy); color: var(--warm); min-height: 100vh; }
+
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; align-items: center; justify-content: space-between; padding: 14px 52px; background: rgba(26,30,46,0.95); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
+.logo { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--warm); text-decoration: none; }
+.logo-i { color: var(--gold); font-style: italic; }
+.logo-coaching { color: var(--gold); font-style: italic; }
+.nav-links { display: flex; align-items: center; gap: 20px; }
+.nav-links a { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.nav-links a:hover { color: var(--gold); }
+
+.dash-wrap { max-width: 760px; margin: 0 auto; padding: 100px 40px 80px; }
+
+/* GREETING */
+.greeting { margin-bottom: 40px; }
+.greeting h1 { font-family: 'Playfair Display', serif; font-size: 1.8rem; color: var(--warm); margin-bottom: 8px; }
+.greeting-email { font-size: 0.82rem; color: var(--muted); margin-bottom: 14px; }
+.sign-out-btn { background: none; border: 1.5px solid var(--border); color: var(--muted); padding: 7px 18px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.sign-out-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+/* SECTIONS */
+.dash-section { margin-bottom: 40px; padding: 32px; border: 1.5px solid var(--border); border-radius: var(--r); background: rgba(255,255,255,0.02); }
+.dash-section-label { font-size: 0.63rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 16px; }
+.dash-section h2 { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: var(--warm); margin-bottom: 16px; }
+
+/* MOOD PILLS */
+.mood-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.mood-pill { padding: 10px 20px; border: 1.5px solid var(--border); border-radius: 50px; background: transparent; color: var(--warm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.mood-pill:hover { border-color: var(--gold); }
+.mood-pill.selected { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+.mood-msg { font-size: 0.78rem; color: var(--gold); margin-top: 12px; min-height: 18px; }
+
+/* SAVED ARTICLES */
+.saved-list { display: flex; flex-direction: column; gap: 10px; }
+.saved-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border: 1px solid var(--border); border-radius: var(--r-sm); transition: border-color 0.2s; }
+.saved-item:hover { border-color: var(--gold); }
+.saved-item a { color: var(--warm); text-decoration: none; font-size: 0.88rem; font-weight: 600; transition: color 0.2s; }
+.saved-item a:hover { color: var(--gold); }
+.empty-state { font-size: 0.85rem; color: var(--muted); font-style: italic; }
+
+/* REQUEST FORM */
+.request-toggle { display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+.request-toggle h2 { cursor: pointer; }
+.toggle-icon { font-size: 1.2rem; color: var(--muted); transition: transform 0.2s; }
+.toggle-icon.open { transform: rotate(180deg); }
+.request-form { display: none; margin-top: 20px; }
+.request-form.open { display: block; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--warm); margin-bottom: 6px; }
+.form-group select, .form-group input, .form-group textarea {
+  width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: var(--r-sm);
+  background: rgba(255,255,255,0.05); color: var(--warm); font-family: 'Cabinet Grotesk', sans-serif;
+  font-size: 0.85rem; outline: none; transition: border-color 0.2s;
+}
+.form-group select option { background: var(--navy); color: var(--warm); }
+.form-group select:focus, .form-group input:focus, .form-group textarea:focus { border-color: var(--gold); }
+.form-group textarea { min-height: 80px; resize: vertical; }
+.form-group textarea::placeholder, .form-group input::placeholder { color: var(--muted); }
+.form-submit { background: var(--gold); color: var(--navy); padding: 12px 28px; border-radius: var(--r-sm); border: none; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.form-submit:hover { background: #d4a94c; }
+.form-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.request-msg { font-size: 0.78rem; color: var(--gold); margin-top: 10px; min-height: 18px; }
+
+/* ACTIVE REQUEST */
+.active-request { padding: 18px; border: 1.5px solid var(--gold); border-radius: var(--r-sm); background: rgba(196,154,60,0.06); margin-top: 16px; }
+.active-request-label { font-size: 0.63rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
+.active-request p { font-size: 0.82rem; color: var(--warm); line-height: 1.6; margin-bottom: 4px; }
+
+/* PROMO CARDS */
+.promo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 40px; }
+.promo-card { padding: 28px 24px; border: 1.5px solid var(--border); border-radius: var(--r); text-decoration: none; text-align: center; transition: all 0.25s; display: block; }
+.promo-card:hover { border-color: var(--gold); transform: translateY(-2px); }
+.promo-icon { font-size: 1.4rem; display: block; margin-bottom: 10px; }
+.promo-card h3 { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--warm); margin-bottom: 6px; }
+.promo-card p { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+
+footer { padding: 28px 52px; border-top: 1px solid var(--border); display: flex; justify-content: center; }
+.f-note { font-size: 0.68rem; color: var(--muted); }
+
+@media (max-width: 768px) {
+  nav { padding: 12px 20px; }
+  .dash-wrap { padding: 90px 20px 60px; }
+  .promo-grid { grid-template-columns: 1fr; }
+  .mood-pills { gap: 6px; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="/"><span class="logo-i">i</span>need<span class="logo-coaching">coaching</span>.org</a>
+  <div class="nav-links">
+    <a href="/#articles">Articles</a>
+    <a href="/quizzes.html">Quizzes</a>
+  </div>
+</nav>
+
+<div class="dash-wrap" id="dash-wrap">
+  <!-- Greeting -->
+  <div class="greeting">
+    <h1 id="greeting-text">Welcome back.</h1>
+    <p class="greeting-email" id="user-email"></p>
+    <button class="sign-out-btn" onclick="signOut()">Sign out</button>
+  </div>
+
+  <!-- Daily Check-in -->
+  <div class="dash-section">
+    <div class="dash-section-label">Daily Check-in</div>
+    <h2>How are you today?</h2>
+    <div class="mood-pills" id="mood-pills">
+      <button class="mood-pill" data-mood="Thriving" onclick="selectMood(this)">Thriving</button>
+      <button class="mood-pill" data-mood="Okay" onclick="selectMood(this)">Okay</button>
+      <button class="mood-pill" data-mood="Struggling" onclick="selectMood(this)">Struggling</button>
+      <button class="mood-pill" data-mood="Exhausted" onclick="selectMood(this)">Exhausted</button>
+      <button class="mood-pill" data-mood="Not sure" onclick="selectMood(this)">Not sure</button>
+    </div>
+    <div class="mood-msg" id="mood-msg"></div>
+  </div>
+
+  <!-- Saved Articles -->
+  <div class="dash-section">
+    <div class="dash-section-label">Your Library</div>
+    <h2>Saved Articles</h2>
+    <div class="saved-list" id="saved-list">
+      <p class="empty-state">Loading...</p>
+    </div>
+  </div>
+
+  <!-- Post a Request -->
+  <div class="dash-section">
+    <div class="dash-section-label">The Commons</div>
+    <div class="request-toggle" onclick="toggleRequest()">
+      <h2>Post a Request</h2>
+      <span class="toggle-icon" id="toggle-icon">&#x25BC;</span>
+    </div>
+    <div class="request-form" id="request-form">
+      <div class="form-group">
+        <label>What are you working through?</label>
+        <select id="req-struggle">
+          <option value="">Select one...</option>
+          <option value="Career transition">Career transition</option>
+          <option value="Leadership growth">Leadership growth</option>
+          <option value="Burnout">Burnout</option>
+          <option value="Confidence">Confidence</option>
+          <option value="Relationships">Relationships</option>
+          <option value="Anxiety">Anxiety</option>
+          <option value="Life direction">Life direction</option>
+          <option value="Health and wellness">Health and wellness</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>What type of support?</label>
+        <select id="req-support">
+          <option value="Coaching">Coaching</option>
+          <option value="Therapy">Therapy</option>
+          <option value="Open to any provider">Open to any provider</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Format preference</label>
+        <select id="req-format">
+          <option value="">No preference</option>
+          <option value="Video">Video</option>
+          <option value="Phone">Phone</option>
+          <option value="In-person">In-person</option>
+          <option value="Text-based">Text-based</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Availability</label>
+        <select id="req-availability">
+          <option value="">No preference</option>
+          <option value="Weekday mornings">Weekday mornings</option>
+          <option value="Weekday evenings">Weekday evenings</option>
+          <option value="Weekends">Weekends</option>
+          <option value="Flexible">Flexible</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Budget range</label>
+        <select id="req-budget">
+          <option value="">Prefer not to say</option>
+          <option value="Under $50/session">Under $50/session</option>
+          <option value="$50-100/session">$50-100/session</option>
+          <option value="$100-200/session">$100-200/session</option>
+          <option value="$200+/session">$200+/session</option>
+          <option value="Sliding scale only">Sliding scale only</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Anything else?</label>
+        <textarea id="req-notes" placeholder="Optional: share anything that would help a provider understand what you need."></textarea>
+      </div>
+      <button class="form-submit" id="req-submit" onclick="postRequest()">Post my request</button>
+      <div class="request-msg" id="req-msg"></div>
+    </div>
+    <div id="active-request-slot"></div>
+  </div>
+
+  <!-- Promo cards -->
+  <div class="promo-grid">
+    <a href="https://www.sprixle.com" target="_blank" class="promo-card">
+      <span class="promo-icon">&#x2728;</span>
+      <h3>Sprixle</h3>
+      <p>Private journaling, pattern tracking, and AI companion. Free to start.</p>
+    </a>
+    <a href="https://www.ineedtherapy.org/wellness-snapshot.html" target="_blank" class="promo-card">
+      <span class="promo-icon">&#x1F4CA;</span>
+      <h3>Wellness Snapshot</h3>
+      <p>A quick check-in to see where you are right now.</p>
+    </a>
+  </div>
+</div>
+
+<footer>
+  <span class="f-note">Not a crisis service — In crisis? Call or text 988</span>
+</footer>
+
+<script>
+const SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+
+var currentUserEmail = '';
+
+// Check for magic link callback in hash (in case redirected here)
+(function() {
+  var hash = window.location.hash;
+  if (hash && hash.includes('access_token')) {
+    var params = new URLSearchParams(hash.substring(1));
+    var accessToken = params.get('access_token');
+    if (accessToken) {
+      localStorage.setItem('sb_access_token', accessToken);
+      var refreshToken = params.get('refresh_token');
+      if (refreshToken) localStorage.setItem('sb_refresh_token', refreshToken);
+      window.location.hash = '';
+    }
+  }
+})();
+
+// Auth check
+async function initDashboard() {
+  var token = localStorage.getItem('sb_access_token');
+  if (!token) { window.location.href = '/welcome.html'; return; }
+
+  try {
+    var res = await fetch(SUPABASE_URL + '/auth/v1/user', {
+      headers: { 'Authorization': 'Bearer ' + token, 'apikey': ANON_KEY }
+    });
+    if (!res.ok) { localStorage.removeItem('sb_access_token'); window.location.href = '/welcome.html'; return; }
+    var user = await res.json();
+    currentUserEmail = user.email;
+    document.getElementById('user-email').textContent = currentUserEmail;
+
+    // Load data
+    loadSavedArticles();
+    loadActiveRequest();
+    checkPrefill();
+  } catch(e) {
+    localStorage.removeItem('sb_access_token');
+    window.location.href = '/welcome.html';
+  }
+}
+
+function signOut() {
+  localStorage.removeItem('sb_access_token');
+  localStorage.removeItem('sb_refresh_token');
+  window.location.href = '/';
+}
+
+// Daily check-in
+async function selectMood(btn) {
+  document.querySelectorAll('.mood-pill').forEach(function(p) { p.classList.remove('selected'); });
+  btn.classList.add('selected');
+  var mood = btn.dataset.mood;
+  var msg = document.getElementById('mood-msg');
+
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/explorer_checkins', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ user_email: currentUserEmail, mood: mood, created_at: new Date().toISOString() })
+    });
+    msg.textContent = 'Noted. Take care of yourself today.';
+  } catch(e) {
+    msg.textContent = 'Could not save. Try again.';
+  }
+}
+
+// Saved articles
+async function loadSavedArticles() {
+  var list = document.getElementById('saved-list');
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/saved_articles?user_email=eq.' + encodeURIComponent(currentUserEmail) + '&select=article_slug,article_title&order=created_at.desc', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
+    });
+    var articles = await res.json();
+    if (!articles || !articles.length) {
+      list.innerHTML = '<p class="empty-state">No saved articles yet.</p>';
+      return;
+    }
+    list.innerHTML = articles.map(function(a) {
+      return '<div class="saved-item"><a href="/article.html?slug=' + encodeURIComponent(a.article_slug) + '">' + (a.article_title || a.article_slug) + '</a></div>';
+    }).join('');
+  } catch(e) {
+    list.innerHTML = '<p class="empty-state">Could not load saved articles.</p>';
+  }
+}
+
+// Request form toggle
+function toggleRequest() {
+  var form = document.getElementById('request-form');
+  var icon = document.getElementById('toggle-icon');
+  form.classList.toggle('open');
+  icon.classList.toggle('open');
+}
+
+// Post request
+async function postRequest() {
+  var struggle = document.getElementById('req-struggle').value;
+  var support = document.getElementById('req-support').value;
+  var format = document.getElementById('req-format').value;
+  var availability = document.getElementById('req-availability').value;
+  var budget = document.getElementById('req-budget').value;
+  var notes = document.getElementById('req-notes').value.trim();
+  var msg = document.getElementById('req-msg');
+  var btn = document.getElementById('req-submit');
+
+  if (!struggle) { msg.textContent = 'Please select what you are working through.'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Posting...';
+  msg.textContent = '';
+
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/explorer_requests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        user_email: currentUserEmail,
+        struggle_type: struggle,
+        support_type: support,
+        format_preference: format,
+        availability: availability,
+        budget: budget,
+        notes: notes,
+        source: 'ineedcoaching.org',
+        status: 'active'
+      })
+    });
+    if (res.ok) {
+      msg.textContent = 'Your request has been posted.';
+      btn.textContent = 'Posted';
+      loadActiveRequest();
+    } else {
+      msg.textContent = 'Something went wrong. Please try again.';
+      btn.disabled = false;
+      btn.textContent = 'Post my request';
+    }
+  } catch(e) {
+    msg.textContent = 'Network error. Please try again.';
+    btn.disabled = false;
+    btn.textContent = 'Post my request';
+  }
+}
+
+// Active request
+async function loadActiveRequest() {
+  var slot = document.getElementById('active-request-slot');
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/explorer_requests?user_email=eq.' + encodeURIComponent(currentUserEmail) + '&status=eq.active&order=created_at.desc&limit=1', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
+    });
+    var requests = await res.json();
+    if (requests && requests.length) {
+      var r = requests[0];
+      slot.innerHTML = '<div class="active-request">' +
+        '<div class="active-request-label">Your Active Request</div>' +
+        '<p><strong>Working through:</strong> ' + r.struggle_type + '</p>' +
+        '<p><strong>Support type:</strong> ' + r.support_type + '</p>' +
+        (r.format_preference ? '<p><strong>Format:</strong> ' + r.format_preference + '</p>' : '') +
+        (r.availability ? '<p><strong>Availability:</strong> ' + r.availability + '</p>' : '') +
+        (r.budget ? '<p><strong>Budget:</strong> ' + r.budget + '</p>' : '') +
+        (r.notes ? '<p><strong>Notes:</strong> ' + r.notes + '</p>' : '') +
+      '</div>';
+    }
+  } catch(e) { /* silent */ }
+}
+
+// Check URL prefill
+function checkPrefill() {
+  var params = new URLSearchParams(window.location.search);
+  var struggle = params.get('prefill_struggle');
+  if (struggle) {
+    document.getElementById('req-struggle').value = struggle;
+    toggleRequest();
+  }
+}
+
+initDashboard();
+</script>
+</body>
+</html>
