@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coach Dashboard | ineedcoaching.org</title>
+<meta name="description" content="Manage your coaching profile, bookings, testimonials, and recommendations on ineedcoaching.org">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #1a2e1a;
+  --forest: #4a7c59;
+  --cream: #f7f4ee;
+  --white: #ffffff;
+  --gold: #c49a3c;
+  --gold-hover: #a87d1f;
+  --muted: #6b6b60;
+  --border: #e0ddd5;
+  --r: 14px;
+  --r-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); color: var(--ink); min-height: 100vh; }
+
+/* LOGIN SCREEN */
+.login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; background: var(--cream); }
+.login-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 48px 40px; max-width: 440px; width: 100%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.06); }
+.login-card h1 { font-family: 'Playfair Display', serif; font-size: 1.8rem; color: var(--ink); margin-bottom: 10px; }
+.login-card .login-sub { font-size: 0.92rem; color: var(--muted); margin-bottom: 28px; line-height: 1.6; }
+.login-card input[type="email"] { width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; color: var(--ink); background: var(--cream); margin-bottom: 14px; transition: border-color 0.2s; }
+.login-card input[type="email"]:focus { outline: none; border-color: var(--gold); }
+.login-card input[type="email"]::placeholder { color: var(--muted); }
+.login-btn { width: 100%; padding: 14px 24px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+.login-btn:hover { background: var(--gold-hover); }
+.login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.login-msg { font-size: 0.82rem; color: var(--gold); margin-top: 14px; min-height: 20px; }
+.login-logo { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; color: var(--ink); margin-bottom: 24px; }
+.login-logo .logo-i { color: var(--gold); font-style: italic; }
+.login-logo .logo-coaching { color: var(--gold); font-style: italic; }
+
+/* DASHBOARD */
+.dashboard { display: none; }
+
+/* TOP NAV */
+.top-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; align-items: center; justify-content: space-between; padding: 14px 52px; background: var(--ink); border-bottom: 1px solid rgba(255,255,255,0.1); }
+.logo { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--cream); text-decoration: none; }
+.logo .logo-i { color: var(--gold); font-style: italic; }
+.logo .logo-coaching { color: var(--gold); font-style: italic; }
+.nav-right { display: flex; align-items: center; gap: 18px; }
+.nav-coach-name { font-size: 0.85rem; font-weight: 600; color: var(--cream); }
+.nav-profile-link { font-size: 0.78rem; font-weight: 700; color: var(--gold); text-decoration: none; transition: color 0.2s; }
+.nav-profile-link:hover { color: #d4a94c; }
+.sign-out-btn { background: none; border: 1.5px solid rgba(255,255,255,0.2); color: var(--cream); padding: 7px 18px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.sign-out-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+/* TABS */
+.tab-bar { position: fixed; top: 55px; left: 0; right: 0; z-index: 299; background: var(--white); border-bottom: 1px solid var(--border); display: flex; padding: 0 52px; }
+.tab-btn { padding: 14px 24px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; font-weight: 700; color: var(--muted); background: none; border: none; border-bottom: 2.5px solid transparent; cursor: pointer; transition: all 0.2s; }
+.tab-btn:hover { color: var(--ink); }
+.tab-btn.active { color: var(--ink); border-bottom-color: var(--gold); }
+
+/* CONTENT */
+.dash-content { max-width: 900px; margin: 0 auto; padding: 130px 40px 80px; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* FORM STYLES */
+.form-section { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 32px; margin-bottom: 24px; }
+.form-section-title { font-family: 'Playfair Display', serif; font-size: 1.15rem; color: var(--ink); margin-bottom: 20px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.form-group { margin-bottom: 16px; }
+.form-group.full { grid-column: 1 / -1; }
+.form-group label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--ink); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.92rem; color: var(--ink); background: var(--cream); transition: border-color 0.2s; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--gold); }
+.form-group textarea { min-height: 120px; resize: vertical; }
+.form-group textarea::placeholder, .form-group input::placeholder { color: var(--muted); }
+.char-count { font-size: 0.72rem; color: var(--muted); text-align: right; margin-top: 4px; }
+
+/* PHOTO SECTION */
+.photo-section { display: flex; align-items: center; gap: 24px; margin-bottom: 24px; }
+.photo-preview { width: 100px; height: 100px; border-radius: var(--r); object-fit: cover; border: 1px solid var(--border); }
+.photo-initials { width: 100px; height: 100px; border-radius: var(--r); background: var(--ink); display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-size: 2.2rem; font-weight: 900; color: var(--gold); }
+.photo-upload-area { flex: 1; }
+.photo-upload-area label.upload-label { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: var(--white); border: 1.5px solid var(--border); border-radius: var(--r-sm); font-size: 0.85rem; font-weight: 600; color: var(--ink); cursor: pointer; transition: all 0.2s; }
+.photo-upload-area label.upload-label:hover { border-color: var(--gold); }
+.photo-upload-area input[type="file"] { display: none; }
+.photo-upload-area .photo-hint { font-size: 0.75rem; color: var(--muted); margin-top: 6px; }
+
+/* PILLS */
+.pills-container { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: rgba(196,154,60,0.12); color: var(--gold); border: 1px solid rgba(196,154,60,0.3); border-radius: 50px; font-size: 0.8rem; font-weight: 600; }
+.pill .pill-remove { background: none; border: none; color: var(--gold); font-size: 1rem; cursor: pointer; line-height: 1; padding: 0; margin-left: 2px; opacity: 0.7; transition: opacity 0.2s; }
+.pill .pill-remove:hover { opacity: 1; }
+.pill-add-row { display: flex; gap: 8px; }
+.pill-add-row input { flex: 1; padding: 8px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; color: var(--ink); background: var(--cream); }
+.pill-add-row input:focus { outline: none; border-color: var(--gold); }
+.pill-add-btn { padding: 8px 16px; background: var(--ink); color: var(--cream); border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+.pill-add-btn:hover { background: var(--gold); }
+
+/* SAVE BUTTON */
+.save-btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 32px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.save-btn:hover { background: var(--gold-hover); }
+.save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.save-msg { display: inline-block; font-size: 0.82rem; color: var(--forest); margin-left: 14px; opacity: 0; transition: opacity 0.3s; }
+.save-msg.show { opacity: 1; }
+
+/* SERVICES LIST */
+.service-item { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 24px; margin-bottom: 14px; }
+.service-item-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.service-item h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--ink); }
+.service-item p { font-size: 0.88rem; color: var(--muted); line-height: 1.6; margin-bottom: 8px; }
+.service-item-meta { display: flex; align-items: center; gap: 16px; font-size: 0.82rem; color: var(--muted); }
+.service-item-meta .price { font-weight: 700; color: var(--gold); font-family: 'Playfair Display', serif; font-size: 1rem; }
+
+/* TOGGLE SWITCH */
+.toggle-switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: var(--border); border-radius: 24px; transition: 0.2s; }
+.toggle-slider::before { content: ''; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: var(--white); border-radius: 50%; transition: 0.2s; }
+.toggle-switch input:checked + .toggle-slider { background: var(--forest); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+/* ADD SERVICE FORM */
+.add-service-form { background: var(--cream); border: 1px solid var(--border); border-radius: var(--r); padding: 24px; margin-top: 14px; display: none; }
+.add-service-form.open { display: block; }
+.add-service-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; background: var(--ink); color: var(--cream); border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: background 0.2s; margin-top: 14px; }
+.add-service-btn:hover { background: var(--gold); }
+.checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.checkbox-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--gold); }
+.checkbox-row label { font-size: 0.85rem; color: var(--ink); text-transform: none; letter-spacing: 0; font-weight: 500; }
+
+/* BOOKINGS TABLE */
+.bookings-table-wrap { overflow-x: auto; }
+.bookings-table { width: 100%; border-collapse: collapse; background: var(--white); border-radius: var(--r); overflow: hidden; border: 1px solid var(--border); }
+.bookings-table th { padding: 14px 16px; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); text-align: left; background: var(--cream); border-bottom: 1px solid var(--border); }
+.bookings-table td { padding: 14px 16px; font-size: 0.88rem; color: var(--ink); border-bottom: 1px solid var(--border); vertical-align: top; }
+.bookings-table tr:last-child td { border-bottom: none; }
+
+/* STATUS PILLS */
+.status-pill { display: inline-block; padding: 4px 12px; border-radius: 50px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+.status-pending { background: rgba(196,154,60,0.15); color: var(--gold); }
+.status-confirmed { background: rgba(74,124,89,0.15); color: var(--forest); }
+.status-rejected { background: rgba(107,107,96,0.12); color: var(--muted); }
+.status-completed { background: rgba(26,46,26,0.12); color: var(--ink); }
+
+/* ACTION BUTTONS */
+.action-btn { padding: 6px 14px; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; margin-right: 6px; }
+.action-confirm { background: var(--forest); color: var(--white); }
+.action-confirm:hover { background: #3a6c49; }
+.action-decline { background: var(--cream); color: var(--muted); border: 1px solid var(--border); }
+.action-decline:hover { border-color: var(--muted); }
+.action-approve { background: var(--forest); color: var(--white); }
+.action-approve:hover { background: #3a6c49; }
+.action-remove { background: var(--cream); color: var(--muted); border: 1px solid var(--border); }
+.action-remove:hover { border-color: var(--muted); }
+
+/* TESTIMONIAL & REC CARDS */
+.review-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 28px; margin-bottom: 16px; }
+.review-card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+.review-card-author { font-weight: 700; font-size: 0.92rem; color: var(--ink); }
+.review-card-title { font-size: 0.82rem; color: var(--muted); }
+.review-card-company { font-size: 0.8rem; color: var(--muted); }
+.review-card-text { font-size: 0.92rem; line-height: 1.8; color: var(--muted); font-style: italic; margin-bottom: 16px; }
+.review-card-stars { display: flex; gap: 3px; margin-bottom: 12px; }
+.review-card-stars .star { color: var(--gold); font-size: 1rem; }
+.review-card-stars .star.empty { color: var(--border); }
+.review-badge { display: inline-block; padding: 4px 12px; border-radius: 50px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+.badge-live { background: rgba(74,124,89,0.15); color: var(--forest); }
+.badge-pending-review { background: rgba(196,154,60,0.15); color: var(--gold); }
+.review-card-actions { display: flex; gap: 8px; margin-top: 14px; }
+
+/* EMPTY STATES */
+.empty-state { text-align: center; padding: 48px 24px; }
+.empty-state p { font-size: 0.92rem; color: var(--muted); font-style: italic; line-height: 1.6; }
+
+/* NO PROFILE STATE */
+.no-profile { text-align: center; padding: 80px 24px; }
+.no-profile h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--ink); margin-bottom: 12px; }
+.no-profile p { color: var(--muted); font-size: 0.95rem; }
+.no-profile a { color: var(--gold); }
+
+/* LOADING SPINNER */
+.loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 16px; }
+.loading-spinner { width: 48px; height: 48px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* MOBILE */
+@media (max-width: 768px) {
+  .top-nav { padding: 12px 20px; }
+  .tab-bar { padding: 0 12px; overflow-x: auto; }
+  .tab-btn { padding: 12px 16px; font-size: 0.8rem; white-space: nowrap; }
+  .dash-content { padding: 120px 16px 60px; }
+  .form-row { grid-template-columns: 1fr; }
+  .photo-section { flex-direction: column; align-items: flex-start; }
+  .service-item-header { flex-direction: column; gap: 8px; align-items: flex-start; }
+  .bookings-table { font-size: 0.82rem; }
+  .bookings-table th, .bookings-table td { padding: 10px 10px; }
+  .nav-right { gap: 10px; }
+  .nav-coach-name { display: none; }
+  .login-card { padding: 32px 24px; }
+  .form-section { padding: 24px 18px; }
+}
+
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <div class="login-logo"><span class="logo-i">i</span>need<span class="logo-coaching">coaching</span>.org</div>
+    <h1>Coach Dashboard</h1>
+    <p class="login-sub">Sign in with your email to manage your profile.</p>
+    <form id="login-form">
+      <input type="email" id="login-email" placeholder="you@example.com" required>
+      <button type="submit" class="login-btn" id="login-submit">Send magic link</button>
+    </form>
+    <div class="login-msg" id="login-msg"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="dashboard">
+
+  <!-- TOP NAV -->
+  <nav class="top-nav">
+    <a href="/" class="logo"><span class="logo-i">i</span>need<span class="logo-coaching">coaching</span>.org</a>
+    <div class="nav-right">
+      <span class="nav-coach-name" id="nav-coach-name"></span>
+      <a href="#" class="nav-profile-link" id="nav-profile-link">View my profile &rarr;</a>
+      <button class="sign-out-btn" id="sign-out-btn">Sign out</button>
+    </div>
+  </nav>
+
+  <!-- TAB BAR -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="profile">Profile</button>
+    <button class="tab-btn" data-tab="bookings">Bookings</button>
+    <button class="tab-btn" data-tab="testimonials">Testimonials</button>
+    <button class="tab-btn" data-tab="recommendations">Recommendations</button>
+  </div>
+
+  <!-- LOADING -->
+  <div id="dash-loading" class="loading-state">
+    <div class="loading-spinner"></div>
+    <p style="color:var(--muted);font-size:0.9rem;">Loading your dashboard...</p>
+  </div>
+
+  <!-- NO PROFILE -->
+  <div id="no-profile" class="no-profile hidden">
+    <h2>No coach profile found for this email.</h2>
+    <p>If you believe this is an error, contact <a href="mailto:admin@ineedcoaching.org">admin@ineedcoaching.org</a>.</p>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="dash-content" class="dash-content hidden">
+
+    <!-- PROFILE TAB -->
+    <div id="tab-profile" class="tab-panel active">
+
+      <!-- Photo -->
+      <div class="form-section">
+        <h2 class="form-section-title">Profile Photo</h2>
+        <div class="photo-section">
+          <div id="photo-preview-container"></div>
+          <div class="photo-upload-area">
+            <label class="upload-label" for="photo-input">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+              Upload new photo
+            </label>
+            <input type="file" id="photo-input" accept="image/*">
+            <p class="photo-hint">JPG or PNG, max 5MB</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Basic Info -->
+      <div class="form-section">
+        <h2 class="form-section-title">Basic Information</h2>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="f-display-name">Display Name</label>
+            <input type="text" id="f-display-name" placeholder="How clients see your name">
+          </div>
+          <div class="form-group">
+            <label for="f-full-name">Full Name</label>
+            <input type="text" id="f-full-name" placeholder="Your legal name">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="f-headline">Headline</label>
+          <input type="text" id="f-headline" placeholder="Executive coach helping leaders thrive" maxlength="200">
+          <div class="char-count"><span id="headline-count">0</span>/200</div>
+        </div>
+        <div class="form-group">
+          <label for="f-bio">Bio</label>
+          <textarea id="f-bio" placeholder="Tell potential clients about yourself..." style="min-height:160px;"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="f-philosophy">Coaching Philosophy</label>
+          <textarea id="f-philosophy" placeholder="What drives your approach to coaching..."></textarea>
+        </div>
+      </div>
+
+      <!-- Details -->
+      <div class="form-section">
+        <h2 class="form-section-title">Details</h2>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="f-company">Company Name</label>
+            <input type="text" id="f-company" placeholder="Your coaching practice or firm">
+          </div>
+          <div class="form-group">
+            <label for="f-location">Location</label>
+            <input type="text" id="f-location" placeholder="City, State">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="f-experience">Years of Experience</label>
+            <input type="number" id="f-experience" placeholder="0" min="0" max="99">
+          </div>
+          <div class="form-group">
+            <label for="f-website">Website URL</label>
+            <input type="url" id="f-website" placeholder="https://yoursite.com">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="f-linkedin">LinkedIn URL</label>
+            <input type="url" id="f-linkedin" placeholder="https://linkedin.com/in/you">
+          </div>
+          <div class="form-group">
+            <label for="f-instagram">Instagram URL</label>
+            <input type="url" id="f-instagram" placeholder="https://instagram.com/you">
+          </div>
+        </div>
+      </div>
+
+      <!-- Specialties -->
+      <div class="form-section">
+        <h2 class="form-section-title">Specialties</h2>
+        <div class="pills-container" id="specialties-pills"></div>
+        <div class="pill-add-row">
+          <input type="text" id="specialty-input" placeholder="Add a specialty...">
+          <button class="pill-add-btn" id="add-specialty-btn">Add</button>
+        </div>
+      </div>
+
+      <!-- Credentials -->
+      <div class="form-section">
+        <h2 class="form-section-title">Credentials</h2>
+        <div class="pills-container" id="credentials-pills"></div>
+        <div class="pill-add-row">
+          <input type="text" id="credential-input" placeholder="Add a credential...">
+          <button class="pill-add-btn" id="add-credential-btn">Add</button>
+        </div>
+      </div>
+
+      <!-- Certifications -->
+      <div class="form-section">
+        <h2 class="form-section-title">Certifications</h2>
+        <div class="pills-container" id="certifications-pills"></div>
+        <div class="pill-add-row">
+          <input type="text" id="certification-input" placeholder="Add a certification...">
+          <button class="pill-add-btn" id="add-certification-btn">Add</button>
+        </div>
+      </div>
+
+      <!-- Save -->
+      <div style="margin-bottom:32px;">
+        <button class="save-btn" id="save-profile-btn">Save profile</button>
+        <span class="save-msg" id="save-profile-msg">Saved</span>
+      </div>
+
+      <!-- Services -->
+      <div class="form-section">
+        <h2 class="form-section-title">Services</h2>
+        <div id="services-list"></div>
+        <button class="add-service-btn" id="toggle-add-service">+ Add service</button>
+        <div class="add-service-form" id="add-service-form">
+          <div class="form-group">
+            <label for="svc-name">Service Name</label>
+            <input type="text" id="svc-name" placeholder="1:1 Executive Coaching">
+          </div>
+          <div class="form-group">
+            <label for="svc-desc">Description</label>
+            <textarea id="svc-desc" placeholder="What this service includes..." style="min-height:80px;"></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="svc-price">Price ($)</label>
+              <input type="number" id="svc-price" placeholder="250" min="0">
+              <div class="checkbox-row" style="margin-top:8px;">
+                <input type="checkbox" id="svc-contact-pricing">
+                <label for="svc-contact-pricing">Contact for pricing</label>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="svc-duration">Duration</label>
+              <input type="text" id="svc-duration" placeholder="60 min">
+            </div>
+          </div>
+          <button class="save-btn" id="save-service-btn" style="margin-right:8px;">Save service</button>
+          <button class="action-decline" id="cancel-service-btn" style="padding:14px 24px;">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOOKINGS TAB -->
+    <div id="tab-bookings" class="tab-panel">
+      <div id="bookings-loading" class="loading-state" style="min-height:30vh;">
+        <div class="loading-spinner"></div>
+      </div>
+      <div id="bookings-content" class="hidden"></div>
+    </div>
+
+    <!-- TESTIMONIALS TAB -->
+    <div id="tab-testimonials" class="tab-panel">
+      <div id="testimonials-loading" class="loading-state" style="min-height:30vh;">
+        <div class="loading-spinner"></div>
+      </div>
+      <div id="testimonials-content" class="hidden"></div>
+    </div>
+
+    <!-- RECOMMENDATIONS TAB -->
+    <div id="tab-recommendations" class="tab-panel">
+      <div id="recs-loading" class="loading-state" style="min-height:30vh;">
+        <div class="loading-spinner"></div>
+      </div>
+      <div id="recs-content" class="hidden"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ================================================
+   SUPABASE CONFIG
+   ================================================ */
+const SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+const TOKEN_KEY = 'sb_access_token';
+
+let currentToken = null;
+let currentUser = null;
+let coachProfile = null;
+
+/* ================================================
+   HELPERS
+   ================================================ */
+function apiHeaders(token) {
+  return {
+    'apikey': ANON_KEY,
+    'Authorization': 'Bearer ' + (token || currentToken),
+    'Content-Type': 'application/json'
+  };
+}
+
+async function supabaseGet(path, token) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    headers: apiHeaders(token)
+  });
+  return res.json();
+}
+
+async function supabasePatch(table, match, body) {
+  const params = new URLSearchParams(match).toString();
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?' + params, {
+    method: 'PATCH',
+    headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
+    body: JSON.stringify(body)
+  });
+  return res.json();
+}
+
+async function supabaseDelete(table, match) {
+  const params = new URLSearchParams(match).toString();
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?' + params, {
+    method: 'DELETE',
+    headers: { ...apiHeaders(), 'Prefer': 'return=representation' }
+  });
+  return res.json();
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function $(id) { return document.getElementById(id); }
+
+/* ================================================
+   AUTH: CHECK URL HASH FOR TOKEN
+   ================================================ */
+(function checkHash() {
+  const hash = window.location.hash;
+  if (hash && hash.includes('access_token')) {
+    const params = new URLSearchParams(hash.substring(1));
+    const token = params.get('access_token');
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+      window.location.hash = '';
+      window.location.reload();
+      return;
+    }
+  }
+})();
+
+/* ================================================
+   AUTH: LOGIN FORM
+   ================================================ */
+$('login-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  var email = $('login-email').value.trim();
+  if (!email) return;
+  var btn = $('login-submit');
+  var msg = $('login-msg');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  msg.textContent = '';
+  try {
+    var res = await fetch(SUPABASE_URL + '/auth/v1/magiclink', {
+      method: 'POST',
+      headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email,
+        options: { emailRedirectTo: window.location.origin + '/coach-dashboard.html' }
+      })
+    });
+    if (res.ok || res.status === 200) {
+      msg.textContent = 'Check your email \u2014 your link is waiting.';
+      msg.style.color = 'var(--forest)';
+    } else {
+      var data = await res.json();
+      msg.textContent = data.msg || data.error_description || 'Something went wrong. Try again.';
+      msg.style.color = '#c44';
+    }
+  } catch (err) {
+    msg.textContent = 'Network error. Please try again.';
+    msg.style.color = '#c44';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Send magic link';
+});
+
+/* ================================================
+   AUTH: VERIFY TOKEN & LOAD DASHBOARD
+   ================================================ */
+async function init() {
+  var token = localStorage.getItem(TOKEN_KEY);
+  if (!token) {
+    $('login-screen').style.display = 'flex';
+    return;
+  }
+
+  // Hide login, show dashboard shell
+  $('login-screen').style.display = 'none';
+  $('dashboard').style.display = 'block';
+
+  // Verify token
+  try {
+    var res = await fetch(SUPABASE_URL + '/auth/v1/user', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) {
+      localStorage.removeItem(TOKEN_KEY);
+      window.location.reload();
+      return;
+    }
+    currentUser = await res.json();
+    currentToken = token;
+  } catch (err) {
+    localStorage.removeItem(TOKEN_KEY);
+    window.location.reload();
+    return;
+  }
+
+  // Load coach profile by user email
+  var email = currentUser.email;
+  try {
+    var profiles = await supabaseGet('coach_profiles?email=eq.' + encodeURIComponent(email) + '&select=*', token);
+    if (!profiles || profiles.length === 0) {
+      $('dash-loading').style.display = 'none';
+      $('no-profile').classList.remove('hidden');
+      return;
+    }
+    coachProfile = profiles[0];
+  } catch (err) {
+    $('dash-loading').style.display = 'none';
+    $('no-profile').classList.remove('hidden');
+    return;
+  }
+
+  // Show dashboard
+  $('dash-loading').style.display = 'none';
+  $('dash-content').classList.remove('hidden');
+  $('nav-coach-name').textContent = coachProfile.display_name || coachProfile.full_name || '';
+  $('nav-profile-link').href = '/coach/' + (coachProfile.slug || '');
+
+  populateProfileForm();
+  setupTabs();
+  setupProfileHandlers();
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function setupTabs() {
+  var btns = document.querySelectorAll('.tab-btn');
+  btns.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      btns.forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+      var panel = $('tab-' + btn.dataset.tab);
+      if (panel) panel.classList.add('active');
+
+      // Lazy load tab data
+      if (btn.dataset.tab === 'bookings' && !btn._loaded) {
+        btn._loaded = true;
+        loadBookings();
+      }
+      if (btn.dataset.tab === 'testimonials' && !btn._loaded) {
+        btn._loaded = true;
+        loadTestimonials();
+      }
+      if (btn.dataset.tab === 'recommendations' && !btn._loaded) {
+        btn._loaded = true;
+        loadRecommendations();
+      }
+    });
+  });
+}
+
+/* ================================================
+   PROFILE FORM
+   ================================================ */
+var profileSpecialties = [];
+var profileCredentials = [];
+var profileCertifications = [];
+var profileServices = [];
+
+function populateProfileForm() {
+  var p = coachProfile;
+
+  // Photo
+  renderPhotoPreview();
+
+  // Fields
+  $('f-display-name').value = p.display_name || '';
+  $('f-full-name').value = p.full_name || '';
+  $('f-headline').value = p.headline || '';
+  $('headline-count').textContent = (p.headline || '').length;
+  $('f-bio').value = p.bio || '';
+  $('f-philosophy').value = p.philosophy || '';
+  $('f-company').value = p.company_name || '';
+  $('f-location').value = p.location || '';
+  $('f-experience').value = p.years_experience != null ? p.years_experience : '';
+  $('f-website').value = p.website_url || '';
+  $('f-linkedin').value = p.linkedin_url || '';
+  $('f-instagram').value = p.instagram_url || '';
+
+  // Arrays
+  profileSpecialties = Array.isArray(p.specialties) ? p.specialties.slice() : [];
+  profileCredentials = Array.isArray(p.credentials) ? p.credentials.slice() : [];
+  profileCertifications = Array.isArray(p.certifications) ? p.certifications.slice() : [];
+  profileServices = Array.isArray(p.services) ? p.services.slice() : [];
+
+  renderPills('specialties-pills', profileSpecialties, 'specialty');
+  renderPills('credentials-pills', profileCredentials, 'credential');
+  renderPills('certifications-pills', profileCertifications, 'certification');
+  renderServices();
+}
+
+function renderPhotoPreview() {
+  var container = $('photo-preview-container');
+  if (coachProfile.photo_url) {
+    container.innerHTML = '<img class="photo-preview" src="' + escapeHtml(coachProfile.photo_url) + '" alt="Profile photo">';
+  } else {
+    var initials = getInitials(coachProfile.display_name || coachProfile.full_name || '?');
+    container.innerHTML = '<div class="photo-initials">' + escapeHtml(initials) + '</div>';
+  }
+}
+
+function getInitials(name) {
+  return name.split(' ').map(function(w) { return w[0]; }).join('').substring(0, 2).toUpperCase();
+}
+
+function renderPills(containerId, arr, type) {
+  var c = $(containerId);
+  c.innerHTML = '';
+  arr.forEach(function(item, idx) {
+    var pill = document.createElement('span');
+    pill.className = 'pill';
+    pill.innerHTML = escapeHtml(item) + ' <button class="pill-remove" data-type="' + type + '" data-idx="' + idx + '">&times;</button>';
+    c.appendChild(pill);
+  });
+}
+
+function renderServices() {
+  var c = $('services-list');
+  if (!profileServices.length) {
+    c.innerHTML = '<div class="empty-state"><p>No services added yet.</p></div>';
+    return;
+  }
+  var html = '';
+  profileServices.forEach(function(svc, idx) {
+    var isActive = svc.active !== false;
+    var priceDisplay = svc.contact_pricing ? 'Contact for pricing' : (svc.price ? '$' + svc.price : 'Free');
+    html += '<div class="service-item">'
+      + '<div class="service-item-header">'
+      + '<h3>' + escapeHtml(svc.name || 'Untitled') + '</h3>'
+      + '<label class="toggle-switch"><input type="checkbox" data-svc-idx="' + idx + '" ' + (isActive ? 'checked' : '') + '><span class="toggle-slider"></span></label>'
+      + '</div>'
+      + (svc.description ? '<p>' + escapeHtml(svc.description) + '</p>' : '')
+      + '<div class="service-item-meta">'
+      + '<span class="price">' + escapeHtml(priceDisplay) + '</span>'
+      + (svc.duration ? '<span>' + escapeHtml(svc.duration) + '</span>' : '')
+      + '</div>'
+      + '</div>';
+  });
+  c.innerHTML = html;
+
+  // Toggle handlers
+  c.querySelectorAll('input[data-svc-idx]').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+      var idx = parseInt(this.dataset.svcIdx);
+      profileServices[idx].active = this.checked;
+      saveServices();
+    });
+  });
+}
+
+async function saveServices() {
+  await supabasePatch('coach_profiles', { id: 'eq.' + coachProfile.id }, { services: profileServices });
+}
+
+function setupProfileHandlers() {
+  // Headline char count
+  $('f-headline').addEventListener('input', function() {
+    $('headline-count').textContent = this.value.length;
+  });
+
+  // Photo upload
+  $('photo-input').addEventListener('change', async function() {
+    var file = this.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { alert('File too large. Max 5MB.'); return; }
+
+    var ext = file.name.split('.').pop().toLowerCase();
+    if (!['jpg', 'jpeg', 'png', 'webp'].includes(ext)) { alert('Please upload a JPG or PNG.'); return; }
+
+    var filename = coachProfile.slug + '-' + Date.now() + '.' + ext;
+    try {
+      var res = await fetch(SUPABASE_URL + '/storage/v1/object/coach-photos/' + filename, {
+        method: 'POST',
+        headers: {
+          'apikey': ANON_KEY,
+          'Authorization': 'Bearer ' + currentToken,
+          'Content-Type': file.type,
+          'x-upsert': 'true'
+        },
+        body: file
+      });
+      if (!res.ok) { alert('Upload failed. Please try again.'); return; }
+      var publicUrl = SUPABASE_URL + '/storage/v1/object/public/coach-photos/' + filename;
+      await supabasePatch('coach_profiles', { id: 'eq.' + coachProfile.id }, { photo_url: publicUrl });
+      coachProfile.photo_url = publicUrl;
+      renderPhotoPreview();
+    } catch (err) {
+      alert('Upload error: ' + err.message);
+    }
+  });
+
+  // Pill remove (delegate)
+  document.addEventListener('click', function(e) {
+    if (!e.target.classList.contains('pill-remove')) return;
+    var type = e.target.dataset.type;
+    var idx = parseInt(e.target.dataset.idx);
+    if (type === 'specialty') { profileSpecialties.splice(idx, 1); renderPills('specialties-pills', profileSpecialties, 'specialty'); }
+    if (type === 'credential') { profileCredentials.splice(idx, 1); renderPills('credentials-pills', profileCredentials, 'credential'); }
+    if (type === 'certification') { profileCertifications.splice(idx, 1); renderPills('certifications-pills', profileCertifications, 'certification'); }
+  });
+
+  // Pill add buttons
+  setupPillAdd('add-specialty-btn', 'specialty-input', profileSpecialties, 'specialties-pills', 'specialty');
+  setupPillAdd('add-credential-btn', 'credential-input', profileCredentials, 'credentials-pills', 'credential');
+  setupPillAdd('add-certification-btn', 'certification-input', profileCertifications, 'certifications-pills', 'certification');
+
+  // Save profile
+  $('save-profile-btn').addEventListener('click', saveProfile);
+
+  // Add service toggle
+  $('toggle-add-service').addEventListener('click', function() {
+    var form = $('add-service-form');
+    form.classList.toggle('open');
+    if (form.classList.contains('open')) {
+      this.style.display = 'none';
+    }
+  });
+  $('cancel-service-btn').addEventListener('click', function() {
+    $('add-service-form').classList.remove('open');
+    $('toggle-add-service').style.display = '';
+    clearServiceForm();
+  });
+  $('save-service-btn').addEventListener('click', addService);
+
+  // Contact for pricing toggle
+  $('svc-contact-pricing').addEventListener('change', function() {
+    $('svc-price').disabled = this.checked;
+    if (this.checked) $('svc-price').value = '';
+  });
+
+  // Sign out
+  $('sign-out-btn').addEventListener('click', function() {
+    localStorage.removeItem(TOKEN_KEY);
+    window.location.reload();
+  });
+}
+
+function setupPillAdd(btnId, inputId, arr, containerId, type) {
+  function doAdd() {
+    var input = $(inputId);
+    var val = input.value.trim();
+    if (!val) return;
+    if (arr.indexOf(val) === -1) {
+      arr.push(val);
+      renderPills(containerId, arr, type);
+    }
+    input.value = '';
+    input.focus();
+  }
+  $(btnId).addEventListener('click', doAdd);
+  $(inputId).addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); doAdd(); }
+  });
+}
+
+async function saveProfile() {
+  var btn = $('save-profile-btn');
+  var msg = $('save-profile-msg');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  msg.classList.remove('show');
+
+  var payload = {
+    display_name: $('f-display-name').value.trim(),
+    full_name: $('f-full-name').value.trim(),
+    headline: $('f-headline').value.trim(),
+    bio: $('f-bio').value.trim(),
+    philosophy: $('f-philosophy').value.trim(),
+    company_name: $('f-company').value.trim(),
+    location: $('f-location').value.trim(),
+    years_experience: $('f-experience').value ? parseInt($('f-experience').value) : null,
+    website_url: $('f-website').value.trim(),
+    linkedin_url: $('f-linkedin').value.trim(),
+    instagram_url: $('f-instagram').value.trim(),
+    specialties: profileSpecialties,
+    credentials: profileCredentials,
+    certifications: profileCertifications
+  };
+
+  try {
+    var result = await supabasePatch('coach_profiles', { id: 'eq.' + coachProfile.id }, payload);
+    if (result && result.length > 0) {
+      coachProfile = Object.assign(coachProfile, result[0]);
+      $('nav-coach-name').textContent = coachProfile.display_name || coachProfile.full_name || '';
+    }
+    msg.textContent = 'Saved';
+    msg.style.color = 'var(--forest)';
+    msg.classList.add('show');
+    setTimeout(function() { msg.classList.remove('show'); }, 3000);
+  } catch (err) {
+    msg.textContent = 'Error saving. Try again.';
+    msg.style.color = '#c44';
+    msg.classList.add('show');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Save profile';
+}
+
+function clearServiceForm() {
+  $('svc-name').value = '';
+  $('svc-desc').value = '';
+  $('svc-price').value = '';
+  $('svc-price').disabled = false;
+  $('svc-contact-pricing').checked = false;
+  $('svc-duration').value = '';
+}
+
+async function addService() {
+  var name = $('svc-name').value.trim();
+  if (!name) { alert('Service name is required.'); return; }
+
+  var svc = {
+    name: name,
+    description: $('svc-desc').value.trim(),
+    price: $('svc-contact-pricing').checked ? null : ($('svc-price').value ? parseFloat($('svc-price').value) : null),
+    contact_pricing: $('svc-contact-pricing').checked,
+    duration: $('svc-duration').value.trim(),
+    active: true
+  };
+
+  profileServices.push(svc);
+  await saveServices();
+  renderServices();
+  clearServiceForm();
+  $('add-service-form').classList.remove('open');
+  $('toggle-add-service').style.display = '';
+}
+
+/* ================================================
+   BOOKINGS
+   ================================================ */
+async function loadBookings() {
+  try {
+    var data = await supabaseGet(
+      'coach_bookings?coach_id=eq.' + coachProfile.id + '&order=created_at.desc&select=*'
+    );
+    $('bookings-loading').style.display = 'none';
+    $('bookings-content').classList.remove('hidden');
+
+    if (!data || data.length === 0) {
+      $('bookings-content').innerHTML = '<div class="empty-state"><p>No booking requests yet.</p></div>';
+      return;
+    }
+
+    var html = '<div class="bookings-table-wrap"><table class="bookings-table"><thead><tr>'
+      + '<th>Client</th><th>Email</th><th>Service</th><th>Date</th><th>Notes</th><th>Status</th><th>Actions</th>'
+      + '</tr></thead><tbody>';
+
+    data.forEach(function(b) {
+      var statusClass = 'status-' + (b.status || 'pending');
+      var statusText = (b.status || 'pending').charAt(0).toUpperCase() + (b.status || 'pending').slice(1);
+      var dateStr = b.preferred_date ? new Date(b.preferred_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : (b.created_at ? new Date(b.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '');
+      var actions = '';
+      if (b.status === 'pending') {
+        actions = '<button class="action-btn action-confirm" data-booking-id="' + b.id + '" data-action="confirmed">Confirm</button>'
+          + '<button class="action-btn action-decline" data-booking-id="' + b.id + '" data-action="rejected">Decline</button>';
+      }
+
+      html += '<tr>'
+        + '<td>' + escapeHtml(b.client_name || '') + '</td>'
+        + '<td>' + escapeHtml(b.client_email || '') + '</td>'
+        + '<td>' + escapeHtml(b.service_name || '') + '</td>'
+        + '<td>' + escapeHtml(dateStr) + '</td>'
+        + '<td>' + escapeHtml(b.notes || '') + '</td>'
+        + '<td><span class="status-pill ' + statusClass + '">' + escapeHtml(statusText) + '</span></td>'
+        + '<td>' + actions + '</td>'
+        + '</tr>';
+    });
+
+    html += '</tbody></table></div>';
+    $('bookings-content').innerHTML = html;
+
+    // Action handlers
+    $('bookings-content').querySelectorAll('.action-btn').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        var id = this.dataset.bookingId;
+        var action = this.dataset.action;
+        this.disabled = true;
+        await supabasePatch('coach_bookings', { id: 'eq.' + id }, { status: action });
+        loadBookings();
+      });
+    });
+
+  } catch (err) {
+    $('bookings-loading').style.display = 'none';
+    $('bookings-content').classList.remove('hidden');
+    $('bookings-content').innerHTML = '<div class="empty-state"><p>Error loading bookings.</p></div>';
+  }
+}
+
+/* ================================================
+   TESTIMONIALS
+   ================================================ */
+async function loadTestimonials() {
+  try {
+    var data = await supabaseGet(
+      'coach_testimonials?coach_id=eq.' + coachProfile.id + '&order=created_at.desc&select=*'
+    );
+    $('testimonials-loading').style.display = 'none';
+    $('testimonials-content').classList.remove('hidden');
+
+    if (!data || data.length === 0) {
+      $('testimonials-content').innerHTML = '<div class="empty-state"><p>No testimonials yet. Share your profile link with clients to collect testimonials.</p></div>';
+      return;
+    }
+
+    var html = '';
+    data.forEach(function(t) {
+      var stars = '';
+      if (t.rating) {
+        stars = '<div class="review-card-stars">';
+        for (var i = 1; i <= 5; i++) {
+          stars += '<span class="star' + (i > t.rating ? ' empty' : '') + '">' + (i <= t.rating ? '\u2605' : '\u2606') + '</span>';
+        }
+        stars += '</div>';
+      }
+      var badge = t.is_approved
+        ? '<span class="review-badge badge-live">Live</span>'
+        : '<span class="review-badge badge-pending-review">Pending review</span>';
+
+      html += '<div class="review-card">'
+        + '<div class="review-card-header">'
+        + '<div><div class="review-card-author">' + escapeHtml(t.client_name || 'Anonymous') + '</div>'
+        + (t.client_title ? '<div class="review-card-title">' + escapeHtml(t.client_title) + '</div>' : '')
+        + '</div>'
+        + badge
+        + '</div>'
+        + stars
+        + '<div class="review-card-text">"' + escapeHtml(t.content || '') + '"</div>'
+        + '<div class="review-card-actions">'
+        + (t.is_approved
+          ? '<button class="action-btn action-remove" data-testimonial-id="' + t.id + '" data-testimonial-action="unapprove">Remove</button>'
+          : '<button class="action-btn action-approve" data-testimonial-id="' + t.id + '" data-testimonial-action="approve">Approve</button>'
+            + '<button class="action-btn action-remove" data-testimonial-id="' + t.id + '" data-testimonial-action="remove">Remove</button>')
+        + '</div></div>';
+    });
+    $('testimonials-content').innerHTML = html;
+
+    // Action handlers
+    $('testimonials-content').querySelectorAll('.action-btn').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        var id = this.dataset.testimonialId;
+        var action = this.dataset.testimonialAction;
+        this.disabled = true;
+        if (action === 'approve') {
+          await supabasePatch('coach_testimonials', { id: 'eq.' + id }, { is_approved: true });
+        } else if (action === 'unapprove') {
+          await supabasePatch('coach_testimonials', { id: 'eq.' + id }, { is_approved: false });
+        } else if (action === 'remove') {
+          if (confirm('Remove this testimonial?')) {
+            await supabaseDelete('coach_testimonials', { id: 'eq.' + id });
+          }
+        }
+        loadTestimonials();
+      });
+    });
+
+  } catch (err) {
+    $('testimonials-loading').style.display = 'none';
+    $('testimonials-content').classList.remove('hidden');
+    $('testimonials-content').innerHTML = '<div class="empty-state"><p>Error loading testimonials.</p></div>';
+  }
+}
+
+/* ================================================
+   RECOMMENDATIONS
+   ================================================ */
+async function loadRecommendations() {
+  try {
+    var data = await supabaseGet(
+      'coach_recommendations?coach_id=eq.' + coachProfile.id + '&order=created_at.desc&select=*'
+    );
+    $('recs-loading').style.display = 'none';
+    $('recs-content').classList.remove('hidden');
+
+    if (!data || data.length === 0) {
+      $('recs-content').innerHTML = '<div class="empty-state"><p>No recommendations yet.</p></div>';
+      return;
+    }
+
+    var html = '';
+    data.forEach(function(r) {
+      var badge = r.is_approved
+        ? '<span class="review-badge badge-live">Live</span>'
+        : '<span class="review-badge badge-pending-review">Pending review</span>';
+
+      html += '<div class="review-card">'
+        + '<div class="review-card-header">'
+        + '<div>'
+        + '<div class="review-card-author">' + escapeHtml(r.recommender_name || 'Anonymous') + '</div>'
+        + (r.recommender_title ? '<div class="review-card-title">' + escapeHtml(r.recommender_title) + '</div>' : '')
+        + (r.recommender_company ? '<div class="review-card-company">' + escapeHtml(r.recommender_company) + '</div>' : '')
+        + '</div>'
+        + badge
+        + '</div>'
+        + '<div class="review-card-text">"' + escapeHtml(r.content || '') + '"</div>'
+        + '<div class="review-card-actions">'
+        + (r.is_approved
+          ? '<button class="action-btn action-remove" data-rec-id="' + r.id + '" data-rec-action="unapprove">Remove</button>'
+          : '<button class="action-btn action-approve" data-rec-id="' + r.id + '" data-rec-action="approve">Approve</button>'
+            + '<button class="action-btn action-remove" data-rec-id="' + r.id + '" data-rec-action="remove">Remove</button>')
+        + '</div></div>';
+    });
+    $('recs-content').innerHTML = html;
+
+    // Action handlers
+    $('recs-content').querySelectorAll('.action-btn').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        var id = this.dataset.recId;
+        var action = this.dataset.recAction;
+        this.disabled = true;
+        if (action === 'approve') {
+          await supabasePatch('coach_recommendations', { id: 'eq.' + id }, { is_approved: true });
+        } else if (action === 'unapprove') {
+          await supabasePatch('coach_recommendations', { id: 'eq.' + id }, { is_approved: false });
+        } else if (action === 'remove') {
+          if (confirm('Remove this recommendation?')) {
+            await supabaseDelete('coach_recommendations', { id: 'eq.' + id });
+          }
+        }
+        loadRecommendations();
+      });
+    });
+
+  } catch (err) {
+    $('recs-loading').style.display = 'none';
+    $('recs-content').classList.remove('hidden');
+    $('recs-content').innerHTML = '<div class="empty-state"><p>Error loading recommendations.</p></div>';
+  }
+}
+
+/* ================================================
+   INIT
+   ================================================ */
+init();
+</script>
+</body>
+</html>
