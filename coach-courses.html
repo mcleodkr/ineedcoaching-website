@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Courses — ineedcoaching.org</title>
+<meta name="description" content="Discover courses from top coaches on ineedcoaching.org. Masterclasses, self-paced programs, and cohort-based learning.">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #1a2e1a;
+  --forest: #4a7c59;
+  --forest-lt: #d8ede3;
+  --cream: #f7f4ee;
+  --warm: #ffffff;
+  --gold: #c49a3c;
+  --gold-hover: #a87d1f;
+  --muted: #6b6b60;
+  --border: #e0ddd5;
+  --r: 14px;
+  --r-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); color: var(--ink); }
+
+/* NAV */
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; align-items: center; justify-content: space-between; padding: 14px 52px; background: rgba(247,244,238,0.95); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
+.logo { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--ink); text-decoration: none; }
+.logo .logo-i { color: var(--forest); font-style: italic; }
+.logo .logo-coaching { color: var(--gold); font-style: italic; }
+.nav-links { display: flex; align-items: center; gap: 28px; list-style: none; }
+.nav-links a { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.nav-links a:hover, .nav-links a.active { color: var(--forest); }
+
+/* HERO */
+.page-hero { background: var(--ink); padding: 140px 80px 80px; position: relative; overflow: hidden; }
+.page-hero::after { content: 'COURSES'; font-family: 'Playfair Display', serif; font-size: 12rem; font-weight: 900; color: rgba(255,255,255,0.04); position: absolute; right: -30px; top: 50%; transform: translateY(-50%); pointer-events: none; user-select: none; line-height: 1; }
+.page-hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(2.4rem, 4.5vw, 3.8rem); color: white; line-height: 1.08; margin-bottom: 16px; position: relative; z-index: 2; }
+.page-hero h1 em { color: var(--gold); font-style: italic; }
+.page-hero p { font-size: 1.05rem; line-height: 1.7; color: rgba(247,244,238,0.7); max-width: 580px; position: relative; z-index: 2; }
+
+/* FILTERS */
+.filters-bar { background: white; border-bottom: 1px solid var(--border); padding: 20px 80px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center; position: sticky; top: 54px; z-index: 200; }
+.filter-group { display: flex; flex-direction: column; gap: 4px; }
+.filter-group label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.filter-group select, .filter-group input { padding: 10px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.88rem; color: var(--ink); background: var(--cream); min-width: 160px; }
+.filter-group select:focus, .filter-group input:focus { outline: none; border-color: var(--gold); }
+.results-count { margin-left: auto; font-size: 0.85rem; color: var(--muted); align-self: flex-end; padding-bottom: 4px; }
+
+/* GRID */
+.courses-container { padding: 48px 80px 80px; }
+.courses-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 28px; }
+
+/* COURSE CARD */
+.course-card { background: white; border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; }
+.course-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.08); }
+.course-card.featured { border: 2px solid var(--gold); }
+.course-card-body { padding: 28px 28px 24px; flex: 1; display: flex; flex-direction: column; }
+.course-coach { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.coach-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.coach-initials { width: 40px; height: 40px; border-radius: 50%; background: var(--ink); display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-size: 0.85rem; font-weight: 700; color: var(--gold); flex-shrink: 0; }
+.coach-name-link { font-size: 0.85rem; font-weight: 700; color: var(--ink); text-decoration: none; }
+.coach-name-link:hover { color: var(--gold); }
+.course-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.badge { padding: 4px 12px; border-radius: 50px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.badge-format { background: var(--cream); color: var(--ink); }
+.badge-coming-soon { background: rgba(196,154,60,0.15); color: var(--gold); }
+.badge-active { background: rgba(74,124,89,0.15); color: var(--forest); }
+.badge-completed { background: rgba(107,107,96,0.12); color: var(--muted); }
+.badge-featured { background: var(--gold); color: white; }
+.course-card h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--ink); margin-bottom: 10px; line-height: 1.3; }
+.course-card p { font-size: 0.88rem; line-height: 1.7; color: var(--muted); margin-bottom: 16px; flex: 1; }
+.course-card-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 16px; border-top: 1px solid var(--border); }
+.course-price { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--gold); }
+.course-date { font-size: 0.8rem; color: var(--muted); }
+
+/* EMPTY */
+.empty-state { text-align: center; padding: 80px 24px; }
+.empty-state h3 { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--ink); margin-bottom: 8px; }
+.empty-state p { color: var(--muted); font-size: 0.95rem; }
+
+/* LOADING */
+.loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 24px; gap: 16px; }
+.loading-spinner { width: 48px; height: 48px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* FOOTER */
+.site-footer { background: var(--ink); padding: 48px 80px; text-align: center; }
+.footer-text { font-size: 0.85rem; color: rgba(247,244,238,0.5); }
+.footer-text a { color: var(--gold); text-decoration: none; }
+.footer-text a:hover { text-decoration: underline; }
+
+/* MOBILE */
+@media (max-width: 768px) {
+  nav { padding: 12px 20px; }
+  .page-hero { padding: 110px 24px 60px; }
+  .filters-bar { padding: 16px 24px; }
+  .courses-container { padding: 32px 24px 60px; }
+  .courses-grid { grid-template-columns: 1fr; }
+  .site-footer { padding: 40px 24px; }
+  .page-hero::after { font-size: 5rem; }
+  .filter-group select, .filter-group input { min-width: 120px; }
+}
+
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo"><span class="logo-i">i</span>need<span class="logo-coaching">coaching</span>.org</a>
+  <ul class="nav-links">
+    <li><a href="/">Home</a></li>
+    <li><a href="/coach-courses.html" class="active">Courses</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="page-hero">
+  <h1>Discover <em>Courses</em></h1>
+  <p>Expert-led courses from top coaches. Learn at your own pace, join a cohort, or attend a masterclass.</p>
+</section>
+
+<!-- FILTERS -->
+<div class="filters-bar">
+  <div class="filter-group">
+    <label for="filter-format">Format</label>
+    <select id="filter-format">
+      <option value="">All Formats</option>
+      <option value="masterclass">Masterclass</option>
+      <option value="self-paced">Self-paced</option>
+      <option value="cohort">Cohort</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label for="filter-status">Status</label>
+    <select id="filter-status">
+      <option value="">All</option>
+      <option value="coming_soon">Coming Soon</option>
+      <option value="active">Active</option>
+      <option value="completed">Completed</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label for="filter-search">Search</label>
+    <input type="text" id="filter-search" placeholder="Search courses...">
+  </div>
+  <div class="results-count" id="results-count"></div>
+</div>
+
+<!-- COURSES GRID -->
+<div class="courses-container">
+  <div id="loading" class="loading-state">
+    <div class="loading-spinner"></div>
+    <p style="color:var(--muted);font-size:0.9rem;">Loading courses...</p>
+  </div>
+  <div id="courses-grid" class="courses-grid hidden"></div>
+  <div id="empty-state" class="empty-state hidden">
+    <h3>No courses found</h3>
+    <p>Try adjusting your filters or check back later for new courses.</p>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="footer-text">Powered by <a href="https://ineedcoaching.org">ineedcoaching.org</a></div>
+</footer>
+
+<script>
+const SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+
+const API = `${SUPABASE_URL}/rest/v1`;
+const GET_HEADERS = {
+  'apikey': ANON_KEY,
+  'Authorization': `Bearer ${ANON_KEY}`
+};
+
+let allCourses = [];
+
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function getInitials(name) {
+  if (!name) return '?';
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
+async function loadCourses() {
+  try {
+    // Fetch courses with coach info using embedded select
+    const res = await fetch(
+      `${API}/coach_courses?status=neq.draft&select=*,coach_profiles(id,display_name,full_name,slug,photo_url)&order=is_featured.desc,created_at.desc`,
+      { headers: GET_HEADERS }
+    );
+    allCourses = await res.json();
+
+    if (!Array.isArray(allCourses)) {
+      allCourses = [];
+    }
+
+    renderCourses(allCourses);
+  } catch (err) {
+    console.error('Error loading courses:', err);
+    document.getElementById('loading').classList.add('hidden');
+    document.getElementById('empty-state').classList.remove('hidden');
+  }
+}
+
+function renderCourses(courses) {
+  document.getElementById('loading').classList.add('hidden');
+  const grid = document.getElementById('courses-grid');
+  const empty = document.getElementById('empty-state');
+  const countEl = document.getElementById('results-count');
+
+  if (courses.length === 0) {
+    grid.classList.add('hidden');
+    empty.classList.remove('hidden');
+    countEl.textContent = '0 courses';
+    return;
+  }
+
+  empty.classList.add('hidden');
+  grid.classList.remove('hidden');
+  countEl.textContent = `${courses.length} course${courses.length !== 1 ? 's' : ''}`;
+
+  let html = '';
+  courses.forEach(course => {
+    const coach = course.coach_profiles || {};
+    const coachName = coach.display_name || coach.full_name || 'Coach';
+    const coachSlug = coach.slug || '';
+
+    const statusClass = course.status === 'coming_soon' ? 'badge-coming-soon' :
+                        course.status === 'active' ? 'badge-active' :
+                        course.status === 'completed' ? 'badge-completed' : 'badge-coming-soon';
+    const statusLabel = course.status === 'coming_soon' ? 'Coming Soon' :
+                        course.status.charAt(0).toUpperCase() + course.status.slice(1);
+    const formatLabel = course.format ? course.format.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '';
+
+    const avatarHtml = coach.photo_url
+      ? `<img src="${escapeHtml(coach.photo_url)}" alt="${escapeHtml(coachName)}" class="coach-avatar">`
+      : `<div class="coach-initials">${getInitials(coachName)}</div>`;
+
+    html += `
+      <div class="course-card${course.is_featured ? ' featured' : ''}" data-format="${course.format || ''}" data-status="${course.status || ''}" data-title="${escapeHtml((course.title || '').toLowerCase())}" data-desc="${escapeHtml((course.description || '').toLowerCase())}">
+        <div class="course-card-body">
+          <div class="course-coach">
+            ${avatarHtml}
+            <a href="/coach/${escapeHtml(coachSlug)}" class="coach-name-link">${escapeHtml(coachName)}</a>
+          </div>
+          <div class="course-badges">
+            ${course.is_featured ? '<span class="badge badge-featured">Featured</span>' : ''}
+            ${formatLabel ? `<span class="badge badge-format">${escapeHtml(formatLabel)}</span>` : ''}
+            <span class="badge ${statusClass}">${escapeHtml(statusLabel)}</span>
+          </div>
+          <h3>${escapeHtml(course.title)}</h3>
+          <p>${escapeHtml(course.description || '')}</p>
+          <div class="course-card-footer">
+            ${course.price !== null && course.price !== undefined ? `<span class="course-price">$${Number(course.price).toLocaleString()}</span>` : '<span class="course-price" style="font-size:0.85rem;font-family:Cabinet Grotesk,sans-serif;">Contact for pricing</span>'}
+            ${course.start_date ? `<span class="course-date">Starts ${new Date(course.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  grid.innerHTML = html;
+}
+
+function applyFilters() {
+  const format = document.getElementById('filter-format').value;
+  const status = document.getElementById('filter-status').value;
+  const search = document.getElementById('filter-search').value.toLowerCase().trim();
+
+  const filtered = allCourses.filter(course => {
+    if (format && course.format !== format) return false;
+    if (status && course.status !== status) return false;
+    if (search) {
+      const title = (course.title || '').toLowerCase();
+      const desc = (course.description || '').toLowerCase();
+      const coachName = (course.coach_profiles?.display_name || course.coach_profiles?.full_name || '').toLowerCase();
+      if (!title.includes(search) && !desc.includes(search) && !coachName.includes(search)) return false;
+    }
+    return true;
+  });
+
+  renderCourses(filtered);
+}
+
+document.getElementById('filter-format').addEventListener('change', applyFilters);
+document.getElementById('filter-status').addEventListener('change', applyFilters);
+document.getElementById('filter-search').addEventListener('input', applyFilters);
+
+// Init
+loadCourses();
+</script>
+</body>
+</html>

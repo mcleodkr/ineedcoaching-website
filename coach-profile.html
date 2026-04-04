@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coach Profile — ineedcoaching.org</title>
+<meta name="description" content="Professional coach profile on ineedcoaching.org">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #1a2e1a;
+  --forest: #4a7c59;
+  --forest-lt: #d8ede3;
+  --cream: #f7f4ee;
+  --warm: #ffffff;
+  --gold: #c49a3c;
+  --gold-hover: #a87d1f;
+  --muted: #6b6b60;
+  --border: #e0ddd5;
+  --r: 14px;
+  --r-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); color: var(--ink); }
+
+/* NAV */
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; align-items: center; justify-content: space-between; padding: 14px 52px; background: rgba(247,244,238,0.95); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
+.logo { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--ink); text-decoration: none; }
+.logo .logo-i { color: var(--forest); font-style: italic; }
+.logo .logo-coaching { color: var(--gold); font-style: italic; }
+.nav-links { display: flex; align-items: center; gap: 28px; list-style: none; }
+.nav-links a { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.nav-links a:hover { color: var(--forest); }
+
+/* LOADING */
+.loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; gap: 16px; }
+.loading-spinner { width: 48px; height: 48px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.error-state { text-align: center; padding: 120px 24px; }
+.error-state h1 { font-family: 'Playfair Display', serif; font-size: 2.4rem; color: var(--ink); margin-bottom: 12px; }
+.error-state p { color: var(--muted); font-size: 1.05rem; }
+
+/* HERO */
+.hero { background: var(--ink); padding: 140px 80px 80px; position: relative; overflow: hidden; }
+.hero::after { content: 'COACH'; font-family: 'Playfair Display', serif; font-size: 14rem; font-weight: 900; color: rgba(255,255,255,0.04); position: absolute; right: -30px; top: 50%; transform: translateY(-50%); pointer-events: none; user-select: none; line-height: 1; }
+.hero-inner { max-width: 900px; position: relative; z-index: 2; }
+.hero-name { font-family: 'Playfair Display', serif; font-size: clamp(2.6rem, 5vw, 4.2rem); font-weight: 900; color: var(--gold); line-height: 1.08; margin-bottom: 16px; }
+.hero-headline { font-size: 1.15rem; line-height: 1.7; color: #f7f4ee; max-width: 640px; margin-bottom: 28px; opacity: 0.85; }
+.hero-specialties { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 36px; }
+.specialty-pill { background: rgba(196,154,60,0.15); color: var(--gold); border: 1px solid rgba(196,154,60,0.3); padding: 6px 16px; border-radius: 50px; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.02em; }
+.hero-buttons { display: flex; gap: 14px; flex-wrap: wrap; }
+.btn-gold { display: inline-flex; align-items: center; gap: 8px; background: var(--gold); color: white; padding: 14px 30px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.92rem; font-weight: 700; text-decoration: none; border: none; cursor: pointer; transition: all 0.2s; }
+.btn-gold:hover { background: var(--gold-hover); transform: translateY(-2px); }
+.btn-outline { display: inline-flex; align-items: center; gap: 8px; background: transparent; color: #f7f4ee; padding: 14px 30px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.92rem; font-weight: 700; text-decoration: none; border: 1.5px solid rgba(247,244,238,0.3); cursor: pointer; transition: all 0.2s; }
+.btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+.hero-location { display: flex; align-items: center; gap: 6px; color: rgba(247,244,238,0.6); font-size: 0.85rem; margin-bottom: 20px; }
+
+/* SECTION LAYOUT */
+.section { padding: 80px 80px; }
+.section-dark { background: var(--ink); color: #f7f4ee; }
+.section-cream { background: var(--cream); }
+.section-warm { background: #fff; }
+.section-title { font-family: 'Playfair Display', serif; font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 700; color: var(--ink); margin-bottom: 40px; }
+.section-dark .section-title { color: var(--gold); }
+
+/* ABOUT */
+.about-grid { display: grid; grid-template-columns: 280px 1fr; gap: 60px; align-items: start; }
+.about-photo { width: 280px; height: 320px; border-radius: var(--r); object-fit: cover; }
+.about-initials { width: 280px; height: 320px; border-radius: var(--r); background: var(--ink); display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-size: 5rem; font-weight: 900; color: var(--gold); }
+.about-text h3 { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--ink); margin-bottom: 16px; }
+.about-text p { font-size: 1rem; line-height: 1.8; color: var(--muted); margin-bottom: 20px; }
+.about-philosophy { background: rgba(196,154,60,0.08); border-left: 3px solid var(--gold); padding: 20px 24px; border-radius: 0 var(--r-sm) var(--r-sm) 0; margin-top: 24px; }
+.about-philosophy p { font-style: italic; color: var(--ink); margin-bottom: 0; }
+
+/* CREDENTIALS */
+.credentials-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 32px; }
+.credential-card { background: white; border: 1px solid var(--border); border-radius: var(--r); padding: 28px; }
+.credential-card h4 { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--ink); margin-bottom: 12px; }
+.credential-list { list-style: none; }
+.credential-list li { padding: 6px 0; font-size: 0.9rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.credential-list li::before { content: ''; width: 6px; height: 6px; background: var(--gold); border-radius: 50%; flex-shrink: 0; }
+.experience-badge { display: inline-flex; align-items: center; gap: 8px; background: var(--ink); color: var(--gold); padding: 12px 24px; border-radius: 50px; font-weight: 700; font-size: 0.9rem; }
+
+/* SERVICES */
+.services-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+.service-card { background: white; border: 1px solid var(--border); border-radius: var(--r); padding: 32px; display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s; }
+.service-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.08); }
+.service-card h3 { font-family: 'Playfair Display', serif; font-size: 1.15rem; color: var(--ink); margin-bottom: 10px; }
+.service-card p { font-size: 0.92rem; line-height: 1.7; color: var(--muted); margin-bottom: 16px; flex: 1; }
+.service-meta { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.service-price { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700; color: var(--gold); }
+.service-price.contact { font-size: 0.9rem; font-family: 'Cabinet Grotesk', sans-serif; color: var(--muted); }
+.service-duration { font-size: 0.82rem; color: var(--muted); background: var(--cream); padding: 4px 12px; border-radius: 50px; }
+.service-book-btn { display: inline-flex; align-items: center; justify-content: center; background: var(--ink); color: #f7f4ee; padding: 12px 24px; border-radius: 50px; font-size: 0.85rem; font-weight: 700; text-decoration: none; border: none; cursor: pointer; transition: all 0.2s; width: 100%; }
+.service-book-btn:hover { background: var(--gold); }
+
+/* COURSES */
+.courses-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
+.course-card { background: white; border: 1px solid var(--border); border-radius: var(--r); padding: 32px; position: relative; overflow: hidden; }
+.course-card.featured { border: 2px solid var(--gold); }
+.course-card.featured::before { content: 'FEATURED'; position: absolute; top: 16px; right: -28px; background: var(--gold); color: white; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em; padding: 4px 36px; transform: rotate(45deg); }
+.course-card h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--ink); margin-bottom: 10px; }
+.course-card p { font-size: 0.9rem; line-height: 1.7; color: var(--muted); margin-bottom: 16px; }
+.course-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.badge { padding: 4px 12px; border-radius: 50px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.badge-format { background: var(--cream); color: var(--ink); }
+.badge-coming-soon { background: rgba(196,154,60,0.15); color: var(--gold); }
+.badge-active { background: rgba(74,124,89,0.15); color: var(--forest); }
+.badge-enrolling { background: rgba(74,124,89,0.2); color: var(--forest); }
+.course-price { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--gold); }
+.course-date { font-size: 0.82rem; color: var(--muted); margin-top: 8px; }
+
+/* TESTIMONIALS */
+.testimonials-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
+.testimonial-card { background: white; border: 1px solid var(--border); border-radius: var(--r); padding: 32px; }
+.testimonial-stars { display: flex; gap: 3px; margin-bottom: 16px; }
+.star { color: var(--gold); font-size: 1.1rem; }
+.star.empty { color: var(--border); }
+.testimonial-text { font-size: 0.95rem; line-height: 1.8; color: var(--muted); font-style: italic; margin-bottom: 20px; }
+.testimonial-author { font-weight: 700; font-size: 0.88rem; color: var(--ink); }
+.testimonial-title { font-size: 0.8rem; color: var(--muted); }
+
+/* RECOMMENDATIONS */
+.recs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 28px; }
+.rec-card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--r); padding: 36px; }
+.rec-text { font-size: 1rem; line-height: 1.85; color: #f7f4ee; opacity: 0.85; margin-bottom: 24px; }
+.rec-author { display: flex; flex-direction: column; gap: 2px; }
+.rec-name { font-weight: 700; font-size: 0.92rem; color: var(--gold); }
+.rec-title { font-size: 0.82rem; color: rgba(247,244,238,0.6); }
+.rec-company { font-size: 0.8rem; color: rgba(247,244,238,0.5); }
+
+/* BOOKING */
+.booking-form { max-width: 600px; margin: 0 auto; background: white; border: 1px solid var(--border); border-radius: var(--r); padding: 40px; }
+.form-group { margin-bottom: 20px; }
+.form-group label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--ink); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; color: var(--ink); background: var(--cream); transition: border-color 0.2s; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--gold); }
+.form-group textarea { min-height: 100px; resize: vertical; }
+.booking-submit { width: 100%; }
+.booking-success { display: none; text-align: center; padding: 40px; }
+.booking-success h3 { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--forest); margin-bottom: 12px; }
+.booking-success p { color: var(--muted); font-size: 0.95rem; }
+
+/* EXTERNAL LINKS */
+.external-links { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.ext-link { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 50px; font-size: 0.85rem; font-weight: 700; text-decoration: none; border: 1.5px solid var(--border); color: var(--ink); transition: all 0.2s; }
+.ext-link:hover { border-color: var(--gold); color: var(--gold); }
+
+/* FOOTER */
+.coach-footer { background: var(--ink); padding: 48px 80px; text-align: center; }
+.footer-name { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--gold); margin-bottom: 8px; }
+.footer-powered { font-size: 0.82rem; color: rgba(247,244,238,0.5); }
+.footer-powered a { color: var(--gold); text-decoration: none; }
+.footer-powered a:hover { text-decoration: underline; }
+.footer-links { display: flex; gap: 20px; justify-content: center; margin-top: 16px; }
+.footer-links a { color: rgba(247,244,238,0.6); text-decoration: none; font-size: 0.82rem; transition: color 0.2s; }
+.footer-links a:hover { color: var(--gold); }
+
+/* MOBILE */
+@media (max-width: 768px) {
+  nav { padding: 12px 20px; }
+  .hero { padding: 110px 24px 60px; }
+  .hero-name { font-size: 2.2rem; }
+  .section { padding: 60px 24px; }
+  .about-grid { grid-template-columns: 1fr; gap: 32px; }
+  .about-photo, .about-initials { width: 100%; max-width: 280px; height: 280px; margin: 0 auto; }
+  .recs-grid { grid-template-columns: 1fr; }
+  .services-grid { grid-template-columns: 1fr; }
+  .courses-grid { grid-template-columns: 1fr; }
+  .testimonials-grid { grid-template-columns: 1fr; }
+  .booking-form { padding: 28px 20px; }
+  .coach-footer { padding: 40px 24px; }
+  .hero::after { font-size: 6rem; }
+}
+
+/* HIDDEN */
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo"><span class="logo-i">i</span>need<span class="logo-coaching">coaching</span>.org</a>
+  <ul class="nav-links">
+    <li><a href="/">Home</a></li>
+    <li><a href="/coach-courses.html">Courses</a></li>
+  </ul>
+</nav>
+
+<!-- Loading -->
+<div id="loading" class="loading-state">
+  <div class="loading-spinner"></div>
+  <p style="color:var(--muted);font-size:0.9rem;">Loading profile...</p>
+</div>
+
+<!-- Error -->
+<div id="error" class="error-state hidden">
+  <h1>Coach Not Found</h1>
+  <p>This profile does not exist or is not currently published.</p>
+</div>
+
+<!-- Profile Content (hidden until loaded) -->
+<div id="profile" class="hidden">
+
+  <!-- HERO -->
+  <section class="hero" id="hero-section">
+    <div class="hero-inner">
+      <div class="hero-location hidden" id="hero-location"></div>
+      <h1 class="hero-name" id="hero-name"></h1>
+      <p class="hero-headline" id="hero-headline"></p>
+      <div class="hero-specialties" id="hero-specialties"></div>
+      <div class="hero-buttons">
+        <a href="#booking" class="btn-gold">Book a Session</a>
+        <a href="#services" class="btn-outline">View Services</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="section section-cream hidden" id="about-section">
+    <h2 class="section-title">About</h2>
+    <div class="about-grid">
+      <div id="about-photo-container"></div>
+      <div class="about-text" id="about-text"></div>
+    </div>
+  </section>
+
+  <!-- SPECIALTIES & CREDENTIALS -->
+  <section class="section section-warm hidden" id="credentials-section">
+    <h2 class="section-title">Specialties &amp; Credentials</h2>
+    <div id="specialties-pills" class="hero-specialties" style="margin-bottom:32px;"></div>
+    <div class="credentials-grid" id="credentials-grid"></div>
+    <div id="experience-container" style="margin-top:24px;"></div>
+  </section>
+
+  <!-- SERVICES -->
+  <section class="section section-cream" id="services">
+    <h2 class="section-title">Services</h2>
+    <div class="services-grid" id="services-grid"></div>
+  </section>
+
+  <!-- COURSES -->
+  <section class="section section-warm hidden" id="courses-section">
+    <h2 class="section-title">Courses</h2>
+    <div class="courses-grid" id="courses-grid"></div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section class="section section-cream hidden" id="testimonials-section">
+    <h2 class="section-title">What Clients Say</h2>
+    <div class="testimonials-grid" id="testimonials-grid"></div>
+  </section>
+
+  <!-- RECOMMENDATIONS -->
+  <section class="section section-dark hidden" id="recommendations-section">
+    <h2 class="section-title">Recommendations</h2>
+    <div class="recs-grid" id="recs-grid"></div>
+  </section>
+
+  <!-- BOOKING -->
+  <section class="section section-warm" id="booking">
+    <h2 class="section-title" style="text-align:center;">Request a Booking</h2>
+    <div class="booking-form" id="booking-form-container">
+      <form id="booking-form">
+        <div class="form-group">
+          <label for="booking-service">Service</label>
+          <select id="booking-service" required>
+            <option value="">Select a service...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="booking-name">Your Name</label>
+          <input type="text" id="booking-name" required placeholder="Full name">
+        </div>
+        <div class="form-group">
+          <label for="booking-email">Your Email</label>
+          <input type="email" id="booking-email" required placeholder="email@example.com">
+        </div>
+        <div class="form-group">
+          <label for="booking-date">Preferred Date</label>
+          <input type="date" id="booking-date" required>
+        </div>
+        <div class="form-group">
+          <label for="booking-notes">Notes (optional)</label>
+          <textarea id="booking-notes" placeholder="Tell the coach what you're looking for..."></textarea>
+        </div>
+        <button type="submit" class="btn-gold booking-submit">Request Booking</button>
+      </form>
+      <div class="booking-success" id="booking-success">
+        <h3>Booking Request Sent!</h3>
+        <p>Your request has been submitted. The coach will be in touch soon.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- EXTERNAL LINKS -->
+  <section class="section section-cream hidden" id="external-links-section" style="text-align:center;">
+    <h2 class="section-title" style="text-align:center;">Connect</h2>
+    <div class="external-links" id="external-links"></div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="coach-footer">
+    <div class="footer-name" id="footer-name"></div>
+    <div class="footer-powered">Powered by <a href="https://ineedcoaching.org">ineedcoaching.org</a></div>
+    <div class="footer-links" id="footer-links"></div>
+  </footer>
+
+</div>
+
+<script>
+const SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+
+const API = `${SUPABASE_URL}/rest/v1`;
+const HEADERS = {
+  'apikey': ANON_KEY,
+  'Authorization': `Bearer ${ANON_KEY}`,
+  'Content-Type': 'application/json',
+  'Prefer': 'return=minimal'
+};
+const GET_HEADERS = {
+  'apikey': ANON_KEY,
+  'Authorization': `Bearer ${ANON_KEY}`
+};
+
+let coachData = null;
+
+function getSlug() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('slug')) return params.get('slug');
+  const pathMatch = window.location.pathname.match(/\/coach\/([^/]+)/);
+  if (pathMatch) return pathMatch[1];
+  return null;
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function formatPrice(price) {
+  if (price === null || price === undefined) return '<span class="service-price contact">Contact for pricing</span>';
+  return `<span class="service-price">$${Number(price).toLocaleString()}</span>`;
+}
+
+function renderStars(rating) {
+  let html = '';
+  for (let i = 1; i <= 5; i++) {
+    html += `<span class="star${i > rating ? ' empty' : ''}">&#9733;</span>`;
+  }
+  return html;
+}
+
+function getInitials(name) {
+  if (!name) return '?';
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
+async function loadProfile() {
+  const slug = getSlug();
+  if (!slug) {
+    showError();
+    return;
+  }
+
+  try {
+    // Fetch coach profile
+    const profileRes = await fetch(
+      `${API}/coach_profiles?slug=eq.${encodeURIComponent(slug)}&is_published=eq.true&select=*`,
+      { headers: GET_HEADERS }
+    );
+    const profiles = await profileRes.json();
+
+    if (!profiles || profiles.length === 0) {
+      showError();
+      return;
+    }
+
+    coachData = profiles[0];
+    const coachId = coachData.id;
+
+    // Fetch related data in parallel
+    const [servicesRes, testimonialsRes, recsRes, coursesRes] = await Promise.all([
+      fetch(`${API}/coach_services?coach_id=eq.${coachId}&is_active=eq.true&select=*`, { headers: GET_HEADERS }),
+      fetch(`${API}/coach_testimonials?coach_id=eq.${coachId}&is_approved=eq.true&select=*`, { headers: GET_HEADERS }),
+      fetch(`${API}/coach_recommendations?coach_id=eq.${coachId}&is_approved=eq.true&select=*`, { headers: GET_HEADERS }),
+      fetch(`${API}/coach_courses?coach_id=eq.${coachId}&status=neq.draft&select=*&order=is_featured.desc,created_at.desc`, { headers: GET_HEADERS })
+    ]);
+
+    const services = await servicesRes.json();
+    const testimonials = await testimonialsRes.json();
+    const recommendations = await recsRes.json();
+    const courses = await coursesRes.json();
+
+    renderProfile(coachData, services, testimonials, recommendations, courses);
+
+  } catch (err) {
+    console.error('Error loading profile:', err);
+    showError();
+  }
+}
+
+function showError() {
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('error').classList.remove('hidden');
+}
+
+function renderProfile(coach, services, testimonials, recommendations, courses) {
+  // Update page title
+  document.title = `${coach.display_name || coach.full_name} — Coach Profile | ineedcoaching.org`;
+
+  // Hero
+  if (coach.photo_url) {
+    document.getElementById('hero-section').style.backgroundImage = `linear-gradient(rgba(26,46,26,0.88), rgba(26,46,26,0.95)), url('${coach.photo_url}')`;
+    document.getElementById('hero-section').style.backgroundSize = 'cover';
+    document.getElementById('hero-section').style.backgroundPosition = 'center';
+  }
+
+  document.getElementById('hero-name').textContent = coach.display_name || coach.full_name || 'Coach';
+  document.getElementById('hero-headline').textContent = coach.headline || '';
+
+  if (coach.location) {
+    const locEl = document.getElementById('hero-location');
+    locEl.innerHTML = `&#9679; ${escapeHtml(coach.location)}`;
+    locEl.classList.remove('hidden');
+  }
+
+  // Specialty pills in hero
+  const specialtiesHtml = (coach.specialties || []).map(s =>
+    `<span class="specialty-pill">${escapeHtml(s)}</span>`
+  ).join('');
+  document.getElementById('hero-specialties').innerHTML = specialtiesHtml;
+
+  // About section
+  if (coach.bio || coach.philosophy || coach.photo_url) {
+    const aboutSection = document.getElementById('about-section');
+    aboutSection.classList.remove('hidden');
+
+    const photoContainer = document.getElementById('about-photo-container');
+    if (coach.photo_url) {
+      photoContainer.innerHTML = `<img src="${escapeHtml(coach.photo_url)}" alt="${escapeHtml(coach.display_name)}" class="about-photo">`;
+    } else {
+      photoContainer.innerHTML = `<div class="about-initials">${getInitials(coach.display_name || coach.full_name)}</div>`;
+    }
+
+    let aboutHtml = '';
+    if (coach.bio) {
+      aboutHtml += `<h3>Background</h3><p>${escapeHtml(coach.bio)}</p>`;
+    }
+    if (coach.philosophy) {
+      aboutHtml += `<div class="about-philosophy"><h3 style="margin-bottom:8px;">Coaching Philosophy</h3><p>${escapeHtml(coach.philosophy)}</p></div>`;
+    }
+    document.getElementById('about-text').innerHTML = aboutHtml;
+  }
+
+  // Credentials section
+  const hasCredentials = (coach.credentials && coach.credentials.length > 0) ||
+                         (coach.certifications && coach.certifications.length > 0) ||
+                         (coach.specialties && coach.specialties.length > 0) ||
+                         coach.years_experience > 0;
+
+  if (hasCredentials) {
+    document.getElementById('credentials-section').classList.remove('hidden');
+
+    // Specialties pills
+    document.getElementById('specialties-pills').innerHTML = (coach.specialties || []).map(s =>
+      `<span class="specialty-pill" style="background:rgba(74,124,89,0.1);color:var(--forest);border-color:rgba(74,124,89,0.2);">${escapeHtml(s)}</span>`
+    ).join('');
+
+    let credGrid = '';
+    if (coach.credentials && coach.credentials.length > 0) {
+      credGrid += `<div class="credential-card"><h4>Credentials</h4><ul class="credential-list">${coach.credentials.map(c => `<li>${escapeHtml(c)}</li>`).join('')}</ul></div>`;
+    }
+    if (coach.certifications && coach.certifications.length > 0) {
+      credGrid += `<div class="credential-card"><h4>Certifications</h4><ul class="credential-list">${coach.certifications.map(c => `<li>${escapeHtml(c)}</li>`).join('')}</ul></div>`;
+    }
+    document.getElementById('credentials-grid').innerHTML = credGrid;
+
+    if (coach.years_experience > 0) {
+      document.getElementById('experience-container').innerHTML =
+        `<span class="experience-badge">${coach.years_experience}+ Years of Experience</span>`;
+    }
+  }
+
+  // Services (from jsonb array on profile)
+  const jsonbServices = coach.services || [];
+  const allServices = [...jsonbServices];
+
+  // Also include coach_services table entries
+  services.forEach(s => {
+    allServices.push({
+      name: s.title,
+      description: s.description,
+      price: s.price,
+      price_type: s.price_type,
+      duration: s.duration,
+      id: s.id
+    });
+  });
+
+  let servicesHtml = '';
+  allServices.forEach((svc, idx) => {
+    const priceHtml = formatPrice(svc.price);
+    servicesHtml += `
+      <div class="service-card">
+        <h3>${escapeHtml(svc.name || svc.title || 'Service')}</h3>
+        <p>${escapeHtml(svc.description || '')}</p>
+        <div class="service-meta">
+          ${priceHtml}
+          ${svc.duration ? `<span class="service-duration">${escapeHtml(svc.duration)}</span>` : ''}
+        </div>
+        <button class="service-book-btn" onclick="scrollToBooking(${idx})">${svc.price !== null && svc.price !== undefined ? 'Book Now' : 'Inquire'}</button>
+      </div>
+    `;
+  });
+  document.getElementById('services-grid').innerHTML = servicesHtml;
+
+  // Populate booking dropdown
+  const bookingSelect = document.getElementById('booking-service');
+  allServices.forEach((svc, idx) => {
+    const opt = document.createElement('option');
+    opt.value = svc.id || `jsonb-${idx}`;
+    opt.textContent = svc.name || svc.title || 'Service';
+    bookingSelect.appendChild(opt);
+  });
+
+  // Courses
+  if (courses && courses.length > 0) {
+    document.getElementById('courses-section').classList.remove('hidden');
+    let coursesHtml = '';
+    courses.forEach(course => {
+      const statusClass = course.status === 'coming_soon' ? 'badge-coming-soon' :
+                          course.status === 'active' ? 'badge-active' : 'badge-enrolling';
+      const statusLabel = course.status === 'coming_soon' ? 'Coming Soon' :
+                          course.status === 'active' ? 'Active' : course.status.charAt(0).toUpperCase() + course.status.slice(1);
+      const formatLabel = course.format ? course.format.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '';
+
+      coursesHtml += `
+        <div class="course-card${course.is_featured ? ' featured' : ''}">
+          <div class="course-badges">
+            ${formatLabel ? `<span class="badge badge-format">${escapeHtml(formatLabel)}</span>` : ''}
+            <span class="badge ${statusClass}">${escapeHtml(statusLabel)}</span>
+          </div>
+          <h3>${escapeHtml(course.title)}</h3>
+          <p>${escapeHtml(course.description || '')}</p>
+          ${course.price !== null && course.price !== undefined ? `<div class="course-price">$${Number(course.price).toLocaleString()}</div>` : ''}
+          ${course.start_date ? `<div class="course-date">Starts ${new Date(course.start_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>` : ''}
+        </div>
+      `;
+    });
+    document.getElementById('courses-grid').innerHTML = coursesHtml;
+  }
+
+  // Testimonials
+  if (testimonials && testimonials.length > 0) {
+    document.getElementById('testimonials-section').classList.remove('hidden');
+    let testHtml = '';
+    testimonials.forEach(t => {
+      testHtml += `
+        <div class="testimonial-card">
+          ${t.rating ? `<div class="testimonial-stars">${renderStars(t.rating)}</div>` : ''}
+          <p class="testimonial-text">"${escapeHtml(t.content)}"</p>
+          <div class="testimonial-author">${escapeHtml(t.client_name)}</div>
+          ${t.client_title ? `<div class="testimonial-title">${escapeHtml(t.client_title)}</div>` : ''}
+        </div>
+      `;
+    });
+    document.getElementById('testimonials-grid').innerHTML = testHtml;
+  }
+
+  // Recommendations
+  if (recommendations && recommendations.length > 0) {
+    document.getElementById('recommendations-section').classList.remove('hidden');
+    let recHtml = '';
+    recommendations.forEach(r => {
+      recHtml += `
+        <div class="rec-card">
+          <p class="rec-text">"${escapeHtml(r.content)}"</p>
+          <div class="rec-author">
+            <span class="rec-name">${escapeHtml(r.recommender_name)}</span>
+            ${r.recommender_title ? `<span class="rec-title">${escapeHtml(r.recommender_title)}</span>` : ''}
+            ${r.recommender_company ? `<span class="rec-company">${escapeHtml(r.recommender_company)}</span>` : ''}
+          </div>
+        </div>
+      `;
+    });
+    document.getElementById('recs-grid').innerHTML = recHtml;
+  }
+
+  // External links
+  const links = [];
+  if (coach.website_url) links.push({ url: coach.website_url, label: 'Website', icon: '&#127760;' });
+  if (coach.linkedin_url) links.push({ url: coach.linkedin_url, label: 'LinkedIn', icon: '&#128101;' });
+  if (coach.instagram_url) links.push({ url: coach.instagram_url, label: 'Instagram', icon: '&#128247;' });
+
+  if (links.length > 0) {
+    document.getElementById('external-links-section').classList.remove('hidden');
+    document.getElementById('external-links').innerHTML = links.map(l =>
+      `<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener noreferrer" class="ext-link">${l.icon} ${l.label}</a>`
+    ).join('');
+  }
+
+  // Footer
+  document.getElementById('footer-name').textContent = coach.display_name || coach.full_name || '';
+  const footerLinksEl = document.getElementById('footer-links');
+  let footerLinksHtml = '';
+  if (coach.website_url) footerLinksHtml += `<a href="${escapeHtml(coach.website_url)}" target="_blank">Website</a>`;
+  if (coach.linkedin_url) footerLinksHtml += `<a href="${escapeHtml(coach.linkedin_url)}" target="_blank">LinkedIn</a>`;
+  if (coach.instagram_url) footerLinksHtml += `<a href="${escapeHtml(coach.instagram_url)}" target="_blank">Instagram</a>`;
+  footerLinksEl.innerHTML = footerLinksHtml;
+
+  // Show profile, hide loading
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('profile').classList.remove('hidden');
+}
+
+function scrollToBooking(serviceIndex) {
+  const select = document.getElementById('booking-service');
+  if (select.options[serviceIndex + 1]) {
+    select.selectedIndex = serviceIndex + 1;
+  }
+  document.getElementById('booking').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Booking form submission
+document.getElementById('booking-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  const btn = this.querySelector('.booking-submit');
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+
+  const serviceVal = document.getElementById('booking-service').value;
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(serviceVal);
+
+  const payload = {
+    coach_id: coachData.id,
+    client_email: document.getElementById('booking-email').value,
+    scheduled_at: new Date(document.getElementById('booking-date').value).toISOString(),
+    notes: `Name: ${document.getElementById('booking-name').value}\nService: ${document.getElementById('booking-service').selectedOptions[0].textContent}\n${document.getElementById('booking-notes').value}`,
+    status: 'pending'
+  };
+
+  if (isUuid) {
+    payload.service_id = serviceVal;
+  }
+
+  try {
+    const res = await fetch(`${API}/coach_bookings`, {
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok || res.status === 201) {
+      document.getElementById('booking-form').style.display = 'none';
+      document.getElementById('booking-success').style.display = 'block';
+    } else {
+      throw new Error('Booking failed');
+    }
+  } catch (err) {
+    console.error('Booking error:', err);
+    btn.disabled = false;
+    btn.textContent = 'Request Booking';
+    alert('Something went wrong. Please try again.');
+  }
+});
+
+// Init
+loadProfile();
+</script>
+</body>
+</html>
