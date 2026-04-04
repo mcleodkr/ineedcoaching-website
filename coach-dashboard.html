@@ -203,6 +203,47 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
   .form-section { padding: 24px 18px; }
 }
 
+/* MESSAGING */
+.thread-list-item { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 18px 24px; margin-bottom: 10px; cursor: pointer; transition: border-color 0.2s; }
+.thread-list-item:hover { border-color: var(--gold); }
+.thread-list-item.expanded { border-color: var(--gold); }
+.thread-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.thread-client { font-weight: 700; font-size: 0.92rem; color: var(--ink); }
+.thread-preview { font-size: 0.82rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 400px; margin-top: 2px; }
+.thread-meta { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.unread-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 50px; background: var(--gold); color: var(--white); font-size: 0.7rem; font-weight: 800; }
+.thread-time { font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
+.thread-body { display: none; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px; }
+.thread-body.open { display: block; }
+.msg-thread { display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; margin-bottom: 14px; padding: 4px; }
+.msg-bubble { max-width: 75%; padding: 12px 16px; border-radius: var(--r); font-size: 0.88rem; line-height: 1.6; word-wrap: break-word; }
+.msg-bubble .msg-sender { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 3px; }
+.msg-bubble .msg-time { font-size: 0.68rem; margin-top: 4px; opacity: 0.7; }
+.msg-coach-bubble { align-self: flex-end; background: var(--gold); color: var(--white); }
+.msg-coach-bubble .msg-sender { color: rgba(255,255,255,0.8); }
+.msg-coach-bubble .msg-time { color: rgba(255,255,255,0.7); }
+.msg-client-bubble { align-self: flex-start; background: var(--white); border: 1px solid var(--border); color: var(--ink); }
+.msg-client-bubble .msg-sender { color: var(--muted); }
+.msg-client-bubble .msg-time { color: var(--muted); }
+.reply-area { display: flex; gap: 10px; }
+.reply-area textarea { flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.88rem; color: var(--ink); background: var(--cream); resize: none; min-height: 44px; max-height: 100px; }
+.reply-area textarea:focus { outline: none; border-color: var(--gold); }
+.reply-btn { padding: 10px 20px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+.reply-btn:hover { background: var(--gold-hover); }
+.reply-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* GOALS */
+.goal-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 24px; margin-bottom: 14px; }
+.goal-card h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--ink); margin-bottom: 6px; }
+.goal-card p { font-size: 0.88rem; color: var(--muted); line-height: 1.6; margin-bottom: 6px; }
+.goal-card-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+.goal-status-select { padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.82rem; color: var(--ink); background: var(--cream); cursor: pointer; }
+.goal-status-select:focus { outline: none; border-color: var(--gold); }
+.goal-delete-btn { padding: 6px 14px; background: none; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 700; color: var(--muted); cursor: pointer; transition: all 0.2s; }
+.goal-delete-btn:hover { border-color: #c44; color: #c44; }
+.add-goal-form { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 28px; margin-bottom: 24px; }
+.add-goal-form h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--ink); margin-bottom: 18px; }
+
 .hidden { display: none !important; }
 </style>
 </head>
@@ -243,6 +284,8 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
     <button class="tab-btn" data-tab="recommendations">Recommendations</button>
     <button class="tab-btn" data-tab="scheduling">Scheduling</button>
     <button class="tab-btn" data-tab="intake">Intake Forms</button>
+    <button class="tab-btn" data-tab="messages" id="tab-btn-messages">Messages</button>
+    <button class="tab-btn" data-tab="goals">Goals</button>
   </div>
 
   <!-- LOADING -->
@@ -521,6 +564,22 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
       </div>
     </div>
 
+    <!-- MESSAGES TAB -->
+    <div id="tab-messages" class="tab-panel">
+      <div id="messages-loading" class="loading-state" style="min-height:30vh;">
+        <div class="loading-spinner"></div>
+      </div>
+      <div id="messages-content" class="hidden"></div>
+    </div>
+
+    <!-- GOALS TAB -->
+    <div id="tab-goals" class="tab-panel">
+      <div id="goals-loading" class="loading-state" style="min-height:30vh;">
+        <div class="loading-spinner"></div>
+      </div>
+      <div id="goals-content" class="hidden"></div>
+    </div>
+
   </div>
 </div>
 
@@ -728,6 +787,14 @@ function setupTabs() {
       if (btn.dataset.tab === 'intake' && !btn._loaded) {
         btn._loaded = true;
         loadIntakeForms();
+      }
+      if (btn.dataset.tab === 'messages' && !btn._loaded) {
+        btn._loaded = true;
+        loadDashMessages();
+      }
+      if (btn.dataset.tab === 'goals' && !btn._loaded) {
+        btn._loaded = true;
+        loadDashGoals();
       }
     });
   });
@@ -1552,6 +1619,308 @@ async function loadIntakeResponses() {
   } catch (e) {
     $('intake-responses-list').innerHTML = '<div class="empty-state"><p>Error loading responses.</p></div>';
   }
+}
+
+/* ================================================
+   DASHBOARD MESSAGES
+   ================================================ */
+function formatMsgTime(ts) {
+  if (!ts) return '';
+  var d = new Date(ts);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+async function loadDashMessages() {
+  try {
+    var data = await supabaseGet(
+      'coach_messages?coach_id=eq.' + coachProfile.id + '&order=created_at.desc&select=*'
+    );
+    $('messages-loading').style.display = 'none';
+    $('messages-content').classList.remove('hidden');
+
+    if (!data || data.length === 0) {
+      $('messages-content').innerHTML = '<div class="empty-state"><p>No messages yet. Messages from clients will appear here.</p></div>';
+      updateMessagesTabBadge(0);
+      return;
+    }
+
+    // Group by booking_id
+    var threads = {};
+    var threadOrder = [];
+    var totalUnread = 0;
+    data.forEach(function(m) {
+      var key = m.booking_id || m.client_email;
+      if (!threads[key]) {
+        threads[key] = { messages: [], clientEmail: m.client_email, bookingId: m.booking_id, unread: 0 };
+        threadOrder.push(key);
+      }
+      threads[key].messages.push(m);
+      if (m.sender === 'client' && !m.is_read) {
+        threads[key].unread++;
+        totalUnread++;
+      }
+    });
+
+    updateMessagesTabBadge(totalUnread);
+
+    var html = '';
+    threadOrder.forEach(function(key) {
+      var t = threads[key];
+      var last = t.messages[0]; // desc order, first is latest
+      var preview = (last.message || '').substring(0, 80);
+      if ((last.message || '').length > 80) preview += '...';
+
+      html += '<div class="thread-list-item" data-thread-key="' + escapeHtml(key) + '">'
+        + '<div class="thread-header" data-toggle-thread="' + escapeHtml(key) + '">'
+        + '<div>'
+        + '<div class="thread-client">' + escapeHtml(t.clientEmail) + '</div>'
+        + '<div class="thread-preview">' + escapeHtml(preview) + '</div>'
+        + '</div>'
+        + '<div class="thread-meta">'
+        + (t.unread > 0 ? '<span class="unread-badge">' + t.unread + '</span>' : '')
+        + '<span class="thread-time">' + formatMsgTime(last.created_at) + '</span>'
+        + '</div></div>'
+        + '<div class="thread-body" id="thread-body-' + escapeHtml(key) + '">'
+        + '<div class="msg-thread" id="thread-msgs-' + escapeHtml(key) + '"></div>'
+        + '<div class="reply-area">'
+        + '<textarea placeholder="Type your reply..." id="reply-input-' + escapeHtml(key) + '"></textarea>'
+        + '<button class="reply-btn" data-reply-key="' + escapeHtml(key) + '">Send</button>'
+        + '</div></div></div>';
+    });
+    $('messages-content').innerHTML = html;
+
+    // Thread toggle handlers
+    document.querySelectorAll('[data-toggle-thread]').forEach(function(el) {
+      el.addEventListener('click', function() {
+        var key = this.dataset.toggleThread;
+        var body = $('thread-body-' + key);
+        var item = this.closest('.thread-list-item');
+        var isOpen = body.classList.contains('open');
+        // Close all
+        document.querySelectorAll('.thread-body').forEach(function(b) { b.classList.remove('open'); });
+        document.querySelectorAll('.thread-list-item').forEach(function(i) { i.classList.remove('expanded'); });
+        if (!isOpen) {
+          body.classList.add('open');
+          item.classList.add('expanded');
+          renderThreadMessages(key, threads[key]);
+          markClientMessagesRead(threads[key]);
+        }
+      });
+    });
+
+    // Reply handlers
+    document.querySelectorAll('[data-reply-key]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        sendCoachReply(this.dataset.replyKey, threads[this.dataset.replyKey]);
+      });
+    });
+
+  } catch (err) {
+    $('messages-loading').style.display = 'none';
+    $('messages-content').classList.remove('hidden');
+    $('messages-content').innerHTML = '<div class="empty-state"><p>Error loading messages.</p></div>';
+  }
+}
+
+function updateMessagesTabBadge(count) {
+  var btn = $('tab-btn-messages');
+  if (btn) {
+    btn.textContent = count > 0 ? 'Messages (' + count + ')' : 'Messages';
+  }
+}
+
+function renderThreadMessages(key, thread) {
+  var container = $('thread-msgs-' + key);
+  // Messages are desc, reverse for asc display
+  var msgs = thread.messages.slice().reverse();
+  var html = '';
+  msgs.forEach(function(m) {
+    var isCoach = m.sender === 'coach';
+    html += '<div class="msg-bubble ' + (isCoach ? 'msg-coach-bubble' : 'msg-client-bubble') + '">'
+      + '<div class="msg-sender">' + (isCoach ? 'You' : 'Client') + '</div>'
+      + '<div>' + escapeHtml(m.message) + '</div>'
+      + '<div class="msg-time">' + formatMsgTime(m.created_at) + '</div>'
+      + '</div>';
+  });
+  container.innerHTML = html;
+  container.scrollTop = container.scrollHeight;
+}
+
+async function markClientMessagesRead(thread) {
+  if (!thread.bookingId) return;
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/coach_messages?booking_id=eq.' + thread.bookingId + '&sender=eq.client&is_read=eq.false', {
+      method: 'PATCH',
+      headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ is_read: true })
+    });
+  } catch (e) {}
+}
+
+async function sendCoachReply(key, thread) {
+  var input = $('reply-input-' + key);
+  var text = input.value.trim();
+  if (!text) return;
+  var btn = document.querySelector('[data-reply-key="' + key + '"]');
+  btn.disabled = true;
+
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/coach_messages', {
+      method: 'POST',
+      headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        coach_id: coachProfile.id,
+        client_email: thread.clientEmail,
+        booking_id: thread.bookingId,
+        sender: 'coach',
+        message: text
+      })
+    });
+    input.value = '';
+    // Reload messages to refresh thread
+    await loadDashMessages();
+    // Re-expand the same thread
+    var toggleEl = document.querySelector('[data-toggle-thread="' + key + '"]');
+    if (toggleEl) toggleEl.click();
+  } catch (e) {
+    alert('Failed to send message.');
+  }
+  btn.disabled = false;
+}
+
+/* ================================================
+   DASHBOARD GOALS
+   ================================================ */
+async function loadDashGoals() {
+  try {
+    var data = await supabaseGet(
+      'coach_goals?coach_id=eq.' + coachProfile.id + '&order=created_at.desc&select=*'
+    );
+    $('goals-loading').style.display = 'none';
+    $('goals-content').classList.remove('hidden');
+
+    var statusLabels = { not_started: 'Not started', in_progress: 'In progress', completed: 'Completed' };
+
+    // Add goal form
+    var html = '<div class="add-goal-form">'
+      + '<h3>Add Goal</h3>'
+      + '<div class="form-group">'
+      + '<label for="goal-client-email">Client Email</label>'
+      + '<input type="email" id="goal-client-email" placeholder="client@example.com">'
+      + '</div>'
+      + '<div class="form-group">'
+      + '<label for="goal-title">Title</label>'
+      + '<input type="text" id="goal-title" placeholder="Goal title">'
+      + '</div>'
+      + '<div class="form-group">'
+      + '<label for="goal-desc">Description</label>'
+      + '<textarea id="goal-desc" placeholder="Describe the goal..." style="min-height:80px;"></textarea>'
+      + '</div>'
+      + '<div class="form-group">'
+      + '<label for="goal-date">Target Date</label>'
+      + '<input type="date" id="goal-date">'
+      + '</div>'
+      + '<button class="save-btn" id="add-goal-btn">Add Goal</button>'
+      + '<span class="save-msg" id="add-goal-msg"></span>'
+      + '</div>';
+
+    if (!data || data.length === 0) {
+      html += '<div class="empty-state"><p>No goals created yet. Use the form above to set goals for your clients.</p></div>';
+    } else {
+      data.forEach(function(g) {
+        var statusClass = 'status-' + g.status;
+        var targetStr = g.target_date ? new Date(g.target_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+
+        html += '<div class="goal-card">'
+          + '<h3>' + escapeHtml(g.title) + '</h3>'
+          + (g.description ? '<p>' + escapeHtml(g.description) + '</p>' : '')
+          + '<p style="font-size:0.82rem;"><strong>Client:</strong> ' + escapeHtml(g.client_email) + '</p>'
+          + (targetStr ? '<p style="font-size:0.82rem;"><strong>Target:</strong> ' + escapeHtml(targetStr) + '</p>' : '')
+          + '<div class="goal-card-meta">'
+          + '<span class="status-pill ' + statusClass + '">' + escapeHtml(statusLabels[g.status] || g.status) + '</span>'
+          + '<select class="goal-status-select" data-goal-id="' + g.id + '">'
+          + '<option value="not_started"' + (g.status === 'not_started' ? ' selected' : '') + '>Not started</option>'
+          + '<option value="in_progress"' + (g.status === 'in_progress' ? ' selected' : '') + '>In progress</option>'
+          + '<option value="completed"' + (g.status === 'completed' ? ' selected' : '') + '>Completed</option>'
+          + '</select>'
+          + '<button class="goal-delete-btn" data-goal-delete="' + g.id + '">Delete</button>'
+          + '</div></div>';
+      });
+    }
+
+    $('goals-content').innerHTML = html;
+
+    // Wire add goal
+    $('add-goal-btn').addEventListener('click', addGoal);
+
+    // Wire status changes
+    document.querySelectorAll('.goal-status-select').forEach(function(sel) {
+      sel.addEventListener('change', async function() {
+        var goalId = this.dataset.goalId;
+        await supabasePatch('coach_goals', { id: 'eq.' + goalId }, { status: this.value });
+        loadDashGoals();
+      });
+    });
+
+    // Wire delete
+    document.querySelectorAll('[data-goal-delete]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        if (!confirm('Delete this goal?')) return;
+        await supabaseDelete('coach_goals', { id: 'eq.' + this.dataset.goalDelete });
+        loadDashGoals();
+      });
+    });
+
+  } catch (err) {
+    $('goals-loading').style.display = 'none';
+    $('goals-content').classList.remove('hidden');
+    $('goals-content').innerHTML = '<div class="empty-state"><p>Error loading goals.</p></div>';
+  }
+}
+
+async function addGoal() {
+  var email = $('goal-client-email').value.trim();
+  var title = $('goal-title').value.trim();
+  var desc = $('goal-desc').value.trim();
+  var date = $('goal-date').value;
+  var msg = $('add-goal-msg');
+
+  if (!email || !title) {
+    msg.textContent = 'Client email and title are required.';
+    msg.style.color = '#c44';
+    msg.classList.add('show');
+    return;
+  }
+
+  var btn = $('add-goal-btn');
+  btn.disabled = true;
+  btn.textContent = 'Adding...';
+  msg.classList.remove('show');
+
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/coach_goals', {
+      method: 'POST',
+      headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        coach_id: coachProfile.id,
+        client_email: email,
+        title: title,
+        description: desc || null,
+        target_date: date || null
+      })
+    });
+    $('goal-client-email').value = '';
+    $('goal-title').value = '';
+    $('goal-desc').value = '';
+    $('goal-date').value = '';
+    loadDashGoals();
+  } catch (e) {
+    msg.textContent = 'Error adding goal.';
+    msg.style.color = '#c44';
+    msg.classList.add('show');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Add Goal';
 }
 
 /* ================================================

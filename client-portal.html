@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Client Portal | ineedcoaching.org</title>
+<meta name="description" content="View your bookings, goals, and messages on ineedcoaching.org">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #1a2e1a;
+  --forest: #4a7c59;
+  --cream: #f7f4ee;
+  --white: #ffffff;
+  --gold: #c49a3c;
+  --gold-hover: #a87d1f;
+  --muted: #6b6b60;
+  --border: #e0ddd5;
+  --r: 14px;
+  --r-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); color: var(--ink); min-height: 100vh; }
+
+/* LOGIN */
+.login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; background: var(--cream); }
+.login-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 48px 40px; max-width: 440px; width: 100%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.06); }
+.login-card h1 { font-family: 'Playfair Display', serif; font-size: 1.8rem; color: var(--ink); margin-bottom: 10px; }
+.login-card .login-sub { font-size: 0.92rem; color: var(--muted); margin-bottom: 28px; line-height: 1.6; }
+.login-card input[type="email"] { width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; color: var(--ink); background: var(--cream); margin-bottom: 14px; transition: border-color 0.2s; }
+.login-card input[type="email"]:focus { outline: none; border-color: var(--gold); }
+.login-btn { width: 100%; padding: 14px 24px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+.login-btn:hover { background: var(--gold-hover); }
+.login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.login-msg { font-size: 0.82rem; color: var(--gold); margin-top: 14px; min-height: 20px; }
+.login-logo { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; color: var(--ink); margin-bottom: 24px; }
+.login-logo .logo-i { color: var(--gold); font-style: italic; }
+.login-logo .logo-coaching { color: var(--gold); font-style: italic; }
+
+/* NAV */
+.top-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; align-items: center; justify-content: space-between; padding: 14px 52px; background: var(--ink); border-bottom: 1px solid rgba(255,255,255,0.1); }
+.logo { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--cream); text-decoration: none; }
+.logo .logo-i { color: var(--gold); font-style: italic; }
+.logo .logo-coaching { color: var(--gold); font-style: italic; }
+.nav-right { display: flex; align-items: center; gap: 18px; }
+.nav-email { font-size: 0.85rem; font-weight: 600; color: var(--cream); }
+.sign-out-btn { background: none; border: 1.5px solid rgba(255,255,255,0.2); color: var(--cream); padding: 7px 18px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.sign-out-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+/* TABS */
+.tab-bar { position: fixed; top: 55px; left: 0; right: 0; z-index: 299; background: var(--white); border-bottom: 1px solid var(--border); display: flex; padding: 0 52px; }
+.tab-btn { padding: 14px 24px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; font-weight: 700; color: var(--muted); background: none; border: none; border-bottom: 2.5px solid transparent; cursor: pointer; transition: all 0.2s; }
+.tab-btn:hover { color: var(--ink); }
+.tab-btn.active { color: var(--ink); border-bottom-color: var(--gold); }
+
+/* CONTENT */
+.portal { display: none; }
+.dash-content { max-width: 900px; margin: 0 auto; padding: 130px 40px 80px; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* CARDS */
+.card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 24px; margin-bottom: 14px; }
+.card h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--ink); margin-bottom: 8px; }
+.card p { font-size: 0.88rem; color: var(--muted); line-height: 1.6; margin-bottom: 6px; }
+.card-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+
+/* STATUS PILLS */
+.status-pill { display: inline-block; padding: 4px 12px; border-radius: 50px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+.status-pending { background: rgba(196,154,60,0.15); color: var(--gold); }
+.status-confirmed { background: rgba(74,124,89,0.15); color: var(--forest); }
+.status-rejected { background: rgba(107,107,96,0.12); color: var(--muted); }
+.status-completed { background: rgba(26,46,26,0.12); color: var(--ink); }
+.status-not_started { background: rgba(107,107,96,0.12); color: var(--muted); }
+.status-in_progress { background: rgba(196,154,60,0.15); color: var(--gold); }
+
+/* BUTTONS */
+.action-btn { padding: 8px 16px; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.82rem; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-block; }
+.btn-gold { background: var(--gold); color: var(--white); }
+.btn-gold:hover { background: var(--gold-hover); }
+.btn-forest { background: var(--forest); color: var(--white); }
+.btn-forest:hover { background: #3a6c49; }
+.btn-outline { background: var(--cream); color: var(--muted); border: 1px solid var(--border); }
+.btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+
+/* THREAD LIST */
+.thread-item { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 18px 24px; margin-bottom: 10px; cursor: pointer; transition: border-color 0.2s; display: flex; align-items: center; justify-content: space-between; gap: 12px; text-decoration: none; color: inherit; }
+.thread-item:hover { border-color: var(--gold); }
+.thread-info { flex: 1; min-width: 0; }
+.thread-info .thread-coach { font-weight: 700; font-size: 0.92rem; color: var(--ink); margin-bottom: 2px; }
+.thread-info .thread-preview { font-size: 0.82rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.thread-meta { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.unread-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 50px; background: var(--gold); color: var(--white); font-size: 0.7rem; font-weight: 800; }
+.thread-time { font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
+
+/* EMPTY */
+.empty-state { text-align: center; padding: 48px 24px; }
+.empty-state p { font-size: 0.92rem; color: var(--muted); font-style: italic; line-height: 1.6; }
+
+/* LOADING */
+.loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 30vh; gap: 16px; }
+.loading-spinner { width: 48px; height: 48px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.hidden { display: none !important; }
+
+@media (max-width: 768px) {
+  .top-nav { padding: 12px 20px; }
+  .tab-bar { padding: 0 12px; overflow-x: auto; }
+  .tab-btn { padding: 12px 16px; font-size: 0.8rem; white-space: nowrap; }
+  .dash-content { padding: 120px 16px 60px; }
+  .nav-right { gap: 10px; }
+  .nav-email { display: none; }
+  .login-card { padding: 32px 24px; }
+  .card { padding: 18px; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <div class="login-logo"><span class="logo-i">i</span>need<span class="logo-coaching">coaching</span>.org</div>
+    <h1>Your coaching space</h1>
+    <p class="login-sub">Sign in to see your bookings, goals, and messages.</p>
+    <form id="login-form">
+      <input type="email" id="login-email" placeholder="you@example.com" required>
+      <button type="submit" class="login-btn" id="login-submit">Send magic link</button>
+    </form>
+    <div class="login-msg" id="login-msg"></div>
+  </div>
+</div>
+
+<!-- PORTAL -->
+<div id="portal" class="portal">
+  <nav class="top-nav">
+    <a href="/" class="logo"><span class="logo-i">i</span>need<span class="logo-coaching">coaching</span>.org</a>
+    <div class="nav-right">
+      <span class="nav-email" id="nav-email"></span>
+      <button class="sign-out-btn" id="sign-out-btn">Sign out</button>
+    </div>
+  </nav>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="bookings">Bookings</button>
+    <button class="tab-btn" data-tab="goals">Goals</button>
+    <button class="tab-btn" data-tab="messages">Messages</button>
+  </div>
+
+  <div class="dash-content">
+    <!-- BOOKINGS TAB -->
+    <div id="tab-bookings" class="tab-panel active">
+      <div id="bookings-loading" class="loading-state"><div class="loading-spinner"></div></div>
+      <div id="bookings-content" class="hidden"></div>
+    </div>
+
+    <!-- GOALS TAB -->
+    <div id="tab-goals" class="tab-panel">
+      <div id="goals-loading" class="loading-state"><div class="loading-spinner"></div></div>
+      <div id="goals-content" class="hidden"></div>
+    </div>
+
+    <!-- MESSAGES TAB -->
+    <div id="tab-messages" class="tab-panel">
+      <div id="messages-loading" class="loading-state"><div class="loading-spinner"></div></div>
+      <div id="messages-content" class="hidden"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+const TOKEN_KEY = 'sb_access_token';
+
+let currentToken = null;
+let currentEmail = null;
+
+function $(id) { return document.getElementById(id); }
+
+function apiHeaders(token) {
+  return {
+    'apikey': ANON_KEY,
+    'Authorization': 'Bearer ' + (token || currentToken),
+    'Content-Type': 'application/json'
+  };
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  var d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function formatDate(ts) {
+  if (!ts) return '';
+  var d = new Date(ts);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatTime(ts) {
+  if (!ts) return '';
+  var d = new Date(ts);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+/* AUTH: hash callback */
+(function checkHash() {
+  var hash = window.location.hash;
+  if (hash && hash.includes('access_token')) {
+    var params = new URLSearchParams(hash.substring(1));
+    var token = params.get('access_token');
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+      window.location.hash = '';
+      window.location.reload();
+      return;
+    }
+  }
+})();
+
+/* LOGIN FORM */
+$('login-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  var email = $('login-email').value.trim();
+  if (!email) return;
+  var btn = $('login-submit');
+  var msg = $('login-msg');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  msg.textContent = '';
+  try {
+    var res = await fetch(SUPABASE_URL + '/auth/v1/magiclink', {
+      method: 'POST',
+      headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, options: { emailRedirectTo: window.location.origin + '/client-portal.html' } })
+    });
+    if (res.ok) {
+      msg.textContent = 'Check your email for the magic link.';
+      msg.style.color = 'var(--forest)';
+    } else {
+      var data = await res.json();
+      msg.textContent = data.msg || data.error_description || 'Something went wrong.';
+      msg.style.color = '#c44';
+    }
+  } catch (err) {
+    msg.textContent = 'Network error. Try again.';
+    msg.style.color = '#c44';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Send magic link';
+});
+
+/* INIT */
+async function init() {
+  var token = localStorage.getItem(TOKEN_KEY);
+  if (!token) {
+    $('login-screen').style.display = 'flex';
+    return;
+  }
+
+  $('login-screen').style.display = 'none';
+  $('portal').style.display = 'block';
+
+  try {
+    var res = await fetch(SUPABASE_URL + '/auth/v1/user', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) { localStorage.removeItem(TOKEN_KEY); window.location.reload(); return; }
+    var user = await res.json();
+    currentToken = token;
+    currentEmail = user.email;
+  } catch (err) {
+    localStorage.removeItem(TOKEN_KEY);
+    window.location.reload();
+    return;
+  }
+
+  $('nav-email').textContent = currentEmail;
+  $('sign-out-btn').addEventListener('click', function() {
+    localStorage.removeItem(TOKEN_KEY);
+    window.location.reload();
+  });
+
+  setupTabs();
+  loadBookings();
+}
+
+/* TABS */
+function setupTabs() {
+  var btns = document.querySelectorAll('.tab-btn');
+  btns.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      btns.forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+      var panel = $('tab-' + btn.dataset.tab);
+      if (panel) panel.classList.add('active');
+
+      if (btn.dataset.tab === 'bookings' && !btn._loaded) {
+        btn._loaded = true;
+        loadBookings();
+      }
+      if (btn.dataset.tab === 'goals' && !btn._loaded) {
+        btn._loaded = true;
+        loadGoals();
+      }
+      if (btn.dataset.tab === 'messages' && !btn._loaded) {
+        btn._loaded = true;
+        loadMessageThreads();
+      }
+    });
+  });
+}
+
+/* BOOKINGS */
+async function loadBookings() {
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_bookings?client_email=eq.' + encodeURIComponent(currentEmail) + '&order=created_at.desc&select=*,coach_profiles(display_name,full_name,zoom_meeting_link)', {
+      headers: apiHeaders()
+    });
+    var data = await res.json();
+    $('bookings-loading').style.display = 'none';
+    $('bookings-content').classList.remove('hidden');
+
+    if (!data || data.length === 0) {
+      $('bookings-content').innerHTML = '<div class="empty-state"><p>No bookings yet. Find a coach and book a session to get started.</p></div>';
+      return;
+    }
+
+    var html = '';
+    data.forEach(function(b) {
+      var coachName = '';
+      var zoomLink = '';
+      if (b.coach_profiles) {
+        coachName = b.coach_profiles.display_name || b.coach_profiles.full_name || '';
+        zoomLink = b.coach_profiles.zoom_meeting_link || '';
+      }
+      var statusClass = 'status-' + (b.status || 'pending');
+      var statusLabel = (b.status || 'pending');
+      if (statusLabel === 'completed') statusLabel = 'completed';
+      statusLabel = statusLabel.charAt(0).toUpperCase() + statusLabel.slice(1);
+
+      var dateStr = b.preferred_date ? formatDate(b.preferred_date) : formatDate(b.created_at);
+
+      html += '<div class="card">'
+        + '<h3>' + escapeHtml(coachName || 'Coach') + '</h3>'
+        + '<p>' + escapeHtml(b.service_name || b.notes || 'Coaching session') + '</p>'
+        + '<div class="card-meta">'
+        + '<span style="font-size:0.82rem;color:var(--muted);">' + escapeHtml(dateStr) + '</span>'
+        + '<span class="status-pill ' + statusClass + '">' + escapeHtml(statusLabel) + '</span>'
+        + '</div>';
+
+      if (b.status === 'confirmed') {
+        html += '<div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">';
+        html += '<a href="/messages.html?booking_id=' + b.id + '" class="action-btn btn-gold">Message your coach &rarr;</a>';
+        if (zoomLink) {
+          html += '<a href="' + escapeHtml(zoomLink) + '" target="_blank" rel="noopener" class="action-btn btn-forest">Join session</a>';
+        }
+        html += '</div>';
+      }
+
+      html += '</div>';
+    });
+    $('bookings-content').innerHTML = html;
+  } catch (err) {
+    $('bookings-loading').style.display = 'none';
+    $('bookings-content').classList.remove('hidden');
+    $('bookings-content').innerHTML = '<div class="empty-state"><p>Error loading bookings.</p></div>';
+  }
+}
+
+/* GOALS */
+async function loadGoals() {
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_goals?client_email=eq.' + encodeURIComponent(currentEmail) + '&order=created_at.desc&select=*', {
+      headers: apiHeaders()
+    });
+    var data = await res.json();
+    $('goals-loading').style.display = 'none';
+    $('goals-content').classList.remove('hidden');
+
+    if (!data || data.length === 0) {
+      $('goals-content').innerHTML = '<div class="empty-state"><p>No goals set yet. Your coach will add goals for you as part of your coaching journey.</p></div>';
+      return;
+    }
+
+    var html = '';
+    data.forEach(function(g) {
+      var statusClass = 'status-' + g.status;
+      var statusLabels = { not_started: 'Not started', in_progress: 'In progress', completed: 'Completed' };
+      var statusLabel = statusLabels[g.status] || g.status;
+      var targetStr = g.target_date ? formatDate(g.target_date) : '';
+
+      html += '<div class="card" id="goal-card-' + g.id + '">'
+        + '<h3>' + escapeHtml(g.title) + '</h3>'
+        + (g.description ? '<p>' + escapeHtml(g.description) + '</p>' : '')
+        + '<div class="card-meta">'
+        + (targetStr ? '<span style="font-size:0.82rem;color:var(--muted);">Target: ' + escapeHtml(targetStr) + '</span>' : '')
+        + '<span class="status-pill ' + statusClass + '">' + escapeHtml(statusLabel) + '</span>'
+        + '</div>'
+        + '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">';
+
+      if (g.status === 'not_started') {
+        html += '<button class="action-btn btn-gold" onclick="updateGoalStatus(\'' + g.id + '\', \'in_progress\')">Mark in progress</button>';
+      }
+      if (g.status === 'not_started' || g.status === 'in_progress') {
+        html += '<button class="action-btn btn-forest" onclick="updateGoalStatus(\'' + g.id + '\', \'completed\')">Mark complete</button>';
+      }
+
+      html += '</div></div>';
+    });
+    $('goals-content').innerHTML = html;
+  } catch (err) {
+    $('goals-loading').style.display = 'none';
+    $('goals-content').classList.remove('hidden');
+    $('goals-content').innerHTML = '<div class="empty-state"><p>Error loading goals.</p></div>';
+  }
+}
+
+async function updateGoalStatus(goalId, newStatus) {
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/coach_goals?id=eq.' + goalId, {
+      method: 'PATCH',
+      headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ status: newStatus })
+    });
+    loadGoals();
+  } catch (e) {
+    alert('Error updating goal.');
+  }
+}
+
+/* MESSAGES */
+async function loadMessageThreads() {
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_messages?client_email=eq.' + encodeURIComponent(currentEmail) + '&order=created_at.desc&select=*,coach_profiles:coach_id(display_name,full_name)', {
+      headers: apiHeaders()
+    });
+    var data = await res.json();
+    $('messages-loading').style.display = 'none';
+    $('messages-content').classList.remove('hidden');
+
+    if (!data || data.length === 0) {
+      $('messages-content').innerHTML = '<div class="empty-state"><p>No messages yet. Book a coaching session and start a conversation.</p></div>';
+      return;
+    }
+
+    // Group by booking_id
+    var threads = {};
+    data.forEach(function(m) {
+      var key = m.booking_id || 'no-booking';
+      if (!threads[key]) {
+        threads[key] = { messages: [], coachName: '', bookingId: m.booking_id, unread: 0 };
+        if (m.coach_profiles) {
+          threads[key].coachName = m.coach_profiles.display_name || m.coach_profiles.full_name || '';
+        }
+      }
+      threads[key].messages.push(m);
+      if (m.sender === 'coach' && !m.is_read) {
+        threads[key].unread++;
+      }
+    });
+
+    var html = '';
+    Object.keys(threads).forEach(function(key) {
+      var t = threads[key];
+      // Messages are desc, so first is latest
+      var last = t.messages[0];
+      var preview = (last.message || '').substring(0, 80);
+      if ((last.message || '').length > 80) preview += '...';
+      var timeStr = formatTime(last.created_at);
+
+      html += '<a href="/messages.html?booking_id=' + (t.bookingId || '') + '" class="thread-item">'
+        + '<div class="thread-info">'
+        + '<div class="thread-coach">' + escapeHtml(t.coachName || 'Coach') + '</div>'
+        + '<div class="thread-preview">' + escapeHtml(preview) + '</div>'
+        + '</div>'
+        + '<div class="thread-meta">'
+        + (t.unread > 0 ? '<span class="unread-badge">' + t.unread + '</span>' : '')
+        + '<span class="thread-time">' + escapeHtml(timeStr) + '</span>'
+        + '</div>'
+        + '</a>';
+    });
+    $('messages-content').innerHTML = html;
+  } catch (err) {
+    $('messages-loading').style.display = 'none';
+    $('messages-content').classList.remove('hidden');
+    $('messages-content').innerHTML = '<div class="empty-state"><p>Error loading messages.</p></div>';
+  }
+}
+
+init();
+</script>
+</body>
+</html>

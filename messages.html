@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Messages | ineedcoaching.org</title>
+<meta name="description" content="Message your coach on ineedcoaching.org">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #1a2e1a;
+  --forest: #4a7c59;
+  --cream: #f7f4ee;
+  --white: #ffffff;
+  --gold: #c49a3c;
+  --gold-hover: #a87d1f;
+  --muted: #6b6b60;
+  --border: #e0ddd5;
+  --r: 14px;
+  --r-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); color: var(--ink); min-height: 100vh; }
+
+/* LOGIN */
+.login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; background: var(--cream); }
+.login-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 48px 40px; max-width: 440px; width: 100%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.06); }
+.login-card h1 { font-family: 'Playfair Display', serif; font-size: 1.8rem; color: var(--ink); margin-bottom: 10px; }
+.login-card .login-sub { font-size: 0.92rem; color: var(--muted); margin-bottom: 28px; line-height: 1.6; }
+.login-card input[type="email"] { width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; color: var(--ink); background: var(--cream); margin-bottom: 14px; transition: border-color 0.2s; }
+.login-card input[type="email"]:focus { outline: none; border-color: var(--gold); }
+.login-btn { width: 100%; padding: 14px 24px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+.login-btn:hover { background: var(--gold-hover); }
+.login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.login-msg { font-size: 0.82rem; color: var(--gold); margin-top: 14px; min-height: 20px; }
+.login-logo { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; color: var(--ink); margin-bottom: 24px; }
+.login-logo .logo-i { color: var(--gold); font-style: italic; }
+.login-logo .logo-coaching { color: var(--gold); font-style: italic; }
+
+/* NAV */
+.top-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; align-items: center; justify-content: space-between; padding: 14px 52px; background: var(--ink); border-bottom: 1px solid rgba(255,255,255,0.1); }
+.logo { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--cream); text-decoration: none; }
+.logo .logo-i { color: var(--gold); font-style: italic; }
+.logo .logo-coaching { color: var(--gold); font-style: italic; }
+.nav-right { display: flex; align-items: center; gap: 18px; }
+.nav-link { font-size: 0.85rem; font-weight: 700; color: var(--gold); text-decoration: none; transition: color 0.2s; }
+.nav-link:hover { color: #d4a94c; }
+
+/* MESSAGES */
+.messages-page { display: none; max-width: 700px; margin: 0 auto; padding: 80px 24px 24px; min-height: 100vh; display: none; flex-direction: column; }
+.booking-header { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 20px 24px; margin-bottom: 16px; }
+.booking-header h2 { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: var(--ink); margin-bottom: 4px; }
+.booking-header p { font-size: 0.85rem; color: var(--muted); }
+.thread-container { flex: 1; overflow-y: auto; padding: 16px 0; display: flex; flex-direction: column; gap: 12px; min-height: 300px; max-height: calc(100vh - 320px); }
+.msg-bubble { max-width: 75%; padding: 14px 18px; border-radius: var(--r); font-size: 0.92rem; line-height: 1.6; word-wrap: break-word; }
+.msg-bubble .msg-sender { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+.msg-bubble .msg-time { font-size: 0.7rem; margin-top: 6px; opacity: 0.7; }
+.msg-client { align-self: flex-end; background: var(--gold); color: var(--white); }
+.msg-client .msg-sender { color: rgba(255,255,255,0.8); }
+.msg-client .msg-time { color: rgba(255,255,255,0.7); }
+.msg-coach { align-self: flex-start; background: var(--white); border: 1px solid var(--border); color: var(--ink); }
+.msg-coach .msg-sender { color: var(--muted); }
+.msg-coach .msg-time { color: var(--muted); }
+.input-area { display: flex; gap: 10px; padding: 16px 0; border-top: 1px solid var(--border); margin-top: auto; }
+.input-area textarea { flex: 1; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.92rem; color: var(--ink); background: var(--white); resize: none; min-height: 48px; max-height: 120px; transition: border-color 0.2s; }
+.input-area textarea:focus { outline: none; border-color: var(--gold); }
+.send-btn { padding: 12px 24px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.92rem; font-weight: 700; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+.send-btn:hover { background: var(--gold-hover); }
+.send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.empty-state { text-align: center; padding: 48px 24px; }
+.empty-state p { font-size: 0.92rem; color: var(--muted); font-style: italic; }
+.loading-spinner { width: 48px; height: 48px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 40px auto; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 768px) {
+  .top-nav { padding: 12px 20px; }
+  .messages-page { padding: 70px 12px 12px; }
+  .msg-bubble { max-width: 88%; }
+  .login-card { padding: 32px 24px; }
+  .thread-container { max-height: calc(100vh - 280px); }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <div class="login-logo"><span class="logo-i">i</span>need<span class="logo-coaching">coaching</span>.org</div>
+    <h1>Messages</h1>
+    <p class="login-sub">Sign in with your email to view your messages.</p>
+    <form id="login-form">
+      <input type="email" id="login-email" placeholder="you@example.com" required>
+      <button type="submit" class="login-btn" id="login-submit">Send magic link</button>
+    </form>
+    <div class="login-msg" id="login-msg"></div>
+  </div>
+</div>
+
+<!-- MESSAGES PAGE -->
+<div id="messages-page" class="messages-page">
+  <nav class="top-nav">
+    <a href="/" class="logo"><span class="logo-i">i</span>need<span class="logo-coaching">coaching</span>.org</a>
+    <div class="nav-right">
+      <a href="/client-portal.html" class="nav-link">&larr; Back to portal</a>
+    </div>
+  </nav>
+
+  <div id="booking-header" class="booking-header">
+    <div class="loading-spinner" id="header-loading"></div>
+  </div>
+
+  <div class="thread-container" id="thread-container">
+    <div class="loading-spinner" id="thread-loading"></div>
+  </div>
+
+  <div class="input-area" id="input-area" style="display:none;">
+    <textarea id="msg-input" placeholder="Type your message..." rows="1"></textarea>
+    <button class="send-btn" id="send-btn">Send</button>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+const TOKEN_KEY = 'sb_access_token';
+
+let currentToken = null;
+let currentEmail = null;
+let bookingId = null;
+let bookingInfo = null;
+
+function $(id) { return document.getElementById(id); }
+
+function apiHeaders(token) {
+  return {
+    'apikey': ANON_KEY,
+    'Authorization': 'Bearer ' + (token || currentToken),
+    'Content-Type': 'application/json'
+  };
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  var d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function formatTime(ts) {
+  if (!ts) return '';
+  var d = new Date(ts);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+/* AUTH: hash callback */
+(function checkHash() {
+  var hash = window.location.hash;
+  if (hash && hash.includes('access_token')) {
+    var params = new URLSearchParams(hash.substring(1));
+    var token = params.get('access_token');
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+      window.location.hash = '';
+      window.location.reload();
+      return;
+    }
+  }
+})();
+
+/* LOGIN FORM */
+$('login-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  var email = $('login-email').value.trim();
+  if (!email) return;
+  var btn = $('login-submit');
+  var msg = $('login-msg');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  msg.textContent = '';
+  try {
+    var res = await fetch(SUPABASE_URL + '/auth/v1/magiclink', {
+      method: 'POST',
+      headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, options: { emailRedirectTo: window.location.href.split('#')[0] } })
+    });
+    if (res.ok) {
+      msg.textContent = 'Check your email for the magic link.';
+      msg.style.color = 'var(--forest)';
+    } else {
+      var data = await res.json();
+      msg.textContent = data.msg || data.error_description || 'Something went wrong.';
+      msg.style.color = '#c44';
+    }
+  } catch (err) {
+    msg.textContent = 'Network error. Try again.';
+    msg.style.color = '#c44';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Send magic link';
+});
+
+/* INIT */
+async function init() {
+  var token = localStorage.getItem(TOKEN_KEY);
+  if (!token) {
+    $('login-screen').style.display = 'flex';
+    $('messages-page').style.display = 'none';
+    return;
+  }
+
+  // Verify token
+  try {
+    var res = await fetch(SUPABASE_URL + '/auth/v1/user', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) { localStorage.removeItem(TOKEN_KEY); window.location.reload(); return; }
+    var user = await res.json();
+    currentToken = token;
+    currentEmail = user.email;
+  } catch (err) {
+    localStorage.removeItem(TOKEN_KEY);
+    window.location.reload();
+    return;
+  }
+
+  // Get booking_id from URL
+  var params = new URLSearchParams(window.location.search);
+  bookingId = params.get('booking_id');
+  if (!bookingId) {
+    $('login-screen').style.display = 'none';
+    $('messages-page').style.display = 'flex';
+    $('booking-header').innerHTML = '<p style="color:var(--muted);">No booking specified.</p>';
+    $('thread-container').innerHTML = '<div class="empty-state"><p>No booking ID found in the URL.</p></div>';
+    return;
+  }
+
+  $('login-screen').style.display = 'none';
+  $('messages-page').style.display = 'flex';
+
+  await loadBookingInfo();
+  await loadMessages();
+  markCoachMessagesRead();
+
+  $('input-area').style.display = 'flex';
+  $('send-btn').addEventListener('click', sendMessage);
+  $('msg-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  // Poll for new messages every 10s
+  setInterval(async function() { await loadMessages(); markCoachMessagesRead(); }, 10000);
+}
+
+async function loadBookingInfo() {
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_bookings?id=eq.' + bookingId + '&select=*,coach_profiles(display_name,full_name)', {
+      headers: apiHeaders()
+    });
+    var data = await res.json();
+    if (data && data.length > 0) {
+      bookingInfo = data[0];
+      var coachName = '';
+      if (bookingInfo.coach_profiles) {
+        coachName = bookingInfo.coach_profiles.display_name || bookingInfo.coach_profiles.full_name || '';
+      }
+      var dateStr = bookingInfo.preferred_date ? new Date(bookingInfo.preferred_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
+      $('booking-header').innerHTML = '<h2>Conversation with ' + escapeHtml(coachName || 'your coach') + '</h2>'
+        + '<p>' + (bookingInfo.service_name ? escapeHtml(bookingInfo.service_name) : 'Coaching session') + (dateStr ? ' &middot; ' + escapeHtml(dateStr) : '') + '</p>';
+    } else {
+      $('booking-header').innerHTML = '<h2>Conversation</h2><p>Booking details not found.</p>';
+    }
+  } catch (e) {
+    $('booking-header').innerHTML = '<h2>Conversation</h2><p>Could not load booking info.</p>';
+  }
+}
+
+async function loadMessages() {
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_messages?booking_id=eq.' + bookingId + '&order=created_at.asc&select=*', {
+      headers: apiHeaders()
+    });
+    var data = await res.json();
+    var container = $('thread-container');
+    if (!data || data.length === 0) {
+      container.innerHTML = '<div class="empty-state"><p>No messages yet. Start the conversation below.</p></div>';
+      return;
+    }
+    var html = '';
+    data.forEach(function(m) {
+      var isClient = m.sender === 'client';
+      html += '<div class="msg-bubble ' + (isClient ? 'msg-client' : 'msg-coach') + '">'
+        + '<div class="msg-sender">' + (isClient ? 'You' : 'Coach') + '</div>'
+        + '<div>' + escapeHtml(m.message) + '</div>'
+        + '<div class="msg-time">' + formatTime(m.created_at) + '</div>'
+        + '</div>';
+    });
+    container.innerHTML = html;
+    container.scrollTop = container.scrollHeight;
+  } catch (e) {
+    // silent fail on poll
+  }
+}
+
+async function markCoachMessagesRead() {
+  if (!bookingId) return;
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/coach_messages?booking_id=eq.' + bookingId + '&sender=eq.coach&is_read=eq.false', {
+      method: 'PATCH',
+      headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ is_read: true })
+    });
+  } catch (e) {}
+}
+
+async function sendMessage() {
+  var input = $('msg-input');
+  var text = input.value.trim();
+  if (!text) return;
+  var btn = $('send-btn');
+  btn.disabled = true;
+
+  try {
+    var coachId = bookingInfo ? bookingInfo.coach_id : null;
+    await fetch(SUPABASE_URL + '/rest/v1/coach_messages', {
+      method: 'POST',
+      headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        coach_id: coachId,
+        client_email: currentEmail,
+        booking_id: bookingId,
+        sender: 'client',
+        message: text
+      })
+    });
+    input.value = '';
+    await loadMessages();
+    markCoachMessagesRead();
+  } catch (e) {
+    alert('Failed to send message. Please try again.');
+  }
+  btn.disabled = false;
+  input.focus();
+}
+
+init();
+</script>
+</body>
+</html>
