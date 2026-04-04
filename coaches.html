@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Find a Coach | ineedcoaching.org</title>
+<meta name="description" content="Browse our directory of published coaches. Find the right coach for your goals.">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #1a1e2e; --gold: #c49a3c; --gold-lt: #faf3e0; --warm: #faf8f4;
+  --white: #ffffff; --muted: #8a8a9a; --border: #2a2e3e; --ink: #1a2e1a;
+  --r: 14px; --r-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--warm); color: var(--ink); }
+
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; align-items: center; justify-content: space-between; padding: 14px 52px; background: rgba(26,30,46,0.95); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
+.logo { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--warm); text-decoration: none; }
+.logo-i { color: var(--gold); font-style: italic; }
+.logo-coaching { color: var(--gold); font-style: italic; }
+.nav-links { display: flex; align-items: center; gap: 22px; list-style: none; }
+.nav-links a { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.nav-links a:hover { color: var(--gold); }
+.nav-pill { background: var(--gold); color: var(--navy) !important; padding: 8px 18px; border-radius: 50px; }
+
+.page-wrap { max-width: 1100px; margin: 0 auto; padding: 120px 24px 80px; }
+
+.page-header { text-align: center; margin-bottom: 40px; }
+.page-header h1 { font-family: 'Playfair Display', serif; font-size: clamp(1.8rem, 4vw, 2.6rem); color: var(--ink); margin-bottom: 10px; }
+.page-header h1 em { color: var(--gold); font-style: italic; }
+.page-header p { font-size: 0.92rem; color: var(--muted); max-width: 500px; margin: 0 auto; line-height: 1.7; }
+
+.filters { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 36px; }
+.filter-pill { padding: 8px 18px; border-radius: 50px; border: 1.5px solid #e0ddd5; background: var(--white); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 700; color: var(--muted); cursor: pointer; transition: all 0.2s; }
+.filter-pill:hover { border-color: var(--gold); color: var(--ink); }
+.filter-pill.active { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+
+.card { background: var(--white); border: 1.5px solid #e0ddd5; border-radius: var(--r); overflow: hidden; transition: all 0.25s; }
+.card:hover { border-color: var(--gold); transform: translateY(-4px); box-shadow: 0 12px 32px rgba(196,154,60,0.1); }
+.card-photo { width: 100%; height: 200px; background: var(--navy); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.card-photo img { width: 100%; height: 100%; object-fit: cover; }
+.card-initials { font-family: 'Playfair Display', serif; font-size: 3rem; font-weight: 900; color: var(--gold); }
+.card-body { padding: 24px; }
+.card-name { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--ink); margin-bottom: 4px; }
+.card-company { font-size: 0.75rem; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+.card-headline { font-size: 0.82rem; color: var(--muted); line-height: 1.55; margin-bottom: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+.card-pill { font-size: 0.65rem; font-weight: 700; background: var(--gold-lt); color: var(--gold); padding: 3px 10px; border-radius: 20px; }
+.card-btn { display: block; width: 100%; text-align: center; background: var(--gold); color: var(--navy); padding: 10px; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; font-weight: 700; text-decoration: none; transition: background 0.2s; }
+.card-btn:hover { background: #d4a94c; }
+
+.empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 0.92rem; }
+
+footer { background: var(--navy); padding: 40px 52px; text-align: center; border-top: 1px solid var(--border); }
+.f-logo { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--warm); margin-bottom: 8px; }
+.f-note { font-size: 0.72rem; color: var(--muted); }
+.f-note a { color: var(--gold); text-decoration: none; }
+
+@media (max-width: 900px) {
+  nav { padding: 12px 20px; }
+  .nav-links { gap: 14px; }
+  .grid { grid-template-columns: 1fr 1fr; }
+  .page-wrap { padding: 100px 18px 60px; }
+}
+@media (max-width: 600px) {
+  .grid { grid-template-columns: 1fr; }
+  .nav-links a:not(.nav-pill) { display: none; }
+  footer { padding: 32px 20px; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo"><span class="logo-i">i</span><span>need</span><span class="logo-coaching">coaching</span><span>.org</span></a>
+  <ul class="nav-links">
+    <li><a href="/coaches.html">Coaches</a></li>
+    <li><a href="/coach-courses.html">Courses</a></li>
+    <li><a href="/#articles">Articles</a></li>
+    <li><a href="/coach-dashboard.html">Dashboard</a></li>
+    <li><a href="https://www.ineedtherapy.org/ineedtherapy-profile-form.html" class="nav-pill">List Your Practice</a></li>
+  </ul>
+</nav>
+
+<div class="page-wrap">
+  <div class="page-header">
+    <h1>Find your <em>coach.</em></h1>
+    <p>Browse coaches who are ready to help you move forward. Filter by specialty to find the right fit.</p>
+  </div>
+
+  <div class="filters" id="filters">
+    <button class="filter-pill active" onclick="filterCoaches('')">All</button>
+  </div>
+
+  <div class="grid" id="coaches-grid">
+    <div class="empty" style="grid-column:1/-1;">Loading coaches...</div>
+  </div>
+</div>
+
+<footer>
+  <div class="f-logo"><span class="logo-i">i</span><span>need</span><span class="logo-coaching">coaching</span><span>.org</span></div>
+  <p class="f-note">A project from <a href="https://www.ineedtherapy.org">ineedtherapy.org</a></p>
+</footer>
+
+<script>
+var SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+var _allCoaches = [];
+var _currentFilter = '';
+
+function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+async function loadCoaches() {
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles?is_published=eq.true&select=*&order=created_at.desc', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
+    });
+    _allCoaches = await res.json();
+    if (!_allCoaches || _allCoaches.error) _allCoaches = [];
+    buildFilters();
+    renderCoaches(_allCoaches);
+  } catch(e) {
+    document.getElementById('coaches-grid').innerHTML = '<div class="empty" style="grid-column:1/-1;">Could not load coaches.</div>';
+  }
+}
+
+function buildFilters() {
+  var specs = {};
+  _allCoaches.forEach(function(c) {
+    (c.specialties || []).forEach(function(s) { specs[s] = (specs[s] || 0) + 1; });
+  });
+  var sorted = Object.entries(specs).sort(function(a, b) { return b[1] - a[1]; });
+  var html = '<button class="filter-pill active" onclick="filterCoaches(\'\')">All</button>';
+  sorted.forEach(function(e) {
+    html += '<button class="filter-pill" onclick="filterCoaches(\'' + esc(e[0]).replace(/'/g, "\\'") + '\')">' + esc(e[0]) + '</button>';
+  });
+  document.getElementById('filters').innerHTML = html;
+}
+
+function filterCoaches(spec) {
+  _currentFilter = spec;
+  document.querySelectorAll('.filter-pill').forEach(function(p) { p.classList.remove('active'); });
+  event.target.classList.add('active');
+  var filtered = spec ? _allCoaches.filter(function(c) { return (c.specialties || []).indexOf(spec) !== -1; }) : _allCoaches;
+  renderCoaches(filtered);
+}
+
+function renderCoaches(coaches) {
+  var grid = document.getElementById('coaches-grid');
+  if (!coaches.length) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1;">No coaches found.</div>';
+    return;
+  }
+  grid.innerHTML = coaches.map(function(c) {
+    var initials = (c.display_name || 'C').split(' ').map(function(w) { return w[0]; }).join('').substring(0, 2).toUpperCase();
+    var pills = (c.specialties || []).slice(0, 3).map(function(s) { return '<span class="card-pill">' + esc(s) + '</span>'; }).join('');
+    var services = [];
+    try { services = typeof c.services === 'string' ? JSON.parse(c.services) : (c.services || []); } catch(e) {}
+    var company = '';
+    services.forEach(function(s) { if (s.company) company = s.company; });
+
+    return '<div class="card">' +
+      '<div class="card-photo">' +
+        (c.photo_url ? '<img src="' + esc(c.photo_url) + '" alt="' + esc(c.display_name) + '">' : '<span class="card-initials">' + initials + '</span>') +
+      '</div>' +
+      '<div class="card-body">' +
+        '<div class="card-name">' + esc(c.display_name || c.full_name) + '</div>' +
+        (c.location ? '<div class="card-company">' + esc(c.location) + '</div>' : '') +
+        '<div class="card-headline">' + esc(c.headline || '') + '</div>' +
+        '<div class="card-pills">' + pills + '</div>' +
+        '<a href="/coach/' + esc(c.slug) + '" class="card-btn">View Profile →</a>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+loadCoaches();
+</script>
+</body>
+</html>
