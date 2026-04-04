@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Course — ineedcoaching.org</title>
+<meta name="description" content="Explore this course on ineedcoaching.org">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #1a2e1a;
+  --forest: #4a7c59;
+  --cream: #f7f4ee;
+  --white: #ffffff;
+  --gold: #c49a3c;
+  --gold-hover: #a87d1f;
+  --muted: #6b6b60;
+  --border: #e0ddd5;
+  --r: 14px;
+  --r-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); color: var(--ink); }
+
+/* NAV */
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; align-items: center; justify-content: space-between; padding: 14px 52px; background: rgba(247,244,238,0.95); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
+.logo { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--ink); text-decoration: none; }
+.logo .logo-i { color: var(--forest); font-style: italic; }
+.logo .logo-coaching { color: var(--gold); font-style: italic; }
+.nav-links { display: flex; align-items: center; gap: 28px; list-style: none; }
+.nav-links a { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.nav-links a:hover { color: var(--forest); }
+
+/* HERO */
+.course-hero { background: var(--ink); padding: 120px 80px 64px; position: relative; overflow: hidden; }
+.course-hero::after { content: 'LEARN'; font-family: 'Playfair Display', serif; font-size: 14rem; font-weight: 900; color: rgba(255,255,255,0.03); position: absolute; right: -40px; top: 50%; transform: translateY(-50%); pointer-events: none; user-select: none; line-height: 1; }
+.hero-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: flex-end; gap: 40px; position: relative; z-index: 2; }
+.hero-text { flex: 1; }
+.hero-text h1 { font-family: 'Playfair Display', serif; font-size: clamp(2rem, 4vw, 3.2rem); color: var(--gold); line-height: 1.1; margin-bottom: 16px; }
+.format-badge { display: inline-block; padding: 5px 14px; border-radius: 50px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; background: rgba(196,154,60,0.2); color: var(--gold); margin-bottom: 14px; }
+.hero-meta { font-size: 0.92rem; color: rgba(247,244,238,0.7); margin-top: 12px; line-height: 1.6; }
+.hero-meta strong { color: var(--cream); }
+.hero-coach { display: flex; align-items: center; gap: 14px; margin-top: 20px; }
+.hero-coach img { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); }
+.hero-coach-info { font-size: 0.88rem; color: var(--cream); }
+.hero-coach-info span { display: block; font-size: 0.78rem; color: rgba(247,244,238,0.6); }
+
+/* MAIN CONTENT */
+.course-body { max-width: 1100px; margin: 0 auto; padding: 48px 40px 80px; display: grid; grid-template-columns: 1fr 360px; gap: 48px; }
+.course-left h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--ink); margin-bottom: 16px; margin-top: 36px; }
+.course-left h2:first-child { margin-top: 0; }
+.course-left p, .course-left li { font-size: 0.95rem; line-height: 1.8; color: var(--muted); }
+.course-left ul { list-style: none; padding: 0; }
+.course-left ul li { padding: 8px 0; padding-left: 24px; position: relative; }
+.course-left ul li::before { content: ''; position: absolute; left: 0; top: 16px; width: 10px; height: 10px; border-radius: 50%; background: var(--gold); }
+
+/* PRICE CARD */
+.price-card { position: sticky; top: 80px; background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 32px; height: fit-content; }
+.price-card .price-amount { font-family: 'Playfair Display', serif; font-size: 2.4rem; color: var(--ink); margin-bottom: 6px; }
+.price-card .price-detail { font-size: 0.85rem; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+.price-card .price-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+.price-card .price-row:last-of-type { border-bottom: none; margin-bottom: 20px; }
+.price-card .price-label { color: var(--muted); }
+.price-card .price-value { font-weight: 700; color: var(--ink); }
+.enroll-btn { width: 100%; padding: 16px 24px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+.enroll-btn:hover { background: var(--gold-hover); }
+
+/* SYLLABUS ACCORDION */
+.syllabus-section { margin-top: 36px; }
+.syllabus-item { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 10px; overflow: hidden; }
+.syllabus-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; cursor: pointer; font-weight: 700; font-size: 0.95rem; color: var(--ink); transition: background 0.2s; }
+.syllabus-header:hover { background: rgba(196,154,60,0.06); }
+.syllabus-header .arrow { font-size: 1.2rem; color: var(--muted); transition: transform 0.2s; }
+.syllabus-item.open .syllabus-header .arrow { transform: rotate(180deg); }
+.syllabus-body { display: none; padding: 0 24px 18px; font-size: 0.9rem; line-height: 1.7; color: var(--muted); }
+.syllabus-item.open .syllabus-body { display: block; }
+
+/* COACH SECTION */
+.coach-section { max-width: 1100px; margin: 0 auto; padding: 0 40px 80px; }
+.coach-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 40px; display: flex; align-items: center; gap: 32px; }
+.coach-card img { width: 100px; height: 100px; border-radius: var(--r); object-fit: cover; }
+.coach-card-info h3 { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: var(--ink); margin-bottom: 6px; }
+.coach-card-info p { font-size: 0.9rem; color: var(--muted); line-height: 1.6; margin-bottom: 10px; }
+.coach-card-info a { font-size: 0.85rem; font-weight: 700; color: var(--gold); text-decoration: none; }
+.coach-card-info a:hover { text-decoration: underline; }
+
+/* FOOTER */
+footer { background: var(--ink); padding: 48px 80px; text-align: center; }
+footer p { font-size: 0.82rem; color: rgba(247,244,238,0.5); }
+footer a { color: var(--gold); text-decoration: none; }
+
+/* MODAL */
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 500; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal-box { background: var(--white); border-radius: var(--r); padding: 40px; max-width: 440px; width: 90%; text-align: center; }
+.modal-box h2 { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--ink); margin-bottom: 10px; }
+.modal-box p { font-size: 0.9rem; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+.modal-box input { width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; color: var(--ink); background: var(--cream); margin-bottom: 14px; }
+.modal-box input:focus { outline: none; border-color: var(--gold); }
+.modal-box .modal-btn { width: 100%; padding: 14px 24px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+.modal-box .modal-btn:hover { background: var(--gold-hover); }
+.modal-box .modal-msg { font-size: 0.82rem; margin-top: 10px; min-height: 20px; }
+.modal-close { position: absolute; top: 14px; right: 18px; background: none; border: none; font-size: 1.4rem; color: var(--muted); cursor: pointer; }
+
+/* LOADING */
+.loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 16px; }
+.loading-spinner { width: 48px; height: 48px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.error-state { text-align: center; padding: 120px 24px; }
+.error-state h2 { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--ink); margin-bottom: 12px; }
+.error-state p { color: var(--muted); font-size: 0.95rem; }
+.error-state a { color: var(--gold); text-decoration: none; font-weight: 700; }
+
+/* MOBILE */
+@media (max-width: 768px) {
+  nav { padding: 12px 20px; }
+  .course-hero { padding: 100px 24px 48px; }
+  .hero-inner { flex-direction: column; align-items: flex-start; }
+  .course-body { grid-template-columns: 1fr; padding: 32px 20px 60px; gap: 32px; }
+  .price-card { position: static; }
+  .coach-card { flex-direction: column; align-items: flex-start; padding: 28px; }
+  .coach-section { padding: 0 20px 60px; }
+  footer { padding: 32px 20px; }
+  .syllabus-header { padding: 14px 18px; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo"><span class="logo-i">i</span>need<span class="logo-coaching">coaching</span>.org</a>
+  <ul class="nav-links">
+    <li><a href="/coaches.html">Coaches</a></li>
+    <li><a href="/coach-courses.html">Courses</a></li>
+    <li><a href="/classroom.html">Login</a></li>
+  </ul>
+</nav>
+
+<div id="loading" class="loading-state">
+  <div class="loading-spinner"></div>
+  <p style="color:var(--muted);font-size:0.9rem;">Loading course...</p>
+</div>
+
+<div id="error" class="error-state" style="display:none;">
+  <h2>Course not found</h2>
+  <p>This course may no longer be available. <a href="/coach-courses.html">Browse all courses</a></p>
+</div>
+
+<div id="course-page" style="display:none;">
+
+  <!-- HERO -->
+  <section class="course-hero">
+    <div class="hero-inner">
+      <div class="hero-text">
+        <div class="format-badge" id="hero-format"></div>
+        <h1 id="hero-title"></h1>
+        <div class="hero-meta" id="hero-meta"></div>
+        <div class="hero-coach" id="hero-coach"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BODY -->
+  <div class="course-body">
+    <div class="course-left">
+      <h2>About This Course</h2>
+      <p id="course-description"></p>
+
+      <div id="who-section" style="display:none;">
+        <h2>Who It's For</h2>
+        <p id="course-who"></p>
+      </div>
+
+      <div id="learn-section" style="display:none;">
+        <h2>What You'll Learn</h2>
+        <ul id="course-learn"></ul>
+      </div>
+
+      <div id="syllabus-section" class="syllabus-section" style="display:none;">
+        <h2>Syllabus</h2>
+        <div id="syllabus-list"></div>
+      </div>
+    </div>
+
+    <div class="course-right">
+      <div class="price-card" id="price-card"></div>
+    </div>
+  </div>
+
+  <!-- COACH SECTION -->
+  <div class="coach-section" id="coach-section" style="display:none;">
+    <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--ink);margin-bottom:20px;">Your Instructor</h2>
+    <div class="coach-card" id="coach-card"></div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>&copy; 2026 <a href="/">ineedcoaching.org</a>. All rights reserved.</p>
+  </footer>
+</div>
+
+<!-- ENROLL MODAL -->
+<div class="modal-overlay" id="enroll-modal">
+  <div class="modal-box" style="position:relative;">
+    <button class="modal-close" id="modal-close">&times;</button>
+    <h2>Enroll in This Course</h2>
+    <p>Enter your email to enroll. You'll receive access to the classroom.</p>
+    <input type="email" id="enroll-email" placeholder="you@example.com" required>
+    <button class="modal-btn" id="enroll-submit">Enroll Now</button>
+    <div class="modal-msg" id="enroll-msg"></div>
+  </div>
+</div>
+
+<!-- SUCCESS MODAL -->
+<div class="modal-overlay" id="success-modal">
+  <div class="modal-box">
+    <h2 style="color:var(--forest);">You're Enrolled!</h2>
+    <p>You now have access to this course. Head to the classroom to start learning.</p>
+    <a href="/classroom.html" class="modal-btn" style="display:inline-block;text-decoration:none;text-align:center;">Go to Classroom</a>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+const TOKEN_KEY = 'sb_access_token';
+
+function escapeHtml(str) {
+  if (!str) return '';
+  var d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function apiHeaders(token) {
+  var h = { 'apikey': ANON_KEY, 'Content-Type': 'application/json' };
+  if (token) h['Authorization'] = 'Bearer ' + token;
+  else h['Authorization'] = 'Bearer ' + ANON_KEY;
+  return h;
+}
+
+var courseData = null;
+
+async function loadCourse() {
+  var params = new URLSearchParams(window.location.search);
+  var slug = params.get('slug');
+  if (!slug) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+    return;
+  }
+
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_courses?slug=eq.' + encodeURIComponent(slug) + '&select=*,coach_profiles(display_name,slug,photo_url,headline)', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
+    });
+    var data = await res.json();
+    if (!data || data.length === 0) {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('error').style.display = 'block';
+      return;
+    }
+    courseData = data[0];
+    renderCourse();
+  } catch (e) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+  }
+}
+
+function renderCourse() {
+  var c = courseData;
+  var coach = c.coach_profiles;
+
+  document.title = (c.title || 'Course') + ' — ineedcoaching.org';
+
+  // Hero
+  var formatMap = { 'self-paced': 'Self-paced', 'cohort': 'Cohort', 'masterclass': 'Masterclass' };
+  document.getElementById('hero-format').textContent = formatMap[c.format] || c.format || 'Course';
+  document.getElementById('hero-title').textContent = c.title || '';
+
+  var metaHtml = '';
+  if (c.start_date) {
+    var d = new Date(c.start_date);
+    metaHtml += '<strong>Starts:</strong> ' + d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  }
+  if (c.duration_weeks) {
+    metaHtml += (metaHtml ? ' &nbsp;&bull;&nbsp; ' : '') + '<strong>' + c.duration_weeks + ' weeks</strong>';
+  }
+  document.getElementById('hero-meta').innerHTML = metaHtml;
+
+  if (coach) {
+    var coachHtml = '';
+    if (coach.photo_url) {
+      coachHtml += '<img src="' + escapeHtml(coach.photo_url) + '" alt="' + escapeHtml(coach.display_name) + '">';
+    }
+    coachHtml += '<div class="hero-coach-info">' + escapeHtml(coach.display_name) + '<span>' + escapeHtml(coach.headline || '') + '</span></div>';
+    document.getElementById('hero-coach').innerHTML = coachHtml;
+  }
+
+  // Description
+  document.getElementById('course-description').textContent = c.description || '';
+
+  // Who it's for
+  if (c.who_its_for) {
+    document.getElementById('who-section').style.display = 'block';
+    document.getElementById('course-who').textContent = c.who_its_for;
+  }
+
+  // What you'll learn
+  var learns = [];
+  try { learns = typeof c.what_youll_learn === 'string' ? JSON.parse(c.what_youll_learn) : (c.what_youll_learn || []); } catch(e) {}
+  if (learns.length > 0) {
+    document.getElementById('learn-section').style.display = 'block';
+    var learnHtml = '';
+    learns.forEach(function(item) {
+      learnHtml += '<li>' + escapeHtml(item) + '</li>';
+    });
+    document.getElementById('course-learn').innerHTML = learnHtml;
+  }
+
+  // Syllabus
+  var syllabus = [];
+  try { syllabus = typeof c.syllabus === 'string' ? JSON.parse(c.syllabus) : (c.syllabus || []); } catch(e) {}
+  if (syllabus.length > 0) {
+    document.getElementById('syllabus-section').style.display = 'block';
+    var syllHtml = '';
+    syllabus.forEach(function(mod, i) {
+      syllHtml += '<div class="syllabus-item">';
+      syllHtml += '<div class="syllabus-header" onclick="this.parentElement.classList.toggle(\'open\')">';
+      syllHtml += '<span>Module ' + (i + 1) + ': ' + escapeHtml(mod.title || '') + '</span>';
+      syllHtml += '<span class="arrow">&#9662;</span>';
+      syllHtml += '</div>';
+      syllHtml += '<div class="syllabus-body">' + escapeHtml(mod.description || '') + '</div>';
+      syllHtml += '</div>';
+    });
+    document.getElementById('syllabus-list').innerHTML = syllHtml;
+  }
+
+  // Price card
+  var priceHtml = '';
+  var price = c.price ? parseFloat(c.price) : 0;
+  priceHtml += '<div class="price-amount">' + (price > 0 ? '$' + price.toFixed(0) : 'Free') + '</div>';
+  priceHtml += '<div class="price-detail">' + (price > 0 ? 'One-time payment' : 'No cost to enroll') + '</div>';
+  priceHtml += '<div class="price-row"><span class="price-label">Format</span><span class="price-value">' + escapeHtml(formatMap[c.format] || c.format || 'Course') + '</span></div>';
+  if (c.start_date) {
+    var sd = new Date(c.start_date);
+    priceHtml += '<div class="price-row"><span class="price-label">Starts</span><span class="price-value">' + sd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + '</span></div>';
+  }
+  if (c.duration_weeks) {
+    priceHtml += '<div class="price-row"><span class="price-label">Duration</span><span class="price-value">' + c.duration_weeks + ' weeks</span></div>';
+  }
+  priceHtml += '<button class="enroll-btn" id="enroll-btn" onclick="handleEnroll()">Enroll Now</button>';
+  document.getElementById('price-card').innerHTML = priceHtml;
+
+  // Coach section
+  if (coach) {
+    document.getElementById('coach-section').style.display = 'block';
+    var ccHtml = '';
+    if (coach.photo_url) {
+      ccHtml += '<img src="' + escapeHtml(coach.photo_url) + '" alt="' + escapeHtml(coach.display_name) + '">';
+    }
+    ccHtml += '<div class="coach-card-info">';
+    ccHtml += '<h3>' + escapeHtml(coach.display_name) + '</h3>';
+    ccHtml += '<p>' + escapeHtml(coach.headline || '') + '</p>';
+    if (coach.slug) {
+      ccHtml += '<a href="/coach/' + escapeHtml(coach.slug) + '">View full profile &rarr;</a>';
+    }
+    ccHtml += '</div>';
+    document.getElementById('coach-card').innerHTML = ccHtml;
+  }
+
+  // Show page
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('course-page').style.display = 'block';
+}
+
+function handleEnroll() {
+  if (!courseData) return;
+
+  // If course has stripe_price_id, redirect to Stripe checkout
+  if (courseData.stripe_price_id) {
+    window.location.href = 'https://checkout.stripe.com/pay/' + courseData.stripe_price_id;
+    return;
+  }
+
+  // Otherwise show email modal
+  document.getElementById('enroll-modal').classList.add('open');
+  document.getElementById('enroll-email').focus();
+}
+
+document.getElementById('modal-close').addEventListener('click', function() {
+  document.getElementById('enroll-modal').classList.remove('open');
+});
+
+document.getElementById('enroll-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+
+document.getElementById('enroll-submit').addEventListener('click', async function() {
+  var email = document.getElementById('enroll-email').value.trim();
+  var msg = document.getElementById('enroll-msg');
+  if (!email) {
+    msg.textContent = 'Please enter your email.';
+    msg.style.color = '#c44';
+    return;
+  }
+
+  this.disabled = true;
+  this.textContent = 'Enrolling...';
+  msg.textContent = '';
+
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_enrollments', {
+      method: 'POST',
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+      body: JSON.stringify({
+        course_id: courseData.id,
+        student_email: email
+      })
+    });
+
+    if (res.ok || res.status === 201) {
+      document.getElementById('enroll-modal').classList.remove('open');
+      document.getElementById('success-modal').classList.add('open');
+    } else {
+      var err = await res.json();
+      if (err.message && err.message.includes('duplicate')) {
+        msg.textContent = 'You are already enrolled! Head to the classroom.';
+        msg.style.color = 'var(--forest)';
+      } else {
+        msg.textContent = err.message || 'Something went wrong. Try again.';
+        msg.style.color = '#c44';
+      }
+    }
+  } catch (e) {
+    msg.textContent = 'Network error. Please try again.';
+    msg.style.color = '#c44';
+  }
+
+  this.disabled = false;
+  this.textContent = 'Enroll Now';
+});
+
+document.getElementById('success-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+
+loadCourse();
+</script>
+</body>
+</html>

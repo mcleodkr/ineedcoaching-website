@@ -244,6 +244,52 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .add-goal-form { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 28px; margin-bottom: 24px; }
 .add-goal-form h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--ink); margin-bottom: 18px; }
 
+/* COURSES TAB */
+.course-mgmt-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 24px; margin-bottom: 14px; }
+.course-mgmt-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+.course-mgmt-header h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--ink); }
+.course-mgmt-header .course-badges { display: flex; gap: 6px; align-items: center; }
+.course-badge { display: inline-block; padding: 4px 12px; border-radius: 50px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+.badge-active { background: rgba(74,124,89,0.15); color: var(--forest); }
+.badge-draft { background: rgba(107,107,96,0.12); color: var(--muted); }
+.badge-format { background: rgba(196,154,60,0.15); color: var(--gold); }
+.course-mgmt-meta { font-size: 0.85rem; color: var(--muted); margin-bottom: 12px; }
+.manage-btn { padding: 8px 18px; background: var(--ink); color: var(--cream); border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+.manage-btn:hover { background: var(--gold); }
+.lesson-builder { display: none; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px; }
+.lesson-builder.open { display: block; }
+.lesson-builder-item { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: var(--cream); border: 1px solid var(--border); border-radius: var(--r-sm); margin-bottom: 8px; }
+.lesson-builder-item .lb-title { flex: 1; font-size: 0.88rem; font-weight: 600; color: var(--ink); }
+.lesson-builder-item .lb-video-icon { color: var(--gold); font-size: 0.8rem; }
+.lb-btn { padding: 5px 12px; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.75rem; font-weight: 700; cursor: pointer; border: 1px solid var(--border); background: var(--white); color: var(--muted); transition: all 0.2s; }
+.lb-btn:hover { border-color: var(--gold); color: var(--gold); }
+.lb-btn-danger:hover { border-color: #c44; color: #c44; }
+.add-lesson-form { background: var(--cream); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 18px; margin-top: 12px; }
+.add-lesson-form .form-group { margin-bottom: 12px; }
+.add-lesson-form .form-group label { display: block; font-size: 0.75rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+.add-lesson-form .form-group input, .add-lesson-form .form-group textarea { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.88rem; color: var(--ink); background: var(--white); }
+.add-lesson-form .form-group input:focus, .add-lesson-form .form-group textarea:focus { outline: none; border-color: var(--gold); }
+.add-lesson-form .form-group textarea { min-height: 80px; resize: vertical; }
+.cert-template-row { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+.cert-template-row label { font-size: 0.78rem; font-weight: 700; color: var(--ink); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+.cert-template-row select { padding: 8px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; color: var(--ink); background: var(--cream); }
+.cert-template-row select:focus { outline: none; border-color: var(--gold); }
+.create-course-form { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 28px; margin-bottom: 24px; display: none; }
+.create-course-form.open { display: block; }
+.create-course-form h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--ink); margin-bottom: 18px; }
+.learn-items-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.learn-item { display: flex; align-items: center; gap: 8px; }
+.learn-item span { flex: 1; font-size: 0.85rem; color: var(--ink); }
+.learn-item button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1rem; }
+.learn-item button:hover { color: #c44; }
+.syllabus-modules-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.syl-module { background: var(--cream); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px; }
+.syl-module-header { display: flex; justify-content: space-between; align-items: center; }
+.syl-module-header strong { font-size: 0.85rem; color: var(--ink); }
+.syl-module-header button { background: none; border: none; color: var(--muted); cursor: pointer; }
+.syl-module-header button:hover { color: #c44; }
+.syl-module p { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+
 .hidden { display: none !important; }
 </style>
 </head>
@@ -286,6 +332,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
     <button class="tab-btn" data-tab="intake">Intake Forms</button>
     <button class="tab-btn" data-tab="messages" id="tab-btn-messages">Messages</button>
     <button class="tab-btn" data-tab="goals">Goals</button>
+    <button class="tab-btn" data-tab="courses">Courses</button>
   </div>
 
   <!-- LOADING -->
@@ -580,6 +627,14 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
       <div id="goals-content" class="hidden"></div>
     </div>
 
+    <!-- COURSES TAB -->
+    <div id="tab-courses" class="tab-panel">
+      <div id="courses-loading" class="loading-state" style="min-height:30vh;">
+        <div class="loading-spinner"></div>
+      </div>
+      <div id="courses-content" class="hidden"></div>
+    </div>
+
   </div>
 </div>
 
@@ -795,6 +850,10 @@ function setupTabs() {
       if (btn.dataset.tab === 'goals' && !btn._loaded) {
         btn._loaded = true;
         loadDashGoals();
+      }
+      if (btn.dataset.tab === 'courses' && !btn._loaded) {
+        btn._loaded = true;
+        loadDashCourses();
       }
     });
   });
@@ -1921,6 +1980,415 @@ async function addGoal() {
   }
   btn.disabled = false;
   btn.textContent = 'Add Goal';
+}
+
+/* ================================================
+   COURSES TAB
+   ================================================ */
+var dashCourses = [];
+var managingCourseId = null;
+var createCourseLearnItems = [];
+var createCourseSyllabusModules = [];
+
+async function loadDashCourses() {
+  var loading = $('courses-loading');
+  var content = $('courses-content');
+  loading.style.display = 'flex';
+  content.classList.add('hidden');
+
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_courses?coach_id=eq.' + coachProfile.id + '&select=*&order=created_at.desc', {
+      headers: apiHeaders()
+    });
+    dashCourses = await res.json();
+    if (!Array.isArray(dashCourses)) dashCourses = [];
+  } catch (e) {
+    dashCourses = [];
+  }
+
+  // Fetch enrollment counts
+  for (var i = 0; i < dashCourses.length; i++) {
+    try {
+      var cRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_enrollments?course_id=eq.' + dashCourses[i].id + '&select=id', {
+        headers: apiHeaders()
+      });
+      var enrolls = await cRes.json();
+      dashCourses[i]._enrollCount = Array.isArray(enrolls) ? enrolls.length : 0;
+    } catch (e) {
+      dashCourses[i]._enrollCount = 0;
+    }
+  }
+
+  loading.style.display = 'none';
+  content.classList.remove('hidden');
+  renderDashCourses();
+}
+
+function renderDashCourses() {
+  var content = $('courses-content');
+  var html = '';
+
+  html += '<button class="add-service-btn" onclick="toggleCreateCourseForm()" style="margin-bottom:18px;">+ Create Course</button>';
+
+  // Create Course Form
+  html += '<div id="create-course-form" class="create-course-form">';
+  html += '<h3>Create a New Course</h3>';
+  html += '<div class="form-row">';
+  html += '<div class="form-group"><label>Title</label><input type="text" id="cc-title" placeholder="Course title"></div>';
+  html += '<div class="form-group"><label>Slug</label><input type="text" id="cc-slug" placeholder="my-course-slug"></div>';
+  html += '</div>';
+  html += '<div class="form-group"><label>Description</label><textarea id="cc-desc" placeholder="What is this course about?"></textarea></div>';
+  html += '<div class="form-row">';
+  html += '<div class="form-group"><label>Price ($)</label><input type="number" id="cc-price" placeholder="0" min="0" step="1"></div>';
+  html += '<div class="form-group"><label>Format</label><select id="cc-format"><option value="self-paced">Self-paced</option><option value="cohort">Cohort</option><option value="masterclass">Masterclass</option></select></div>';
+  html += '</div>';
+  html += '<div class="form-group"><label>Who It\'s For</label><textarea id="cc-who" placeholder="Describe the ideal student..." style="min-height:80px;"></textarea></div>';
+
+  // What you'll learn
+  html += '<div class="form-group"><label>What You\'ll Learn</label>';
+  html += '<div id="cc-learn-list" class="learn-items-list"></div>';
+  html += '<div class="pill-add-row"><input type="text" id="cc-learn-input" placeholder="Add a learning outcome..."><button class="pill-add-btn" onclick="addLearnItem()">Add</button></div>';
+  html += '</div>';
+
+  // Syllabus
+  html += '<div class="form-group"><label>Syllabus Modules</label>';
+  html += '<div id="cc-syll-list" class="syllabus-modules-list"></div>';
+  html += '<div style="display:flex;gap:8px;margin-bottom:8px;"><input type="text" id="cc-syll-title" placeholder="Module title" style="flex:1;padding:8px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:\'Cabinet Grotesk\',sans-serif;font-size:0.85rem;"><input type="text" id="cc-syll-desc" placeholder="Module description" style="flex:2;padding:8px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:\'Cabinet Grotesk\',sans-serif;font-size:0.85rem;"><button class="pill-add-btn" onclick="addSyllabusModule()">Add</button></div>';
+  html += '</div>';
+
+  html += '<button class="save-btn" onclick="submitCreateCourse()">Create Course</button>';
+  html += '<span class="save-msg" id="cc-msg"></span>';
+  html += '</div>';
+
+  // Course list
+  if (dashCourses.length === 0) {
+    html += '<div class="empty-state"><p>No courses yet. Create your first course above.</p></div>';
+  } else {
+    dashCourses.forEach(function(c) {
+      var formatMap = { 'self-paced': 'Self-paced', 'cohort': 'Cohort', 'masterclass': 'Masterclass' };
+      html += '<div class="course-mgmt-card" id="course-card-' + c.id + '">';
+      html += '<div class="course-mgmt-header">';
+      html += '<h3>' + escapeHtml(c.title || 'Untitled') + '</h3>';
+      html += '<div class="course-badges">';
+      html += '<span class="course-badge ' + (c.status === 'active' ? 'badge-active' : 'badge-draft') + '">' + escapeHtml(c.status || 'draft') + '</span>';
+      html += '<span class="course-badge badge-format">' + escapeHtml(formatMap[c.format] || c.format || 'Course') + '</span>';
+      html += '</div></div>';
+      html += '<div class="course-mgmt-meta">' + (c._enrollCount || 0) + ' enrollment' + (c._enrollCount !== 1 ? 's' : '') + '</div>';
+      html += '<button class="manage-btn" onclick="toggleManageCourse(\'' + c.id + '\')">Manage Lessons</button>';
+
+      // Lesson builder (hidden by default)
+      html += '<div class="lesson-builder" id="lb-' + c.id + '">';
+      html += '<div id="lb-lessons-' + c.id + '">Loading lessons...</div>';
+
+      // Add lesson form
+      html += '<div class="add-lesson-form">';
+      html += '<div class="form-group"><label>Lesson Title</label><input type="text" id="lb-title-' + c.id + '" placeholder="Lesson title"></div>';
+      html += '<div class="form-group"><label>Content (HTML)</label><textarea id="lb-content-' + c.id + '" placeholder="Lesson content..."></textarea></div>';
+      html += '<div class="form-group"><label>Video URL</label><input type="text" id="lb-video-' + c.id + '" placeholder="https://youtube.com/embed/..."></div>';
+      html += '<button class="save-btn" style="padding:10px 22px;font-size:0.85rem;" onclick="addLesson(\'' + c.id + '\')">Add Lesson</button>';
+      html += '<span class="save-msg" id="lb-msg-' + c.id + '"></span>';
+      html += '</div>';
+
+      // Certificate template
+      html += '<div class="cert-template-row">';
+      html += '<label>Certificate Template</label>';
+      html += '<select onchange="updateCertTemplate(\'' + c.id + '\', this.value)">';
+      var templates = ['elegant', 'minimal', 'bold', 'warm'];
+      templates.forEach(function(t) {
+        html += '<option value="' + t + '"' + (c.certificate_template === t ? ' selected' : '') + '>' + t.charAt(0).toUpperCase() + t.slice(1) + '</option>';
+      });
+      html += '</select></div>';
+
+      html += '</div>'; // lesson-builder
+      html += '</div>'; // course-mgmt-card
+    });
+  }
+
+  content.innerHTML = html;
+}
+
+function toggleCreateCourseForm() {
+  var form = $('create-course-form');
+  if (form) form.classList.toggle('open');
+  createCourseLearnItems = [];
+  createCourseSyllabusModules = [];
+}
+
+function addLearnItem() {
+  var input = $('cc-learn-input');
+  var val = input.value.trim();
+  if (!val) return;
+  createCourseLearnItems.push(val);
+  input.value = '';
+  renderLearnItems();
+}
+
+function removeLearnItem(idx) {
+  createCourseLearnItems.splice(idx, 1);
+  renderLearnItems();
+}
+
+function renderLearnItems() {
+  var list = $('cc-learn-list');
+  if (!list) return;
+  var html = '';
+  createCourseLearnItems.forEach(function(item, i) {
+    html += '<div class="learn-item"><span>' + escapeHtml(item) + '</span><button onclick="removeLearnItem(' + i + ')">&times;</button></div>';
+  });
+  list.innerHTML = html;
+}
+
+function addSyllabusModule() {
+  var titleInput = $('cc-syll-title');
+  var descInput = $('cc-syll-desc');
+  var title = titleInput.value.trim();
+  var desc = descInput.value.trim();
+  if (!title) return;
+  createCourseSyllabusModules.push({ title: title, description: desc });
+  titleInput.value = '';
+  descInput.value = '';
+  renderSyllabusModules();
+}
+
+function removeSyllabusModule(idx) {
+  createCourseSyllabusModules.splice(idx, 1);
+  renderSyllabusModules();
+}
+
+function renderSyllabusModules() {
+  var list = $('cc-syll-list');
+  if (!list) return;
+  var html = '';
+  createCourseSyllabusModules.forEach(function(mod, i) {
+    html += '<div class="syl-module"><div class="syl-module-header"><strong>' + escapeHtml(mod.title) + '</strong><button onclick="removeSyllabusModule(' + i + ')">&times;</button></div>';
+    if (mod.description) html += '<p>' + escapeHtml(mod.description) + '</p>';
+    html += '</div>';
+  });
+  list.innerHTML = html;
+}
+
+async function submitCreateCourse() {
+  var title = $('cc-title').value.trim();
+  var slug = $('cc-slug').value.trim();
+  var desc = $('cc-desc').value.trim();
+  var price = parseFloat($('cc-price').value) || 0;
+  var format = $('cc-format').value;
+  var who = $('cc-who').value.trim();
+  var msg = $('cc-msg');
+
+  if (!title || !slug) {
+    msg.textContent = 'Title and slug are required.';
+    msg.style.color = '#c44';
+    msg.classList.add('show');
+    return;
+  }
+
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_courses', {
+      method: 'POST',
+      headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
+      body: JSON.stringify({
+        coach_id: coachProfile.id,
+        title: title,
+        slug: slug,
+        description: desc || null,
+        price: price,
+        format: format,
+        who_its_for: who || null,
+        what_youll_learn: createCourseLearnItems,
+        syllabus: createCourseSyllabusModules,
+        status: 'draft',
+        certificate_template: 'elegant'
+      })
+    });
+
+    if (res.ok || res.status === 201) {
+      msg.textContent = 'Course created!';
+      msg.style.color = 'var(--forest)';
+      msg.classList.add('show');
+      createCourseLearnItems = [];
+      createCourseSyllabusModules = [];
+      setTimeout(function() { loadDashCourses(); }, 600);
+    } else {
+      var err = await res.json();
+      msg.textContent = err.message || 'Error creating course.';
+      msg.style.color = '#c44';
+      msg.classList.add('show');
+    }
+  } catch (e) {
+    msg.textContent = 'Network error.';
+    msg.style.color = '#c44';
+    msg.classList.add('show');
+  }
+}
+
+async function toggleManageCourse(courseId) {
+  var builder = $('lb-' + courseId);
+  if (!builder) return;
+
+  if (builder.classList.contains('open')) {
+    builder.classList.remove('open');
+    managingCourseId = null;
+    return;
+  }
+
+  // Close others
+  document.querySelectorAll('.lesson-builder.open').forEach(function(el) { el.classList.remove('open'); });
+
+  builder.classList.add('open');
+  managingCourseId = courseId;
+  await loadCourseLessons(courseId);
+}
+
+async function loadCourseLessons(courseId) {
+  var container = $('lb-lessons-' + courseId);
+  if (!container) return;
+  container.innerHTML = '<div class="loading-state" style="min-height:60px;padding:12px;"><div class="loading-spinner" style="width:24px;height:24px;border-width:2px;"></div></div>';
+
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?course_id=eq.' + courseId + '&order=sort_order.asc&select=*', {
+      headers: apiHeaders()
+    });
+    var lessons = await res.json();
+    if (!Array.isArray(lessons)) lessons = [];
+
+    if (lessons.length === 0) {
+      container.innerHTML = '<p style="font-size:0.85rem;color:var(--muted);font-style:italic;padding:8px 0;">No lessons yet. Add your first lesson below.</p>';
+      return;
+    }
+
+    var html = '';
+    lessons.forEach(function(l, idx) {
+      html += '<div class="lesson-builder-item">';
+      html += '<span style="font-size:0.75rem;color:var(--muted);font-weight:700;min-width:24px;">' + (idx + 1) + '</span>';
+      html += '<span class="lb-title">' + escapeHtml(l.title) + '</span>';
+      if (l.video_url) html += '<span class="lb-video-icon">&#9654;</span>';
+      // Move up/down
+      if (idx > 0) {
+        html += '<button class="lb-btn" onclick="moveLessonUp(\'' + courseId + '\',\'' + l.id + '\',' + l.sort_order + ',' + (idx > 0 ? lessons[idx-1].sort_order : 0) + ',\'' + (idx > 0 ? lessons[idx-1].id : '') + '\')" title="Move up">&uarr;</button>';
+      }
+      if (idx < lessons.length - 1) {
+        html += '<button class="lb-btn" onclick="moveLessonDown(\'' + courseId + '\',\'' + l.id + '\',' + l.sort_order + ',' + lessons[idx+1].sort_order + ',\'' + lessons[idx+1].id + '\')" title="Move down">&darr;</button>';
+      }
+      html += '<button class="lb-btn lb-btn-danger" onclick="deleteLesson(\'' + courseId + '\',\'' + l.id + '\')" title="Delete">&#10005;</button>';
+      html += '</div>';
+    });
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = '<p style="font-size:0.85rem;color:#c44;">Error loading lessons.</p>';
+  }
+}
+
+async function addLesson(courseId) {
+  var title = $('lb-title-' + courseId).value.trim();
+  var content = $('lb-content-' + courseId).value.trim();
+  var video = $('lb-video-' + courseId).value.trim();
+  var msg = $('lb-msg-' + courseId);
+
+  if (!title) {
+    msg.textContent = 'Title is required.';
+    msg.style.color = '#c44';
+    msg.classList.add('show');
+    return;
+  }
+
+  try {
+    // Get max sort order
+    var countRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?course_id=eq.' + courseId + '&select=sort_order&order=sort_order.desc&limit=1', {
+      headers: apiHeaders()
+    });
+    var existing = await countRes.json();
+    var nextOrder = (Array.isArray(existing) && existing.length > 0) ? (existing[0].sort_order + 1) : 0;
+
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons', {
+      method: 'POST',
+      headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        course_id: courseId,
+        title: title,
+        content: content || null,
+        video_url: video || null,
+        sort_order: nextOrder
+      })
+    });
+
+    if (res.ok || res.status === 201) {
+      $('lb-title-' + courseId).value = '';
+      $('lb-content-' + courseId).value = '';
+      $('lb-video-' + courseId).value = '';
+      msg.textContent = 'Lesson added!';
+      msg.style.color = 'var(--forest)';
+      msg.classList.add('show');
+      setTimeout(function() { msg.classList.remove('show'); }, 2000);
+      loadCourseLessons(courseId);
+    } else {
+      var err = await res.json();
+      msg.textContent = err.message || 'Error adding lesson.';
+      msg.style.color = '#c44';
+      msg.classList.add('show');
+    }
+  } catch (e) {
+    msg.textContent = 'Network error.';
+    msg.style.color = '#c44';
+    msg.classList.add('show');
+  }
+}
+
+async function deleteLesson(courseId, lessonId) {
+  if (!confirm('Delete this lesson?')) return;
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?id=eq.' + lessonId, {
+      method: 'DELETE',
+      headers: { ...apiHeaders(), 'Prefer': 'return=representation' }
+    });
+    loadCourseLessons(courseId);
+  } catch (e) { /* ignore */ }
+}
+
+async function moveLessonUp(courseId, lessonId, currentOrder, prevOrder, prevId) {
+  try {
+    await Promise.all([
+      fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?id=eq.' + lessonId, {
+        method: 'PATCH',
+        headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ sort_order: prevOrder })
+      }),
+      fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?id=eq.' + prevId, {
+        method: 'PATCH',
+        headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ sort_order: currentOrder })
+      })
+    ]);
+    loadCourseLessons(courseId);
+  } catch (e) { /* ignore */ }
+}
+
+async function moveLessonDown(courseId, lessonId, currentOrder, nextOrder, nextId) {
+  try {
+    await Promise.all([
+      fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?id=eq.' + lessonId, {
+        method: 'PATCH',
+        headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ sort_order: nextOrder })
+      }),
+      fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?id=eq.' + nextId, {
+        method: 'PATCH',
+        headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ sort_order: currentOrder })
+      })
+    ]);
+    loadCourseLessons(courseId);
+  } catch (e) { /* ignore */ }
+}
+
+async function updateCertTemplate(courseId, template) {
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/coach_courses?id=eq.' + courseId, {
+      method: 'PATCH',
+      headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ certificate_template: template })
+    });
+  } catch (e) { /* ignore */ }
 }
 
 /* ================================================
