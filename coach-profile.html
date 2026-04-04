@@ -211,7 +211,7 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
       <p class="hero-headline" id="hero-headline"></p>
       <div class="hero-specialties" id="hero-specialties"></div>
       <div class="hero-buttons">
-        <a href="#booking" class="btn-gold">Book a Session</a>
+        <a href="#booking" class="btn-gold" id="hero-book-btn">Book a Session</a>
         <a href="#services" class="btn-outline">View Services</a>
       </div>
     </div>
@@ -278,6 +278,10 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
           <input type="email" id="booking-email" required placeholder="email@example.com">
         </div>
         <div class="form-group">
+          <label for="booking-phone">Phone Number (for reminders)</label>
+          <input type="tel" id="booking-phone" placeholder="Phone number (for reminders)">
+        </div>
+        <div class="form-group">
           <label for="booking-date">Preferred Date</label>
           <input type="date" id="booking-date" required>
         </div>
@@ -287,9 +291,22 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
         </div>
         <button type="submit" class="btn-gold booking-submit">Request Booking</button>
       </form>
+      <div id="intake-step" class="hidden" style="padding:32px 0;">
+        <h3 style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--ink);margin-bottom:6px;">Step 2: Intake Form</h3>
+        <p style="font-size:0.88rem;color:var(--muted);margin-bottom:24px;">Please complete this form so the coach can prepare for your session.</p>
+        <div id="intake-questions-render"></div>
+        <button class="btn-gold booking-submit" id="submit-intake-btn" style="margin-top:20px;width:100%;">Submit Intake Form</button>
+      </div>
       <div class="booking-success" id="booking-success">
         <h3>Booking Request Sent!</h3>
         <p>Your request has been submitted. The coach will be in touch soon.</p>
+        <div id="zoom-link-display" class="hidden" style="margin-top:20px;padding:16px;background:var(--cream);border:1px solid var(--border);border-radius:var(--r-sm);text-align:left;">
+          <div style="font-weight:700;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink);margin-bottom:8px;">Your Session Link</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <a id="zoom-link-url" href="#" target="_blank" style="flex:1;color:var(--gold);font-weight:600;font-size:0.92rem;word-break:break-all;"></a>
+            <button id="copy-zoom-btn" style="padding:8px 16px;background:var(--ink);color:var(--cream);border:none;border-radius:var(--r-sm);font-family:'Cabinet Grotesk',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;">Copy</button>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -398,6 +415,14 @@ async function loadProfile() {
 
     renderProfile(coachData, services, testimonials, recommendations, courses);
 
+    // Update hero book button for calendly
+    if (coachData.calendly_url && coachData.calendly_url.trim()) {
+      const heroBtn = document.getElementById('hero-book-btn');
+      heroBtn.href = coachData.calendly_url;
+      heroBtn.target = '_blank';
+      heroBtn.rel = 'noopener noreferrer';
+    }
+
   } catch (err) {
     console.error('Error loading profile:', err);
     showError();
@@ -502,9 +527,18 @@ function renderProfile(coach, services, testimonials, recommendations, courses) 
     });
   });
 
+  const hasCalendly = !!(coach.calendly_url && coach.calendly_url.trim());
+
   let servicesHtml = '';
   allServices.forEach((svc, idx) => {
     const priceHtml = formatPrice(svc.price);
+    const bookLabel = svc.price !== null && svc.price !== undefined ? 'Book Now' : 'Inquire';
+    let bookAction;
+    if (hasCalendly) {
+      bookAction = `onclick="window.open('${escapeHtml(coach.calendly_url)}', '_blank')"`;
+    } else {
+      bookAction = `onclick="scrollToBooking(${idx})"`;
+    }
     servicesHtml += `
       <div class="service-card">
         <h3>${escapeHtml(svc.name || svc.title || 'Service')}</h3>
@@ -513,7 +547,7 @@ function renderProfile(coach, services, testimonials, recommendations, courses) 
           ${priceHtml}
           ${svc.duration ? `<span class="service-duration">${escapeHtml(svc.duration)}</span>` : ''}
         </div>
-        <button class="service-book-btn" onclick="scrollToBooking(${idx})">${svc.price !== null && svc.price !== undefined ? 'Book Now' : 'Inquire'}</button>
+        <button class="service-book-btn" ${bookAction}>${bookLabel}</button>
       </div>
     `;
   });
@@ -637,9 +671,13 @@ document.getElementById('booking-form').addEventListener('submit', async functio
   const serviceVal = document.getElementById('booking-service').value;
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(serviceVal);
 
+  const clientEmail = document.getElementById('booking-email').value;
+  const clientPhone = document.getElementById('booking-phone').value.trim();
+
   const payload = {
     coach_id: coachData.id,
-    client_email: document.getElementById('booking-email').value,
+    client_email: clientEmail,
+    client_phone: clientPhone || null,
     scheduled_at: new Date(document.getElementById('booking-date').value).toISOString(),
     notes: `Name: ${document.getElementById('booking-name').value}\nService: ${document.getElementById('booking-service').selectedOptions[0].textContent}\n${document.getElementById('booking-notes').value}`,
     status: 'pending'
@@ -650,15 +688,35 @@ document.getElementById('booking-form').addEventListener('submit', async functio
   }
 
   try {
+    const bookingHeaders = { ...HEADERS, 'Prefer': 'return=representation' };
     const res = await fetch(`${API}/coach_bookings`, {
       method: 'POST',
-      headers: HEADERS,
+      headers: bookingHeaders,
       body: JSON.stringify(payload)
     });
 
     if (res.ok || res.status === 201) {
+      let bookingResult = null;
+      try { bookingResult = await res.json(); } catch(e) {}
+      const bookingId = bookingResult && bookingResult.length > 0 ? bookingResult[0].id : null;
+
       document.getElementById('booking-form').style.display = 'none';
-      document.getElementById('booking-success').style.display = 'block';
+
+      // Check for intake form
+      try {
+        const intakeRes = await fetch(
+          `${API}/coach_intake_forms?coach_id=eq.${coachData.id}&is_active=eq.true&limit=1`,
+          { headers: GET_HEADERS }
+        );
+        const intakeForms = await intakeRes.json();
+        if (intakeForms && intakeForms.length > 0 && intakeForms[0].questions && intakeForms[0].questions.length > 0) {
+          renderIntakeForm(intakeForms[0], clientEmail, bookingId);
+          return;
+        }
+      } catch(e) { console.log('Intake check failed', e); }
+
+      // Show success directly
+      showBookingSuccess();
     } else {
       throw new Error('Booking failed');
     }
@@ -669,6 +727,122 @@ document.getElementById('booking-form').addEventListener('submit', async functio
     alert('Something went wrong. Please try again.');
   }
 });
+
+function showBookingSuccess() {
+  document.getElementById('intake-step').classList.add('hidden');
+  document.getElementById('booking-success').style.display = 'block';
+
+  // Show zoom link if available
+  if (coachData && coachData.zoom_meeting_link && coachData.zoom_meeting_link.trim()) {
+    const zoomDisplay = document.getElementById('zoom-link-display');
+    const zoomUrl = document.getElementById('zoom-link-url');
+    zoomUrl.href = coachData.zoom_meeting_link;
+    zoomUrl.textContent = coachData.zoom_meeting_link;
+    zoomDisplay.classList.remove('hidden');
+
+    document.getElementById('copy-zoom-btn').addEventListener('click', function() {
+      navigator.clipboard.writeText(coachData.zoom_meeting_link).then(() => {
+        this.textContent = 'Copied!';
+        setTimeout(() => { this.textContent = 'Copy'; }, 2000);
+      });
+    });
+  }
+}
+
+function renderIntakeForm(form, clientEmail, bookingId) {
+  const questions = form.questions;
+  const container = document.getElementById('intake-questions-render');
+  let html = '';
+
+  questions.forEach((q, idx) => {
+    const reqMark = q.required ? ' <span style="color:#c44;">*</span>' : '';
+    html += `<div class="form-group" style="margin-bottom:20px;">`;
+    html += `<label style="display:block;font-size:0.82rem;font-weight:700;color:var(--ink);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;">${escapeHtml(q.text)}${reqMark}</label>`;
+
+    switch(q.type) {
+      case 'short_text':
+        html += `<input type="text" class="intake-answer" data-idx="${idx}" style="width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'Cabinet Grotesk',sans-serif;font-size:0.95rem;color:var(--ink);background:var(--cream);" ${q.required ? 'required' : ''}>`;
+        break;
+      case 'long_text':
+        html += `<textarea class="intake-answer" data-idx="${idx}" style="width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'Cabinet Grotesk',sans-serif;font-size:0.95rem;color:var(--ink);background:var(--cream);min-height:100px;resize:vertical;" ${q.required ? 'required' : ''}></textarea>`;
+        break;
+      case 'multiple_choice':
+        (q.options || []).forEach((opt, oi) => {
+          html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <input type="radio" name="intake-q-${idx}" class="intake-answer-radio" data-idx="${idx}" value="${escapeHtml(opt)}" id="iq-${idx}-${oi}" style="accent-color:var(--gold);width:18px;height:18px;">
+            <label for="iq-${idx}-${oi}" style="font-size:0.92rem;color:var(--ink);text-transform:none;letter-spacing:0;font-weight:400;">${escapeHtml(opt)}</label>
+          </div>`;
+        });
+        break;
+      case 'yes_no':
+        html += `<div style="display:flex;gap:16px;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.92rem;color:var(--ink);text-transform:none;letter-spacing:0;font-weight:400;"><input type="radio" name="intake-q-${idx}" class="intake-answer-radio" data-idx="${idx}" value="Yes" style="accent-color:var(--gold);width:18px;height:18px;"> Yes</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.92rem;color:var(--ink);text-transform:none;letter-spacing:0;font-weight:400;"><input type="radio" name="intake-q-${idx}" class="intake-answer-radio" data-idx="${idx}" value="No" style="accent-color:var(--gold);width:18px;height:18px;"> No</label>
+        </div>`;
+        break;
+      case 'scale':
+        html += `<div style="display:flex;align-items:center;gap:12px;">
+          <span style="font-size:0.82rem;color:var(--muted);">1</span>
+          <input type="range" min="1" max="10" value="5" class="intake-answer" data-idx="${idx}" style="flex:1;accent-color:var(--gold);" oninput="document.getElementById('scale-val-${idx}').textContent=this.value">
+          <span style="font-size:0.82rem;color:var(--muted);">10</span>
+          <span id="scale-val-${idx}" style="font-weight:700;font-size:1rem;color:var(--gold);min-width:24px;text-align:center;">5</span>
+        </div>`;
+        break;
+    }
+    html += `</div>`;
+  });
+
+  container.innerHTML = html;
+  document.getElementById('intake-step').classList.remove('hidden');
+
+  // Wire submit
+  document.getElementById('submit-intake-btn').addEventListener('click', async function() {
+    const btn = this;
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+
+    // Gather responses
+    const responses = [];
+    let valid = true;
+    questions.forEach((q, idx) => {
+      let answer = '';
+      if (q.type === 'multiple_choice' || q.type === 'yes_no') {
+        const checked = document.querySelector(`input[name="intake-q-${idx}"]:checked`);
+        answer = checked ? checked.value : '';
+      } else {
+        const el = document.querySelector(`.intake-answer[data-idx="${idx}"]`);
+        answer = el ? el.value : '';
+      }
+      if (q.required && !answer) valid = false;
+      responses.push({ question: q.text, type: q.type, answer: answer });
+    });
+
+    if (!valid) {
+      alert('Please complete all required fields.');
+      btn.disabled = false;
+      btn.textContent = 'Submit Intake Form';
+      return;
+    }
+
+    try {
+      const intakePayload = {
+        coach_id: coachData.id,
+        client_email: clientEmail,
+        booking_id: bookingId,
+        responses: responses
+      };
+      await fetch(`${API}/coach_intake_responses`, {
+        method: 'POST',
+        headers: HEADERS,
+        body: JSON.stringify(intakePayload)
+      });
+    } catch(e) {
+      console.log('Intake submission error', e);
+    }
+
+    showBookingSuccess();
+  });
+}
 
 // Init
 loadProfile();

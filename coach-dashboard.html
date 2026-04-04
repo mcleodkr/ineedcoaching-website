@@ -241,6 +241,8 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
     <button class="tab-btn" data-tab="bookings">Bookings</button>
     <button class="tab-btn" data-tab="testimonials">Testimonials</button>
     <button class="tab-btn" data-tab="recommendations">Recommendations</button>
+    <button class="tab-btn" data-tab="scheduling">Scheduling</button>
+    <button class="tab-btn" data-tab="intake">Intake Forms</button>
   </div>
 
   <!-- LOADING -->
@@ -432,6 +434,91 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
         <div class="loading-spinner"></div>
       </div>
       <div id="recs-content" class="hidden"></div>
+    </div>
+
+    <!-- SCHEDULING TAB -->
+    <div id="tab-scheduling" class="tab-panel">
+      <div class="form-section">
+        <h2 class="form-section-title">External Scheduler</h2>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">If you use Calendly or Acuity, your external link replaces the built-in scheduler.</p>
+        <div class="form-group">
+          <label for="f-calendly-url">Paste your Calendly or Acuity link</label>
+          <input type="url" id="f-calendly-url" placeholder="https://calendly.com/your-name">
+        </div>
+        <button class="save-btn" id="save-calendly-btn">Save Scheduler Link</button>
+        <span class="save-msg" id="save-calendly-msg">Saved</span>
+      </div>
+
+      <div class="form-section">
+        <h2 class="form-section-title">Zoom Meeting Link</h2>
+        <div class="form-group">
+          <label for="f-zoom-link">Zoom meeting link (shown to clients after booking)</label>
+          <input type="url" id="f-zoom-link" placeholder="https://zoom.us/j/your-meeting-id">
+        </div>
+        <button class="save-btn" id="save-zoom-btn">Save Zoom Link</button>
+        <span class="save-msg" id="save-zoom-msg">Saved</span>
+      </div>
+
+      <div class="form-section" id="availability-section">
+        <h2 class="form-section-title">Weekly Availability</h2>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">Set your available hours for each day. Only shown if you do not use an external scheduler.</p>
+        <div id="availability-grid" style="display:grid;gap:10px;"></div>
+        <div style="margin-top:20px;">
+          <button class="save-btn" id="save-availability-btn">Save Availability</button>
+          <span class="save-msg" id="save-availability-msg">Saved</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- INTAKE FORMS TAB -->
+    <div id="tab-intake" class="tab-panel">
+      <div class="form-section">
+        <h2 class="form-section-title">Intake Form Builder</h2>
+        <div id="intake-form-status" style="margin-bottom:16px;"></div>
+        <div id="intake-questions-list" style="margin-bottom:20px;"></div>
+
+        <div id="intake-add-form" style="background:var(--cream);border:1px solid var(--border);border-radius:var(--r);padding:24px;margin-bottom:16px;">
+          <h3 style="font-family:'Playfair Display',serif;font-size:1rem;color:var(--ink);margin-bottom:14px;">Add Question</h3>
+          <div class="form-group">
+            <label for="iq-text">Question Text</label>
+            <input type="text" id="iq-text" placeholder="What are your coaching goals?">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="iq-type">Question Type</label>
+              <select id="iq-type">
+                <option value="short_text">Short text</option>
+                <option value="long_text">Long text</option>
+                <option value="multiple_choice">Multiple choice</option>
+                <option value="yes_no">Yes/No</option>
+                <option value="scale">Scale 1-10</option>
+              </select>
+            </div>
+            <div class="form-group" style="display:flex;align-items:flex-end;">
+              <div class="checkbox-row" style="margin-bottom:0;">
+                <input type="checkbox" id="iq-required" checked>
+                <label for="iq-required">Required</label>
+              </div>
+            </div>
+          </div>
+          <div class="form-group hidden" id="iq-options-group">
+            <label for="iq-options">Options (comma-separated)</label>
+            <input type="text" id="iq-options" placeholder="Option A, Option B, Option C">
+          </div>
+          <button class="pill-add-btn" id="add-intake-question-btn">Add Question</button>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+          <button class="save-btn" id="save-intake-form-btn">Save Intake Form</button>
+          <span class="save-msg" id="save-intake-msg">Saved</span>
+          <button class="action-btn action-decline" id="deactivate-intake-btn" style="display:none;padding:12px 20px;">Deactivate Form</button>
+        </div>
+      </div>
+
+      <div class="form-section" style="margin-top:24px;">
+        <h2 class="form-section-title">Intake Responses</h2>
+        <div id="intake-responses-list"></div>
+      </div>
     </div>
 
   </div>
@@ -633,6 +720,14 @@ function setupTabs() {
       if (btn.dataset.tab === 'recommendations' && !btn._loaded) {
         btn._loaded = true;
         loadRecommendations();
+      }
+      if (btn.dataset.tab === 'scheduling' && !btn._loaded) {
+        btn._loaded = true;
+        loadScheduling();
+      }
+      if (btn.dataset.tab === 'intake' && !btn._loaded) {
+        btn._loaded = true;
+        loadIntakeForms();
       }
     });
   });
@@ -1116,6 +1211,346 @@ async function loadRecommendations() {
     $('recs-loading').style.display = 'none';
     $('recs-content').classList.remove('hidden');
     $('recs-content').innerHTML = '<div class="empty-state"><p>Error loading recommendations.</p></div>';
+  }
+}
+
+/* ================================================
+   SCHEDULING
+   ================================================ */
+var DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+function loadScheduling() {
+  var p = coachProfile;
+  $('f-calendly-url').value = p.calendly_url || '';
+  $('f-zoom-link').value = p.zoom_meeting_link || '';
+
+  // Toggle availability section visibility based on calendly_url
+  var hasExternal = !!(p.calendly_url && p.calendly_url.trim());
+  $('availability-section').style.display = hasExternal ? 'none' : '';
+
+  // Build availability grid
+  var availability = Array.isArray(p.weekly_availability) ? p.weekly_availability : [];
+  var grid = $('availability-grid');
+  grid.innerHTML = '';
+  DAYS.forEach(function(day) {
+    var existing = availability.find(function(a) { return a.day === day; });
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);flex-wrap:wrap;';
+    row.innerHTML = '<label style="display:flex;align-items:center;gap:8px;min-width:130px;font-size:0.88rem;font-weight:600;color:var(--ink);text-transform:none;letter-spacing:0;">'
+      + '<input type="checkbox" class="avail-day-cb" data-day="' + day + '" style="width:18px;height:18px;accent-color:var(--gold);" ' + (existing ? 'checked' : '') + '>'
+      + day + '</label>'
+      + '<div style="display:flex;align-items:center;gap:8px;">'
+      + '<input type="time" class="avail-start" data-day="' + day + '" value="' + (existing ? existing.start : '09:00') + '" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:\'Cabinet Grotesk\',sans-serif;font-size:0.85rem;background:var(--cream);color:var(--ink);">'
+      + '<span style="color:var(--muted);font-size:0.85rem;">to</span>'
+      + '<input type="time" class="avail-end" data-day="' + day + '" value="' + (existing ? existing.end : '17:00') + '" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:\'Cabinet Grotesk\',sans-serif;font-size:0.85rem;background:var(--cream);color:var(--ink);">'
+      + '</div>';
+    grid.appendChild(row);
+  });
+
+  // Wire up save buttons
+  $('save-calendly-btn').onclick = saveCalendlyUrl;
+  $('save-zoom-btn').onclick = saveZoomLink;
+  $('save-availability-btn').onclick = saveAvailability;
+
+  // Update availability visibility when calendly changes
+  $('f-calendly-url').addEventListener('input', function() {
+    $('availability-section').style.display = this.value.trim() ? 'none' : '';
+  });
+}
+
+async function saveCalendlyUrl() {
+  var btn = $('save-calendly-btn');
+  var msg = $('save-calendly-msg');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  msg.classList.remove('show');
+  try {
+    var val = $('f-calendly-url').value.trim();
+    await supabasePatch('coach_profiles', { id: 'eq.' + coachProfile.id }, { calendly_url: val || null });
+    coachProfile.calendly_url = val || null;
+    $('availability-section').style.display = val ? 'none' : '';
+    msg.textContent = 'Saved';
+    msg.style.color = 'var(--forest)';
+    msg.classList.add('show');
+    setTimeout(function() { msg.classList.remove('show'); }, 3000);
+  } catch (e) {
+    msg.textContent = 'Error saving.';
+    msg.style.color = '#c44';
+    msg.classList.add('show');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Save Scheduler Link';
+}
+
+async function saveZoomLink() {
+  var btn = $('save-zoom-btn');
+  var msg = $('save-zoom-msg');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  msg.classList.remove('show');
+  try {
+    var val = $('f-zoom-link').value.trim();
+    await supabasePatch('coach_profiles', { id: 'eq.' + coachProfile.id }, { zoom_meeting_link: val || null });
+    coachProfile.zoom_meeting_link = val || null;
+    msg.textContent = 'Saved';
+    msg.style.color = 'var(--forest)';
+    msg.classList.add('show');
+    setTimeout(function() { msg.classList.remove('show'); }, 3000);
+  } catch (e) {
+    msg.textContent = 'Error saving.';
+    msg.style.color = '#c44';
+    msg.classList.add('show');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Save Zoom Link';
+}
+
+async function saveAvailability() {
+  var btn = $('save-availability-btn');
+  var msg = $('save-availability-msg');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  msg.classList.remove('show');
+  try {
+    var availability = [];
+    var checks = document.querySelectorAll('.avail-day-cb:checked');
+    checks.forEach(function(cb) {
+      var day = cb.dataset.day;
+      var start = document.querySelector('.avail-start[data-day="' + day + '"]').value;
+      var end = document.querySelector('.avail-end[data-day="' + day + '"]').value;
+      availability.push({ day: day, start: start, end: end });
+    });
+    await supabasePatch('coach_profiles', { id: 'eq.' + coachProfile.id }, { weekly_availability: availability });
+    coachProfile.weekly_availability = availability;
+    msg.textContent = 'Saved';
+    msg.style.color = 'var(--forest)';
+    msg.classList.add('show');
+    setTimeout(function() { msg.classList.remove('show'); }, 3000);
+  } catch (e) {
+    msg.textContent = 'Error saving.';
+    msg.style.color = '#c44';
+    msg.classList.add('show');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Save Availability';
+}
+
+/* ================================================
+   INTAKE FORMS
+   ================================================ */
+var intakeFormId = null;
+var intakeQuestions = [];
+var intakeFormActive = false;
+
+async function loadIntakeForms() {
+  // Fetch active intake form
+  try {
+    var forms = await supabaseGet(
+      'coach_intake_forms?coach_id=eq.' + coachProfile.id + '&is_active=eq.true&order=created_at.desc&limit=1'
+    );
+    if (forms && forms.length > 0) {
+      intakeFormId = forms[0].id;
+      intakeQuestions = Array.isArray(forms[0].questions) ? forms[0].questions : [];
+      intakeFormActive = forms[0].is_active;
+      $('deactivate-intake-btn').style.display = 'inline-flex';
+      $('intake-form-status').innerHTML = '<span class="status-pill status-confirmed" style="font-size:0.78rem;">Active</span>';
+    } else {
+      intakeFormId = null;
+      intakeQuestions = [];
+      intakeFormActive = false;
+      $('deactivate-intake-btn').style.display = 'none';
+      $('intake-form-status').innerHTML = '<span style="font-size:0.85rem;color:var(--muted);font-style:italic;">No active intake form. Add questions below to create one.</span>';
+    }
+    renderIntakeQuestions();
+  } catch (e) {
+    $('intake-form-status').innerHTML = '<span style="color:#c44;font-size:0.85rem;">Error loading intake form.</span>';
+  }
+
+  // Wire up handlers
+  $('add-intake-question-btn').onclick = addIntakeQuestion;
+  $('save-intake-form-btn').onclick = saveIntakeForm;
+  $('deactivate-intake-btn').onclick = deactivateIntakeForm;
+  $('iq-type').onchange = function() {
+    $('iq-options-group').classList.toggle('hidden', this.value !== 'multiple_choice');
+  };
+
+  // Load responses
+  loadIntakeResponses();
+}
+
+function renderIntakeQuestions() {
+  var container = $('intake-questions-list');
+  if (!intakeQuestions.length) {
+    container.innerHTML = '<div class="empty-state" style="padding:24px;"><p>No questions yet. Add up to 10 questions.</p></div>';
+    $('add-intake-question-btn').disabled = false;
+    return;
+  }
+
+  var html = '';
+  intakeQuestions.forEach(function(q, idx) {
+    var typeLabels = { short_text: 'Short text', long_text: 'Long text', multiple_choice: 'Multiple choice', yes_no: 'Yes/No', scale: 'Scale 1-10' };
+    html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">'
+      + '<div style="flex:1;min-width:200px;">'
+      + '<div style="font-weight:600;font-size:0.92rem;color:var(--ink);margin-bottom:6px;">' + escapeHtml(q.text) + '</div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+      + '<span class="status-pill status-pending" style="font-size:0.7rem;">' + escapeHtml(typeLabels[q.type] || q.type) + '</span>'
+      + '<span class="status-pill ' + (q.required ? 'status-confirmed' : 'status-completed') + '" style="font-size:0.7rem;">' + (q.required ? 'Required' : 'Optional') + '</span>'
+      + (q.options && q.options.length ? '<span style="font-size:0.75rem;color:var(--muted);">Options: ' + escapeHtml(q.options.join(', ')) + '</span>' : '')
+      + '</div></div>'
+      + '<div style="display:flex;gap:6px;">'
+      + '<button class="action-btn action-decline" data-iq-edit="' + idx + '">Edit</button>'
+      + '<button class="action-btn action-decline" data-iq-remove="' + idx + '" style="color:#c44;">Delete</button>'
+      + '</div></div>';
+  });
+  container.innerHTML = html;
+
+  // Disable add if at 10
+  $('add-intake-question-btn').disabled = intakeQuestions.length >= 10;
+
+  // Wire edit/delete
+  container.querySelectorAll('[data-iq-remove]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      removeIntakeQuestion(parseInt(this.dataset.iqRemove));
+    });
+  });
+  container.querySelectorAll('[data-iq-edit]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      editIntakeQuestion(parseInt(this.dataset.iqEdit));
+    });
+  });
+}
+
+function addIntakeQuestion() {
+  if (intakeQuestions.length >= 10) return;
+  var text = $('iq-text').value.trim();
+  if (!text) { alert('Question text is required.'); return; }
+  var type = $('iq-type').value;
+  var required = $('iq-required').checked;
+  var q = { text: text, type: type, required: required };
+  if (type === 'multiple_choice') {
+    var opts = $('iq-options').value.split(',').map(function(o) { return o.trim(); }).filter(Boolean);
+    if (!opts.length) { alert('Please enter at least one option.'); return; }
+    q.options = opts;
+  }
+  intakeQuestions.push(q);
+  renderIntakeQuestions();
+  $('iq-text').value = '';
+  $('iq-options').value = '';
+  $('iq-required').checked = true;
+  $('iq-type').value = 'short_text';
+  $('iq-options-group').classList.add('hidden');
+}
+
+function removeIntakeQuestion(idx) {
+  if (confirm('Remove this question?')) {
+    intakeQuestions.splice(idx, 1);
+    renderIntakeQuestions();
+  }
+}
+
+function editIntakeQuestion(idx) {
+  var q = intakeQuestions[idx];
+  $('iq-text').value = q.text;
+  $('iq-type').value = q.type;
+  $('iq-required').checked = q.required;
+  if (q.type === 'multiple_choice' && q.options) {
+    $('iq-options').value = q.options.join(', ');
+    $('iq-options-group').classList.remove('hidden');
+  } else {
+    $('iq-options-group').classList.add('hidden');
+  }
+  intakeQuestions.splice(idx, 1);
+  renderIntakeQuestions();
+  $('iq-text').focus();
+}
+
+async function saveIntakeForm() {
+  var btn = $('save-intake-form-btn');
+  var msg = $('save-intake-msg');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  msg.classList.remove('show');
+
+  try {
+    if (intakeFormId) {
+      // Update existing
+      await supabasePatch('coach_intake_forms', { id: 'eq.' + intakeFormId }, { questions: intakeQuestions, is_active: true });
+    } else {
+      // Create new
+      var res = await fetch(SUPABASE_URL + '/rest/v1/coach_intake_forms', {
+        method: 'POST',
+        headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
+        body: JSON.stringify({ coach_id: coachProfile.id, questions: intakeQuestions, is_active: true })
+      });
+      var data = await res.json();
+      if (data && data.length > 0) {
+        intakeFormId = data[0].id;
+      }
+    }
+    intakeFormActive = true;
+    $('deactivate-intake-btn').style.display = 'inline-flex';
+    $('intake-form-status').innerHTML = '<span class="status-pill status-confirmed" style="font-size:0.78rem;">Active</span>';
+    msg.textContent = 'Saved';
+    msg.style.color = 'var(--forest)';
+    msg.classList.add('show');
+    setTimeout(function() { msg.classList.remove('show'); }, 3000);
+  } catch (e) {
+    msg.textContent = 'Error saving.';
+    msg.style.color = '#c44';
+    msg.classList.add('show');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Save Intake Form';
+}
+
+async function deactivateIntakeForm() {
+  if (!intakeFormId) return;
+  if (!confirm('Deactivate this intake form? New bookings will not see it.')) return;
+  try {
+    await supabasePatch('coach_intake_forms', { id: 'eq.' + intakeFormId }, { is_active: false });
+    intakeFormActive = false;
+    intakeFormId = null;
+    intakeQuestions = [];
+    $('deactivate-intake-btn').style.display = 'none';
+    $('intake-form-status').innerHTML = '<span style="font-size:0.85rem;color:var(--muted);font-style:italic;">No active intake form. Add questions below to create one.</span>';
+    renderIntakeQuestions();
+  } catch (e) {
+    alert('Error deactivating form.');
+  }
+}
+
+async function loadIntakeResponses() {
+  try {
+    var data = await supabaseGet(
+      'coach_intake_responses?coach_id=eq.' + coachProfile.id + '&order=created_at.desc&select=*'
+    );
+    var container = $('intake-responses-list');
+    if (!data || data.length === 0) {
+      container.innerHTML = '<div class="empty-state"><p>No intake responses yet.</p></div>';
+      return;
+    }
+    var html = '';
+    data.forEach(function(r) {
+      var dateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      var responses = Array.isArray(r.responses) ? r.responses : [];
+      var detailsHtml = '';
+      responses.forEach(function(resp) {
+        detailsHtml += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">'
+          + '<div style="font-weight:600;font-size:0.82rem;color:var(--ink);margin-bottom:2px;">' + escapeHtml(resp.question || '') + '</div>'
+          + '<div style="font-size:0.88rem;color:var(--muted);">' + escapeHtml(String(resp.answer || '')) + '</div>'
+          + '</div>';
+      });
+      html += '<div class="review-card" style="margin-bottom:12px;">'
+        + '<div class="review-card-header">'
+        + '<div><div class="review-card-author">' + escapeHtml(r.client_email || 'Unknown') + '</div>'
+        + '<div class="review-card-title">' + escapeHtml(dateStr) + '</div></div>'
+        + '</div>'
+        + '<details style="margin-top:10px;"><summary style="font-size:0.85rem;font-weight:600;color:var(--gold);cursor:pointer;">View responses (' + responses.length + ')</summary>'
+        + '<div style="margin-top:10px;">' + detailsHtml + '</div></details></div>';
+    });
+    container.innerHTML = html;
+  } catch (e) {
+    $('intake-responses-list').innerHTML = '<div class="empty-state"><p>Error loading responses.</p></div>';
   }
 }
 
