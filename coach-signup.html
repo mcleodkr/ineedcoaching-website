@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>List Your Practice | ineedcoaching.org</title>
+<meta name="description" content="Join ineedcoaching.org as a coach. Build your professional profile, get discovered by clients, and grow your practice. Founding rate: $47/mo locked for life.">
+<meta property="og:title" content="List Your Practice on ineedcoaching.org">
+<meta property="og:description" content="Get discovered by clients looking for exactly what you offer. Build your profile in minutes.">
+<meta property="og:url" content="https://www.ineedcoaching.org/coach-signup">
+<meta property="og:type" content="website">
+<link rel="canonical" href="https://www.ineedcoaching.org/coach-signup">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #1a3a52; --gold: #c49a3c; --gold-hover: #a87d1f; --cream: #f7f4ee;
+  --warm: #ffffff; --muted: #8a8a9a; --border-light: #e0ddd5; --gold-lt: #faf3e0;
+  --forest: #4a7c59; --r: 14px; --r-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); color: var(--navy); overflow-x: hidden; }
+
+/* PAGE LAYOUT */
+.page-wrap { max-width: 1100px; margin: 0 auto; padding: 120px 24px 80px; }
+
+/* HERO SECTION */
+.signup-hero { text-align: center; margin-bottom: 64px; }
+.signup-hero .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); margin-bottom: 24px; }
+.eyebrow-dot { width: 7px; height: 7px; background: var(--gold); border-radius: 50%; animation: pulse 2s ease-in-out infinite; flex-shrink: 0; }
+@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.6); } }
+.signup-hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.12; letter-spacing: -0.02em; color: var(--navy); margin-bottom: 16px; }
+.signup-hero h1 em { color: var(--gold); font-style: italic; }
+.signup-hero .subtitle { font-size: 1rem; line-height: 1.7; color: var(--muted); max-width: 520px; margin: 0 auto; }
+
+/* VALUE PROPS */
+.value-props { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 64px; }
+.value-prop { padding: 32px 28px; background: var(--warm); border: 1.5px solid var(--border-light); border-radius: var(--r); transition: border-color 0.2s; }
+.value-prop:hover { border-color: var(--gold); }
+.value-prop-icon { width: 44px; height: 44px; background: var(--gold-lt); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 18px; font-size: 1.3rem; }
+.value-prop h3 { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--navy); margin-bottom: 8px; line-height: 1.3; }
+.value-prop p { font-size: 0.84rem; color: var(--muted); line-height: 1.65; }
+
+/* FORM SECTION */
+.form-section { display: grid; grid-template-columns: 1fr 380px; gap: 48px; align-items: start; }
+.form-card { background: var(--warm); border: 1.5px solid var(--border-light); border-radius: var(--r); padding: 40px; }
+.form-card h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--navy); margin-bottom: 6px; }
+.form-card .form-sub { font-size: 0.85rem; color: var(--muted); margin-bottom: 32px; line-height: 1.6; }
+
+.field { margin-bottom: 22px; }
+.field label { display: block; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--navy); margin-bottom: 8px; }
+.field label .optional { font-weight: 500; color: var(--muted); text-transform: none; letter-spacing: 0; font-size: 0.72rem; }
+.field input, .field select, .field textarea {
+  width: 100%; padding: 13px 16px; border: 1.5px solid var(--border-light); border-radius: var(--r-sm);
+  font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem; color: var(--navy);
+  background: var(--warm); outline: none; transition: border-color 0.2s;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--gold); }
+.field input::placeholder, .field textarea::placeholder { color: var(--muted); }
+.field textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
+.field select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a8a9a' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; padding-right: 40px; }
+.field .char-count { font-size: 0.7rem; color: var(--muted); text-align: right; margin-top: 4px; }
+
+.btn-submit {
+  display: block; width: 100%; padding: 16px; margin-top: 8px;
+  background: var(--gold); color: var(--navy); border: none; border-radius: var(--r-sm);
+  font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; font-weight: 700;
+  cursor: pointer; transition: all 0.2s; letter-spacing: 0.01em;
+}
+.btn-submit:hover { background: #d4a94c; transform: translateY(-1px); }
+.btn-submit:active { transform: translateY(0); }
+.btn-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+.form-fine { font-size: 0.73rem; color: var(--muted); text-align: center; margin-top: 14px; line-height: 1.6; }
+
+.form-error { display: none; padding: 12px 16px; background: #fdf0f0; border: 1px solid #e8c4c4; border-radius: var(--r-sm); color: #8b3a3a; font-size: 0.84rem; margin-bottom: 20px; line-height: 1.5; }
+.form-error.show { display: block; }
+
+/* SIDEBAR */
+.sidebar { position: sticky; top: 100px; }
+.sidebar-card { background: var(--navy); border-radius: var(--r); padding: 32px; color: var(--cream); margin-bottom: 20px; }
+.sidebar-card .price-eyebrow { font-size: 0.63rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px; }
+.sidebar-card .price { font-family: 'Playfair Display', serif; font-size: 2.4rem; font-weight: 900; color: var(--cream); line-height: 1; margin-bottom: 4px; }
+.sidebar-card .price-period { font-size: 0.85rem; color: var(--muted); margin-bottom: 20px; }
+.sidebar-card .price-lock { display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 700; color: var(--gold); background: rgba(196,154,60,0.12); padding: 6px 14px; border-radius: 50px; margin-bottom: 24px; }
+.sidebar-card .includes { list-style: none; }
+.sidebar-card .includes li { font-size: 0.82rem; color: rgba(247,244,238,0.8); padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: flex-start; gap: 10px; line-height: 1.5; }
+.sidebar-card .includes li:last-child { border-bottom: none; }
+.check-icon { color: var(--gold); font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+
+.trust-card { background: var(--warm); border: 1.5px solid var(--border-light); border-radius: var(--r); padding: 24px; }
+.trust-card .trust-quote { font-family: 'Playfair Display', serif; font-style: italic; font-size: 0.92rem; color: var(--navy); line-height: 1.55; margin-bottom: 12px; }
+.trust-card .trust-attr { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
+
+/* FOOTER */
+footer { padding: 40px 80px; border-top: 1px solid rgba(255,255,255,0.1); background: var(--navy); display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.footer-logo { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--cream); text-decoration: none; }
+.footer-note { font-size: 0.72rem; color: var(--muted); }
+.footer-note a { color: var(--gold); text-decoration: none; }
+.footer-links { display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; margin-top: 4px; }
+.footer-links a { font-size: 0.72rem; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.footer-links a:hover { color: var(--gold); }
+.footer-crisis { font-size: 0.68rem; color: var(--muted); margin-top: 4px; }
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  nav { padding: 12px 20px; }
+  .form-section { grid-template-columns: 1fr; }
+  .sidebar { position: static; }
+  .value-props { grid-template-columns: 1fr; }
+  .page-wrap { padding: 100px 18px 60px; }
+  footer { padding: 32px 24px; }
+}
+@media (max-width: 600px) {
+  .nav-links a:not(.nav-pill) { display: none; }
+  .form-card { padding: 28px 20px; }
+}
+</style>
+</head>
+<body>
+
+<nav style="position:fixed;top:0;left:0;right:0;z-index:300;display:flex;align-items:center;justify-content:space-between;padding:14px 52px;background:rgba(26,58,82,0.95);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,0.1);">
+  <a href="/" style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:#f7f4ee;text-decoration:none;"><span style="color:#c49a3c;font-style:italic;">i</span>need<span style="color:#c49a3c;font-style:italic;">coaching</span>.org</a>
+  <div style="display:flex;align-items:center;gap:22px;">
+    <a href="/coaches.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Coaches</a>
+    <a href="/sessions.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Sessions</a>
+    <a href="/coach-courses.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Courses</a>
+    <a href="/#articles" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Articles</a>
+    <a href="/coaching-commons.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Commons</a>
+    <a href="/coach-dashboard.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Dashboard</a>
+    <a href="/coach-signup.html" style="font-size:0.78rem;font-weight:700;background:#c49a3c;color:#1a3a52;padding:8px 18px;border-radius:50px;text-decoration:none;">List Your Practice</a>
+  </div>
+</nav>
+
+<div class="page-wrap">
+
+  <!-- HERO -->
+  <section class="signup-hero">
+    <div class="eyebrow"><span class="eyebrow-dot"></span> For Coaches</div>
+    <h1>List your practice on<br><em>ineedcoaching.org</em></h1>
+    <p class="subtitle">People are already looking for what you offer. Make it easy for them to find you.</p>
+  </section>
+
+  <!-- VALUE PROPS -->
+  <section class="value-props">
+    <div class="value-prop">
+      <div class="value-prop-icon">&#x1F50D;</div>
+      <h3>Get discovered by clients looking for exactly what you offer</h3>
+      <p>Your profile appears in our directory, searchable by specialty, location, and coaching style. Clients come to you.</p>
+    </div>
+    <div class="value-prop">
+      <div class="value-prop-icon">&#x270F;</div>
+      <h3>Build your professional profile in minutes</h3>
+      <p>Add your bio, credentials, services, and availability. Set up intake forms and start accepting bookings right away.</p>
+    </div>
+    <div class="value-prop">
+      <div class="value-prop-icon">&#x2728;</div>
+      <h3>Join at our founding rate &mdash; $47/mo, locked for life</h3>
+      <p>Early coaches get our lowest rate, guaranteed. No commissions on your sessions. No hidden fees. Ever.</p>
+    </div>
+  </section>
+
+  <!-- FORM + SIDEBAR -->
+  <section class="form-section">
+    <div class="form-card">
+      <h2>Create your profile</h2>
+      <p class="form-sub">Tell us a little about your practice. You can complete and customize everything from your dashboard after signing up.</p>
+
+      <div class="form-error" id="form-error"></div>
+
+      <form id="signup-form" onsubmit="handleSignup(event)">
+        <div class="field">
+          <label for="f-name">Full Name</label>
+          <input type="text" id="f-name" name="full_name" required placeholder="Your full name" autocomplete="name">
+        </div>
+
+        <div class="field">
+          <label for="f-email">Email Address</label>
+          <input type="email" id="f-email" name="email" required placeholder="you@example.com" autocomplete="email">
+        </div>
+
+        <div class="field">
+          <label for="f-specialty">Coaching Niche / Specialty</label>
+          <select id="f-specialty" name="specialty" required>
+            <option value="" disabled selected>Select your primary focus</option>
+            <option value="Life Coaching">Life Coaching</option>
+            <option value="Executive Coaching">Executive Coaching</option>
+            <option value="Career Coaching">Career Coaching</option>
+            <option value="Leadership Coaching">Leadership Coaching</option>
+            <option value="Health & Wellness">Health & Wellness</option>
+            <option value="Business Coaching">Business Coaching</option>
+            <option value="Relationship Coaching">Relationship Coaching</option>
+            <option value="Mindfulness & Meditation">Mindfulness & Meditation</option>
+            <option value="Financial Coaching">Financial Coaching</option>
+            <option value="Performance Coaching">Performance Coaching</option>
+            <option value="Parenting Coaching">Parenting Coaching</option>
+            <option value="Spiritual Coaching">Spiritual Coaching</option>
+            <option value="Transition Coaching">Transition Coaching</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="f-years">Years of Experience</label>
+          <select id="f-years" name="years_experience" required>
+            <option value="" disabled selected>How long have you been coaching?</option>
+            <option value="1">Less than 1 year</option>
+            <option value="2">1 &ndash; 2 years</option>
+            <option value="4">3 &ndash; 5 years</option>
+            <option value="7">6 &ndash; 10 years</option>
+            <option value="15">10+ years</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="f-website">Website URL <span class="optional">(optional)</span></label>
+          <input type="url" id="f-website" name="website" placeholder="https://yoursite.com" autocomplete="url">
+        </div>
+
+        <div class="field">
+          <label for="f-bio">Brief Bio</label>
+          <textarea id="f-bio" name="bio" required placeholder="Tell potential clients a little about who you are and how you help people..." maxlength="600" oninput="updateCharCount()"></textarea>
+          <div class="char-count" id="bio-count">0 / 600</div>
+        </div>
+
+        <button type="submit" class="btn-submit" id="btn-submit">Create my profile</button>
+        <p class="form-fine">You'll be redirected to set up your $47/mo subscription.<br>Cancel anytime. No long-term contracts.</p>
+      </form>
+    </div>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-card">
+        <div class="price-eyebrow">Founding Rate</div>
+        <div class="price">$47</div>
+        <div class="price-period">per month</div>
+        <div class="price-lock">&#x1F512; Locked for life</div>
+        <ul class="includes">
+          <li><span class="check-icon">&#x2713;</span> Professional profile in our directory</li>
+          <li><span class="check-icon">&#x2713;</span> Booking and intake form system</li>
+          <li><span class="check-icon">&#x2713;</span> Client messaging dashboard</li>
+          <li><span class="check-icon">&#x2713;</span> Course and content publishing</li>
+          <li><span class="check-icon">&#x2713;</span> Goal tracking for clients</li>
+          <li><span class="check-icon">&#x2713;</span> Testimonials and recommendations</li>
+          <li><span class="check-icon">&#x2713;</span> Zero commission on your sessions</li>
+        </ul>
+      </div>
+      <div class="trust-card">
+        <p class="trust-quote">"We built this for coaches who are tired of platforms that take a cut of every session. Your clients, your revenue."</p>
+        <p class="trust-attr">The ineedcoaching.org team</p>
+      </div>
+    </aside>
+  </section>
+
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <a class="footer-logo" href="/"><span style="color:var(--gold);font-style:italic;">i</span>need<span style="color:var(--gold);font-style:italic;">coaching</span>.org</a>
+  <div class="footer-links">
+    <a href="/coaches.html">Coaches</a>
+    <a href="/sessions.html">Sessions</a>
+    <a href="/coach-courses.html">Courses</a>
+    <a href="/#articles">Articles</a>
+    <a href="/coaching-commons.html">Commons</a>
+    <a href="/coach-dashboard.html">Dashboard</a>
+  </div>
+  <p class="footer-note">A project from <a href="https://www.ineedtherapy.org">ineedtherapy.org</a></p>
+  <p class="footer-crisis">Not a crisis service &mdash; In crisis? Call or text 988</p>
+</footer>
+
+<script>
+var SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+var STRIPE_PRICE_ID = 'price_1TId10KMH7e8DY6GAnGRpEox';
+
+function apiHeaders() {
+  return {
+    'apikey': ANON_KEY,
+    'Authorization': 'Bearer ' + ANON_KEY,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation'
+  };
+}
+
+function updateCharCount() {
+  var bio = document.getElementById('f-bio');
+  document.getElementById('bio-count').textContent = bio.value.length + ' / 600';
+}
+
+function generateSlug(name) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + Date.now().toString(36);
+}
+
+function showError(msg) {
+  var el = document.getElementById('form-error');
+  el.textContent = msg;
+  el.classList.add('show');
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function hideError() {
+  document.getElementById('form-error').classList.remove('show');
+}
+
+async function handleSignup(e) {
+  e.preventDefault();
+  hideError();
+
+  var btn = document.getElementById('btn-submit');
+  btn.disabled = true;
+  btn.textContent = 'Creating your profile...';
+
+  var fullName = document.getElementById('f-name').value.trim();
+  var email = document.getElementById('f-email').value.trim();
+  var specialty = document.getElementById('f-specialty').value;
+  var yearsExp = parseInt(document.getElementById('f-years').value, 10);
+  var website = document.getElementById('f-website').value.trim();
+  var bio = document.getElementById('f-bio').value.trim();
+
+  if (!fullName || !email || !specialty || !yearsExp || !bio) {
+    showError('Please fill in all required fields.');
+    btn.disabled = false;
+    btn.textContent = 'Create my profile';
+    return;
+  }
+
+  var slug = generateSlug(fullName);
+
+  var profileData = {
+    full_name: fullName,
+    display_name: fullName,
+    email: email,
+    user_email: email,
+    specialties: JSON.stringify([specialty]),
+    years_of_experience: yearsExp,
+    website: website || null,
+    bio: bio,
+    slug: slug,
+    is_published: false
+  };
+
+  try {
+    /* 1. Insert row into coach_profiles */
+    var insertRes = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles', {
+      method: 'POST',
+      headers: apiHeaders(),
+      body: JSON.stringify(profileData)
+    });
+
+    if (!insertRes.ok) {
+      var errBody = await insertRes.json().catch(function() { return {}; });
+      if (errBody.message && errBody.message.indexOf('duplicate') !== -1) {
+        showError('An account with this email already exists. Try logging in to your dashboard instead.');
+      } else {
+        showError('Something went wrong creating your profile. Please try again.');
+      }
+      btn.disabled = false;
+      btn.textContent = 'Create my profile';
+      return;
+    }
+
+    var inserted = await insertRes.json();
+    var coachId = inserted[0] ? inserted[0].id : null;
+
+    /* 2. Send coach welcome email */
+    fetch('/api/coach-welcome', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, display_name: fullName, slug: slug })
+    }).catch(function() { /* non-blocking */ });
+
+    /* 3. Redirect to Stripe Checkout */
+    var stripeUrl = 'https://checkout.stripe.com/pay/' + STRIPE_PRICE_ID
+      + '?prefilled_email=' + encodeURIComponent(email)
+      + '&client_reference_id=' + encodeURIComponent(coachId || email)
+      + '&success_url=' + encodeURIComponent('https://www.ineedcoaching.org/signup-success.html')
+      + '&cancel_url=' + encodeURIComponent('https://www.ineedcoaching.org/coach-signup.html');
+
+    window.location.href = stripeUrl;
+
+  } catch (err) {
+    showError('A network error occurred. Please check your connection and try again.');
+    btn.disabled = false;
+    btn.textContent = 'Create my profile';
+  }
+}
+</script>
+</body>
+</html>

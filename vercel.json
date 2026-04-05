@@ -1,6 +1,8 @@
 {
   "rewrites": [
     { "source": "/coaches", "destination": "/coaches.html" },
-    { "source": "/coach/:slug", "destination": "/coach-profile.html?slug=:slug" }
+    { "source": "/coach/:slug", "destination": "/coach-profile.html?slug=:slug" },
+    { "source": "/coach-signup", "destination": "/coach-signup.html" },
+    { "source": "/signup-success", "destination": "/signup-success.html" }
   ]
 }

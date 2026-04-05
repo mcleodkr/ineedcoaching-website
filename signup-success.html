@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Welcome | ineedcoaching.org</title>
+<meta name="description" content="Welcome to ineedcoaching.org. Your coach profile has been created.">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #1a3a52; --gold: #c49a3c; --cream: #f7f4ee;
+  --warm: #ffffff; --muted: #8a8a9a; --border-light: #e0ddd5; --gold-lt: #faf3e0;
+  --forest: #4a7c59; --r: 14px; --r-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); color: var(--navy); overflow-x: hidden; min-height: 100vh; display: flex; flex-direction: column; }
+
+.success-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 120px 24px 80px; }
+.success-card { max-width: 560px; width: 100%; text-align: center; }
+
+.success-icon { width: 72px; height: 72px; background: var(--forest); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 28px; font-size: 2rem; color: var(--warm); animation: scaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes scaleIn { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
+
+.success-card h1 { font-family: 'Playfair Display', serif; font-size: clamp(1.8rem, 3.5vw, 2.4rem); color: var(--navy); line-height: 1.15; margin-bottom: 12px; }
+.success-card h1 em { color: var(--gold); font-style: italic; }
+.success-card .success-sub { font-size: 0.95rem; color: var(--muted); line-height: 1.7; max-width: 420px; margin: 0 auto 36px; }
+
+.success-steps { background: var(--warm); border: 1.5px solid var(--border-light); border-radius: var(--r); padding: 28px 32px; text-align: left; margin-bottom: 32px; }
+.success-steps h3 { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); margin-bottom: 16px; }
+.success-steps ol { padding-left: 20px; }
+.success-steps li { font-size: 0.88rem; color: var(--navy); line-height: 1.6; margin-bottom: 10px; }
+.success-steps li:last-child { margin-bottom: 0; }
+.success-steps li span { color: var(--muted); }
+
+.btn-dashboard {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--gold); color: var(--navy); padding: 16px 36px; border-radius: 50px;
+  font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; font-weight: 700;
+  text-decoration: none; transition: all 0.2s; border: none; cursor: pointer;
+}
+.btn-dashboard:hover { background: #d4a94c; transform: translateY(-2px); }
+.btn-dashboard:active { transform: translateY(0); }
+
+.success-fine { font-size: 0.75rem; color: var(--muted); margin-top: 16px; line-height: 1.6; }
+.success-fine a { color: var(--gold); text-decoration: none; }
+
+/* FOOTER */
+footer { padding: 40px 80px; border-top: 1px solid rgba(255,255,255,0.1); background: var(--navy); display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.footer-logo { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--cream); text-decoration: none; }
+.footer-note { font-size: 0.72rem; color: var(--muted); }
+.footer-note a { color: var(--gold); text-decoration: none; }
+.footer-links { display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; margin-top: 4px; }
+.footer-links a { font-size: 0.72rem; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.footer-links a:hover { color: var(--gold); }
+.footer-crisis { font-size: 0.68rem; color: var(--muted); margin-top: 4px; }
+
+@media (max-width: 900px) {
+  nav { padding: 12px 20px; }
+  .success-wrap { padding: 100px 18px 60px; }
+  footer { padding: 32px 24px; }
+}
+@media (max-width: 600px) {
+  .nav-links a:not(.nav-pill) { display: none; }
+  .success-steps { padding: 24px 20px; }
+}
+</style>
+</head>
+<body>
+
+<nav style="position:fixed;top:0;left:0;right:0;z-index:300;display:flex;align-items:center;justify-content:space-between;padding:14px 52px;background:rgba(26,58,82,0.95);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,0.1);">
+  <a href="/" style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:#f7f4ee;text-decoration:none;"><span style="color:#c49a3c;font-style:italic;">i</span>need<span style="color:#c49a3c;font-style:italic;">coaching</span>.org</a>
+  <div style="display:flex;align-items:center;gap:22px;">
+    <a href="/coaches.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Coaches</a>
+    <a href="/sessions.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Sessions</a>
+    <a href="/coach-courses.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Courses</a>
+    <a href="/#articles" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Articles</a>
+    <a href="/coaching-commons.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Commons</a>
+    <a href="/coach-dashboard.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Dashboard</a>
+    <a href="/coach-signup.html" style="font-size:0.78rem;font-weight:700;background:#c49a3c;color:#1a3a52;padding:8px 18px;border-radius:50px;text-decoration:none;">List Your Practice</a>
+  </div>
+</nav>
+
+<div class="success-wrap">
+  <div class="success-card">
+    <div class="success-icon">&#x2713;</div>
+    <h1>You're in.<br>Welcome to <em>ineedcoaching.org</em></h1>
+    <p class="success-sub">Your profile has been created and your subscription is active. Let's get you set up so clients can find you.</p>
+
+    <div class="success-steps">
+      <h3>Next Steps</h3>
+      <ol>
+        <li>Add a photo and complete your bio <span>&mdash; first impressions matter</span></li>
+        <li>Set up your services with pricing <span>&mdash; let clients know what you offer</span></li>
+        <li>Configure your availability <span>&mdash; or connect Calendly</span></li>
+        <li>Create an intake form <span>&mdash; learn about clients before the first session</span></li>
+      </ol>
+    </div>
+
+    <a href="/coach-dashboard.html" class="btn-dashboard">Go to your dashboard &rarr;</a>
+    <p class="success-fine">We sent a welcome email with everything you need to get started.<br>Questions? <a href="mailto:hello@ineedcoaching.org">hello@ineedcoaching.org</a></p>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <a class="footer-logo" href="/"><span style="color:var(--gold);font-style:italic;">i</span>need<span style="color:var(--gold);font-style:italic;">coaching</span>.org</a>
+  <div class="footer-links">
+    <a href="/coaches.html">Coaches</a>
+    <a href="/sessions.html">Sessions</a>
+    <a href="/coach-courses.html">Courses</a>
+    <a href="/#articles">Articles</a>
+    <a href="/coaching-commons.html">Commons</a>
+    <a href="/coach-dashboard.html">Dashboard</a>
+  </div>
+  <p class="footer-note">A project from <a href="https://www.ineedtherapy.org">ineedtherapy.org</a></p>
+  <p class="footer-crisis">Not a crisis service &mdash; In crisis? Call or text 988</p>
+</footer>
+
+</body>
+</html>
