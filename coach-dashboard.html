@@ -355,6 +355,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
     <button class="tab-btn" data-tab="goals">Goals</button>
     <button class="tab-btn" data-tab="courses">Courses</button>
     <button class="tab-btn" data-tab="articles">Draft Articles</button>
+    <button class="tab-btn" data-tab="proposals">Proposals</button>
   </div>
 
   <!-- LOADING -->
@@ -665,6 +666,14 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
       <div id="articles-content" class="hidden"></div>
     </div>
 
+    <!-- PROPOSALS TAB -->
+    <div id="tab-proposals" class="tab-panel">
+      <div id="proposals-loading" class="loading-state" style="min-height:30vh;">
+        <div class="loading-spinner"></div>
+      </div>
+      <div id="proposals-content" class="hidden"></div>
+    </div>
+
   </div>
 </div>
 
@@ -888,6 +897,10 @@ function setupTabs() {
       if (btn.dataset.tab === 'articles' && !btn._loaded) {
         btn._loaded = true;
         loadDashArticles();
+      }
+      if (btn.dataset.tab === 'proposals' && !btn._loaded) {
+        btn._loaded = true;
+        loadDashProposals();
       }
     });
   });
@@ -2568,6 +2581,58 @@ function attachArticleHandlers() {
       }
     });
   });
+}
+
+/* ================================================
+   PROPOSALS
+   ================================================ */
+async function loadDashProposals() {
+  try {
+    var data = await supabaseGet(
+      'coach_proposals?coach_id=eq.' + coachProfile.id + '&order=created_at.desc&select=*'
+    );
+    $('proposals-loading').style.display = 'none';
+    $('proposals-content').classList.remove('hidden');
+
+    if (!data || data.length === 0) {
+      $('proposals-content').innerHTML = '<div class="empty-state"><p>No proposals yet.</p><a href="/proposal-builder.html" style="display:inline-block;margin-top:16px;padding:12px 24px;background:var(--gold);color:var(--ink);border-radius:8px;font-weight:700;text-decoration:none;">Create Your First Proposal</a></div>';
+      return;
+    }
+
+    var html = '<div style="margin-bottom:16px;"><a href="/proposal-builder.html" class="action-btn action-confirm" style="text-decoration:none;display:inline-flex;padding:10px 20px;">+ New Proposal</a></div>';
+    html += '<div class="bookings-table-wrap"><table class="bookings-table"><thead><tr>'
+      + '<th>Company</th><th>Contact</th><th>Service</th><th>Investment</th><th>Status</th><th>Date</th>'
+      + '</tr></thead><tbody>';
+
+    data.forEach(function(p) {
+      var statusMap = {
+        draft: 'status-pending',
+        sent: 'status-confirmed',
+        accepted: 'status-confirmed',
+        declined: 'status-rejected'
+      };
+      var statusClass = statusMap[p.status] || 'status-pending';
+      var statusLabel = (p.status || 'draft').charAt(0).toUpperCase() + (p.status || 'draft').slice(1);
+      var date = p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+      var inv = p.investment ? '$' + Number(p.investment).toLocaleString() : '';
+
+      html += '<tr>'
+        + '<td style="font-weight:700;">' + escapeHtml(p.client_company || '') + '</td>'
+        + '<td>' + escapeHtml(p.client_name || '') + '<br><span style="font-size:0.75rem;color:var(--muted);">' + escapeHtml(p.client_email || '') + '</span></td>'
+        + '<td>' + escapeHtml(p.service_type || '') + '</td>'
+        + '<td style="font-weight:700;">' + inv + '</td>'
+        + '<td><span class="status-pill ' + statusClass + '">' + escapeHtml(statusLabel) + '</span></td>'
+        + '<td style="font-size:0.78rem;color:var(--muted);">' + date + '</td>'
+        + '</tr>';
+    });
+
+    html += '</tbody></table></div>';
+    $('proposals-content').innerHTML = html;
+  } catch (err) {
+    $('proposals-loading').style.display = 'none';
+    $('proposals-content').classList.remove('hidden');
+    $('proposals-content').innerHTML = '<div class="empty-state"><p>Error loading proposals.</p></div>';
+  }
 }
 
 /* ================================================

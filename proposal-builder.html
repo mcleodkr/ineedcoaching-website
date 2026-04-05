@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proposal Builder | ineedcoaching.org</title>
+<meta name="robots" content="noindex, nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #1a3a52; --gold: #c49a3c; --gold-hover: #a87d1f; --cream: #f7f4ee;
+  --warm: #ffffff; --muted: #8a8a9a; --border: #e0ddd5; --gold-lt: #faf3e0;
+  --forest: #4a7c59; --ink: #1a3a52; --r: 14px; --r-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); color: var(--ink); }
+
+/* AUTH */
+#login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--navy); }
+.login-card { background: var(--warm); border-radius: var(--r); padding: 48px 40px; max-width: 400px; width: 100%; text-align: center; box-shadow: 0 24px 48px rgba(0,0,0,0.18); }
+.login-card h1 { font-family: 'Playfair Display', serif; font-size: 1.5rem; color: var(--ink); margin-bottom: 6px; }
+.login-card p { font-size: 0.85rem; color: var(--muted); margin-bottom: 24px; }
+.login-card input { width: 100%; padding: 13px 16px; border: 1.5px solid var(--border); border-radius: var(--r-sm); font-family: inherit; font-size: 0.9rem; outline: none; margin-bottom: 12px; }
+.login-card input:focus { border-color: var(--gold); }
+.login-card button { width: 100%; padding: 13px; background: var(--navy); color: white; border: none; border-radius: var(--r-sm); font-family: inherit; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
+.login-card button:hover { background: #24506e; }
+.login-msg { font-size: 0.82rem; margin-top: 10px; min-height: 20px; }
+
+/* LAYOUT */
+#app { display: none; }
+.page-wrap { max-width: 1100px; margin: 0 auto; padding: 90px 24px 60px; }
+.page-header { margin-bottom: 36px; }
+.page-header h1 { font-family: 'Playfair Display', serif; font-size: clamp(1.6rem, 3vw, 2.2rem); color: var(--ink); margin-bottom: 6px; }
+.page-header h1 em { color: var(--gold); font-style: italic; }
+.page-header p { font-size: 0.9rem; color: var(--muted); }
+
+.builder-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; }
+
+/* FORM */
+.form-card { background: var(--warm); border: 1.5px solid var(--border); border-radius: var(--r); padding: 36px; }
+.form-card h2 { font-family: 'Playfair Display', serif; font-size: 1.15rem; color: var(--ink); margin-bottom: 24px; }
+.field { margin-bottom: 18px; }
+.field label { display: block; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); margin-bottom: 6px; }
+.field input, .field select, .field textarea {
+  width: 100%; padding: 12px 16px; border: 1.5px solid var(--border); border-radius: var(--r-sm);
+  font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem; color: var(--ink);
+  background: var(--warm); outline: none; transition: border-color 0.2s;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--gold); }
+.field textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
+.field select { appearance: none; cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a8a9a' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; padding-right: 40px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+/* INCLUSIONS BUILDER */
+.inclusions-list { margin-bottom: 10px; }
+.inclusion-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--gold-lt); border-radius: var(--r-sm); margin-bottom: 6px; font-size: 0.85rem; }
+.inclusion-item span { flex: 1; }
+.inclusion-remove { background: none; border: none; color: #c44; cursor: pointer; font-size: 1rem; font-weight: 700; padding: 0 4px; }
+.inclusion-add { display: flex; gap: 8px; }
+.inclusion-add input { flex: 1; }
+.inclusion-add button { padding: 10px 18px; background: var(--ink); color: var(--cream); border: none; border-radius: var(--r-sm); font-family: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.inclusion-add button:hover { background: var(--gold); }
+
+/* ACTIONS */
+.form-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
+.btn-gold { padding: 14px 28px; background: var(--gold); color: var(--ink); border: none; border-radius: var(--r-sm); font-family: inherit; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.btn-gold:hover { background: #d4a94c; }
+.btn-gold:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-outline { padding: 14px 28px; background: var(--warm); color: var(--ink); border: 1.5px solid var(--border); border-radius: var(--r-sm); font-family: inherit; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.btn-outline:hover { border-color: var(--gold); }
+.btn-send { padding: 14px 28px; background: var(--forest); color: white; border: none; border-radius: var(--r-sm); font-family: inherit; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.btn-send:hover { background: #3d6a4a; }
+.btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
+.form-msg { font-size: 0.85rem; margin-top: 12px; min-height: 20px; }
+
+/* PREVIEW */
+.preview-card { position: sticky; top: 80px; background: var(--warm); border: 1.5px solid var(--border); border-radius: var(--r); overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.06); }
+.preview-label { padding: 14px 24px; background: var(--cream); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); }
+#proposal-preview { padding: 0; }
+
+/* PRINT PROPOSAL */
+.proposal-doc { padding: 48px; font-family: 'Cabinet Grotesk', sans-serif; }
+.proposal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; padding-bottom: 24px; border-bottom: 2px solid var(--gold); }
+.proposal-logo { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--ink); }
+.proposal-logo .pl-i { color: var(--gold); font-style: italic; }
+.proposal-logo .pl-c { color: var(--gold); font-style: italic; }
+.proposal-date { font-size: 0.78rem; color: var(--muted); text-align: right; }
+.proposal-title { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--ink); margin-bottom: 6px; line-height: 1.2; }
+.proposal-subtitle { font-size: 0.88rem; color: var(--muted); margin-bottom: 32px; }
+.proposal-section { margin-bottom: 28px; }
+.proposal-section-label { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
+.proposal-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+.proposal-detail-item label { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 4px; }
+.proposal-detail-item span { font-size: 0.95rem; color: var(--ink); font-weight: 600; }
+.proposal-inclusions { list-style: none; }
+.proposal-inclusions li { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; color: var(--ink); display: flex; align-items: flex-start; gap: 10px; }
+.proposal-inclusions li:last-child { border-bottom: none; }
+.proposal-check { color: var(--gold); font-weight: 700; flex-shrink: 0; }
+.proposal-message { font-size: 0.92rem; color: var(--ink); line-height: 1.7; padding: 24px; background: var(--gold-lt); border-radius: var(--r-sm); border-left: 3px solid var(--gold); }
+.proposal-investment { text-align: center; padding: 28px; background: var(--navy); border-radius: var(--r); margin: 28px 0; }
+.proposal-investment-label { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
+.proposal-investment-amount { font-family: 'Playfair Display', serif; font-size: 2.4rem; font-weight: 900; color: var(--cream); }
+.proposal-footer { margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border); text-align: center; }
+.proposal-footer-name { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--ink); margin-bottom: 4px; }
+.proposal-footer-via { font-size: 0.72rem; color: var(--muted); }
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  nav { padding: 12px 20px; }
+  .builder-grid { grid-template-columns: 1fr; }
+  .preview-card { position: static; }
+  .page-wrap { padding: 100px 18px 60px; }
+  .proposal-detail-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .nav-links a:not(.nav-pill) { display: none; }
+  .form-card { padding: 24px 18px; }
+  .field-row { grid-template-columns: 1fr; }
+  .form-actions { flex-direction: column; }
+}
+
+/* PRINT */
+@media print {
+  body { background: white; }
+  nav, #login-screen, .form-card, .form-actions, .preview-label, .page-header { display: none !important; }
+  .builder-grid { grid-template-columns: 1fr; }
+  .preview-card { position: static; border: none; box-shadow: none; }
+  .proposal-doc { padding: 24px; }
+  .proposal-investment { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" style="display:flex;">
+  <div class="login-card">
+    <h1><span style="color:var(--gold);font-style:italic;">i</span>need<span style="color:var(--gold);font-style:italic;">coaching</span>.org</h1>
+    <p>Sign in to create proposals</p>
+    <form id="login-form" onsubmit="return handleLogin(event)">
+      <input type="email" id="login-email" placeholder="Your coach email" required>
+      <button type="submit" id="login-btn">Send magic link</button>
+    </form>
+    <div class="login-msg" id="login-msg"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+<nav style="position:fixed;top:0;left:0;right:0;z-index:300;display:flex;align-items:center;justify-content:space-between;padding:14px 52px;background:rgba(26,58,82,0.95);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,0.1);">
+  <a href="/" style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:#f7f4ee;text-decoration:none;"><span style="color:#c49a3c;font-style:italic;">i</span>need<span style="color:#c49a3c;font-style:italic;">coaching</span>.org</a>
+  <div style="display:flex;align-items:center;gap:22px;">
+    <a href="/coach-dashboard.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Dashboard</a>
+    <a href="/coach-signup.html" style="font-size:0.78rem;font-weight:700;background:#c49a3c;color:#1a3a52;padding:8px 18px;border-radius:50px;text-decoration:none;">List Your Practice</a>
+  </div>
+</nav>
+
+<div class="page-wrap">
+  <div class="page-header">
+    <h1>Proposal <em>Builder</em></h1>
+    <p>Create a polished B2B proposal for corporate clients. Preview, download as PDF, or send directly.</p>
+  </div>
+
+  <div class="builder-grid">
+
+    <!-- FORM -->
+    <div class="form-card">
+      <h2>Proposal Details</h2>
+
+      <div class="field">
+        <label for="f-company">Client Company</label>
+        <input type="text" id="f-company" required placeholder="Acme Corp" oninput="updatePreview()">
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="f-contact">Contact Name</label>
+          <input type="text" id="f-contact" placeholder="Jane Smith" oninput="updatePreview()">
+        </div>
+        <div class="field">
+          <label for="f-email">Contact Email</label>
+          <input type="email" id="f-email" required placeholder="jane@acme.com">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="f-service">Proposed Service</label>
+        <select id="f-service" required onchange="updatePreview()">
+          <option value="" disabled selected>Select service type</option>
+          <option value="Workshop">Workshop</option>
+          <option value="Retreat">Retreat</option>
+          <option value="Executive Coaching">Executive Coaching</option>
+          <option value="Speaking Engagement">Speaking Engagement</option>
+          <option value="Consulting">Consulting</option>
+        </select>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="f-participants">Number of Participants</label>
+          <input type="number" id="f-participants" min="1" value="10" oninput="updatePreview()">
+        </div>
+        <div class="field">
+          <label for="f-dates">Proposed Dates</label>
+          <input type="text" id="f-dates" placeholder="March 15-16, 2026" oninput="updatePreview()">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="f-investment">Investment Amount ($)</label>
+        <input type="number" id="f-investment" min="0" step="100" placeholder="5000" oninput="updatePreview()">
+      </div>
+
+      <div class="field">
+        <label>What's Included</label>
+        <div class="inclusions-list" id="inclusions-list"></div>
+        <div class="inclusion-add">
+          <input type="text" id="f-inclusion-input" placeholder="e.g. Two 90-minute sessions" onkeydown="if(event.key==='Enter'){event.preventDefault();addInclusion();}">
+          <button type="button" onclick="addInclusion()">Add</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="f-message">Custom Message</label>
+        <textarea id="f-message" placeholder="A personal note to the client about why this engagement matters..." oninput="updatePreview()"></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn-gold" onclick="saveDraft()">Save Draft</button>
+        <button class="btn-outline" onclick="window.print()">Download PDF</button>
+        <button class="btn-send" id="btn-send" onclick="sendProposal()">Send to Client</button>
+      </div>
+      <div class="form-msg" id="form-msg"></div>
+    </div>
+
+    <!-- PREVIEW -->
+    <div class="preview-card">
+      <div class="preview-label">Live Preview</div>
+      <div id="proposal-preview"></div>
+    </div>
+
+  </div>
+</div>
+
+</div>
+
+<script>
+var SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+var TOKEN_KEY = 'sb_access_token';
+var currentToken = null;
+var coachProfile = null;
+var inclusions = [];
+
+function $(id) { return document.getElementById(id); }
+function escHtml(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function apiHeaders() {
+  return { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + currentToken, 'Content-Type': 'application/json' };
+}
+
+/* ── AUTH ── */
+(function() {
+  var hash = window.location.hash;
+  if (hash && hash.includes('access_token')) {
+    var params = new URLSearchParams(hash.substring(1));
+    var token = params.get('access_token');
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+      window.history.replaceState(null, '', window.location.pathname);
+      window.location.reload();
+      return;
+    }
+  }
+  var stored = localStorage.getItem(TOKEN_KEY);
+  if (stored) { verifyAndInit(stored); }
+})();
+
+function handleLogin(e) {
+  e.preventDefault();
+  var email = $('login-email').value.trim();
+  if (!email) return false;
+  var btn = $('login-btn');
+  btn.disabled = true; btn.textContent = 'Sending...';
+  fetch(SUPABASE_URL + '/auth/v1/magiclink', {
+    method: 'POST',
+    headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email, options: { emailRedirectTo: window.location.origin + '/proposal-builder.html' } })
+  }).then(function(res) {
+    if (res.ok) {
+      $('login-msg').textContent = 'Check your email for the login link.';
+      $('login-msg').style.color = 'var(--forest)';
+    } else {
+      $('login-msg').textContent = 'Failed to send. Try again.';
+      $('login-msg').style.color = '#c44';
+    }
+    btn.disabled = false; btn.textContent = 'Send magic link';
+  });
+  return false;
+}
+
+async function verifyAndInit(token) {
+  try {
+    var res = await fetch(SUPABASE_URL + '/auth/v1/user', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) { localStorage.removeItem(TOKEN_KEY); return; }
+    var user = await res.json();
+    currentToken = token;
+
+    var profiles = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles?email=eq.' + encodeURIComponent(user.email) + '&select=*', {
+      headers: apiHeaders()
+    }).then(function(r) { return r.json(); });
+
+    if (!profiles || profiles.length === 0) {
+      $('login-msg').textContent = 'No coach profile found for this email.';
+      $('login-msg').style.color = '#c44';
+      return;
+    }
+
+    coachProfile = profiles[0];
+    $('login-screen').style.display = 'none';
+    $('app').style.display = 'block';
+    updatePreview();
+  } catch (e) {
+    localStorage.removeItem(TOKEN_KEY);
+  }
+}
+
+/* ── INCLUSIONS ── */
+function addInclusion() {
+  var input = $('f-inclusion-input');
+  var val = input.value.trim();
+  if (!val) return;
+  inclusions.push(val);
+  input.value = '';
+  renderInclusions();
+  updatePreview();
+}
+
+function removeInclusion(idx) {
+  inclusions.splice(idx, 1);
+  renderInclusions();
+  updatePreview();
+}
+
+function renderInclusions() {
+  var html = '';
+  inclusions.forEach(function(item, i) {
+    html += '<div class="inclusion-item"><span>' + escHtml(item) + '</span><button class="inclusion-remove" onclick="removeInclusion(' + i + ')">&times;</button></div>';
+  });
+  $('inclusions-list').innerHTML = html;
+}
+
+/* ── PREVIEW ── */
+function getFormData() {
+  return {
+    company: $('f-company').value.trim(),
+    contact: $('f-contact').value.trim(),
+    email: $('f-email').value.trim(),
+    service: $('f-service').value,
+    participants: parseInt($('f-participants').value, 10) || 1,
+    dates: $('f-dates').value.trim(),
+    investment: parseFloat($('f-investment').value) || 0,
+    inclusions: inclusions,
+    message: $('f-message').value.trim(),
+  };
+}
+
+function formatCurrency(n) {
+  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+function updatePreview() {
+  var d = getFormData();
+  var coachName = coachProfile ? (coachProfile.display_name || coachProfile.full_name || 'Coach') : 'Coach';
+  var headline = coachProfile ? (coachProfile.headline || '') : '';
+  var today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  var inclusionsHtml = '';
+  if (d.inclusions.length > 0) {
+    inclusionsHtml = '<ul class="proposal-inclusions">' +
+      d.inclusions.map(function(item) {
+        return '<li><span class="proposal-check">&#10003;</span> ' + escHtml(item) + '</li>';
+      }).join('') + '</ul>';
+  }
+
+  var html = '<div class="proposal-doc">'
+    + '<div class="proposal-header">'
+    + '<div class="proposal-logo"><span class="pl-i">i</span>need<span class="pl-c">coaching</span>.org</div>'
+    + '<div class="proposal-date">' + today + '<br>Prepared for ' + escHtml(d.company || 'Client') + '</div>'
+    + '</div>'
+
+    + '<div class="proposal-title">' + escHtml(d.service || 'Coaching Proposal') + '</div>'
+    + '<div class="proposal-subtitle">Prepared by ' + escHtml(coachName) + (headline ? ' &mdash; ' + escHtml(headline) : '') + '</div>'
+
+    + '<div class="proposal-detail-grid">'
+    + '<div class="proposal-detail-item"><label>Client</label><span>' + escHtml(d.company || '&mdash;') + '</span></div>'
+    + '<div class="proposal-detail-item"><label>Contact</label><span>' + escHtml(d.contact || '&mdash;') + '</span></div>'
+    + '<div class="proposal-detail-item"><label>Participants</label><span>' + d.participants + '</span></div>'
+    + '<div class="proposal-detail-item"><label>Proposed Dates</label><span>' + escHtml(d.dates || 'TBD') + '</span></div>'
+    + '</div>';
+
+  if (d.investment > 0) {
+    html += '<div class="proposal-investment">'
+      + '<div class="proposal-investment-label">Investment</div>'
+      + '<div class="proposal-investment-amount">' + formatCurrency(d.investment) + '</div>'
+      + '</div>';
+  }
+
+  if (inclusionsHtml) {
+    html += '<div class="proposal-section">'
+      + '<div class="proposal-section-label">What\'s Included</div>'
+      + inclusionsHtml
+      + '</div>';
+  }
+
+  if (d.message) {
+    html += '<div class="proposal-section">'
+      + '<div class="proposal-section-label">A Note From ' + escHtml(coachName) + '</div>'
+      + '<div class="proposal-message">' + escHtml(d.message).replace(/\n/g, '<br>') + '</div>'
+      + '</div>';
+  }
+
+  html += '<div class="proposal-footer">'
+    + '<div class="proposal-footer-name">' + escHtml(coachName) + '</div>'
+    + '<div class="proposal-footer-via">via ineedcoaching.org</div>'
+    + '</div></div>';
+
+  $('proposal-preview').innerHTML = html;
+}
+
+/* ── SAVE DRAFT ── */
+async function saveDraft() {
+  var d = getFormData();
+  if (!d.company || !d.email || !d.service) {
+    showMsg('Please fill in company, email, and service type.', '#c44');
+    return;
+  }
+  showMsg('Saving...', 'var(--muted)');
+
+  var payload = {
+    coach_id: coachProfile.id,
+    client_company: d.company,
+    client_name: d.contact,
+    client_email: d.email,
+    service_type: d.service,
+    participants: d.participants,
+    proposed_dates: d.dates,
+    investment: d.investment || null,
+    inclusions: d.inclusions,
+    custom_message: d.message,
+    status: 'draft',
+  };
+
+  var res = await fetch(SUPABASE_URL + '/rest/v1/coach_proposals', {
+    method: 'POST',
+    headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
+    body: JSON.stringify(payload)
+  });
+
+  if (res.ok) {
+    showMsg('Draft saved.', 'var(--forest)');
+  } else {
+    showMsg('Failed to save. Try again.', '#c44');
+  }
+}
+
+/* ── SEND ── */
+async function sendProposal() {
+  var d = getFormData();
+  if (!d.company || !d.email || !d.service) {
+    showMsg('Please fill in company, email, and service type.', '#c44');
+    return;
+  }
+  var btn = $('btn-send');
+  btn.disabled = true; btn.textContent = 'Sending...';
+  showMsg('', 'var(--muted)');
+
+  var payload = {
+    coach_id: coachProfile.id,
+    client_company: d.company,
+    client_name: d.contact,
+    client_email: d.email,
+    service_type: d.service,
+    participants: d.participants,
+    proposed_dates: d.dates,
+    investment: d.investment || null,
+    inclusions: d.inclusions,
+    custom_message: d.message,
+    status: 'sent',
+  };
+
+  var res = await fetch(SUPABASE_URL + '/rest/v1/coach_proposals', {
+    method: 'POST',
+    headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
+    body: JSON.stringify(payload)
+  });
+
+  if (res.ok) {
+    var coachName = coachProfile.display_name || coachProfile.full_name || 'A coach';
+
+    // Send email notification via coach-welcome-style endpoint (logs for now)
+    fetch('/api/booking-confirmation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ proposal_email: d.email, coach_name: coachName, service: d.service, company: d.company })
+    }).catch(function() {});
+
+    console.log('=== PROPOSAL SENT ===');
+    console.log('To:', d.email);
+    console.log('From:', coachName);
+    console.log('Service:', d.service);
+    console.log('Investment:', d.investment);
+    console.log('===');
+
+    showMsg('Proposal sent to ' + d.email + '.', 'var(--forest)');
+  } else {
+    showMsg('Failed to send. Try again.', '#c44');
+  }
+  btn.disabled = false; btn.textContent = 'Send to Client';
+}
+
+function showMsg(text, color) {
+  var el = $('form-msg');
+  el.textContent = text;
+  el.style.color = color;
+}
+</script>
+</body>
+</html>
