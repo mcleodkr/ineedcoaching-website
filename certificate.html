@@ -3,263 +3,184 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Certificate — ineedcoaching.org</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<title>Certificate of Completion</title>
 <style>
-:root {
-  --ink: #1a2e1a;
-  --forest: #4a7c59;
-  --cream: #f7f4ee;
-  --white: #ffffff;
-  --gold: #c49a3c;
-  --muted: #6b6b60;
-  --border: #e0ddd5;
-  --r: 14px;
-  --r-sm: 8px;
-}
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap');
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Cabinet Grotesk', sans-serif; background: #e8e5df; color: var(--ink); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; }
+body { font-family: 'Cabinet Grotesk', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #e8e8e8; padding: 40px 20px; }
+.cert { width: 800px; min-height: 560px; position: relative; }
+.print-bar { text-align: center; margin-bottom: 20px; }
+.print-btn { background: #1a2e1a; color: white; border: none; padding: 10px 28px; border-radius: 50px; font-family: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; }
+@media print { .print-bar { display: none !important; } body { background: white; padding: 0; } .cert { width: 100%; } }
 
-.print-btn { display: inline-block; padding: 14px 32px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; margin-bottom: 32px; transition: background 0.2s; }
-.print-btn:hover { background: #a87d1f; }
+/* ═══ PRESTIGE ═══ */
+.prestige { background: #0e1a0e; padding: 48px; text-align: center; border: 3px solid rgba(196,154,60,0.3); }
+.prestige .inner { border: 1.5px solid rgba(196,154,60,0.2); padding: 40px 36px; }
+.prestige .star { width: 48px; height: 48px; border: 2px solid #c49a3c; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 1.4rem; color: #c49a3c; }
+.prestige .brand { font-size: 0.55rem; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: #c49a3c; margin-bottom: 16px; }
+.prestige .rule { height: 1px; background: linear-gradient(90deg, transparent, rgba(196,154,60,0.4), transparent); margin: 18px 0; }
+.prestige .pre { font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(196,154,60,0.5); margin-bottom: 8px; }
+.prestige .name { font-family: Georgia, serif; font-size: 26px; color: #f7f4ee; margin-bottom: 8px; }
+.prestige .course { font-size: 13px; color: #c49a3c; margin-bottom: 4px; }
+.prestige .coach { font-size: 0.65rem; color: rgba(247,244,238,0.4); margin-bottom: 4px; }
+.prestige .footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 24px; padding-top: 12px; }
+.prestige .sig { border-top: 1px solid rgba(196,154,60,0.3); width: 160px; padding-top: 6px; font-size: 0.6rem; color: rgba(247,244,238,0.35); }
+.prestige .meta { text-align: right; font-size: 0.55rem; color: rgba(247,244,238,0.3); line-height: 1.6; }
 
-/* CERTIFICATE FRAME */
-.certificate { width: 900px; max-width: 100%; aspect-ratio: 1.414; position: relative; overflow: hidden; }
+/* ═══ EDITORIAL ═══ */
+.editorial { background: white; overflow: hidden; }
+.editorial .top { background: #1a2e1a; padding: 48px 48px 36px; text-align: center; }
+.editorial .tag { font-size: 0.55rem; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: #c49a3c; margin-bottom: 16px; }
+.editorial .name { font-family: Georgia, serif; font-size: 26px; color: #f7f4ee; line-height: 1.3; }
+.editorial .bottom { padding: 36px 48px 40px; }
+.editorial .label { font-size: 0.55rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #999; margin-bottom: 8px; }
+.editorial .course { font-size: 16px; font-weight: 700; color: #1a2e1a; margin-bottom: 4px; }
+.editorial .coach { font-size: 0.78rem; color: #999; margin-bottom: 16px; }
+.editorial .gold-rule { width: 40px; height: 2px; background: #c49a3c; margin-bottom: 24px; }
+.editorial .footer { display: flex; justify-content: space-between; align-items: flex-end; }
+.editorial .sig { border-top: 1px solid #ddd; width: 160px; padding-top: 6px; font-size: 0.6rem; color: #999; }
+.editorial .meta { text-align: right; font-size: 0.55rem; color: #bbb; line-height: 1.6; }
 
-/* TEMPLATE: ELEGANT */
-.cert-elegant { background: var(--white); border: 3px solid var(--gold); padding: 60px 72px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-.cert-elegant .cert-border-inner { position: absolute; top: 12px; left: 12px; right: 12px; bottom: 12px; border: 1px solid var(--gold); pointer-events: none; }
-.cert-elegant .cert-line-top, .cert-elegant .cert-line-bottom { width: 200px; height: 1px; background: var(--gold); }
-.cert-elegant .cert-line-top { margin-bottom: 32px; }
-.cert-elegant .cert-line-bottom { margin-top: 32px; }
-.cert-elegant .cert-label { font-family: 'Playfair Display', serif; font-size: 0.85rem; font-weight: 400; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px; }
-.cert-elegant .cert-student { font-family: 'Playfair Display', serif; font-size: 2.6rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; line-height: 1.2; }
-.cert-elegant .cert-has-completed { font-size: 0.92rem; color: var(--muted); margin-bottom: 6px; }
-.cert-elegant .cert-course { font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; font-style: italic; }
-.cert-elegant .cert-coach { font-size: 0.92rem; color: var(--muted); margin-bottom: 4px; }
-.cert-elegant .cert-date { font-size: 0.88rem; color: var(--muted); }
-.cert-elegant .cert-id { font-size: 0.72rem; color: var(--border); margin-top: 20px; letter-spacing: 0.1em; }
-.cert-elegant .cert-branding { font-family: 'Playfair Display', serif; font-size: 0.82rem; color: var(--muted); margin-top: 16px; }
-.cert-elegant .cert-branding em { color: var(--gold); }
+/* ═══ GEOMETRIC ═══ */
+.geometric { background: #f7f4ee; position: relative; padding: 0; }
+.geometric .bar { height: 8px; background: #1a2e1a; }
+.geometric .body { padding: 48px; position: relative; }
+.geometric .watermark { position: absolute; top: 60px; left: 48px; font-size: 36px; font-weight: 900; color: rgba(26,46,26,0.06); letter-spacing: 0.1em; text-transform: uppercase; pointer-events: none; }
+.geometric .dot { position: absolute; top: 28px; right: 48px; width: 12px; height: 12px; border-radius: 50%; background: #c49a3c; }
+.geometric .name { font-size: 22px; font-weight: 800; color: #1a2e1a; margin-bottom: 12px; margin-top: 40px; }
+.geometric .text { font-size: 0.78rem; color: #888; line-height: 1.6; margin-bottom: 16px; }
+.geometric .badge { display: inline-block; background: #1a2e1a; color: #c49a3c; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; padding: 5px 14px; border-radius: 50px; margin-bottom: 20px; }
+.geometric .course { font-size: 14px; font-weight: 700; color: #1a2e1a; margin-bottom: 4px; }
+.geometric .coach { font-size: 0.75rem; color: #888; margin-bottom: 24px; }
+.geometric .footer { display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid #ddd; padding-top: 16px; }
+.geometric .sig { border-top: 1px solid #1a2e1a; width: 160px; padding-top: 6px; font-size: 0.6rem; color: #888; }
+.geometric .meta { text-align: right; font-size: 0.55rem; color: #aaa; line-height: 1.6; }
 
-/* TEMPLATE: MINIMAL */
-.cert-minimal { background: var(--white); padding: 80px 72px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-.cert-minimal .cert-divider { width: 60px; height: 2px; background: var(--border); margin: 20px 0; }
-.cert-minimal .cert-label { font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-bottom: 32px; }
-.cert-minimal .cert-student { font-family: 'Cabinet Grotesk', sans-serif; font-size: 2.4rem; font-weight: 800; color: var(--ink); margin-bottom: 8px; }
-.cert-minimal .cert-has-completed { font-size: 0.88rem; color: var(--muted); margin-bottom: 4px; }
-.cert-minimal .cert-course { font-family: 'Cabinet Grotesk', sans-serif; font-size: 1.4rem; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
-.cert-minimal .cert-coach { font-size: 0.88rem; color: var(--muted); }
-.cert-minimal .cert-date { font-size: 0.85rem; color: var(--muted); }
-.cert-minimal .cert-id { font-size: 0.7rem; color: var(--border); margin-top: 24px; letter-spacing: 0.1em; }
-.cert-minimal .cert-branding { font-size: 0.78rem; color: var(--muted); margin-top: 12px; }
-
-/* TEMPLATE: BOLD */
-.cert-bold { background: var(--ink); padding: 60px 72px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-.cert-bold .cert-label { font-family: 'Playfair Display', serif; font-size: 0.9rem; font-weight: 400; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin-bottom: 20px; }
-.cert-bold .cert-student { font-family: 'Playfair Display', serif; font-size: 3rem; font-weight: 900; color: var(--gold); margin-bottom: 12px; line-height: 1.1; }
-.cert-bold .cert-has-completed { font-size: 0.95rem; color: rgba(247,244,238,0.6); margin-bottom: 6px; }
-.cert-bold .cert-course { font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 700; color: var(--cream); margin-bottom: 10px; font-style: italic; }
-.cert-bold .cert-coach { font-size: 0.92rem; color: rgba(247,244,238,0.6); margin-bottom: 4px; }
-.cert-bold .cert-date { font-size: 0.88rem; color: rgba(247,244,238,0.5); }
-.cert-bold .cert-line { width: 200px; height: 1px; background: var(--gold); margin: 24px 0; }
-.cert-bold .cert-id { font-size: 0.72rem; color: rgba(247,244,238,0.25); margin-top: 20px; letter-spacing: 0.1em; }
-.cert-bold .cert-branding { font-family: 'Playfair Display', serif; font-size: 0.82rem; color: rgba(247,244,238,0.4); margin-top: 12px; }
-.cert-bold .cert-branding em { color: var(--gold); }
-
-/* TEMPLATE: WARM */
-.cert-warm { background: var(--cream); border: 3px solid var(--forest); padding: 60px 72px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-.cert-warm .cert-border-inner { position: absolute; top: 10px; left: 10px; right: 10px; bottom: 10px; border: 1px solid rgba(74,124,89,0.3); pointer-events: none; }
-.cert-warm .cert-label { font-family: 'Playfair Display', serif; font-size: 0.85rem; font-weight: 400; letter-spacing: 0.2em; text-transform: uppercase; color: var(--forest); margin-bottom: 12px; }
-.cert-warm .cert-line { width: 140px; height: 2px; background: var(--forest); margin: 20px 0; opacity: 0.4; }
-.cert-warm .cert-student { font-family: 'Playfair Display', serif; font-size: 2.6rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; line-height: 1.2; }
-.cert-warm .cert-has-completed { font-size: 0.92rem; color: var(--muted); margin-bottom: 6px; }
-.cert-warm .cert-course { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 700; color: var(--forest); margin-bottom: 8px; font-style: italic; }
-.cert-warm .cert-coach { font-size: 0.92rem; color: var(--muted); margin-bottom: 4px; }
-.cert-warm .cert-date { font-size: 0.88rem; color: var(--muted); }
-.cert-warm .cert-id { font-size: 0.72rem; color: var(--border); margin-top: 20px; letter-spacing: 0.1em; }
-.cert-warm .cert-branding { font-family: 'Playfair Display', serif; font-size: 0.82rem; color: var(--forest); margin-top: 16px; opacity: 0.7; }
-
-/* ERROR */
-.error-state { text-align: center; padding: 80px 24px; }
-.error-state h2 { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--ink); margin-bottom: 12px; }
-.error-state p { color: var(--muted); font-size: 0.95rem; }
-.error-state a { color: var(--gold); text-decoration: none; font-weight: 700; }
-
-/* LOADING */
-.loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
-.loading-spinner { width: 48px; height: 48px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* PRINT */
-@media print {
-  body { background: white; padding: 0; margin: 0; }
-  .print-btn { display: none !important; }
-  .certificate { width: 100%; max-width: 100%; aspect-ratio: auto; box-shadow: none !important; border-radius: 0 !important; page-break-inside: avoid; }
-  @page { size: landscape; margin: 0; }
-}
-
-/* RESPONSIVE */
-@media (max-width: 768px) {
-  body { padding: 20px 12px; }
-  .certificate { width: 100%; aspect-ratio: auto; min-height: 500px; }
-  .cert-elegant, .cert-minimal, .cert-bold, .cert-warm { padding: 40px 28px; }
-  .cert-elegant .cert-student, .cert-minimal .cert-student, .cert-warm .cert-student { font-size: 1.8rem; }
-  .cert-bold .cert-student { font-size: 2rem; }
-  .cert-elegant .cert-course, .cert-bold .cert-course, .cert-warm .cert-course { font-size: 1.2rem; }
-  .cert-minimal .cert-course { font-size: 1.1rem; }
-}
+/* ═══ WARMTH ═══ */
+.warmth { background: white; display: flex; overflow: hidden; }
+.warmth .left-bar { width: 8px; background: #4a7c59; flex-shrink: 0; }
+.warmth .content { padding: 48px; flex: 1; }
+.warmth .brand { font-size: 0.55rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: #4a7c59; margin-bottom: 20px; }
+.warmth .pre { font-size: 0.72rem; color: #888; margin-bottom: 8px; }
+.warmth .name { font-family: Georgia, serif; font-size: 22px; color: #4a7c59; margin-bottom: 16px; }
+.warmth .label { font-size: 0.55rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #888; margin-bottom: 6px; }
+.warmth .course { font-size: 15px; font-weight: 700; color: #1a2e1a; margin-bottom: 4px; }
+.warmth .cohort { font-size: 0.78rem; color: #4a7c59; margin-bottom: 20px; }
+.warmth .rule { height: 1px; background: #e0ddd5; margin-bottom: 24px; }
+.warmth .footer { display: flex; justify-content: space-between; align-items: flex-end; }
+.warmth .sig { border-top: 2px solid #4a7c59; width: 180px; padding-top: 8px; }
+.warmth .sig-name { font-size: 0.78rem; font-weight: 700; color: #1a2e1a; }
+.warmth .sig-title { font-size: 0.6rem; color: #888; }
+.warmth .meta { text-align: right; font-size: 0.6rem; color: #aaa; line-height: 1.6; }
 </style>
 </head>
 <body>
 
-<div id="loading" class="loading-state">
-  <div class="loading-spinner"></div>
-  <p style="color:var(--muted);font-size:0.9rem;">Loading certificate...</p>
-</div>
-
-<div id="error" class="error-state" style="display:none;">
-  <h2>Certificate not found</h2>
-  <p>This certificate ID could not be verified. <a href="/classroom.html">Return to classroom</a></p>
-</div>
-
-<div id="cert-wrap" style="display:none;">
-  <button class="print-btn" onclick="window.print()">Print Certificate</button>
-  <div id="certificate" class="certificate"></div>
-</div>
+<div class="print-bar"><button class="print-btn" onclick="window.print()">Print Certificate</button></div>
+<div class="cert" id="cert"></div>
 
 <script>
-var SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
-var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+var params = new URLSearchParams(window.location.search);
+var template = params.get('template') || 'prestige';
+var student = params.get('student') || 'Student';
+var course = params.get('course') || 'Course';
+var coach = params.get('coach') || 'Coach';
+var date = params.get('date') || new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+var certId = params.get('id') || 'CERT-' + Math.random().toString(36).substring(2, 10).toUpperCase();
 
-function escapeHtml(str) {
-  if (!str) return '';
-  var d = document.createElement('div');
-  d.textContent = str;
-  return d.innerHTML;
-}
-
-function getStudentName(email) {
-  if (!email) return 'Student';
-  var name = email.split('@')[0];
-  // Capitalize and clean
-  return name.replace(/[._-]/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
-}
-
-async function loadCertificate() {
-  var params = new URLSearchParams(window.location.search);
-  var certId = params.get('id');
-  if (!certId) {
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('error').style.display = 'block';
-    return;
+// Also try fetching from Supabase if id param is a UUID
+(async function() {
+  if (params.get('id') && params.get('id').includes('-')) {
+    try {
+      var SUPA = 'https://qroizygknxdjsstkezsf.supabase.co';
+      var KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+      var res = await fetch(SUPA + '/rest/v1/coach_course_enrollments?certificate_id=eq.' + params.get('id') + '&select=*,coach_courses(title,certificate_template,coach_profiles(display_name))&limit=1', {
+        headers: { apikey: KEY, Authorization: 'Bearer ' + KEY }
+      });
+      var rows = await res.json();
+      if (rows && rows.length) {
+        var e = rows[0];
+        student = e.student_email ? e.student_email.split('@')[0] : student;
+        course = e.coach_courses ? e.coach_courses.title : course;
+        coach = e.coach_courses && e.coach_courses.coach_profiles ? e.coach_courses.coach_profiles.display_name : coach;
+        date = e.completed_at ? new Date(e.completed_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : date;
+        certId = e.certificate_id || certId;
+        template = e.coach_courses ? (e.coach_courses.certificate_template || template) : template;
+      }
+    } catch(err) {}
   }
+  render();
+})();
 
-  try {
-    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_enrollments?certificate_id=eq.' + encodeURIComponent(certId) + '&select=*,coach_courses(*,coach_profiles(display_name,slug,photo_url,headline))', {
-      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
-    });
-    var data = await res.json();
+function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
-    if (!data || data.length === 0) {
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('error').style.display = 'block';
-      return;
-    }
+function render() {
+  var el = document.getElementById('cert');
 
-    var enrollment = data[0];
-    var course = enrollment.coach_courses || {};
-    var coach = course.coach_profiles || {};
-    var template = course.certificate_template || 'elegant';
-    var studentName = getStudentName(enrollment.student_email);
-    var completionDate = enrollment.completed_at ? new Date(enrollment.completed_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A';
-    var certificateId = enrollment.certificate_id;
-    var courseName = course.title || 'Course';
-    var coachName = coach.display_name || '';
-
-    document.title = 'Certificate — ' + courseName + ' — ineedcoaching.org';
-
-    var certEl = document.getElementById('certificate');
-    var html = '';
-
-    if (template === 'elegant') {
-      certEl.className = 'certificate cert-elegant';
-      html += '<div class="cert-border-inner"></div>';
-      html += '<div class="cert-line-top"></div>';
-      html += '<div class="cert-label">Certificate of Completion</div>';
-      html += '<div class="cert-student">' + escapeHtml(studentName) + '</div>';
-      html += '<div class="cert-has-completed">has successfully completed</div>';
-      html += '<div class="cert-course">' + escapeHtml(courseName) + '</div>';
-      if (coachName) html += '<div class="cert-coach">Taught by ' + escapeHtml(coachName) + '</div>';
-      html += '<div class="cert-date">' + escapeHtml(completionDate) + '</div>';
-      html += '<div class="cert-line-bottom"></div>';
-      html += '<div class="cert-branding"><em>i</em>needcoaching.org</div>';
-      html += '<div class="cert-id">' + escapeHtml(certificateId) + '</div>';
-    } else if (template === 'minimal') {
-      certEl.className = 'certificate cert-minimal';
-      html += '<div class="cert-label">Certificate of Completion</div>';
-      html += '<div class="cert-student">' + escapeHtml(studentName) + '</div>';
-      html += '<div class="cert-divider"></div>';
-      html += '<div class="cert-has-completed">has successfully completed</div>';
-      html += '<div class="cert-course">' + escapeHtml(courseName) + '</div>';
-      if (coachName) html += '<div class="cert-coach">Taught by ' + escapeHtml(coachName) + '</div>';
-      html += '<div class="cert-divider"></div>';
-      html += '<div class="cert-date">' + escapeHtml(completionDate) + '</div>';
-      html += '<div class="cert-branding">ineedcoaching.org</div>';
-      html += '<div class="cert-id">' + escapeHtml(certificateId) + '</div>';
-    } else if (template === 'bold') {
-      certEl.className = 'certificate cert-bold';
-      html += '<div class="cert-label">Certificate of Completion</div>';
-      html += '<div class="cert-line"></div>';
-      html += '<div class="cert-student">' + escapeHtml(studentName) + '</div>';
-      html += '<div class="cert-has-completed">has successfully completed</div>';
-      html += '<div class="cert-course">' + escapeHtml(courseName) + '</div>';
-      if (coachName) html += '<div class="cert-coach">Taught by ' + escapeHtml(coachName) + '</div>';
-      html += '<div class="cert-date">' + escapeHtml(completionDate) + '</div>';
-      html += '<div class="cert-line"></div>';
-      html += '<div class="cert-branding"><em>i</em>needcoaching.org</div>';
-      html += '<div class="cert-id">' + escapeHtml(certificateId) + '</div>';
-    } else if (template === 'warm') {
-      certEl.className = 'certificate cert-warm';
-      html += '<div class="cert-border-inner"></div>';
-      html += '<div class="cert-label">Certificate of Completion</div>';
-      html += '<div class="cert-line"></div>';
-      html += '<div class="cert-student">' + escapeHtml(studentName) + '</div>';
-      html += '<div class="cert-has-completed">has successfully completed</div>';
-      html += '<div class="cert-course">' + escapeHtml(courseName) + '</div>';
-      if (coachName) html += '<div class="cert-coach">Taught by ' + escapeHtml(coachName) + '</div>';
-      html += '<div class="cert-date">' + escapeHtml(completionDate) + '</div>';
-      html += '<div class="cert-line"></div>';
-      html += '<div class="cert-branding">ineedtherapy.org</div>';
-      html += '<div class="cert-id">' + escapeHtml(certificateId) + '</div>';
-    } else {
-      // Fallback to elegant
-      certEl.className = 'certificate cert-elegant';
-      html += '<div class="cert-border-inner"></div>';
-      html += '<div class="cert-line-top"></div>';
-      html += '<div class="cert-label">Certificate of Completion</div>';
-      html += '<div class="cert-student">' + escapeHtml(studentName) + '</div>';
-      html += '<div class="cert-has-completed">has successfully completed</div>';
-      html += '<div class="cert-course">' + escapeHtml(courseName) + '</div>';
-      if (coachName) html += '<div class="cert-coach">Taught by ' + escapeHtml(coachName) + '</div>';
-      html += '<div class="cert-date">' + escapeHtml(completionDate) + '</div>';
-      html += '<div class="cert-line-bottom"></div>';
-      html += '<div class="cert-branding"><em>i</em>needcoaching.org</div>';
-      html += '<div class="cert-id">' + escapeHtml(certificateId) + '</div>';
-    }
-
-    certEl.innerHTML = html;
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('cert-wrap').style.display = 'flex';
-    document.getElementById('cert-wrap').style.flexDirection = 'column';
-    document.getElementById('cert-wrap').style.alignItems = 'center';
-  } catch (e) {
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('error').style.display = 'block';
+  if (template === 'prestige') {
+    el.innerHTML =
+      '<div class="prestige"><div class="inner">' +
+        '<div class="star">&#9733;</div>' +
+        '<div class="brand">ineedcoaching.org</div>' +
+        '<div class="rule"></div>' +
+        '<div class="pre">This certificate is presented to</div>' +
+        '<div class="name">' + esc(student) + '</div>' +
+        '<div class="pre">in recognition of completing</div>' +
+        '<div class="course">' + esc(course) + '</div>' +
+        '<div class="coach">with ' + esc(coach) + '</div>' +
+        '<div class="rule"></div>' +
+        '<div class="footer"><div class="sig">Signature</div><div class="meta">' + esc(date) + '<br>' + esc(certId) + '</div></div>' +
+      '</div></div>';
+  } else if (template === 'editorial') {
+    el.innerHTML =
+      '<div class="editorial">' +
+        '<div class="top">' +
+          '<div class="tag">Certificate of Completion</div>' +
+          '<div class="name">' + esc(student) + '</div>' +
+        '</div>' +
+        '<div class="bottom">' +
+          '<div class="label">Successfully completed</div>' +
+          '<div class="course">' + esc(course) + '</div>' +
+          '<div class="coach">with ' + esc(coach) + '</div>' +
+          '<div class="gold-rule"></div>' +
+          '<div class="footer"><div class="sig">Signature</div><div class="meta">' + esc(date) + '<br>' + esc(certId) + '</div></div>' +
+        '</div>' +
+      '</div>';
+  } else if (template === 'geometric') {
+    el.innerHTML =
+      '<div class="geometric">' +
+        '<div class="bar"></div>' +
+        '<div class="body">' +
+          '<div class="watermark">CERTIFICATE</div>' +
+          '<div class="dot"></div>' +
+          '<div class="name">' + esc(student) + '</div>' +
+          '<div class="text">Has successfully completed the following program and demonstrated commitment to personal and professional growth.</div>' +
+          '<div class="badge">ineedcoaching.org</div><br>' +
+          '<div class="course">' + esc(course) + '</div>' +
+          '<div class="coach">with ' + esc(coach) + '</div>' +
+          '<div class="footer"><div class="sig">Signature</div><div class="meta">Certificate ID: ' + esc(certId) + '<br>' + esc(date) + '</div></div>' +
+        '</div>' +
+      '</div>';
+  } else if (template === 'warmth') {
+    el.innerHTML =
+      '<div class="warmth">' +
+        '<div class="left-bar"></div>' +
+        '<div class="content">' +
+          '<div class="brand">ineedtherapy.org</div>' +
+          '<div class="pre">This certificate recognizes that</div>' +
+          '<div class="name">' + esc(student) + '</div>' +
+          '<div class="label">Completed</div>' +
+          '<div class="course">' + esc(course) + '</div>' +
+          '<div class="cohort">May 2026 Cohort</div>' +
+          '<div class="rule"></div>' +
+          '<div class="footer">' +
+            '<div class="sig"><div class="sig-name">Dr. Kimberly McLeod EdD LPC-A</div><div class="sig-title">Facilitator</div></div>' +
+            '<div class="meta">' + esc(date) + '<br>' + esc(certId) + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
   }
 }
-
-loadCertificate();
 </script>
 </body>
 </html>
