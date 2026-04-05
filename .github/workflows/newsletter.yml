@@ -1,0 +1,34 @@
+name: Weekly Coach Newsletter
+
+on:
+  schedule:
+    - cron: '0 8 * * 1'  # Every Monday at 8AM UTC
+  workflow_dispatch: {}    # Allow manual trigger
+
+jobs:
+  send-newsletter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Trigger newsletter endpoint
+        env:
+          NEWSLETTER_URL: ${{ secrets.VERCEL_DEPLOYMENT_URL || 'https://www.ineedcoaching.org' }}
+        run: |
+          echo "Sending weekly coach newsletter..."
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "${NEWSLETTER_URL}/api/coach-newsletter" \
+            -H "Content-Type: application/json" \
+            -d '{}')
+
+          http_code=$(echo "$response" | tail -1)
+          body=$(echo "$response" | head -n -1)
+
+          echo "Status: $http_code"
+          echo "Response: $body"
+
+          if [ "$http_code" -ne 200 ]; then
+            echo "::error::Newsletter API returned $http_code"
+            exit 1
+          fi
+
+          echo "Newsletter sent successfully"
