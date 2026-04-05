@@ -342,7 +342,7 @@ async function loadBookings() {
       var zoomLink = '';
       if (b.coach_profiles) {
         coachName = b.coach_profiles.display_name || b.coach_profiles.full_name || '';
-        zoomLink = b.coach_profiles.zoom_meeting_link || '';
+        zoomLink = b.zoom_link || b.coach_profiles.zoom_meeting_link || '';
       }
       var statusClass = 'status-' + (b.status || 'pending');
       var statusLabel = (b.status || 'pending');

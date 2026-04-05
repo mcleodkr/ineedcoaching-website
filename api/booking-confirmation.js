@@ -27,8 +27,27 @@ export default async function handler(req, res) {
     const sessionDate = booking.scheduled_at
       ? new Date(booking.scheduled_at).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' })
       : 'TBD';
-    const zoomLink = coach.zoom_meeting_link || booking.zoom_link || 'Will be provided before the session';
     const notes = booking.notes || 'None';
+
+    // Generate Zoom meeting if no link exists yet
+    let zoomLink = booking.zoom_link || coach.zoom_meeting_link || '';
+    if (!zoomLink) {
+      try {
+        const origin = req.headers.host ? `https://${req.headers.host}` : 'https://www.ineedcoaching.org';
+        const zoomRes = await fetch(`${origin}/api/zoom-meeting`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ booking_id }),
+        });
+        if (zoomRes.ok) {
+          const zoomData = await zoomRes.json();
+          zoomLink = zoomData.zoom_link || '';
+        }
+      } catch (zoomErr) {
+        console.log('Zoom meeting creation skipped:', zoomErr.message);
+      }
+    }
+    if (!zoomLink) zoomLink = 'Will be provided before the session';
 
     // Client email
     const clientSubject = `Your session with ${coachName} is confirmed`;
