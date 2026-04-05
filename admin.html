@@ -268,6 +268,7 @@ body{font-family:'Cabinet Grotesk',sans-serif;background:var(--cream);color:var(
 </div>
 
 <script>
+console.log('[admin] Script loaded');
 var SUPABASE_URL='https://qroizygknxdjsstkezsf.supabase.co';
 var ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
 var API=SUPABASE_URL+'/rest/v1';
@@ -277,12 +278,20 @@ var loaded={};
 // --- AUTH ---
 function doLogin(){
   var pw=document.getElementById('login-pw').value;
-  if(pw==='admin2026'){localStorage.setItem('coaching_admin','1');showApp();}
+  if(pw==='admin2026'){localStorage.setItem('coaching_admin','1');try{showApp();}catch(e){console.log('[admin] login error:',e);}}
   else{document.getElementById('login-err').textContent='Incorrect password.';}
 }
 function doLogout(){localStorage.removeItem('coaching_admin');location.reload();}
-function showApp(){document.getElementById('login-screen').style.display='none';document.getElementById('app').style.display='';loadSection('overview');}
-(function(){if(localStorage.getItem('coaching_admin')==='1')showApp();})();
+function showApp(){
+  console.log('[admin] showApp');
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  try { loadSection('overview'); } catch(e) { console.log('[admin] loadSection error:', e); }
+}
+(function(){
+  console.log('[admin] Checking auth:', localStorage.getItem('coaching_admin'));
+  if(localStorage.getItem('coaching_admin')==='1') showApp();
+})();
 
 // --- FETCH HELPER ---
 async function sGet(path){
