@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ineedcoaching.org — Find Your Coach. Build Your Practice.</title>
+<title>ineedcoaching.org — Find Your Coach</title>
 <meta name="description" content="The place where people looking for direction find coaches ready to help. And where coaches find the clients who need exactly what they offer. No commissions. No algorithms. Just real people.">
-<meta property="og:title" content="ineedcoaching.org — Find Your Coach. Build Your Practice.">
+<meta property="og:title" content="ineedcoaching.org — Find Your Coach">
 <meta property="og:description" content="A coaching marketplace where real people find each other. No commissions. No algorithms.">
 <meta property="og:url" content="https://www.ineedcoaching.org">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="ineedcoaching.org — Find Your Coach. Build Your Practice.">
+<meta name="twitter:title" content="ineedcoaching.org — Find Your Coach">
 <meta name="twitter:description" content="A coaching marketplace where real people find each other.">
 <link rel="canonical" href="https://www.ineedcoaching.org/">
 <script type="application/ld+json">
@@ -31,136 +31,213 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  --navy: #1a1e2e; --gold: #c49a3c; --gold-lt: #faf3e0; --warm: #faf8f4;
-  --white: #ffffff; --muted: #8a8a9a; --border: #2a2e3e;
-  --r: 14px; --r-sm: 8px;
+  --navy: #1a3a52; --gold: #c49a3c; --cream: #f7f4ee; --white: #ffffff; --muted: #8a8a9a;
+  --border: rgba(255,255,255,0.1); --r: 14px; --r-sm: 8px;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
-body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--navy); color: var(--warm); overflow-x: hidden; }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--navy); color: var(--cream); overflow-x: hidden; }
 
-/* NAV */
-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; align-items: center; justify-content: space-between; padding: 14px 52px; background: rgba(26,30,46,0.95); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
-.logo { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--warm); text-decoration: none; }
-.logo-i { color: var(--gold); font-style: italic; }
-.logo-coaching { color: var(--gold); font-style: italic; }
-.nav-links { display: flex; align-items: center; gap: 22px; list-style: none; }
-.nav-links a { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
-.nav-links a:hover { color: var(--gold); }
-.nav-pill { background: var(--gold); color: var(--navy) !important; padding: 8px 18px; border-radius: 50px; }
-.nav-pill:hover { background: #d4a94c !important; }
+/* LOGO */
+.flow-logo { position: fixed; top: 24px; left: 40px; z-index: 400; font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--cream); text-decoration: none; }
+.flow-logo .li { color: var(--gold); font-style: italic; }
 
-/* HERO */
-.hero { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 120px 40px 80px; position: relative; overflow: hidden; }
-.hero::before { content: ''; position: absolute; width: 500px; height: 500px; background: radial-gradient(circle, rgba(196,154,60,0.08) 0%, transparent 70%); top: -100px; right: -100px; pointer-events: none; }
-.eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 0.63rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin-bottom: 24px; }
-.eyebrow-dot { width: 7px; height: 7px; background: var(--gold); border-radius: 50%; animation: pulse 2s ease-in-out infinite; }
-@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.6); } }
-.hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(2.6rem, 5vw, 4.2rem); line-height: 1.08; letter-spacing: -0.02em; color: var(--warm); margin-bottom: 24px; }
-.hero h1 em { color: var(--gold); font-style: italic; }
-.hero-sub { font-size: 1rem; line-height: 1.75; color: var(--muted); max-width: 540px; margin: 0 auto 48px; }
-.hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
-.btn-primary { display: inline-flex; align-items: center; gap: 8px; background: var(--gold); color: var(--navy); padding: 14px 32px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem; font-weight: 700; text-decoration: none; transition: all 0.2s; border: none; cursor: pointer; }
-.btn-primary:hover { background: #d4a94c; transform: translateY(-2px); }
-.btn-outline { display: inline-flex; align-items: center; gap: 8px; background: transparent; color: var(--warm); padding: 14px 32px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem; font-weight: 700; text-decoration: none; transition: all 0.2s; border: 1.5px solid var(--border); }
+/* SCREENS */
+.screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.5s ease, transform 0.5s ease; transform: translateY(20px); z-index: 100; background: var(--navy); }
+.screen.active { opacity: 1; pointer-events: auto; transform: translateY(0); }
+.screen-inner { max-width: 640px; width: 100%; padding: 24px; text-align: center; }
+.screen-inner h1 { font-family: 'Playfair Display', serif; font-size: clamp(1.8rem, 4vw, 2.8rem); line-height: 1.15; color: var(--cream); margin-bottom: 36px; }
+.screen-inner h1 em { color: var(--gold); font-style: italic; }
+.screen-inner h2 { font-family: 'Playfair Display', serif; font-size: clamp(1.4rem, 3vw, 2rem); line-height: 1.2; color: var(--cream); margin-bottom: 20px; }
+
+/* PILLS */
+.pills { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.pill { display: inline-block; border: 1.5px solid var(--gold); border-radius: 50px; padding: 14px 24px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.88rem; color: var(--cream); background: transparent; cursor: pointer; transition: all 0.2s; max-width: 480px; width: 100%; text-align: center; }
+.pill:hover { background: var(--gold); color: var(--white); }
+
+/* PRIMARY BTN */
+.btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--navy); color: var(--white); padding: 14px 32px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem; font-weight: 700; text-decoration: none; border: 1.5px solid var(--gold); cursor: pointer; transition: all 0.2s; }
+.btn-primary:hover { background: var(--gold); color: var(--white); transform: translateY(-2px); }
+.btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--gold); color: var(--navy); padding: 14px 32px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem; font-weight: 700; text-decoration: none; border: none; cursor: pointer; transition: all 0.2s; }
+.btn-secondary:hover { background: #d4a94c; transform: translateY(-2px); }
+.btn-outline { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: transparent; color: var(--cream); padding: 14px 32px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem; font-weight: 700; text-decoration: none; border: 1.5px solid rgba(255,255,255,0.2); cursor: pointer; transition: all 0.2s; }
 .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
 
-/* VALUES */
-.values-section { padding: 80px 80px; }
-.values-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 960px; margin: 0 auto; }
-.value-card { padding: 32px 24px; border: 1.5px solid var(--border); border-radius: var(--r); transition: border-color 0.2s; }
-.value-card:hover { border-color: var(--gold); }
-.value-card h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--gold); margin-bottom: 10px; }
-.value-card p { font-size: 0.84rem; color: var(--muted); line-height: 1.65; }
+/* PROGRESS DOTS */
+.progress-dots { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 200; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.2); transition: all 0.3s; }
+.dot.active { background: var(--gold); transform: scale(1.2); }
+
+/* REFLECTION TEXT */
+.reflection-text { font-size: 1.05rem; line-height: 1.8; color: var(--muted); margin-bottom: 32px; max-width: 520px; margin-left: auto; margin-right: auto; }
+.reflection-text em { color: var(--gold); font-style: italic; }
+
+/* TEXTAREA */
+.reflect-textarea { width: 100%; max-width: 480px; padding: 16px; border: 1.5px solid rgba(255,255,255,0.15); border-radius: var(--r-sm); background: rgba(255,255,255,0.05); color: var(--cream); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.92rem; line-height: 1.6; resize: vertical; min-height: 100px; margin-bottom: 20px; }
+.reflect-textarea:focus { outline: none; border-color: var(--gold); }
+
+/* PATH CARDS */
+.path-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; max-width: 580px; margin: 0 auto 32px; }
+.path-card { padding: 28px 20px; border: 1.5px solid rgba(255,255,255,0.12); border-radius: var(--r); text-align: center; cursor: pointer; transition: all 0.25s; text-decoration: none; display: block; }
+.path-card:hover { border-color: var(--gold); transform: translateY(-4px); box-shadow: 0 12px 36px rgba(196,154,60,0.1); }
+.path-card h3 { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--gold); margin-bottom: 8px; }
+.path-card p { font-size: 0.8rem; color: var(--muted); line-height: 1.6; }
+
+/* BUTTON ROW */
+.btn-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 24px; }
+
+/* BELOW FOLD */
+.below-fold { position: relative; z-index: 50; background: var(--navy); display: none; }
+.below-fold.visible { display: block; }
 
 /* ARTICLES */
 .articles-section { padding: 80px 80px; }
 .section-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 36px; max-width: 1100px; margin-left: auto; margin-right: auto; }
-.section-title { font-family: 'Playfair Display', serif; font-size: clamp(1.8rem, 3vw, 2.6rem); color: var(--warm); line-height: 1.1; }
+.section-title { font-family: 'Playfair Display', serif; font-size: clamp(1.8rem, 3vw, 2.6rem); color: var(--cream); line-height: 1.1; }
 .section-title em { color: var(--gold); font-style: italic; }
 .filter-pills { display: flex; flex-wrap: wrap; gap: 8px; max-width: 1100px; margin: 0 auto 32px; }
-.filter-pill { padding: 8px 18px; border-radius: 50px; border: 1.5px solid var(--border); background: transparent; color: var(--muted); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
-.filter-pill:hover { border-color: var(--gold); color: var(--warm); }
+.filter-pill { padding: 8px 18px; border-radius: 50px; border: 1.5px solid rgba(255,255,255,0.12); background: transparent; color: var(--muted); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.filter-pill:hover { border-color: var(--gold); color: var(--cream); }
 .filter-pill.active { background: var(--gold); color: var(--navy); border-color: var(--gold); }
 .articles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 1100px; margin: 0 auto; }
-.article-card { display: block; padding: 28px 24px; border: 1.5px solid var(--border); border-radius: var(--r); text-decoration: none; transition: all 0.25s; }
+.article-card { display: block; padding: 28px 24px; border: 1.5px solid rgba(255,255,255,0.12); border-radius: var(--r); text-decoration: none; transition: all 0.25s; }
 .article-card:hover { border-color: var(--gold); transform: translateY(-4px); box-shadow: 0 12px 36px rgba(196,154,60,0.08); }
 .article-card .card-category { font-size: 0.63rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
-.article-card .card-title { font-size: 0.95rem; font-weight: 700; color: var(--warm); line-height: 1.4; margin-bottom: 8px; }
+.article-card .card-title { font-size: 0.95rem; font-weight: 700; color: var(--cream); line-height: 1.4; margin-bottom: 8px; }
 .article-card .card-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.6; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .article-card .card-read { font-size: 0.75rem; font-weight: 700; color: var(--gold); }
 
 /* COMMONS */
 .commons-section { padding: 80px 80px; }
-.commons-card { max-width: 800px; margin: 0 auto; background: rgba(255,255,255,0.03); border: 1.5px solid var(--border); border-radius: var(--r); padding: 48px; text-align: center; transition: border-color 0.2s; }
+.commons-card { max-width: 800px; margin: 0 auto; background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.12); border-radius: var(--r); padding: 48px; text-align: center; transition: border-color 0.2s; }
 .commons-card:hover { border-color: var(--gold); }
-.commons-card .eyebrow { margin-bottom: 16px; }
-.commons-card h2 { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--warm); margin-bottom: 12px; line-height: 1.2; }
+.commons-card .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 0.63rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin-bottom: 16px; }
+.commons-card .eyebrow-dot { width: 7px; height: 7px; background: var(--gold); border-radius: 50%; animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.6); } }
+.commons-card h2 { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--cream); margin-bottom: 12px; line-height: 1.2; }
 .commons-card h2 em { color: var(--gold); font-style: italic; }
 .commons-card p { font-size: 0.9rem; color: var(--muted); line-height: 1.7; margin-bottom: 28px; max-width: 520px; margin-left: auto; margin-right: auto; }
 
 /* SPRIXLE */
 .sprixle-section { padding: 0 80px 80px; }
-.sprixle-card { max-width: 800px; margin: 0 auto; background: rgba(255,255,255,0.03); border: 1.5px solid var(--border); border-radius: var(--r); padding: 48px; text-align: center; transition: border-color 0.2s; }
+.sprixle-card { max-width: 800px; margin: 0 auto; background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.12); border-radius: var(--r); padding: 48px; text-align: center; transition: border-color 0.2s; }
 .sprixle-card:hover { border-color: var(--gold); }
-.sprixle-card h2 { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--warm); margin-bottom: 12px; line-height: 1.2; }
+.sprixle-card .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 0.63rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin-bottom: 16px; }
+.sprixle-card .eyebrow-dot { width: 7px; height: 7px; background: var(--gold); border-radius: 50%; }
+.sprixle-card h2 { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--cream); margin-bottom: 12px; line-height: 1.2; }
 .sprixle-card h2 em { color: var(--gold); font-style: italic; }
 .sprixle-card p { font-size: 0.9rem; color: var(--muted); line-height: 1.7; margin-bottom: 28px; max-width: 520px; margin-left: auto; margin-right: auto; }
 
+/* VALUES */
+.values-section { padding: 80px 80px; }
+.values-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 960px; margin: 0 auto; }
+.value-card { padding: 32px 24px; border: 1.5px solid rgba(255,255,255,0.12); border-radius: var(--r); transition: border-color 0.2s; }
+.value-card:hover { border-color: var(--gold); }
+.value-card h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--gold); margin-bottom: 10px; }
+.value-card p { font-size: 0.84rem; color: var(--muted); line-height: 1.65; }
+
 /* FOOTER */
-footer { padding: 40px 80px; border-top: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
-.footer-logo { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--warm); text-decoration: none; }
+footer { padding: 40px 80px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.footer-logo { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--cream); text-decoration: none; }
 .footer-note { font-size: 0.72rem; color: var(--muted); }
 .footer-note a { color: var(--gold); text-decoration: none; }
 .footer-crisis { font-size: 0.68rem; color: var(--muted); margin-top: 4px; }
 
-@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-
 @media (max-width: 768px) {
-  nav { padding: 12px 20px; }
-  .nav-links { gap: 12px; }
-  .nav-links a { font-size: 0.7rem; }
-  .hero { padding: 100px 24px 60px; }
-  .values-section, .articles-section, .commons-section, .sprixle-section { padding: 60px 24px; }
-  .values-grid { grid-template-columns: 1fr; }
+  .flow-logo { top: 16px; left: 20px; font-size: 1rem; }
+  .screen-inner { padding: 16px; }
+  .screen-inner h1 { font-size: 1.6rem; margin-bottom: 24px; }
+  .pill { padding: 12px 20px; font-size: 0.82rem; }
+  .path-cards { grid-template-columns: 1fr; }
+  .articles-section, .commons-section, .sprixle-section, .values-section { padding: 60px 24px; }
   .articles-grid { grid-template-columns: 1fr; }
+  .values-grid { grid-template-columns: 1fr; }
   .section-header { flex-direction: column; align-items: flex-start; gap: 16px; }
-  .filter-pills { gap: 6px; }
   footer { padding: 32px 24px; }
-  .hero-ctas { flex-direction: column; align-items: center; }
+  .progress-dots { bottom: 20px; }
 }
 </style>
 </head>
 <body>
 
-<nav>
-  <a class="logo" href="/"><span class="logo-i">i</span>need<span class="logo-coaching">coaching</span>.org</a>
-  <div class="nav-links">
-    <a href="/coaches.html">Coaches</a>
-    <a href="/sessions.html">Sessions</a>
-    <a href="https://www.ineedtherapy.org/find-a-match.html">Find Your Person</a>
-    <a href="#articles">Articles</a>
-    <a href="/quizzes.html">Quizzes</a>
-    <a href="/dashboard.html">Dashboard</a>
-    <a href="https://www.ineedtherapy.org/ineedtherapy-profile-form.html" class="nav-pill">List Your Practice</a>
-    <a href="/welcome.html" class="nav-pill" id="nav-login-btn">Login</a>
+<!-- LOGO -->
+<a class="flow-logo" href="/"><span class="li">i</span>need<span class="li">coaching</span>.org</a>
+
+<!-- PROGRESS DOTS -->
+<div class="progress-dots" id="progress-dots">
+  <div class="dot active" data-screen="1"></div>
+  <div class="dot" data-screen="2"></div>
+  <div class="dot" data-screen="3"></div>
+  <div class="dot" data-screen="4"></div>
+</div>
+
+<!-- SCREEN 1: What brings you here? -->
+<div class="screen active" id="screen1">
+  <div class="screen-inner">
+    <h1>What brings you here today?</h1>
+    <div class="pills">
+      <button class="pill" onclick="choose(1,'stuck')">I'm feeling stuck and not sure why</button>
+      <button class="pill" onclick="choose(1,'leader')">I want to grow as a leader</button>
+      <button class="pill" onclick="choose(1,'transition')">I'm going through a big transition</button>
+      <button class="pill" onclick="choose(1,'burnout')">I'm burned out and need to find my way back</button>
+      <button class="pill" onclick="choose(1,'better')">I want to be better at what I do</button>
+      <button class="pill" onclick="choose(1,'business')">I'm looking for coaching for my team or organization</button>
+      <button class="pill" onclick="window.location.href='/coach-dashboard.html'">I'm a coach looking to list my services</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 2: Follow-up question (dynamic) -->
+<div class="screen" id="screen2">
+  <div class="screen-inner">
+    <h1 id="screen2-question"></h1>
+    <div class="pills" id="screen2-pills"></div>
+  </div>
+</div>
+
+<!-- SCREEN 3: Reflection -->
+<div class="screen" id="screen3">
+  <div class="screen-inner">
+    <h2>Does this sound right?</h2>
+    <p class="reflection-text" id="reflection-text"></p>
+    <div class="btn-row" id="reflection-buttons">
+      <button class="btn-secondary" onclick="reflectionYes()">Yes, that resonates</button>
+      <button class="btn-outline" onclick="reflectionNo()">Not quite</button>
+    </div>
+    <div id="reflection-edit" style="display:none;margin-top:24px;">
+      <textarea class="reflect-textarea" id="reflect-textarea" placeholder="Tell us more about what you're looking for..."></textarea>
+      <br>
+      <button class="btn-secondary" onclick="reflectionContinue()">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 4: Path choices -->
+<div class="screen" id="screen4">
+  <div class="screen-inner">
+    <h1>Here's how we can help</h1>
+    <div id="screen4-content"></div>
+  </div>
+</div>
+
+<!-- BELOW FOLD: Articles, Commons, Values, Footer -->
+<div class="below-fold" id="below-fold">
+
+<nav style="position:fixed;top:0;left:0;right:0;z-index:300;display:flex;align-items:center;justify-content:space-between;padding:14px 52px;background:rgba(26,58,82,0.95);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,0.1);">
+  <a href="/" style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:#f7f4ee;text-decoration:none;"><span style="color:#c49a3c;font-style:italic;">i</span>need<span style="color:#c49a3c;font-style:italic;">coaching</span>.org</a>
+  <div style="display:flex;align-items:center;gap:22px;">
+    <a href="/coaches.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Coaches</a>
+    <a href="/sessions.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Sessions</a>
+    <a href="/coach-courses.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Courses</a>
+    <a href="/#articles" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Articles</a>
+    <a href="/coaching-commons.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Commons</a>
+    <a href="/coach-dashboard.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Dashboard</a>
+    <a href="https://www.ineedtherapy.org/ineedtherapy-profile-form.html" style="font-size:0.78rem;font-weight:700;background:#c49a3c;color:#1a3a52;padding:8px 18px;border-radius:50px;text-decoration:none;">List Your Practice</a>
   </div>
 </nav>
 
-<!-- HERO -->
-<section class="hero">
-  <div class="eyebrow"><span class="eyebrow-dot"></span> Coaching Marketplace</div>
-  <h1>Find your coach.<br><em>Build your practice.</em></h1>
-  <p style="font-family:'Playfair Display',serif;font-style:italic;font-size:1.1rem;color:var(--gold);margin-bottom:20px;">Whether you are looking for direction or looking for clients — you are in the right place.</p>
-  <p class="hero-sub">The place where people looking for direction find coaches ready to help. And where coaches find the clients who need exactly what they offer. No commissions. No algorithms. Just real people.</p>
-  <div class="hero-ctas">
-    <a href="https://www.ineedtherapy.org/find-a-match.html" class="btn-primary">Find Your Person &rarr;</a>
-    <a href="https://www.ineedtherapy.org/ineedtherapy-profile-form.html" class="btn-outline">Are you a coach? List your practice &rarr;</a>
-  </div>
-</section>
-
 <!-- VALUES -->
-<section class="values-section">
+<section class="values-section" style="padding-top:120px;">
   <div class="values-grid">
     <div class="value-card">
       <h3>No commissions.</h3>
@@ -200,7 +277,7 @@ footer { padding: 40px 80px; border-top: 1px solid var(--border); display: flex;
     <div class="eyebrow"><span class="eyebrow-dot"></span> The Commons</div>
     <h2>Find your match on <em>The Commons</em></h2>
     <p>The shared request board across all ineed sites. Real people posting what they need. Real providers responding. No middleman.</p>
-    <a href="https://www.ineedtherapy.org/find-a-match.html" class="btn-primary">Browse The Commons &rarr;</a>
+    <a href="/coaching-commons.html" class="btn-secondary">Browse The Commons &rarr;</a>
   </div>
 </section>
 
@@ -210,7 +287,7 @@ footer { padding: 40px 80px; border-top: 1px solid var(--border); display: flex;
     <div class="eyebrow"><span class="eyebrow-dot"></span> Sprixle</div>
     <h2>Continue your journey on <em>Sprixle</em></h2>
     <p>Private journaling, pattern tracking, and AI companion. Free to start.</p>
-    <a href="https://www.sprixle.com" target="_blank" class="btn-primary">Try Sprixle &rarr;</a>
+    <a href="https://www.sprixle.com" target="_blank" class="btn-secondary">Try Sprixle &rarr;</a>
   </div>
 </section>
 
@@ -221,18 +298,120 @@ footer { padding: 40px 80px; border-top: 1px solid var(--border); display: flex;
   <p class="footer-crisis">Not a crisis service — In crisis? Call or text 988</p>
 </footer>
 
-<script>
-const SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
-const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+</div><!-- /below-fold -->
 
-// Session check — swap Login to Dashboard if logged in
-(function() {
-  var token = localStorage.getItem('sb_access_token');
-  if (token) {
-    var btn = document.getElementById('nav-login-btn');
-    if (btn) { btn.textContent = 'Dashboard'; btn.href = '/dashboard.html'; }
+<script>
+var SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+
+var currentScreen = 1;
+var userChoice = '';
+var userAnswer = '';
+
+var questions = {
+  stuck: { q: 'What does stuck feel like for you right now?', opts: ['I keep doing the same things expecting different results', 'I know something needs to change but I don\'t know what', 'I\'ve lost the motivation I used to have', 'I feel like I\'m performing but not actually living'] },
+  leader: { q: 'What would feel different if you had support?', opts: ['I\'d make better decisions', 'I\'d communicate more clearly', 'I\'d finally feel confident in my role', 'I\'d have someone in my corner'] },
+  transition: { q: 'What kind of transition are you navigating?', opts: ['Changing jobs or careers', 'New role or promotion', 'Life changes affecting my work', 'I\'m not sure yet'] },
+  burnout: { q: 'What part of you feels most depleted right now?', opts: ['My energy', 'My creativity', 'My sense of purpose', 'My relationships at work'] },
+  better: { q: 'What area feels most important to develop?', opts: ['My leadership presence', 'How I handle difficult conversations', 'My strategic thinking', 'My ability to manage and inspire others'] },
+  business: { q: 'What is your organization looking for?', opts: ['Executive coaching for a leader or leadership team', 'A workshop or training program', 'A leadership retreat or offsite', 'A keynote or speaking engagement', 'We have a specific need'] }
+};
+
+var reflections = {
+  stuck: {
+    'I keep doing the same things expecting different results': 'You already see the pattern — that takes awareness most people skip. A coach can help you interrupt the loop and find the leverage points you\'re missing. <em>You don\'t need more willpower. You need a new vantage point.</em>',
+    'I know something needs to change but I don\'t know what': 'The feeling of knowing something is off without being able to name it is one of the most common reasons people seek coaching. A great coach helps you find language for what you\'re sensing. <em>Clarity is closer than you think.</em>',
+    'I\'ve lost the motivation I used to have': 'Losing motivation isn\'t a character flaw — it\'s a signal. Often it means you\'ve outgrown the story you\'ve been telling yourself about what matters. <em>A coach can help you reconnect with what actually drives you.</em>',
+    'I feel like I\'m performing but not actually living': 'That gap between the version of you the world sees and the one you actually are — coaching is one of the few spaces where you can close it. <em>You deserve to feel as real on the outside as you do on the inside.</em>'
+  },
+  burnout: {
+    'My energy': 'When your energy is gone, everything feels heavier than it should. Coaching won\'t just help you manage your calendar — it will help you understand what\'s been draining you and what would actually fill you back up. <em>Recovery starts with honesty.</em>',
+    'My creativity': 'Creative depletion often comes from working in systems that reward output over thinking. A coach can help you rebuild the conditions where ideas come naturally again. <em>Your creativity isn\'t gone. It\'s just been redirected.</em>',
+    'My sense of purpose': 'Purpose doesn\'t disappear — it gets buried under obligations and expectations. A good coach helps you dig it out again, dust it off, and figure out how to build around it. <em>It\'s still there.</em>',
+    'My relationships at work': 'When burnout affects your relationships, it\'s a sign you\'ve been giving from an empty well. Coaching can help you set boundaries that actually stick and rebuild trust — starting with yourself. <em>You can\'t pour from empty.</em>'
+  },
+  leader: {
+    'I\'d make better decisions': 'Decision-making improves dramatically when you have a thinking partner who isn\'t attached to the outcome. A coach gives you the space to think clearly before you act. <em>Better decisions start with better questions.</em>',
+    'I\'d communicate more clearly': 'Most communication breakdowns aren\'t about words — they\'re about alignment. A coach helps you understand what you\'re really trying to say and how to land it. <em>Clarity in communication starts with clarity in yourself.</em>',
+    'I\'d finally feel confident in my role': 'Confidence isn\'t something you find once and keep forever. It\'s something you build through honest reflection and support. A coach can help you stop second-guessing and start leading. <em>You already have what it takes.</em>',
+    'I\'d have someone in my corner': 'Leadership can be isolating. Having someone who is fully in your corner — not your boss, not your team, not your partner — changes everything. <em>A great coach sees you clearly and believes in you completely.</em>'
+  },
+  _default: 'Something brought you here, and that matters. Whether you can name it yet or not, coaching creates the space to figure it out — with someone who is fully on your side. <em>The first step is showing up. You\'re already here.</em>'
+};
+
+function goToScreen(num) {
+  document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+  var target = document.getElementById('screen' + num);
+  if (target) target.classList.add('active');
+  currentScreen = num;
+  document.querySelectorAll('.dot').forEach(function(d, i) {
+    d.classList.toggle('active', i < num);
+  });
+  if (num === 4) {
+    document.getElementById('below-fold').classList.add('visible');
   }
-})();
+}
+
+function choose(screen, value) {
+  if (screen === 1) {
+    userChoice = value;
+    var q = questions[value];
+    if (q) {
+      document.getElementById('screen2-question').textContent = q.q;
+      var pillsHtml = '';
+      q.opts.forEach(function(opt) {
+        pillsHtml += '<button class="pill" onclick="choose(2,\'' + opt.replace(/'/g, "\\'") + '\')">' + opt + '</button>';
+      });
+      document.getElementById('screen2-pills').innerHTML = pillsHtml;
+      goToScreen(2);
+    }
+  } else if (screen === 2) {
+    userAnswer = value;
+    var refText = '';
+    if (reflections[userChoice] && reflections[userChoice][value]) {
+      refText = reflections[userChoice][value];
+    } else {
+      refText = reflections._default;
+    }
+    document.getElementById('reflection-text').innerHTML = refText;
+    document.getElementById('reflection-buttons').style.display = 'flex';
+    document.getElementById('reflection-edit').style.display = 'none';
+    goToScreen(3);
+  }
+}
+
+function reflectionYes() {
+  showScreen4();
+}
+
+function reflectionNo() {
+  document.getElementById('reflection-buttons').style.display = 'none';
+  document.getElementById('reflection-edit').style.display = 'block';
+}
+
+function reflectionContinue() {
+  showScreen4();
+}
+
+function showScreen4() {
+  var content = document.getElementById('screen4-content');
+  if (userChoice === 'business') {
+    content.innerHTML =
+      '<div class="path-cards">' +
+        '<a href="/coaching-commons.html" class="path-card"><h3>Post a Request</h3><p>Describe what your organization needs. Coaches will come to you.</p></a>' +
+        '<a href="/coaches.html" class="path-card"><h3>Browse Coaches</h3><p>Search our directory for coaches who specialize in business and teams.</p></a>' +
+        '<a href="/business-dashboard.html" class="path-card"><h3>Business Dashboard</h3><p>Manage your requests, review proposals, and track engagement.</p></a>' +
+      '</div>';
+  } else {
+    content.innerHTML =
+      '<div class="path-cards">' +
+        '<a href="/coaches.html" class="path-card"><h3>Browse Coaches</h3><p>Find a coach who fits your style, goals, and budget.</p></a>' +
+        '<a href="/sessions.html" class="path-card"><h3>Explore Sessions</h3><p>See what types of coaching sessions are available right now.</p></a>' +
+        '<a href="/coaching-commons.html" class="path-card"><h3>Post What You Need</h3><p>Tell us what you\'re looking for. Let coaches find you.</p></a>' +
+      '</div>';
+  }
+  goToScreen(4);
+}
 
 // Articles
 var allArticles = [];
