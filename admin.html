@@ -167,9 +167,15 @@ body{font-family:'Cabinet Grotesk',sans-serif;background:var(--cream);color:var(
   <div class="login-card">
     <h1><span class="lc-i">i</span>need<span class="lc-coaching">coaching</span>.org</h1>
     <p>Admin Dashboard</p>
-    <input type="password" id="login-pw" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')doLogin()">
-    <button onclick="doLogin()">Enter</button>
-    <div class="login-error" id="login-err"></div>
+    <div id="login-form">
+      <input type="email" id="login-email" placeholder="Admin email address" onkeydown="if(event.key==='Enter')doLogin()">
+      <button onclick="doLogin()">Send magic link</button>
+      <div class="login-error" id="login-err"></div>
+    </div>
+    <div id="login-sent" style="display:none;">
+      <p style="color:var(--navy);font-weight:600;margin-bottom:12px;">Check your inbox</p>
+      <p style="font-size:0.82rem;color:var(--muted);line-height:1.6;">We sent a login link to your email. Click it to access the admin dashboard.</p>
+    </div>
   </div>
 </div>
 
@@ -262,7 +268,7 @@ body{font-family:'Cabinet Grotesk',sans-serif;background:var(--cream);color:var(
         <div class="settings-row"><span class="settings-label">Support Email</span><span class="settings-val">admin@ineedcoaching.org</span></div>
         <div class="settings-row"><span class="settings-label">Supabase Project</span><span class="settings-val">qroizygknxdjsstkezsf</span></div>
       </div>
-      <div class="settings-note">Admin access is password protected client-side. Move to Supabase authentication before public launch.</div>
+      <div class="settings-note">Admin access is protected by Supabase magic link authentication. Only drkmcleod@gmail.com can access this dashboard.</div>
     </div>
   </main>
 </div>
@@ -274,23 +280,78 @@ var ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 var API=SUPABASE_URL+'/rest/v1';
 var HEADERS={'apikey':ANON_KEY,'Authorization':'Bearer '+ANON_KEY};
 var loaded={};
+var ADMIN_EMAIL='drkmcleod@gmail.com';
+var AUTH_URL=SUPABASE_URL+'/auth/v1';
+var currentToken=null;
 
 // --- AUTH ---
-function doLogin(){
-  var pw=document.getElementById('login-pw').value;
-  if(pw==='admin2026'){localStorage.setItem('coaching_admin','1');try{showApp();}catch(e){console.log('[admin] login error:',e);}}
-  else{document.getElementById('login-err').textContent='Incorrect password.';}
+async function doLogin(){
+  var email=document.getElementById('login-email').value.trim().toLowerCase();
+  var errEl=document.getElementById('login-err');
+  errEl.textContent='';
+  if(!email){errEl.textContent='Please enter your email.';return;}
+  if(email!==ADMIN_EMAIL){errEl.textContent='This email is not authorized for admin access.';return;}
+  var btn=document.querySelector('#login-form button');
+  btn.disabled=true;btn.textContent='Sending...';
+  try{
+    var res=await fetch(AUTH_URL+'/magiclink',{
+      method:'POST',
+      headers:{'apikey':ANON_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({email:email})
+    });
+    if(!res.ok){var e=await res.json().catch(function(){return{};});errEl.textContent=e.msg||'Failed to send magic link. Try again.';btn.disabled=false;btn.textContent='Send magic link';return;}
+    document.getElementById('login-form').style.display='none';
+    document.getElementById('login-sent').style.display='block';
+  }catch(err){errEl.textContent='Network error. Please try again.';btn.disabled=false;btn.textContent='Send magic link';}
 }
-function doLogout(){localStorage.removeItem('coaching_admin');location.reload();}
+function doLogout(){localStorage.removeItem('sb_admin_token');location.reload();}
 function showApp(){
   console.log('[admin] showApp');
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='block';
   try { loadSection('overview'); } catch(e) { console.log('[admin] loadSection error:', e); }
 }
-(function(){
-  console.log('[admin] Checking auth:', localStorage.getItem('coaching_admin'));
-  if(localStorage.getItem('coaching_admin')==='1') showApp();
+async function verifySession(token){
+  try{
+    var res=await fetch(AUTH_URL+'/user',{headers:{'apikey':ANON_KEY,'Authorization':'Bearer '+token}});
+    if(!res.ok) return null;
+    var user=await res.json();
+    if(user.email&&user.email.toLowerCase()===ADMIN_EMAIL) return user;
+    return null;
+  }catch(e){return null;}
+}
+(async function(){
+  console.log('[admin] Checking auth');
+  // Handle magic link redirect — Supabase returns tokens in the URL hash
+  var hash=window.location.hash;
+  if(hash&&hash.includes('access_token')){
+    var params=new URLSearchParams(hash.substring(1));
+    var token=params.get('access_token');
+    if(token){
+      var user=await verifySession(token);
+      if(user){
+        currentToken=token;
+        HEADERS['Authorization']='Bearer '+token;
+        localStorage.setItem('sb_admin_token',token);
+        window.history.replaceState(null,'',window.location.pathname);
+        showApp();return;
+      }
+    }
+    document.getElementById('login-err').textContent='Access denied. This email is not authorized.';
+    window.history.replaceState(null,'',window.location.pathname);
+    return;
+  }
+  // Check stored session
+  var stored=localStorage.getItem('sb_admin_token');
+  if(stored){
+    var user=await verifySession(stored);
+    if(user){
+      currentToken=stored;
+      HEADERS['Authorization']='Bearer '+stored;
+      showApp();return;
+    }
+    localStorage.removeItem('sb_admin_token');
+  }
 })();
 
 // --- FETCH HELPER ---
