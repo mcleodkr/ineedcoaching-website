@@ -5,92 +5,416 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Articles | ineedcoaching.org</title>
 <meta name="description" content="Articles on leadership, burnout recovery, career transitions, and building a coaching practice.">
+<meta property="og:title" content="Articles | ineedcoaching.org">
+<meta property="og:description" content="Articles on leadership, burnout recovery, career transitions, and building a coaching practice.">
+<meta property="og:url" content="https://www.ineedcoaching.org/articles.html">
+<meta property="og:type" content="website">
+<link rel="canonical" href="https://www.ineedcoaching.org/articles.html">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 <style>
-:root { --navy: #1a3a52; --gold: #c49a3c; --gold-lt: #faf3e0; --cream: #f7f4ee; --white: #ffffff; --muted: #8a8a9a; --border: #e0ddd5; --r: 14px; --r-sm: 8px; }
+:root {
+  --navy: #1a3a52;
+  --gold: #c49a3c;
+  --gold-hover: #a87d1f;
+  --gold-lt: #faf3e0;
+  --cream: #f7f4ee;
+  --warm: #ffffff;
+  --muted: #8a8a9a;
+  --border: #e0ddd5;
+  --r: 14px;
+  --r-sm: 8px;
+}
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); color: var(--navy); }
+html { scroll-behavior: smooth; }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); color: var(--navy); overflow-x: hidden; }
 
-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; align-items: center; justify-content: space-between; padding: 14px 52px; background: rgba(26,58,82,0.95); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(255,255,255,0.1); }
-nav a.logo { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: #f7f4ee; text-decoration: none; }
-.logo-i, .logo-c { color: var(--gold); font-style: italic; }
-.nav-links { display: flex; align-items: center; gap: 22px; }
-.nav-links a { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); text-decoration: none; }
-.nav-links a:hover { color: var(--gold); }
-.nav-pill { background: var(--gold); color: var(--navy) !important; padding: 8px 18px; border-radius: 50px; }
+/* ANIMATIONS */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 
-.page-wrap { max-width: 1100px; margin: 0 auto; padding: 120px 24px 80px; }
-.page-header { text-align: center; margin-bottom: 32px; }
-.page-header h1 { font-family: 'Playfair Display', serif; font-size: clamp(1.8rem, 4vw, 2.6rem); color: var(--navy); margin-bottom: 10px; }
-.page-header h1 em { color: var(--gold); font-style: italic; }
-.page-header p { font-size: 0.92rem; color: var(--muted); max-width: 500px; margin: 0 auto; line-height: 1.7; }
+/* HERO */
+.page-hero {
+  background: var(--navy);
+  padding: 140px 52px 64px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.page-hero::after {
+  content: 'ARTICLES';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(7rem, 14vw, 15rem);
+  font-weight: 900;
+  color: rgba(255,255,255,0.04);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.page-hero h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2rem, 4vw, 3rem);
+  color: var(--cream);
+  position: relative;
+  z-index: 1;
+  margin-bottom: 12px;
+  opacity: 0;
+  animation: fadeUp 0.6s ease forwards 0.1s;
+}
+.page-hero h1 em {
+  color: var(--gold);
+  font-style: italic;
+}
+.page-hero p {
+  font-size: 0.95rem;
+  color: rgba(247,244,238,0.6);
+  max-width: 480px;
+  margin: 0 auto;
+  line-height: 1.7;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.6s ease forwards 0.3s;
+}
 
-.tabs { display: flex; justify-content: center; gap: 0; margin-bottom: 32px; border-bottom: 2px solid var(--border); }
-.tab { padding: 12px 28px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.88rem; font-weight: 700; color: var(--muted); background: none; border: none; cursor: pointer; position: relative; transition: color 0.2s; }
+/* SEARCH BAR */
+.search-bar {
+  background: var(--warm);
+  border-bottom: 1px solid var(--border);
+  padding: 20px 52px;
+  position: sticky;
+  top: 54px;
+  z-index: 200;
+}
+.search-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.search-inner input[type="text"] {
+  flex: 1;
+  min-width: 240px;
+  padding: 12px 20px;
+  border: 1.5px solid var(--border);
+  border-radius: 50px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.2s;
+  background: var(--cream);
+  color: var(--navy);
+}
+.search-inner input:focus {
+  border-color: var(--gold);
+}
+.search-inner input::placeholder {
+  color: var(--muted);
+}
+
+/* TABS */
+.tabs-wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 24px 0;
+}
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border);
+}
+.tab {
+  padding: 12px 28px;
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s;
+}
 .tab:hover { color: var(--navy); }
 .tab.active { color: var(--navy); }
-.tab.active::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 3px; background: var(--gold); border-radius: 2px 2px 0 0; }
+.tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--gold);
+  border-radius: 2px 2px 0 0;
+}
 
-.search-row { display: flex; gap: 12px; margin-bottom: 28px; flex-wrap: wrap; }
-.search-row input { flex: 1; min-width: 200px; padding: 10px 18px; border: 1.5px solid var(--border); border-radius: 50px; font-family: inherit; font-size: 0.85rem; outline: none; }
-.search-row input:focus { border-color: var(--gold); }
+/* GRID */
+.page-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 24px 80px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  background: var(--warm);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r);
+  padding: 28px 24px 24px;
+  text-decoration: none;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 0;
+  transform: translateY(20px);
+}
+.card.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.card:hover {
+  border-color: var(--gold);
+  transform: translateY(-5px);
+  box-shadow: 0 16px 40px rgba(196,154,60,0.1);
+}
+.card-cat {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: var(--gold-lt);
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-bottom: 14px;
+  width: fit-content;
+}
+.card-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1.35;
+  margin-bottom: 10px;
+}
+.card-desc {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 16px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
+}
+.card-link {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--gold);
+  transition: color 0.2s;
+}
+.card:hover .card-link { color: var(--gold-hover); }
 
-.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-.card { display: block; background: var(--white); border: 1.5px solid var(--border); border-radius: var(--r); padding: 24px; text-decoration: none; transition: all 0.25s; }
-.card:hover { border-color: var(--gold); transform: translateY(-4px); box-shadow: 0 12px 32px rgba(196,154,60,0.08); }
-.card-cat { font-size: 0.63rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
-.card-title { font-size: 0.95rem; font-weight: 700; color: var(--navy); line-height: 1.4; margin-bottom: 8px; }
-.card-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.55; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.card-link { font-size: 0.75rem; font-weight: 700; color: var(--gold); }
-.empty { text-align: center; padding: 60px 20px; color: var(--muted); grid-column: 1/-1; }
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  grid-column: 1 / -1;
+}
 
-footer { background: var(--navy); padding: 40px 52px; text-align: center; }
-.f-logo { font-family: 'Playfair Display', serif; font-size: 1rem; color: #f7f4ee; margin-bottom: 8px; }
-.f-note { font-size: 0.72rem; color: var(--muted); }
-.f-note a { color: var(--gold); text-decoration: none; }
+/* SCROLL REVEAL */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
 
-@media (max-width: 900px) { nav { padding: 12px 20px; } .grid { grid-template-columns: 1fr 1fr; } .page-wrap { padding: 100px 18px 60px; } }
-@media (max-width: 600px) { .grid { grid-template-columns: 1fr; } .nav-links a:not(.nav-pill) { display: none; } footer { padding: 32px 20px; } }
+/* FOOTER */
+footer {
+  padding: 48px 80px 32px;
+  background: var(--navy);
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.footer-grid {
+  max-width: 900px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr;
+  gap: 40px;
+  margin-bottom: 32px;
+}
+.footer-brand p {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.6;
+  max-width: 280px;
+  margin-top: 10px;
+}
+.footer-logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem;
+  color: var(--cream);
+  text-decoration: none;
+}
+.footer-logo .fl-i,
+.footer-logo .fl-c {
+  color: var(--gold);
+  font-style: italic;
+}
+.footer-col h4 {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 14px;
+}
+.footer-col a {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 4px 0;
+  transition: color 0.2s;
+}
+.footer-col a:hover { color: var(--gold); }
+.footer-bottom {
+  max-width: 900px;
+  margin: 0 auto;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.footer-note {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.footer-note a {
+  color: var(--gold);
+  text-decoration: none;
+}
+.footer-crisis {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  nav { padding: 12px 20px !important; }
+  .page-hero { padding: 120px 24px 48px; }
+  .search-bar { padding: 16px 20px; }
+  .grid { grid-template-columns: 1fr; }
+  .tabs-wrap { padding: 20px 18px 0; }
+  .page-content { padding: 24px 18px 60px; }
+  .footer-grid { grid-template-columns: 1fr; gap: 28px; }
+  footer { padding: 40px 24px 24px; }
+  .footer-bottom { flex-direction: column; text-align: center; }
+}
+@media (max-width: 600px) {
+  .nav-links-inner a:not(.nav-pill) { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .card { opacity: 1; transform: none; }
+  .reveal { opacity: 1; transform: none; }
+}
 </style>
 </head>
 <body>
 
-<nav>
-  <a href="/" class="logo"><span class="logo-i">i</span>need<span class="logo-c">coaching</span>.org</a>
-  <div class="nav-links">
-    <a href="/coaches.html">Coaches</a>
-    <a href="/sessions.html">Sessions</a>
-    <a href="/coach-courses.html">Courses</a>
-    <a href="/articles.html">Articles</a>
-    <a href="/coaching-commons.html">Commons</a>
-    <a href="/coach-dashboard.html">Dashboard</a>
-    <a href="/coach-signup.html" class="nav-pill">List Your Practice</a>
+<nav style="position:fixed;top:0;left:0;right:0;z-index:300;display:flex;align-items:center;justify-content:space-between;padding:14px 52px;background:rgba(26,58,82,0.95);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,0.1);">
+  <a href="/" style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:#f7f4ee;text-decoration:none;"><span style="color:#c49a3c;font-style:italic;">i</span>need<span style="color:#c49a3c;font-style:italic;">coaching</span>.org</a>
+  <div class="nav-links-inner" style="display:flex;align-items:center;gap:22px;">
+    <a href="/coaches.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Coaches</a>
+    <a href="/sessions.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Sessions</a>
+    <a href="/coach-courses.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Courses</a>
+    <a href="/articles.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#f7f4ee;text-decoration:none;border-bottom:2px solid #c49a3c;padding-bottom:2px;">Articles</a>
+    <a href="/coaching-commons.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Commons</a>
+    <a href="/coach-dashboard.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Dashboard</a>
+    <a href="/coach-signup.html" style="font-size:0.78rem;font-weight:700;background:#c49a3c;color:#1a3a52;padding:8px 18px;border-radius:50px;text-decoration:none;" class="nav-pill">List Your Practice</a>
   </div>
 </nav>
 
-<div class="page-wrap">
-  <div class="page-header">
-    <h1>Articles for your <em>journey.</em></h1>
-    <p>Whether you are seeking coaching or building a coaching practice, there is something here for you.</p>
-  </div>
+<!-- HERO -->
+<section class="page-hero">
+  <h1>Worth <em>reading.</em></h1>
+  <p>Whether you are seeking coaching or building a coaching practice, there is something here for you.</p>
+</section>
 
-  <div class="tabs">
-    <button class="tab active" onclick="switchTab('individual')">For Individuals</button>
-    <button class="tab" onclick="switchTab('coach')">For Coaches</button>
-  </div>
-
-  <div class="search-row">
-    <input type="text" id="article-search" placeholder="Search articles..." oninput="filterArticles()">
-  </div>
-
-  <div class="grid" id="articles-grid">
-    <div class="empty">Loading articles...</div>
+<!-- SEARCH BAR -->
+<div class="search-bar">
+  <div class="search-inner">
+    <input type="text" id="article-search" placeholder="Search articles by title or topic..." oninput="filterArticles()">
   </div>
 </div>
 
+<!-- TABS -->
+<div class="tabs-wrap reveal">
+  <div class="tabs">
+    <button class="tab active" data-tab="individual" onclick="switchTab('individual')">For Individuals</button>
+    <button class="tab" data-tab="coach" onclick="switchTab('coach')">For Coaches</button>
+  </div>
+</div>
+
+<!-- ARTICLES GRID -->
+<section class="page-content">
+  <div class="grid" id="articles-grid">
+    <p class="empty">Loading articles...</p>
+  </div>
+</section>
+
+<!-- FOOTER -->
 <footer>
-  <div class="f-logo"><span class="logo-i">i</span>need<span class="logo-c">coaching</span>.org</div>
-  <p class="f-note">A project from <a href="https://www.ineedtherapy.org">ineedtherapy.org</a></p>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="/" class="footer-logo"><span class="fl-i">i</span>need<span class="fl-c">coaching</span>.org</a>
+      <p>The place where people looking for direction find coaches ready to help. No commissions. No algorithms. Just real people.</p>
+    </div>
+    <div class="footer-col">
+      <h4>For Clients</h4>
+      <a href="/coaches.html">Find a Coach</a>
+      <a href="/sessions.html">Book a Session</a>
+      <a href="/articles.html">Read Articles</a>
+      <a href="/coaching-commons.html">Coaching Commons</a>
+    </div>
+    <div class="footer-col">
+      <h4>For Coaches</h4>
+      <a href="/coach-signup.html">List Your Practice</a>
+      <a href="/coach-courses.html">Courses</a>
+      <a href="/coach-dashboard.html">Dashboard</a>
+      <a href="/articles.html">Coach Articles</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span class="footer-note">A project from <a href="https://www.ineedtherapy.org">ineedtherapy.org</a></span>
+    <span class="footer-crisis">If you are in crisis, call or text 988.</span>
+  </div>
 </footer>
 
 <script>
@@ -107,30 +431,34 @@ function esc(s) { var d = document.createElement('div'); d.textContent = s || ''
 async function loadArticles() {
   try {
     var res = await fetch(SUPABASE_URL + '/rest/v1/articles?or=(audience.eq.coach,audience.eq.coaching-consumer)&select=title,slug,meta_description,category&order=created_at.desc&limit=200', {
-      headers: { apikey: ANON_KEY, Authorization: 'Bearer ' + ANON_KEY }
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
     });
     _allArticles = await res.json();
-    if (!_allArticles || _allArticles.error) _allArticles = [];
     filterArticles();
   } catch(e) {
-    document.getElementById('articles-grid').innerHTML = '<div class="empty">Could not load articles.</div>';
+    document.getElementById('articles-grid').innerHTML = '<p class="empty">Articles coming soon.</p>';
   }
 }
 
 function switchTab(tab) {
   _currentTab = tab;
   document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
-  event.target.classList.add('active');
+  document.querySelector('.tab[data-tab="' + tab + '"]').classList.add('active');
   filterArticles();
 }
 
 function filterArticles() {
-  var search = (document.getElementById('article-search').value || '').toLowerCase();
+  var search = (document.getElementById('article-search').value || '').toLowerCase().trim();
   var filtered = _allArticles.filter(function(a) {
-    var isCoachCat = COACH_CATEGORIES.some(function(c) { return (a.category || '').toLowerCase() === c.toLowerCase(); });
-    if (_currentTab === 'individual' && isCoachCat) return false;
+    var cat = (a.category || '').toLowerCase();
+    var isCoachCat = COACH_CATEGORIES.some(function(cc) { return cc.toLowerCase() === cat; });
     if (_currentTab === 'coach' && !isCoachCat) return false;
-    if (search && (a.title || '').toLowerCase().indexOf(search) === -1 && (a.meta_description || '').toLowerCase().indexOf(search) === -1) return false;
+    if (_currentTab === 'individual' && isCoachCat) return false;
+    if (search) {
+      var title = (a.title || '').toLowerCase();
+      var desc = (a.meta_description || '').toLowerCase();
+      if (title.indexOf(search) === -1 && desc.indexOf(search) === -1) return false;
+    }
     return true;
   });
   renderArticles(filtered);
@@ -138,17 +466,45 @@ function filterArticles() {
 
 function renderArticles(articles) {
   var grid = document.getElementById('articles-grid');
-  if (!articles.length) { grid.innerHTML = '<div class="empty">No articles found.</div>'; return; }
+  if (!articles.length) {
+    grid.innerHTML = '<p class="empty">No articles found.</p>';
+    return;
+  }
   grid.innerHTML = articles.map(function(a) {
     return '<a href="/article.html?slug=' + encodeURIComponent(a.slug) + '" class="card">' +
       '<div class="card-cat">' + esc(a.category || 'Article') + '</div>' +
       '<div class="card-title">' + esc(a.title) + '</div>' +
       '<div class="card-desc">' + esc(a.meta_description || '') + '</div>' +
-      '<span class="card-link">Read article →</span></a>';
+      '<span class="card-link">Read article &rarr;</span></a>';
   }).join('');
+  // Stagger entrance
+  setTimeout(function() {
+    document.querySelectorAll('.card').forEach(function(c, i) {
+      setTimeout(function() { c.classList.add('visible'); }, i * 60);
+    });
+  }, 50);
 }
 
 loadArticles();
+
+// IntersectionObserver scroll reveal
+(function() {
+  var reveals = document.querySelectorAll('.reveal');
+  if (!reveals.length) return;
+  if (!('IntersectionObserver' in window)) {
+    reveals.forEach(function(el) { el.classList.add('revealed'); });
+    return;
+  }
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('revealed');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.15 });
+  reveals.forEach(function(el) { observer.observe(el); });
+})();
 </script>
 </body>
 </html>

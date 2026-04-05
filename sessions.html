@@ -4,71 +4,133 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Browse Sessions | ineedcoaching.org</title>
-<meta name="description" content="Browse coaching sessions across all coaches. Find the right session for where you are right now.">
+<meta name="description" content="Browse individual coaching sessions and corporate services. Find the right session for your goals and book directly with a coach.">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  --navy: #1a3a52; --gold: #c49a3c; --gold-lt: #faf3e0; --warm: #faf8f4;
-  --white: #ffffff; --muted: #8a8a9a; --border: #2a2e3e; --ink: #1a3a52;
-  --r: 14px; --r-sm: 8px;
+  --navy: #1a3a52; --gold: #c49a3c; --gold-lt: #faf3e0; --cream: #f7f4ee;
+  --warm: #ffffff; --muted: #8a8a9a; --border: #e0ddd5; --ink: #1a3a52;
+  --forest: #4a7c59; --r: 14px; --r-sm: 8px;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
-body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--warm); color: var(--ink); }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); color: var(--ink); }
 
-.page-wrap { max-width: 1100px; margin: 0 auto; padding: 120px 24px 80px; }
+/* HERO */
+.page-hero { background: var(--navy); padding: 140px 52px 56px; text-align: center; position: relative; overflow: hidden; }
+.page-hero::after { content: 'SESSIONS'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'Playfair Display', serif; font-size: clamp(7rem, 14vw, 15rem); font-weight: 900; color: rgba(255,255,255,0.04); pointer-events: none; white-space: nowrap; }
+.page-hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(2rem, 4vw, 3rem); color: var(--cream); position: relative; z-index: 1; margin-bottom: 10px; }
+.page-hero h1 em { color: var(--gold); font-style: italic; }
+.page-hero p { font-size: 0.95rem; color: rgba(247,244,238,0.6); max-width: 480px; margin: 0 auto; line-height: 1.7; position: relative; z-index: 1; }
 
-.page-header { text-align: center; margin-bottom: 40px; }
-.page-header h1 { font-family: 'Playfair Display', serif; font-size: clamp(1.8rem, 4vw, 2.6rem); color: var(--ink); margin-bottom: 10px; }
-.page-header h1 em { color: var(--gold); font-style: italic; }
-.page-header p { font-size: 0.92rem; color: var(--muted); max-width: 500px; margin: 0 auto; line-height: 1.7; }
+/* SEARCH BAR */
+.search-bar { background: var(--warm); border-bottom: 1px solid var(--border); padding: 20px 52px; position: sticky; top: 54px; z-index: 200; }
+.search-inner { max-width: 1100px; margin: 0 auto; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.search-inner input[type="text"] { flex: 1; min-width: 240px; padding: 12px 20px; border: 1.5px solid var(--border); border-radius: 50px; font-family: inherit; font-size: 0.88rem; outline: none; transition: border-color 0.2s; background: var(--cream); }
+.search-inner input:focus { border-color: var(--gold); }
 
-.search-wrap { text-align: center; margin-bottom: 24px; }
-.search-wrap input { width: 100%; max-width: 500px; padding: 12px 18px; border: 1.5px solid #e0ddd5; border-radius: 50px; font-family: inherit; font-size: 0.85rem; outline: none; }
+/* SECTION TITLES */
+.section-title { font-family: 'Playfair Display', serif; font-size: clamp(1.4rem, 2.5vw, 1.8rem); margin-bottom: 6px; }
+.section-sub { font-size: 0.85rem; color: var(--muted); line-height: 1.6; margin-bottom: 24px; max-width: 520px; }
 
-.filters { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 20px; }
-.filter-pill { padding: 8px 18px; border-radius: 50px; border: 1.5px solid #e0ddd5; background: var(--white); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 700; color: var(--muted); cursor: pointer; transition: all 0.2s; }
+/* INDIVIDUAL SECTION */
+.section-individual { background: var(--cream); }
+.section-individual .section-title { color: var(--ink); }
+
+/* CORPORATE SECTION */
+.section-corporate { background: var(--navy); }
+.section-corporate .section-title { color: var(--cream); }
+.section-corporate .section-sub { color: rgba(247,244,238,0.55); }
+.section-corporate .filter-label { color: rgba(247,244,238,0.4); }
+.section-corporate .filter-pill { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); color: rgba(247,244,238,0.55); }
+.section-corporate .filter-pill:hover { border-color: var(--gold); color: var(--cream); }
+.section-corporate .filter-pill.active { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+.section-corporate .empty { color: rgba(247,244,238,0.45); }
+
+/* SECTION WRAPPER */
+.section-wrap { max-width: 1100px; margin: 0 auto; padding: 48px 24px 64px; }
+.section-wrap.reveal-section { opacity: 0; transform: translateY(30px); transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1); }
+.section-wrap.reveal-section.visible { opacity: 1; transform: translateY(0); }
+
+/* FILTERS */
+.filter-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: center; }
+.filter-label { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-right: 4px; }
+.filter-pill { padding: 7px 16px; border-radius: 50px; border: 1.5px solid var(--border); background: var(--cream); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.75rem; font-weight: 700; color: var(--muted); cursor: pointer; transition: all 0.2s; }
 .filter-pill:hover { border-color: var(--gold); color: var(--ink); }
 .filter-pill.active { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+.filters-block { margin-bottom: 28px; }
 
-.section-divider { border: none; border-top: 1px solid #e0ddd5; margin: 48px 0 40px; }
+/* GRID */
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
 
-.section-heading { font-family: 'Playfair Display', serif; font-size: clamp(1.4rem, 3vw, 1.8rem); color: var(--ink); margin-bottom: 20px; }
-.section-heading em { color: var(--gold); font-style: italic; }
+/* CARDS – INDIVIDUAL (cream bg) */
+.section-individual .card { background: var(--warm); border: 1.5px solid var(--border); border-radius: var(--r); overflow: hidden; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); opacity: 0; transform: translateY(20px); }
+.section-individual .card.visible { opacity: 1; transform: translateY(0); }
+.section-individual .card:hover { border-color: var(--gold); transform: translateY(-5px); box-shadow: 0 16px 40px rgba(196,154,60,0.1); }
 
-.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+/* CARDS – CORPORATE (navy bg, glass) */
+.section-corporate .card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--r); overflow: hidden; backdrop-filter: blur(10px); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); opacity: 0; transform: translateY(20px); }
+.section-corporate .card.visible { opacity: 1; transform: translateY(0); }
+.section-corporate .card:hover { border-color: rgba(196,154,60,0.5); transform: translateY(-5px); box-shadow: 0 16px 40px rgba(0,0,0,0.25); }
+.section-corporate .card-coach-name { color: var(--cream); }
+.section-corporate .card-service-name { color: var(--cream); }
+.section-corporate .card-price { color: var(--gold); }
+.section-corporate .card-meta span { color: rgba(247,244,238,0.5); }
+.section-corporate .card-pill { background: rgba(196,154,60,0.15); color: var(--gold); }
+.section-corporate .card-btn { background: var(--gold); color: var(--navy); }
+.section-corporate .card-btn:hover { background: var(--cream); color: var(--navy); }
+.section-corporate .card-initials-sm { color: var(--gold); }
 
-.card { background: var(--white); border: 1.5px solid #e0ddd5; border-radius: var(--r); overflow: hidden; transition: all 0.25s; display: flex; flex-direction: column; }
-.card:hover { border-color: var(--gold); transform: translateY(-4px); box-shadow: 0 12px 32px rgba(196,154,60,0.1); }
-.card-top { display: flex; align-items: center; gap: 12px; padding: 20px 24px 0; }
-.card-photo-sm { width: 44px; height: 44px; border-radius: 50%; background: var(--navy); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+/* CARD INTERNALS */
+.card-top { display: flex; align-items: center; gap: 10px; padding: 18px 20px 0; }
+.card-photo-sm { width: 44px; height: 44px; border-radius: 50%; background: var(--navy); overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 .card-photo-sm img { width: 100%; height: 100%; object-fit: cover; }
-.card-initials-sm { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 900; color: var(--gold); }
-.card-coach-name { font-size: 0.78rem; color: var(--muted); font-weight: 600; }
-.card-body { padding: 16px 24px 24px; flex: 1; display: flex; flex-direction: column; }
-.card-service-name { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--ink); margin-bottom: 8px; }
-.card-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font-size: 0.8rem; color: var(--muted); }
-.card-price { font-weight: 700; color: var(--ink); }
-.card-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
-.card-pill { font-size: 0.65rem; font-weight: 700; background: var(--gold-lt); color: var(--gold); padding: 3px 10px; border-radius: 20px; }
-.card-btn { display: block; width: 100%; text-align: center; background: var(--gold); color: var(--navy); padding: 10px; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; font-weight: 700; text-decoration: none; transition: background 0.2s; margin-top: auto; }
-.card-btn:hover { background: #d4a94c; }
+.card-initials-sm { font-family: 'Playfair Display', serif; font-size: 0.9rem; font-weight: 900; color: var(--gold); }
+.card-coach-name { font-size: 0.78rem; font-weight: 700; color: var(--muted); }
+.card-body { padding: 14px 20px 20px; }
+.card-service-name { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--ink); margin-bottom: 10px; line-height: 1.3; }
+.card-meta { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; font-size: 0.82rem; }
+.card-price { font-weight: 800; color: var(--gold); }
+.card-meta span { color: var(--muted); }
+.card-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.card-pill { font-size: 0.62rem; font-weight: 700; background: var(--gold-lt); color: var(--gold); padding: 3px 10px; border-radius: 20px; }
+.card-btn { display: block; width: 100%; text-align: center; background: var(--navy); color: var(--cream); padding: 11px; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; font-weight: 700; text-decoration: none; transition: background 0.2s, color 0.2s; }
+.card-btn:hover { background: var(--gold); color: var(--navy); }
 
-.empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 0.92rem; }
+.empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 0.92rem; grid-column: 1 / -1; }
 
-footer { background: var(--navy); padding: 40px 52px; text-align: center; border-top: 1px solid var(--border); }
-.f-logo { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--warm); margin-bottom: 8px; }
-.f-note { font-size: 0.72rem; color: var(--muted); }
-.f-note a { color: var(--gold); text-decoration: none; }
+/* FOOTER */
+footer { padding: 48px 80px 32px; background: var(--navy); border-top: 1px solid rgba(255,255,255,0.06); }
+.footer-grid { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 40px; margin-bottom: 32px; }
+.footer-brand p { font-size: 0.82rem; color: var(--muted); line-height: 1.6; max-width: 280px; margin-top: 10px; }
+.footer-logo { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--cream); text-decoration: none; }
+.footer-col h4 { font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); margin-bottom: 14px; }
+.footer-col a { display: block; font-size: 0.82rem; color: var(--muted); text-decoration: none; padding: 4px 0; transition: color 0.2s; }
+.footer-col a:hover { color: var(--gold); }
+.footer-bottom { max-width: 900px; margin: 0 auto; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.footer-note { font-size: 0.72rem; color: var(--muted); }
+.footer-note a { color: var(--gold); text-decoration: none; }
+.footer-crisis { font-size: 0.68rem; color: var(--muted); }
 
+/* RESPONSIVE */
 @media (max-width: 900px) {
-  nav { padding: 12px 20px; }
+  nav { padding: 12px 20px !important; }
+  .page-hero { padding: 120px 24px 40px; }
+  .search-bar { padding: 16px 20px; }
   .grid { grid-template-columns: 1fr 1fr; }
-  .page-wrap { padding: 100px 18px 60px; }
+  .section-wrap { padding: 36px 18px 48px; }
+  .footer-grid { grid-template-columns: 1fr; gap: 28px; }
+  footer { padding: 40px 24px 24px; }
+  .footer-bottom { flex-direction: column; text-align: center; }
 }
 @media (max-width: 600px) {
   .grid { grid-template-columns: 1fr; }
-  footer { padding: 32px 20px; }
+  .nav-links a:not(.nav-pill) { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  .section-wrap.reveal-section { opacity: 1; transform: none; }
+  .card { opacity: 1; transform: none; }
 }
 </style>
 </head>
@@ -78,7 +140,7 @@ footer { background: var(--navy); padding: 40px 52px; text-align: center; border
   <a href="/" style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:#f7f4ee;text-decoration:none;"><span style="color:#c49a3c;font-style:italic;">i</span>need<span style="color:#c49a3c;font-style:italic;">coaching</span>.org</a>
   <div style="display:flex;align-items:center;gap:22px;">
     <a href="/coaches.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Coaches</a>
-    <a href="/sessions.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Sessions</a>
+    <a href="/sessions.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#f7f4ee;text-decoration:none;border-bottom:2px solid #c49a3c;padding-bottom:2px;">Sessions</a>
     <a href="/coach-courses.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Courses</a>
     <a href="/#articles" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Articles</a>
     <a href="/coaching-commons.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Commons</a>
@@ -87,52 +149,105 @@ footer { background: var(--navy); padding: 40px 52px; text-align: center; border
   </div>
 </nav>
 
-<div class="page-wrap">
-  <div class="page-header">
-    <h1>Browse <em>sessions</em></h1>
-    <p>Find the right coaching session for where you are right now.</p>
-  </div>
+<!-- HERO -->
+<section class="page-hero">
+  <h1>Browse coaching <em>sessions</em></h1>
+  <p>Explore individual sessions and corporate services from coaches ready to help you grow. Book directly — no middleman.</p>
+</section>
 
-  <div class="search-wrap">
-    <input type="text" id="session-search" placeholder="Search by session name or coach..." oninput="applyFilters()">
-  </div>
-
-  <!-- INDIVIDUAL SESSIONS -->
-  <h2 class="section-heading">Individual <em>Sessions</em></h2>
-  <div class="filters" id="individual-spec-filters">
-    <button class="filter-pill active" onclick="setIndSpecFilter(this, '')">All</button>
-  </div>
-  <div class="filters" id="individual-price-filters">
-    <button class="filter-pill active" onclick="setIndPriceFilter(this, '')">Any price</button>
-    <button class="filter-pill" onclick="setIndPriceFilter(this, 'under100')">Under $100</button>
-    <button class="filter-pill" onclick="setIndPriceFilter(this, '100-200')">$100-$200</button>
-    <button class="filter-pill" onclick="setIndPriceFilter(this, 'over200')">$200+</button>
-  </div>
-  <div class="grid" id="individual-grid">
-    <div class="empty" style="grid-column:1/-1;">Loading sessions...</div>
-  </div>
-
-  <hr class="section-divider">
-
-  <!-- CORPORATE & ORGANIZATIONAL SERVICES -->
-  <h2 class="section-heading">Corporate &amp; Organizational <em>Services</em></h2>
-  <div class="filters" id="corporate-spec-filters">
-    <button class="filter-pill active" onclick="setCorpSpecFilter(this, '')">All</button>
-  </div>
-  <div class="filters" id="corporate-price-filters">
-    <button class="filter-pill active" onclick="setCorpPriceFilter(this, '')">Any price</button>
-    <button class="filter-pill" onclick="setCorpPriceFilter(this, 'under100')">Under $100</button>
-    <button class="filter-pill" onclick="setCorpPriceFilter(this, '100-200')">$100-$200</button>
-    <button class="filter-pill" onclick="setCorpPriceFilter(this, 'over200')">$200+</button>
-  </div>
-  <div class="grid" id="corporate-grid">
-    <div class="empty" style="grid-column:1/-1;">Loading services...</div>
+<!-- SEARCH -->
+<div class="search-bar">
+  <div class="search-inner">
+    <input type="text" id="session-search" placeholder="Search sessions by name or coach..." oninput="applyFilters()">
   </div>
 </div>
 
+<!-- INDIVIDUAL SESSIONS -->
+<section class="section-individual" aria-labelledby="individual-heading">
+  <div class="section-wrap reveal-section">
+    <h2 class="section-title" id="individual-heading">Individual Sessions</h2>
+    <p class="section-sub">One-on-one coaching sessions tailored to your personal and professional goals. Find the right fit and book directly.</p>
+
+    <div class="filters-block">
+      <div class="filter-row">
+        <span class="filter-label">Specialty</span>
+        <div id="individual-spec-filters" style="display:contents;">
+          <button class="filter-pill active" onclick="setIndSpecFilter(this, '')">All</button>
+        </div>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">Price</span>
+        <div id="individual-price-filters" style="display:contents;">
+          <button class="filter-pill active" onclick="setIndPriceFilter(this, '')">Any price</button>
+          <button class="filter-pill" onclick="setIndPriceFilter(this, 'under100')">Under $100</button>
+          <button class="filter-pill" onclick="setIndPriceFilter(this, '100-200')">$100 – $200</button>
+          <button class="filter-pill" onclick="setIndPriceFilter(this, 'over200')">$200+</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid" id="individual-grid">
+      <div class="empty" style="grid-column:1/-1;">Loading sessions...</div>
+    </div>
+  </div>
+</section>
+
+<!-- CORPORATE SERVICES -->
+<section class="section-corporate" aria-labelledby="corporate-heading">
+  <div class="section-wrap reveal-section">
+    <h2 class="section-title" id="corporate-heading">Corporate &amp; Organizational Services</h2>
+    <p class="section-sub">Workshops, retreats, keynotes, and consulting engagements designed for teams and organizations.</p>
+
+    <div class="filters-block">
+      <div class="filter-row">
+        <span class="filter-label">Specialty</span>
+        <div id="corporate-spec-filters" style="display:contents;">
+          <button class="filter-pill active" onclick="setCorpSpecFilter(this, '')">All</button>
+        </div>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">Price</span>
+        <div id="corporate-price-filters" style="display:contents;">
+          <button class="filter-pill active" onclick="setCorpPriceFilter(this, '')">Any price</button>
+          <button class="filter-pill" onclick="setCorpPriceFilter(this, 'under100')">Under $100</button>
+          <button class="filter-pill" onclick="setCorpPriceFilter(this, '100-200')">$100 – $200</button>
+          <button class="filter-pill" onclick="setCorpPriceFilter(this, 'over200')">$200+</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid" id="corporate-grid">
+      <div class="empty" style="grid-column:1/-1;">Loading services...</div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
 <footer>
-  <div class="f-logo"><span style="color:#c49a3c;font-style:italic;">i</span>need<span style="color:#c49a3c;font-style:italic;">coaching</span>.org</div>
-  <p class="f-note">A project from <a href="https://www.ineedtherapy.org">ineedtherapy.org</a></p>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a class="footer-logo" href="/"><span style="color:var(--gold);font-style:italic;">i</span>need<span style="color:var(--gold);font-style:italic;">coaching</span>.org</a>
+      <p>A coaching marketplace where real people find each other. No commissions. No algorithms.</p>
+    </div>
+    <div class="footer-col">
+      <h4>For Clients</h4>
+      <a href="/coaches.html">Find a Coach</a>
+      <a href="/sessions.html">Browse Sessions</a>
+      <a href="/coach-courses.html">Courses</a>
+      <a href="/#articles">Articles</a>
+      <a href="/coaching-commons.html">The Commons</a>
+    </div>
+    <div class="footer-col">
+      <h4>For Coaches</h4>
+      <a href="/coach-signup.html">List Your Practice</a>
+      <a href="/coach-dashboard.html">Coach Dashboard</a>
+      <a href="/proposal-builder.html">Proposal Builder</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p class="footer-note">A project from <a href="https://www.ineedtherapy.org">ineedtherapy.org</a></p>
+    <p class="footer-crisis">Not a crisis service. In crisis? Call or text 988</p>
+  </div>
 </footer>
 
 <script>
@@ -281,7 +396,7 @@ function renderSessions(sessions, gridId, emptyMsg) {
     return '<div class="card">' +
       '<div class="card-top">' +
         '<div class="card-photo-sm">' +
-          (s.coachPhoto ? '<img src="' + esc(s.coachPhoto) + '" alt="' + esc(s.coachName) + '">' : '<span class="card-initials-sm">' + initials + '</span>') +
+          (s.coachPhoto ? '<img src="' + esc(s.coachPhoto) + '" alt="' + esc(s.coachName) + '" loading="lazy" width="44" height="44">' : '<span class="card-initials-sm">' + initials + '</span>') +
         '</div>' +
         '<span class="card-coach-name">' + esc(s.coachName) + '</span>' +
       '</div>' +
@@ -299,6 +414,35 @@ function renderSessions(sessions, gridId, emptyMsg) {
 }
 
 loadSessions();
+
+// Scroll reveal for sections
+(function() {
+  var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (prefersReduced) {
+    document.querySelectorAll('.reveal-section').forEach(function(el) { el.classList.add('visible'); });
+    return;
+  }
+
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+
+        // Stagger cards inside visible section
+        setTimeout(function() {
+          entry.target.querySelectorAll('.card').forEach(function(card, i) {
+            setTimeout(function() { card.classList.add('visible'); }, i * 80);
+          });
+        }, 200);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.reveal-section').forEach(function(el) {
+    observer.observe(el);
+  });
+})();
 </script>
 </body>
 </html>

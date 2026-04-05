@@ -8,58 +8,349 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  --navy: #1a3a52; --gold: #c49a3c; --cream: #f7f4ee; --white: #ffffff; --muted: #8a8a9a;
-  --border: #e0ddd5; --r: 14px; --r-sm: 8px;
+  --navy: #1a3a52;
+  --gold: #c49a3c;
+  --cream: #f7f4ee;
+  --white: #ffffff;
+  --muted: #8a8a9a;
+  --border: #e0ddd5;
+  --forest: #4a7c59;
+  --r: 14px;
+  --r-sm: 8px;
+  --duration-fast: 150ms;
+  --duration-normal: 300ms;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
-body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); color: var(--navy); }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); color: var(--navy); overflow-x: hidden; }
 
-.page-wrap { max-width: 720px; margin: 0 auto; padding: 100px 24px 80px; }
+/* ═══════════ HERO ═══════════ */
+.hero {
+  position: relative;
+  background: var(--navy);
+  padding: 140px 24px 80px;
+  text-align: center;
+  overflow: hidden;
+}
+.hero::after {
+  content: 'COMMONS';
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(5rem, 14vw, 11rem);
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.03);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+.hero h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2.2rem, 5vw, 3.4rem);
+  font-weight: 900;
+  color: var(--white);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  margin-bottom: 20px;
+  opacity: 0;
+  animation: heroFadeUp 0.7s var(--ease-out-expo) forwards 0.1s;
+}
+.hero h1 em {
+  color: var(--gold);
+  font-style: italic;
+}
+.hero-subtitle {
+  font-size: 1.05rem;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.7;
+  max-width: 440px;
+  margin: 0 auto;
+  opacity: 0;
+  animation: heroFadeUp 0.7s var(--ease-out-expo) forwards 0.25s;
+}
 
-.page-header { text-align: center; margin-bottom: 40px; }
-.page-header h1 { font-family: 'Playfair Display', serif; font-size: clamp(1.8rem, 4vw, 2.6rem); color: var(--navy); margin-bottom: 10px; }
-.page-header h1 em { color: var(--gold); font-style: italic; }
-.page-header p { font-size: 0.92rem; color: var(--muted); max-width: 500px; margin: 0 auto; line-height: 1.7; }
+@keyframes heroFadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
-/* TABS */
-.tabs { display: flex; justify-content: center; gap: 0; margin-bottom: 36px; border-bottom: 2px solid var(--border); }
-.tab-btn { padding: 14px 32px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.88rem; font-weight: 700; color: var(--muted); background: none; border: none; border-bottom: 2.5px solid transparent; cursor: pointer; transition: all 0.2s; margin-bottom: -2px; }
+/* ═══════════ TABS ═══════════ */
+.tabs-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 0 24px;
+  margin-top: -1px;
+  background: var(--cream);
+}
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  border-bottom: 2px solid var(--border);
+}
+.tab-btn {
+  padding: 18px 36px;
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: none;
+  border: none;
+  border-bottom: 2.5px solid transparent;
+  cursor: pointer;
+  transition: color var(--duration-fast), border-color var(--duration-fast);
+  margin-bottom: -2px;
+  letter-spacing: 0.02em;
+}
 .tab-btn:hover { color: var(--navy); }
-.tab-btn.active { color: var(--navy); border-bottom-color: var(--gold); }
+.tab-btn.active {
+  color: var(--navy);
+  border-bottom-color: var(--gold);
+}
+
+/* ═══════════ FORM AREA ═══════════ */
+.form-area {
+  background: var(--cream);
+  padding: 48px 24px 80px;
+}
+.form-card {
+  max-width: 720px;
+  margin: 0 auto;
+  background: var(--white);
+  border-radius: var(--r);
+  padding: 48px 44px;
+  box-shadow: 0 1px 3px rgba(26, 58, 82, 0.04), 0 8px 32px rgba(26, 58, 82, 0.06);
+}
 
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
 
-/* FORM */
-.form-group { margin-bottom: 20px; }
-.form-group label { display: block; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 6px; }
-.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.92rem; color: var(--navy); background: var(--white); transition: border-color 0.2s; }
-.form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--gold); }
-.form-group textarea { min-height: 120px; resize: vertical; line-height: 1.6; }
+/* ═══════════ FORM FIELDS ═══════════ */
+.form-group { margin-bottom: 22px; }
+.form-group label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-size: 0.92rem;
+  color: var(--navy);
+  background: var(--white);
+  transition: border-color var(--duration-fast);
+  -webkit-appearance: none;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: var(--muted);
+}
+.form-group textarea {
+  min-height: 130px;
+  resize: vertical;
+  line-height: 1.65;
+}
+.form-group input[type="file"] {
+  padding: 12px 14px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
 
-.checkbox-group { display: flex; flex-wrap: wrap; gap: 10px; }
-.checkbox-group label { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 500; color: var(--navy); text-transform: none; letter-spacing: 0; cursor: pointer; padding: 8px 14px; border: 1px solid var(--border); border-radius: 50px; transition: all 0.2s; }
-.checkbox-group label:hover { border-color: var(--gold); }
-.checkbox-group input[type="checkbox"] { accent-color: var(--gold); }
-.checkbox-group input[type="checkbox"]:checked + span { color: var(--gold); }
+/* ═══════════ CHECKBOX PILLS ═══════════ */
+.checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.checkbox-group label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--navy);
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+  padding: 10px 20px;
+  border: 1.5px solid var(--border);
+  border-radius: 50px;
+  transition: all var(--duration-fast);
+  user-select: none;
+}
+.checkbox-group label:hover {
+  border-color: var(--gold);
+  background: rgba(196, 154, 60, 0.04);
+}
+.checkbox-group input[type="checkbox"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.checkbox-group input[type="checkbox"]:checked + span {
+  color: var(--gold);
+}
+.checkbox-group input[type="checkbox"]:checked ~ span {
+  color: var(--gold);
+}
+.checkbox-group label:has(input:checked) {
+  border-color: var(--gold);
+  background: rgba(196, 154, 60, 0.08);
+  color: var(--gold);
+}
 
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
 
-.submit-btn { width: 100%; padding: 16px 24px; background: var(--gold); color: var(--white); border: none; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: background 0.2s; margin-top: 8px; }
-.submit-btn:hover { background: #d4a94c; }
-.submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+/* ═══════════ SUBMIT ═══════════ */
+.submit-btn {
+  width: 100%;
+  padding: 17px 24px;
+  background: var(--gold);
+  color: var(--navy);
+  border: none;
+  border-radius: 50px;
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity var(--duration-fast), transform var(--duration-fast);
+  margin-top: 10px;
+  letter-spacing: 0.01em;
+}
+.submit-btn:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+.submit-btn:active {
+  transform: translateY(0) scale(0.99);
+}
+.submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
 
-.form-msg { text-align: center; font-size: 0.85rem; color: var(--gold); margin-top: 16px; min-height: 24px; }
+.form-msg {
+  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--forest);
+  margin-top: 18px;
+  min-height: 24px;
+  line-height: 1.6;
+}
 
-footer { background: var(--navy); padding: 40px 52px; text-align: center; border-top: 1px solid rgba(255,255,255,0.1); }
-.f-logo { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--cream); margin-bottom: 8px; }
-.f-note { font-size: 0.72rem; color: var(--muted); }
+/* ═══════════ FOOTER ═══════════ */
+footer {
+  background: var(--navy);
+  padding: 64px 52px 48px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.footer-grid {
+  max-width: 960px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 48px;
+  margin-bottom: 48px;
+}
+.footer-brand-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--cream);
+  margin-bottom: 12px;
+}
+.footer-brand-name .fi { color: var(--gold); font-style: italic; }
+.footer-brand-desc {
+  font-size: 0.82rem;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.4);
+  max-width: 260px;
+}
+.footer-col h4 {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.35);
+  margin-bottom: 18px;
+}
+.footer-col a {
+  display: block;
+  font-size: 0.84rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-decoration: none;
+  margin-bottom: 12px;
+  transition: color var(--duration-fast);
+}
+.footer-col a:hover { color: var(--gold); }
+.footer-bottom {
+  text-align: center;
+  padding-top: 32px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.footer-bottom p {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.25);
+}
 
+/* ═══════════ RESPONSIVE ═══════════ */
 @media (max-width: 768px) {
-  .page-wrap { padding: 90px 16px 60px; }
+  .hero { padding: 120px 20px 60px; }
+  .tabs-wrap { padding: 0 16px; }
+  .tab-btn { padding: 14px 22px; font-size: 0.82rem; }
+  .form-area { padding: 32px 16px 60px; }
+  .form-card { padding: 32px 24px; }
   .form-row { grid-template-columns: 1fr; }
-  .tab-btn { padding: 12px 20px; font-size: 0.82rem; }
+  .footer-grid { grid-template-columns: 1fr; gap: 36px; text-align: center; }
+  .footer-brand-desc { max-width: 100%; }
+  footer { padding: 48px 24px 36px; }
+}
+@media (max-width: 480px) {
+  .hero h1 { font-size: 1.8rem; }
+  .tab-btn { padding: 12px 16px; font-size: 0.8rem; }
+  .form-card { padding: 28px 20px; }
+}
+
+/* ═══════════ REDUCED MOTION ═══════════ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .hero h1, .hero-subtitle {
+    opacity: 1;
+    transform: none;
+  }
 }
 </style>
 </head>
@@ -72,176 +363,199 @@ footer { background: var(--navy); padding: 40px 52px; text-align: center; border
     <a href="/sessions.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Sessions</a>
     <a href="/coach-courses.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Courses</a>
     <a href="/#articles" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Articles</a>
-    <a href="/coaching-commons.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Commons</a>
+    <a href="/coaching-commons.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#c49a3c;text-decoration:none;">Commons</a>
     <a href="/coach-dashboard.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Dashboard</a>
     <a href="/coach-signup.html" style="font-size:0.78rem;font-weight:700;background:#c49a3c;color:#1a3a52;padding:8px 18px;border-radius:50px;text-decoration:none;">List Your Practice</a>
   </div>
 </nav>
 
-<div class="page-wrap">
-  <div class="page-header">
-    <h1>The Coaching <em>Commons</em></h1>
-    <p>Tell us what you need. Coaches will find you. No middleman, no algorithms.</p>
-  </div>
+<header class="hero">
+  <h1>The Coaching <em>Commons</em></h1>
+  <p class="hero-subtitle">Post what you need. Coaches will come to you.</p>
+</header>
 
+<section class="tabs-wrap">
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('individual')">Individual</button>
     <button class="tab-btn" onclick="switchTab('business')">Business / Organization</button>
   </div>
+</section>
 
-  <!-- INDIVIDUAL FORM -->
-  <div class="tab-panel active" id="panel-individual">
-    <form id="individual-form" onsubmit="submitIndividual(event)">
-      <div class="form-group">
-        <label>What are you looking for?</label>
-        <textarea name="description" placeholder="Describe what you need from a coach. Be as specific or open as you'd like." required></textarea>
-      </div>
-      <div class="form-group">
-        <label>Budget Range</label>
-        <select name="budget_range">
-          <option value="">Select a range</option>
-          <option value="Under $100/session">Under $100/session</option>
-          <option value="$100-$200/session">$100-$200/session</option>
-          <option value="$200-$350/session">$200-$350/session</option>
-          <option value="$350+/session">$350+/session</option>
-          <option value="Flexible">Flexible</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Availability</label>
-        <div class="checkbox-group">
-          <label><input type="checkbox" name="availability" value="Mornings"><span>Mornings</span></label>
-          <label><input type="checkbox" name="availability" value="Afternoons"><span>Afternoons</span></label>
-          <label><input type="checkbox" name="availability" value="Evenings"><span>Evenings</span></label>
-          <label><input type="checkbox" name="availability" value="Weekends"><span>Weekends</span></label>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Coaching Specialty Preference</label>
-        <select name="specialty_preference">
-          <option value="">Any specialty</option>
-          <option value="Life Coaching">Life Coaching</option>
-          <option value="Executive Coaching">Executive Coaching</option>
-          <option value="Career Coaching">Career Coaching</option>
-          <option value="Leadership Coaching">Leadership Coaching</option>
-          <option value="Health & Wellness">Health & Wellness</option>
-          <option value="Relationship Coaching">Relationship Coaching</option>
-          <option value="Business Coaching">Business Coaching</option>
-          <option value="Performance Coaching">Performance Coaching</option>
-        </select>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Your Name</label>
-          <input type="text" name="name" placeholder="First name" required>
-        </div>
-        <div class="form-group">
-          <label>Your Email</label>
-          <input type="email" name="email" placeholder="you@example.com" required>
-        </div>
-      </div>
-      <button type="submit" class="submit-btn" id="individual-submit">Post My Request</button>
-      <div class="form-msg" id="individual-msg"></div>
-    </form>
-  </div>
+<main class="form-area">
+  <div class="form-card">
 
-  <!-- BUSINESS FORM -->
-  <div class="tab-panel" id="panel-business">
-    <form id="business-form" onsubmit="submitBusiness(event)">
-      <div class="form-group">
-        <label>Organization Name</label>
-        <input type="text" name="org_name" placeholder="Your company or organization" required>
-      </div>
-      <div class="form-row">
+    <!-- INDIVIDUAL FORM -->
+    <div class="tab-panel active" id="panel-individual">
+      <form onsubmit="submitIndividual(event)">
         <div class="form-group">
-          <label>Contact Name</label>
-          <input type="text" name="name" placeholder="Your name" required>
+          <label for="ind-description">What are you looking for?</label>
+          <textarea id="ind-description" placeholder="Describe what you need from a coach. Be as specific or open as you'd like." required></textarea>
         </div>
         <div class="form-group">
-          <label>Contact Email</label>
-          <input type="email" name="email" placeholder="you@company.com" required>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Type of Engagement</label>
-        <select name="business_type" required>
-          <option value="">Select type</option>
-          <option value="Executive coaching">Executive coaching</option>
-          <option value="Team coaching">Team coaching</option>
-          <option value="Workshop / Training">Workshop / Training</option>
-          <option value="Leadership retreat">Leadership retreat</option>
-          <option value="Keynote / Speaking">Keynote / Speaking</option>
-          <option value="Custom / Other">Custom / Other</option>
-        </select>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Number of Participants</label>
-          <select name="participants">
-            <option value="">Select</option>
-            <option value="1">1 (individual executive)</option>
-            <option value="2-5">2-5</option>
-            <option value="6-20">6-20</option>
-            <option value="21-50">21-50</option>
-            <option value="50+">50+</option>
+          <label for="ind-budget">Budget Range</label>
+          <select id="ind-budget">
+            <option value="">Select a range</option>
+            <option value="Under $100/session">Under $100/session</option>
+            <option value="$100-$200/session">$100-$200/session</option>
+            <option value="$200+/session">$200+/session</option>
+            <option value="Not sure yet">Not sure yet</option>
           </select>
         </div>
         <div class="form-group">
-          <label>Budget Range</label>
-          <select name="budget_range">
-            <option value="">Select</option>
-            <option value="Under $5,000">Under $5,000</option>
-            <option value="$5,000-$15,000">$5,000-$15,000</option>
-            <option value="$15,000-$50,000">$15,000-$50,000</option>
-            <option value="$50,000+">$50,000+</option>
-            <option value="Flexible / TBD">Flexible / TBD</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Timeline</label>
-          <select name="timeline">
-            <option value="">Select</option>
-            <option value="Immediately">Immediately</option>
-            <option value="Within 1 month">Within 1 month</option>
-            <option value="1-3 months">1-3 months</option>
-            <option value="3-6 months">3-6 months</option>
-            <option value="Just exploring">Just exploring</option>
-          </select>
+          <label>Availability</label>
+          <div class="checkbox-group">
+            <label><input type="checkbox" value="Mornings"><span>Mornings</span></label>
+            <label><input type="checkbox" value="Afternoons"><span>Afternoons</span></label>
+            <label><input type="checkbox" value="Evenings"><span>Evenings</span></label>
+            <label><input type="checkbox" value="Weekends"><span>Weekends</span></label>
+          </div>
         </div>
         <div class="form-group">
-          <label>Format Preference</label>
-          <select name="format">
-            <option value="">Select</option>
-            <option value="Virtual">Virtual</option>
-            <option value="In-person">In-person</option>
-            <option value="Hybrid">Hybrid</option>
-            <option value="No preference">No preference</option>
+          <label for="ind-specialty">Specialty Preference</label>
+          <select id="ind-specialty">
+            <option value="">Any specialty</option>
+            <option value="Life Coaching">Life Coaching</option>
+            <option value="Executive Coaching">Executive Coaching</option>
+            <option value="Career Coaching">Career Coaching</option>
+            <option value="Leadership">Leadership</option>
+            <option value="Health & Wellness">Health &amp; Wellness</option>
+            <option value="Business Coaching">Business Coaching</option>
+            <option value="Relationship Coaching">Relationship Coaching</option>
+            <option value="Other">Other</option>
           </select>
         </div>
-      </div>
-      <div class="form-group">
-        <label>Location (if in-person)</label>
-        <input type="text" name="location" placeholder="City, state or region">
-      </div>
-      <div class="form-group">
-        <label>Details</label>
-        <textarea name="description" placeholder="Describe what your organization needs, goals, context, or anything else that would help coaches respond thoughtfully." required></textarea>
-      </div>
-      <div class="form-group">
-        <label>Upload RFP (optional, PDF)</label>
-        <input type="file" name="rfp" accept=".pdf,.doc,.docx" id="rfp-file" style="padding:10px;">
-      </div>
-      <button type="submit" class="submit-btn" id="business-submit">Post Business Request</button>
-      <div class="form-msg" id="business-msg"></div>
-    </form>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="ind-name">Your Name</label>
+            <input type="text" id="ind-name" placeholder="First name" required>
+          </div>
+          <div class="form-group">
+            <label for="ind-email">Your Email</label>
+            <input type="email" id="ind-email" placeholder="you@example.com" required>
+          </div>
+        </div>
+        <button type="submit" class="submit-btn">Post Your Request</button>
+        <div class="form-msg" id="ind-msg"></div>
+      </form>
+    </div>
+
+    <!-- BUSINESS FORM -->
+    <div class="tab-panel" id="panel-business">
+      <form onsubmit="submitBusiness(event)">
+        <div class="form-group">
+          <label for="biz-org">Organization Name</label>
+          <input type="text" id="biz-org" placeholder="Your company or organization" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="biz-contact">Contact Name</label>
+            <input type="text" id="biz-contact" placeholder="Your name" required>
+          </div>
+          <div class="form-group">
+            <label for="biz-email">Contact Email</label>
+            <input type="email" id="biz-email" placeholder="you@company.com" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="biz-type">Type of Engagement</label>
+          <select id="biz-type">
+            <option value="">Select type</option>
+            <option value="Executive Coaching">Executive Coaching</option>
+            <option value="Team Workshop">Team Workshop</option>
+            <option value="Leadership Retreat">Leadership Retreat</option>
+            <option value="Keynote / Speaking">Keynote / Speaking</option>
+            <option value="Consulting">Consulting</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="biz-participants">Number of Participants</label>
+            <select id="biz-participants">
+              <option value="">Select</option>
+              <option value="1-5">1-5</option>
+              <option value="6-15">6-15</option>
+              <option value="16-50">16-50</option>
+              <option value="50+">50+</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="biz-budget">Budget Range</label>
+            <select id="biz-budget">
+              <option value="">Select a range</option>
+              <option value="Under $100/session">Under $100/session</option>
+              <option value="$100-$200/session">$100-$200/session</option>
+              <option value="$200+/session">$200+/session</option>
+              <option value="Not sure yet">Not sure yet</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="biz-timeline">Timeline</label>
+            <select id="biz-timeline">
+              <option value="">Select</option>
+              <option value="Within 30 days">Within 30 days</option>
+              <option value="1-3 months">1-3 months</option>
+              <option value="3-6 months">3-6 months</option>
+              <option value="Just exploring">Just exploring</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="biz-format">Format Preference</label>
+            <select id="biz-format">
+              <option value="">Select</option>
+              <option value="In-person">In-person</option>
+              <option value="Virtual">Virtual</option>
+              <option value="Hybrid">Hybrid</option>
+              <option value="No preference">No preference</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="biz-location">Location</label>
+          <input type="text" id="biz-location" placeholder="City, state or region">
+        </div>
+        <div class="form-group">
+          <label for="biz-details">Additional Details</label>
+          <textarea id="biz-details" placeholder="Describe what your organization needs, goals, context, or anything else that would help coaches respond thoughtfully."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="biz-rfp">Upload RFP (optional)</label>
+          <input type="file" id="biz-rfp" accept=".pdf,.doc,.docx">
+        </div>
+        <button type="submit" class="submit-btn">Submit Request</button>
+        <div class="form-msg" id="biz-msg"></div>
+      </form>
+    </div>
+
   </div>
-</div>
+</main>
 
 <footer>
-  <div class="f-logo"><span style="color:#c49a3c;font-style:italic;">i</span>need<span style="color:#c49a3c;font-style:italic;">coaching</span>.org</div>
-  <p class="f-note">A project from ineedtherapy.org</p>
+  <div class="footer-grid">
+    <div>
+      <div class="footer-brand-name"><span class="fi">i</span>need<span class="fi">coaching</span>.org</div>
+      <p class="footer-brand-desc">A coaching marketplace where real people find each other. No commissions. No algorithms. A project from ineedtherapy.org.</p>
+    </div>
+    <div class="footer-col">
+      <h4>For Clients</h4>
+      <a href="/coaches.html">Browse Coaches</a>
+      <a href="/coaching-commons.html">Coaching Commons</a>
+      <a href="/sessions.html">Sessions</a>
+      <a href="/coach-courses.html">Courses</a>
+    </div>
+    <div class="footer-col">
+      <h4>For Coaches</h4>
+      <a href="/coach-signup.html">List Your Practice</a>
+      <a href="/coach-dashboard.html">Dashboard</a>
+      <a href="/coach-courses.html">Create a Course</a>
+      <a href="/#articles">Articles</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>&copy; 2026 ineedcoaching.org</p>
+  </div>
 </footer>
 
 <script>
@@ -262,122 +576,103 @@ function switchTab(tab) {
 
 async function submitIndividual(e) {
   e.preventDefault();
-  var form = e.target;
-  var btn = document.getElementById('individual-submit');
-  var msg = document.getElementById('individual-msg');
-  btn.disabled = true;
-  btn.textContent = 'Posting...';
-  msg.textContent = '';
+  var btn = e.target.querySelector('.submit-btn');
+  var msg = document.getElementById('ind-msg');
+  btn.disabled = true; btn.textContent = 'Posting...';
+  msg.textContent = ''; msg.style.color = '';
 
   var avail = [];
-  form.querySelectorAll('input[name="availability"]:checked').forEach(function(cb) { avail.push(cb.value); });
+  document.querySelectorAll('#panel-individual input[type="checkbox"]:checked').forEach(function(cb) { avail.push(cb.value); });
 
   var payload = {
     poster_type: 'individual',
-    email: form.email.value.trim(),
-    name: form.name.value.trim(),
-    description: form.description.value.trim(),
-    budget_range: form.budget_range.value,
+    email: document.getElementById('ind-email').value.trim(),
+    name: document.getElementById('ind-name').value.trim(),
+    description: document.getElementById('ind-description').value.trim(),
+    budget_range: document.getElementById('ind-budget').value,
     availability: avail.join(', '),
-    specialty_preference: form.specialty_preference.value
+    specialty_preference: document.getElementById('ind-specialty').value
   };
 
   try {
     var res = await fetch(SUPABASE_URL + '/rest/v1/coaching_commons_posts', {
       method: 'POST',
-      headers: {
-        'apikey': ANON_KEY,
-        'Authorization': 'Bearer ' + ANON_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify(payload)
     });
     if (res.ok) {
-      msg.textContent = 'Your request has been posted! Coaches will reach out to you.';
+      msg.textContent = 'Your request has been posted. Coaches will reach out to you directly.';
       msg.style.color = '#4a7c59';
-      form.reset();
+      e.target.reset();
     } else {
-      throw new Error('Failed');
+      msg.textContent = 'Something went wrong. Please try again.';
+      msg.style.color = '#c44';
     }
   } catch(err) {
-    msg.textContent = 'Something went wrong. Please try again.';
+    msg.textContent = 'Network error. Please try again.';
     msg.style.color = '#c44';
   }
-  btn.disabled = false;
-  btn.textContent = 'Post My Request';
+  btn.disabled = false; btn.textContent = 'Post Your Request';
 }
 
 async function submitBusiness(e) {
   e.preventDefault();
-  var form = e.target;
-  var btn = document.getElementById('business-submit');
-  var msg = document.getElementById('business-msg');
-  btn.disabled = true;
-  btn.textContent = 'Posting...';
-  msg.textContent = '';
+  var btn = e.target.querySelector('.submit-btn');
+  var msg = document.getElementById('biz-msg');
+  btn.disabled = true; btn.textContent = 'Posting...';
+  msg.textContent = ''; msg.style.color = '';
 
-  var rfpUrl = '';
-  var rfpFile = document.getElementById('rfp-file').files[0];
-  if (rfpFile) {
+  var rfpUrl = null;
+  var fileInput = document.getElementById('biz-rfp');
+  if (fileInput && fileInput.files && fileInput.files[0]) {
     try {
-      var fileName = Date.now() + '_' + rfpFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      var uploadRes = await fetch(SUPABASE_URL + '/storage/v1/object/coaching-rfps/' + fileName, {
+      var file = fileInput.files[0];
+      var safeName = Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '');
+      var uploadRes = await fetch(SUPABASE_URL + '/storage/v1/object/coaching-rfps/' + safeName, {
         method: 'POST',
-        headers: {
-          'apikey': ANON_KEY,
-          'Authorization': 'Bearer ' + ANON_KEY,
-          'Content-Type': rfpFile.type
-        },
-        body: rfpFile
+        headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY, 'Content-Type': file.type },
+        body: file
       });
       if (uploadRes.ok) {
-        rfpUrl = SUPABASE_URL + '/storage/v1/object/public/coaching-rfps/' + fileName;
+        rfpUrl = SUPABASE_URL + '/storage/v1/object/public/coaching-rfps/' + safeName;
       }
-    } catch(err) {
-      // Upload failed, continue without RFP
-    }
+    } catch(ue) { /* ignore upload error, continue */ }
   }
 
   var payload = {
     poster_type: 'business',
-    email: form.email.value.trim(),
-    name: form.name.value.trim(),
-    org_name: form.org_name.value.trim(),
-    description: form.description.value.trim(),
-    budget_range: form.budget_range.value,
-    business_type: form.business_type.value,
-    participants: form.participants.value,
-    timeline: form.timeline.value,
-    format: form.format.value,
-    location: form.location.value.trim(),
-    rfp_url: rfpUrl || null
+    email: document.getElementById('biz-email').value.trim(),
+    name: document.getElementById('biz-contact').value.trim(),
+    org_name: document.getElementById('biz-org').value.trim(),
+    description: document.getElementById('biz-details').value.trim(),
+    budget_range: document.getElementById('biz-budget').value,
+    business_type: document.getElementById('biz-type').value,
+    participants: document.getElementById('biz-participants').value,
+    timeline: document.getElementById('biz-timeline').value,
+    format: document.getElementById('biz-format').value,
+    location: document.getElementById('biz-location').value.trim(),
+    rfp_url: rfpUrl
   };
 
   try {
     var res = await fetch(SUPABASE_URL + '/rest/v1/coaching_commons_posts', {
       method: 'POST',
-      headers: {
-        'apikey': ANON_KEY,
-        'Authorization': 'Bearer ' + ANON_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify(payload)
     });
     if (res.ok) {
-      msg.textContent = 'Your business request has been posted! Coaches will respond soon.';
+      msg.textContent = 'Your request has been posted. Coaches will reach out to you directly.';
       msg.style.color = '#4a7c59';
-      form.reset();
+      e.target.reset();
     } else {
-      throw new Error('Failed');
+      msg.textContent = 'Something went wrong. Please try again.';
+      msg.style.color = '#c44';
     }
   } catch(err) {
-    msg.textContent = 'Something went wrong. Please try again.';
+    msg.textContent = 'Network error. Please try again.';
     msg.style.color = '#c44';
   }
-  btn.disabled = false;
-  btn.textContent = 'Post Business Request';
+  btn.disabled = false; btn.textContent = 'Submit Request';
 }
 </script>
 </body>

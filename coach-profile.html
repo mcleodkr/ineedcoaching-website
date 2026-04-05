@@ -185,6 +185,9 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
 }
 
 /* HIDDEN */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
 .hidden { display: none !important; }
 </style>
 </head>
@@ -343,6 +346,13 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
     <div class="footer-name" id="footer-name"></div>
     <div class="footer-powered">Powered by <a href="https://ineedcoaching.org">ineedcoaching.org</a></div>
     <div class="footer-links" id="footer-links"></div>
+    <div style="margin-top:24px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:center;gap:24px;flex-wrap:wrap;">
+      <a href="/coaches.html" style="font-size:0.75rem;color:rgba(247,244,238,0.4);text-decoration:none;">Browse Coaches</a>
+      <a href="/sessions.html" style="font-size:0.75rem;color:rgba(247,244,238,0.4);text-decoration:none;">Sessions</a>
+      <a href="/coach-courses.html" style="font-size:0.75rem;color:rgba(247,244,238,0.4);text-decoration:none;">Courses</a>
+      <a href="/coaching-commons.html" style="font-size:0.75rem;color:rgba(247,244,238,0.4);text-decoration:none;">The Commons</a>
+    </div>
+    <p style="font-size:0.68rem;color:rgba(247,244,238,0.3);margin-top:12px;">Not a crisis service. In crisis? Call or text 988</p>
   </footer>
 
 </div>
