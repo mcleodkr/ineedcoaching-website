@@ -1188,6 +1188,16 @@ async function loadBookings() {
         var action = this.dataset.action;
         this.disabled = true;
         await supabasePatch('coach_bookings', { id: 'eq.' + id }, { status: action });
+        // Send confirmation email if confirmed
+        if (action === 'confirmed') {
+          try {
+            await fetch('/api/booking-confirmation', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ booking_id: id })
+            });
+          } catch(e) { console.warn('Confirmation email failed:', e); }
+        }
         loadBookings();
       });
     });

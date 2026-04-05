@@ -92,8 +92,19 @@ footer { background: var(--navy); padding: 40px 52px; text-align: center; border
     <p>Browse coaches who are ready to help you move forward. Filter by specialty to find the right fit.</p>
   </div>
 
+  <div style="text-align:center;">
+    <input type="text" id="coach-search" placeholder="Search by name, specialty, or location..." oninput="applyFilters()" style="width:100%;max-width:500px;padding:12px 18px;border:1.5px solid #e0ddd5;border-radius:50px;font-family:inherit;font-size:0.85rem;outline:none;margin-bottom:16px;">
+  </div>
+
   <div class="filters" id="filters">
     <button class="filter-pill active" onclick="filterCoaches('')">All</button>
+  </div>
+
+  <div style="display:flex;gap:8px;justify-content:center;margin-bottom:20px;" id="price-filters">
+    <button class="filter-pill active" onclick="setPriceFilter('')">Any price</button>
+    <button class="filter-pill" onclick="setPriceFilter('under100')">Under $100</button>
+    <button class="filter-pill" onclick="setPriceFilter('100-200')">$100-$200</button>
+    <button class="filter-pill" onclick="setPriceFilter('over200')">$200+</button>
   </div>
 
   <div class="grid" id="coaches-grid">
@@ -111,6 +122,7 @@ var SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
 var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
 var _allCoaches = [];
 var _currentFilter = '';
+var _currentPriceFilter = '';
 
 function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
@@ -143,9 +155,47 @@ function buildFilters() {
 
 function filterCoaches(spec) {
   _currentFilter = spec;
-  document.querySelectorAll('.filter-pill').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('#filters .filter-pill').forEach(function(p) { p.classList.remove('active'); });
   event.target.classList.add('active');
-  var filtered = spec ? _allCoaches.filter(function(c) { return (c.specialties || []).indexOf(spec) !== -1; }) : _allCoaches;
+  applyFilters();
+}
+
+function setPriceFilter(range) {
+  _currentPriceFilter = range;
+  document.querySelectorAll('#price-filters .filter-pill').forEach(function(p) { p.classList.remove('active'); });
+  event.target.classList.add('active');
+  applyFilters();
+}
+
+function getMinPrice(coach) {
+  var services = [];
+  try { services = typeof coach.services === 'string' ? JSON.parse(coach.services) : (coach.services || []); } catch(e) {}
+  var prices = services.map(function(s) { return s.price; }).filter(function(p) { return p != null && p !== '' && !isNaN(Number(p)); }).map(Number);
+  return prices.length ? Math.min.apply(null, prices) : null;
+}
+
+function applyFilters() {
+  var searchText = (document.getElementById('coach-search').value || '').toLowerCase().trim();
+  var filtered = _allCoaches.filter(function(c) {
+    // Specialty filter
+    if (_currentFilter && (c.specialties || []).indexOf(_currentFilter) === -1) return false;
+    // Search filter
+    if (searchText) {
+      var name = (c.display_name || c.full_name || '').toLowerCase();
+      var specs = (c.specialties || []).join(' ').toLowerCase();
+      var loc = (c.location || '').toLowerCase();
+      if (name.indexOf(searchText) === -1 && specs.indexOf(searchText) === -1 && loc.indexOf(searchText) === -1) return false;
+    }
+    // Price filter
+    if (_currentPriceFilter) {
+      var minP = getMinPrice(c);
+      if (minP === null) return false;
+      if (_currentPriceFilter === 'under100' && minP >= 100) return false;
+      if (_currentPriceFilter === '100-200' && (minP < 100 || minP > 200)) return false;
+      if (_currentPriceFilter === 'over200' && minP <= 200) return false;
+    }
+    return true;
+  });
   renderCoaches(filtered);
 }
 

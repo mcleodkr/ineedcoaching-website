@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Browse Sessions | ineedcoaching.org</title>
+<meta name="description" content="Browse coaching sessions across all coaches. Find the right session for where you are right now.">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #1a1e2e; --gold: #c49a3c; --gold-lt: #faf3e0; --warm: #faf8f4;
+  --white: #ffffff; --muted: #8a8a9a; --border: #2a2e3e; --ink: #1a2e1a;
+  --r: 14px; --r-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--warm); color: var(--ink); }
+
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; align-items: center; justify-content: space-between; padding: 14px 52px; background: rgba(26,30,46,0.95); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
+.logo { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--warm); text-decoration: none; }
+.logo-i { color: var(--gold); font-style: italic; }
+.logo-coaching { color: var(--gold); font-style: italic; }
+.nav-links { display: flex; align-items: center; gap: 22px; list-style: none; }
+.nav-links a { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.nav-links a:hover { color: var(--gold); }
+.nav-pill { background: var(--gold); color: var(--navy) !important; padding: 8px 18px; border-radius: 50px; }
+
+.page-wrap { max-width: 1100px; margin: 0 auto; padding: 120px 24px 80px; }
+
+.page-header { text-align: center; margin-bottom: 40px; }
+.page-header h1 { font-family: 'Playfair Display', serif; font-size: clamp(1.8rem, 4vw, 2.6rem); color: var(--ink); margin-bottom: 10px; }
+.page-header h1 em { color: var(--gold); font-style: italic; }
+.page-header p { font-size: 0.92rem; color: var(--muted); max-width: 500px; margin: 0 auto; line-height: 1.7; }
+
+.filters { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 20px; }
+.filter-pill { padding: 8px 18px; border-radius: 50px; border: 1.5px solid #e0ddd5; background: var(--white); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 700; color: var(--muted); cursor: pointer; transition: all 0.2s; }
+.filter-pill:hover { border-color: var(--gold); color: var(--ink); }
+.filter-pill.active { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+
+.card { background: var(--white); border: 1.5px solid #e0ddd5; border-radius: var(--r); overflow: hidden; transition: all 0.25s; display: flex; flex-direction: column; }
+.card:hover { border-color: var(--gold); transform: translateY(-4px); box-shadow: 0 12px 32px rgba(196,154,60,0.1); }
+.card-top { display: flex; align-items: center; gap: 12px; padding: 20px 24px 0; }
+.card-photo-sm { width: 44px; height: 44px; border-radius: 50%; background: var(--navy); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+.card-photo-sm img { width: 100%; height: 100%; object-fit: cover; }
+.card-initials-sm { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 900; color: var(--gold); }
+.card-coach-name { font-size: 0.78rem; color: var(--muted); font-weight: 600; }
+.card-body { padding: 16px 24px 24px; flex: 1; display: flex; flex-direction: column; }
+.card-service-name { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--ink); margin-bottom: 8px; }
+.card-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font-size: 0.8rem; color: var(--muted); }
+.card-price { font-weight: 700; color: var(--ink); }
+.card-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+.card-pill { font-size: 0.65rem; font-weight: 700; background: var(--gold-lt); color: var(--gold); padding: 3px 10px; border-radius: 20px; }
+.card-btn { display: block; width: 100%; text-align: center; background: var(--gold); color: var(--navy); padding: 10px; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; font-weight: 700; text-decoration: none; transition: background 0.2s; margin-top: auto; }
+.card-btn:hover { background: #d4a94c; }
+
+.empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 0.92rem; }
+
+footer { background: var(--navy); padding: 40px 52px; text-align: center; border-top: 1px solid var(--border); }
+.f-logo { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--warm); margin-bottom: 8px; }
+.f-note { font-size: 0.72rem; color: var(--muted); }
+.f-note a { color: var(--gold); text-decoration: none; }
+
+@media (max-width: 900px) {
+  nav { padding: 12px 20px; }
+  .nav-links { gap: 14px; }
+  .grid { grid-template-columns: 1fr 1fr; }
+  .page-wrap { padding: 100px 18px 60px; }
+}
+@media (max-width: 600px) {
+  .grid { grid-template-columns: 1fr; }
+  .nav-links a:not(.nav-pill) { display: none; }
+  footer { padding: 32px 20px; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo"><span class="logo-i">i</span><span>need</span><span class="logo-coaching">coaching</span><span>.org</span></a>
+  <ul class="nav-links">
+    <li><a href="/coaches.html">Coaches</a></li>
+    <li><a href="/sessions.html">Sessions</a></li>
+    <li><a href="/coach-courses.html">Courses</a></li>
+    <li><a href="/#articles">Articles</a></li>
+    <li><a href="/coach-dashboard.html">Dashboard</a></li>
+    <li><a href="https://www.ineedtherapy.org/ineedtherapy-profile-form.html" class="nav-pill">List Your Practice</a></li>
+  </ul>
+</nav>
+
+<div class="page-wrap">
+  <div class="page-header">
+    <h1>Browse <em>sessions</em></h1>
+    <p>Find the right coaching session for where you are right now.</p>
+  </div>
+
+  <div style="text-align:center;">
+    <input type="text" id="session-search" placeholder="Search by session name or coach..." oninput="applyFilters()" style="width:100%;max-width:500px;padding:12px 18px;border:1.5px solid #e0ddd5;border-radius:50px;font-family:inherit;font-size:0.85rem;outline:none;margin-bottom:16px;">
+  </div>
+
+  <div class="filters" id="specialty-filters">
+    <button class="filter-pill active" onclick="setSpecFilter('')">All</button>
+  </div>
+
+  <div class="filters" id="price-filters">
+    <button class="filter-pill active" onclick="setPriceFilter('')">Any price</button>
+    <button class="filter-pill" onclick="setPriceFilter('under100')">Under $100</button>
+    <button class="filter-pill" onclick="setPriceFilter('100-200')">$100-$200</button>
+    <button class="filter-pill" onclick="setPriceFilter('over200')">$200+</button>
+  </div>
+
+  <div class="grid" id="sessions-grid">
+    <div class="empty" style="grid-column:1/-1;">Loading sessions...</div>
+  </div>
+</div>
+
+<footer>
+  <div class="f-logo"><span class="logo-i">i</span><span>need</span><span class="logo-coaching">coaching</span><span>.org</span></div>
+  <p class="f-note">A project from <a href="https://www.ineedtherapy.org">ineedtherapy.org</a></p>
+</footer>
+
+<script>
+var SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+
+var _allSessions = [];
+var _currentSpecFilter = '';
+var _currentPriceFilter = '';
+
+function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+async function loadSessions() {
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles?is_published=eq.true&select=slug,display_name,photo_url,specialties,services', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
+    });
+    var coaches = await res.json();
+    if (!coaches || coaches.error) coaches = [];
+
+    var sessions = [];
+    var allSpecs = {};
+
+    coaches.forEach(function(c) {
+      var services = [];
+      try { services = typeof c.services === 'string' ? JSON.parse(c.services) : (c.services || []); } catch(e) {}
+      var firstSpec = (c.specialties || [])[0] || null;
+      (c.specialties || []).forEach(function(s) { allSpecs[s] = (allSpecs[s] || 0) + 1; });
+
+      services.forEach(function(svc) {
+        if (!svc.name && !svc.title) return;
+        sessions.push({
+          serviceName: svc.name || svc.title || 'Session',
+          price: svc.price != null && svc.price !== '' ? Number(svc.price) : null,
+          duration: svc.duration || null,
+          coachName: c.display_name || 'Coach',
+          coachPhoto: c.photo_url || null,
+          coachSlug: c.slug,
+          specialty: firstSpec,
+          specialties: c.specialties || []
+        });
+      });
+    });
+
+    _allSessions = sessions;
+    buildSpecFilters(allSpecs);
+    applyFilters();
+  } catch(e) {
+    document.getElementById('sessions-grid').innerHTML = '<div class="empty" style="grid-column:1/-1;">Could not load sessions.</div>';
+  }
+}
+
+function buildSpecFilters(specs) {
+  var sorted = Object.entries(specs).sort(function(a, b) { return b[1] - a[1]; });
+  var html = '<button class="filter-pill active" onclick="setSpecFilter(\'\')">All</button>';
+  sorted.forEach(function(e) {
+    html += '<button class="filter-pill" onclick="setSpecFilter(\'' + esc(e[0]).replace(/'/g, "\\'") + '\')">' + esc(e[0]) + '</button>';
+  });
+  document.getElementById('specialty-filters').innerHTML = html;
+}
+
+function setSpecFilter(spec) {
+  _currentSpecFilter = spec;
+  document.querySelectorAll('#specialty-filters .filter-pill').forEach(function(p) { p.classList.remove('active'); });
+  event.target.classList.add('active');
+  applyFilters();
+}
+
+function setPriceFilter(range) {
+  _currentPriceFilter = range;
+  document.querySelectorAll('#price-filters .filter-pill').forEach(function(p) { p.classList.remove('active'); });
+  event.target.classList.add('active');
+  applyFilters();
+}
+
+function applyFilters() {
+  var searchText = (document.getElementById('session-search').value || '').toLowerCase().trim();
+  var filtered = _allSessions.filter(function(s) {
+    if (_currentSpecFilter && (s.specialties || []).indexOf(_currentSpecFilter) === -1) return false;
+    if (searchText) {
+      var name = (s.serviceName || '').toLowerCase();
+      var coach = (s.coachName || '').toLowerCase();
+      if (name.indexOf(searchText) === -1 && coach.indexOf(searchText) === -1) return false;
+    }
+    if (_currentPriceFilter) {
+      if (s.price === null) return false;
+      if (_currentPriceFilter === 'under100' && s.price >= 100) return false;
+      if (_currentPriceFilter === '100-200' && (s.price < 100 || s.price > 200)) return false;
+      if (_currentPriceFilter === 'over200' && s.price <= 200) return false;
+    }
+    return true;
+  });
+  renderSessions(filtered);
+}
+
+function renderSessions(sessions) {
+  var grid = document.getElementById('sessions-grid');
+  if (!sessions.length) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1;">No sessions found.</div>';
+    return;
+  }
+  grid.innerHTML = sessions.map(function(s) {
+    var initials = (s.coachName || 'C').split(' ').map(function(w) { return w[0]; }).join('').substring(0, 2).toUpperCase();
+    var priceText = s.price != null ? '$' + s.price : 'Contact for pricing';
+    var durationText = s.duration ? s.duration + ' min' : '';
+
+    return '<div class="card">' +
+      '<div class="card-top">' +
+        '<div class="card-photo-sm">' +
+          (s.coachPhoto ? '<img src="' + esc(s.coachPhoto) + '" alt="' + esc(s.coachName) + '">' : '<span class="card-initials-sm">' + initials + '</span>') +
+        '</div>' +
+        '<span class="card-coach-name">' + esc(s.coachName) + '</span>' +
+      '</div>' +
+      '<div class="card-body">' +
+        '<div class="card-service-name">' + esc(s.serviceName) + '</div>' +
+        '<div class="card-meta">' +
+          '<span class="card-price">' + esc(priceText) + '</span>' +
+          (durationText ? '<span>' + esc(durationText) + '</span>' : '') +
+        '</div>' +
+        (s.specialty ? '<div class="card-pills"><span class="card-pill">' + esc(s.specialty) + '</span></div>' : '') +
+        '<a href="/coach/' + esc(s.coachSlug) + '" class="card-btn">Book Now &rarr;</a>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+loadSessions();
+</script>
+</body>
+</html>
