@@ -856,7 +856,7 @@ async function loadArticle() {
   var wrap = document.getElementById('article-wrap');
 
   try {
-    var res = await fetch(SUPABASE_URL + '/rest/v1/articles?slug=eq.' + slug + '&select=title,slug,meta_description,quick_answer,if_this_is_you,content,id,audience,key_insights,category,faq&limit=1', {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/articles?slug=eq.' + slug + '&select=title,slug,meta_description,quick_answer,if_this_is_you,content,id,audience,key_insights,category&limit=1', {
       headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
     });
     var data = await res.json();
