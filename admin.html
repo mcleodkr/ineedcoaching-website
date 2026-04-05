@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard | ineedcoaching.org</title>
+<meta name="robots" content="noindex, nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#1a3a52;--gold:#c49a3c;--cream:#f7f4ee;--white:#ffffff;--muted:#8a8a9a;--border:#e0e0e0;--r:12px;--r-sm:8px;--shadow:0 1px 3px rgba(0,0,0,0.04);--shadow-md:0 4px 12px rgba(0,0,0,0.06)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Cabinet Grotesk',sans-serif;background:var(--cream);color:var(--navy);-webkit-font-smoothing:antialiased}
+
+/* LOGIN */
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--navy)}
+.login-card{background:var(--white);border-radius:var(--r);padding:56px 44px;max-width:420px;width:100%;text-align:center;box-shadow:0 24px 48px rgba(0,0,0,0.18)}
+.login-card h1{font-family:'Playfair Display',serif;font-size:1.7rem;margin-bottom:6px;color:var(--navy);letter-spacing:-0.02em}
+.login-card h1 .lc-i{color:var(--gold);font-style:italic}
+.login-card h1 .lc-coaching{color:var(--gold);font-style:italic}
+.login-card p{font-size:0.85rem;color:var(--muted);margin-bottom:28px;line-height:1.5}
+.login-card input{width:100%;padding:14px 18px;border:2px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.9rem;outline:none;margin-bottom:14px;transition:border-color 0.2s}
+.login-card input:focus{border-color:var(--gold)}
+.login-card button{width:100%;padding:14px;background:var(--navy);color:white;border:none;border-radius:var(--r-sm);font-family:inherit;font-size:0.9rem;font-weight:700;cursor:pointer;transition:background 0.2s}
+.login-card button:hover{background:#24506e}
+.login-error{font-size:0.82rem;color:#c44;margin-top:8px;min-height:20px}
+
+/* SIDEBAR */
+#app{display:none}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;background:var(--navy);padding:24px 0;display:flex;flex-direction:column;z-index:200;transition:width 0.2s}
+.sidebar-logo{padding:0 24px 24px;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:12px;font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--white);cursor:default}
+.sidebar-logo .sl-i{color:var(--gold);font-style:italic}
+.sidebar-logo .sl-coaching{color:var(--gold);font-style:italic}
+.sidebar-nav{flex:1;overflow-y:auto}
+.sidebar-item{display:flex;align-items:center;gap:12px;padding:11px 24px;color:rgba(255,255,255,0.6);font-size:0.85rem;font-weight:600;cursor:pointer;transition:all 0.15s;border-left:3px solid transparent;user-select:none}
+.sidebar-item:hover{background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.9)}
+.sidebar-item.active{background:rgba(255,255,255,0.08);color:white;border-left-color:var(--gold)}
+.sidebar-icon{font-size:1rem;width:20px;text-align:center;flex-shrink:0}
+.sidebar-label{white-space:nowrap;overflow:hidden}
+.sidebar-bottom{padding:12px 24px;border-top:1px solid rgba(255,255,255,0.08)}
+.sidebar-logout{display:flex;align-items:center;gap:12px;color:rgba(255,255,255,0.45);font-size:0.82rem;font-weight:600;cursor:pointer;transition:color 0.15s;background:none;border:none;font-family:inherit}
+.sidebar-logout:hover{color:rgba(255,255,255,0.9)}
+
+/* CONTENT AREA */
+.content-area{margin-left:240px;padding:28px 32px 80px;min-height:100vh;transition:margin-left 0.2s}
+.page-title{font-family:'Playfair Display',serif;font-size:1.45rem;margin-bottom:24px;letter-spacing:-0.01em;color:var(--navy)}
+
+/* SECTION */
+.section{display:none;animation:fadeIn 0.3s ease}
+.section.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* STAT CARDS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat-card{background:var(--white);border-radius:var(--r);padding:24px;box-shadow:var(--shadow)}
+.stat-card .stat-num{font-size:2rem;font-weight:800;line-height:1;letter-spacing:-0.02em;color:var(--navy)}
+.stat-card .stat-num.gold{color:var(--gold)}
+.stat-card .stat-label{font-size:0.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-top:8px}
+
+/* CHARTS */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.chart-card{background:var(--white);border-radius:var(--r);padding:24px;box-shadow:var(--shadow)}
+.chart-card h3{font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:16px}
+.bar-chart{display:flex;align-items:flex-end;gap:3px;height:80px}
+.bar-chart .bar{flex:1;min-width:4px;background:var(--navy);border-radius:2px 2px 0 0;transition:height 0.3s}
+.bar-chart .bar.today{background:var(--gold)}
+
+/* ACTIVITY FEED */
+.feed-card{background:var(--white);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:24px;overflow:hidden}
+.feed-card h3{font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);padding:20px 24px 0}
+.feed-item{display:flex;align-items:center;gap:14px;padding:14px 24px;border-left:3px solid transparent;transition:background 0.15s}
+.feed-item:hover{background:rgba(0,0,0,0.01)}
+.feed-item.type-coach{border-left-color:var(--gold)}
+.feed-item.type-booking{border-left-color:var(--navy)}
+.feed-item.type-article{border-left-color:#4a7c59}
+.feed-icon{font-size:1.1rem;flex-shrink:0}
+.feed-text{flex:1;font-size:0.84rem;color:var(--navy);line-height:1.4}
+.feed-time{font-size:0.72rem;color:var(--muted);white-space:nowrap}
+
+/* QUICK ACTIONS */
+.quick-actions{display:flex;gap:12px;margin-bottom:24px}
+.qa-btn{padding:12px 24px;border-radius:50px;border:1.5px solid var(--navy);background:var(--white);font-family:inherit;font-size:0.82rem;font-weight:700;color:var(--navy);cursor:pointer;transition:all 0.15s}
+.qa-btn:hover{background:var(--navy);color:var(--white)}
+
+/* TABLE */
+.tbl-wrap{background:var(--white);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;margin-bottom:24px}
+.tbl{width:100%;border-collapse:separate;border-spacing:0}
+.tbl th{font-size:0.65rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);text-align:left;padding:14px 16px;background:var(--cream);border-bottom:1px solid var(--border)}
+.tbl td{font-size:0.84rem;padding:14px 16px;border-bottom:1px solid rgba(224,224,224,0.5);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(196,154,60,0.03)}
+.tbl-expand{display:none;background:rgba(247,244,238,0.5)}
+.tbl-expand.open{display:table-row}
+.tbl-expand td{padding:20px 24px;font-size:0.84rem;line-height:1.6}
+
+/* PILLS */
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:0.62rem;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;padding:4px 12px;border-radius:20px}
+.pill::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.pill-green{background:#d8ede3;color:#4a7c59}.pill-green::before{background:#4a7c59}
+.pill-muted{background:#f0f0f0;color:var(--muted)}.pill-muted::before{background:var(--muted)}
+.pill-navy{background:#dce6ee;color:var(--navy)}.pill-navy::before{background:var(--navy)}
+.pill-gold{background:#faf3e0;color:var(--gold)}.pill-gold::before{background:var(--gold)}
+.pill-red{background:#faeee8;color:#c44}.pill-red::before{background:#c44}
+
+/* FILTER / SEARCH */
+.toolbar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+.toolbar input[type="text"],.toolbar input[type="search"]{padding:10px 16px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.84rem;flex:1;min-width:200px;outline:none;transition:border-color 0.2s}
+.toolbar input:focus{border-color:var(--gold)}
+.toolbar select{padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.82rem;background:var(--white);outline:none}
+.filter-pills{display:flex;gap:6px;flex-wrap:wrap}
+.fp{padding:7px 16px;border-radius:50px;border:1.5px solid var(--border);background:var(--white);font-family:inherit;font-size:0.76rem;font-weight:700;color:var(--muted);cursor:pointer;transition:all 0.15s}
+.fp:hover{border-color:var(--gold);color:var(--navy)}
+.fp.active{background:var(--navy);color:var(--white);border-color:var(--navy)}
+
+/* CSV / EXPORT BTN */
+.csv-btn{padding:8px 18px;border-radius:50px;border:1.5px solid var(--navy);background:var(--white);font-family:inherit;font-size:0.74rem;font-weight:700;color:var(--navy);cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;gap:5px;margin-left:auto}
+.csv-btn:hover{background:var(--navy);color:var(--white)}
+
+/* SUB NAV */
+.sub-pills{display:flex;gap:6px;margin-bottom:20px}
+
+/* TOGGLE */
+.toggle{width:36px;height:20px;border-radius:10px;background:#ccc;position:relative;cursor:pointer;transition:background 0.2s;border:none;padding:0;flex-shrink:0}
+.toggle.on{background:#4a7c59}
+.toggle::after{content:'';position:absolute;width:16px;height:16px;background:white;border-radius:50%;top:2px;left:2px;transition:left 0.2s;box-shadow:0 1px 2px rgba(0,0,0,0.15)}
+.toggle.on::after{left:18px}
+
+/* AVATAR */
+.avatar{width:40px;height:40px;border-radius:50%;background:var(--navy);color:var(--gold);display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:0.72rem;flex-shrink:0;overflow:hidden}
+.avatar img{width:100%;height:100%;object-fit:cover}
+
+/* SETTINGS */
+.settings-card{background:var(--white);border-radius:var(--r);padding:32px;box-shadow:var(--shadow);max-width:600px}
+.settings-row{display:flex;justify-content:space-between;padding:14px 0;border-bottom:1px solid rgba(224,224,224,0.5);font-size:0.88rem}
+.settings-row:last-child{border-bottom:none}
+.settings-label{color:var(--muted);font-weight:600;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.04em}
+.settings-val{font-weight:700;color:var(--navy)}
+.settings-note{margin-top:24px;padding:18px;background:#faf3e0;border-radius:var(--r-sm);font-size:0.82rem;color:var(--gold);line-height:1.5;border-left:3px solid var(--gold)}
+
+/* LINK */
+.link-btn{color:var(--gold);font-weight:700;font-size:0.82rem;text-decoration:none;cursor:pointer;border:none;background:none;font-family:inherit;padding:0}
+.link-btn:hover{text-decoration:underline}
+
+/* RESPONSIVE */
+@media(max-width:1100px){.stats-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:768px){
+  .sidebar{width:60px;padding:16px 0}
+  .sidebar-logo{padding:0 12px 16px;font-size:0;text-align:center}
+  .sidebar-logo::after{content:'ic';font-size:0.9rem;color:var(--gold);font-style:italic}
+  .sidebar-item{padding:11px 0;justify-content:center;gap:0}
+  .sidebar-label{display:none}
+  .sidebar-bottom{padding:12px 0;text-align:center}
+  .sidebar-logout .sidebar-label{display:none}
+  .sidebar-logout{justify-content:center;padding-left:0}
+  .content-area{margin-left:60px;padding:20px 16px 60px}
+  .stats-row{grid-template-columns:1fr 1fr}
+  .charts-row{grid-template-columns:1fr}
+  .quick-actions{flex-direction:column}
+}
+@media(max-width:480px){.stats-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <h1><span class="lc-i">i</span>need<span class="lc-coaching">coaching</span>.org</h1>
+    <p>Admin Dashboard</p>
+    <input type="password" id="login-pw" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button onclick="doLogin()">Enter</button>
+    <div class="login-error" id="login-err"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><span class="sl-i">i</span>need<span class="sl-coaching">coaching</span>.org</div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-item active" data-section="overview"><span class="sidebar-icon">📊</span><span class="sidebar-label">Overview</span></div>
+      <div class="sidebar-item" data-section="coaches"><span class="sidebar-icon">👤</span><span class="sidebar-label">Coaches</span></div>
+      <div class="sidebar-item" data-section="clients"><span class="sidebar-icon">👥</span><span class="sidebar-label">Clients</span></div>
+      <div class="sidebar-item" data-section="content"><span class="sidebar-icon">📄</span><span class="sidebar-label">Content</span></div>
+      <div class="sidebar-item" data-section="courses"><span class="sidebar-icon">📚</span><span class="sidebar-label">Courses</span></div>
+      <div class="sidebar-item" data-section="commons"><span class="sidebar-icon">💬</span><span class="sidebar-label">Commons</span></div>
+      <div class="sidebar-item" data-section="revenue"><span class="sidebar-icon">💰</span><span class="sidebar-label">Revenue</span></div>
+      <div class="sidebar-item" data-section="settings"><span class="sidebar-icon">⚙️</span><span class="sidebar-label">Settings</span></div>
+    </nav>
+    <div class="sidebar-bottom">
+      <button class="sidebar-logout" onclick="doLogout()"><span class="sidebar-icon">🚪</span><span class="sidebar-label">Log out</span></button>
+    </div>
+  </aside>
+
+  <main class="content-area">
+    <!-- OVERVIEW -->
+    <div class="section active" id="sec-overview">
+      <div class="page-title">Overview</div>
+      <div class="stats-row" id="ov-stats"></div>
+      <div class="charts-row" id="ov-charts"></div>
+      <div class="feed-card" id="ov-feed"><h3>Recent Activity</h3></div>
+      <div class="quick-actions">
+        <button class="qa-btn" onclick="navTo('coaches')">View Coaches &rarr;</button>
+        <button class="qa-btn" onclick="alert('Run: node scripts/generate-articles.js --platform=coaching')">Run Article Gen</button>
+        <button class="qa-btn" onclick="navTo('commons')">View Commons &rarr;</button>
+      </div>
+    </div>
+
+    <!-- COACHES -->
+    <div class="section" id="sec-coaches">
+      <div class="page-title">Coaches</div>
+      <div class="toolbar" id="coaches-toolbar"></div>
+      <div class="tbl-wrap"><table class="tbl" id="coaches-tbl"><thead></thead><tbody></tbody></table></div>
+    </div>
+
+    <!-- CLIENTS -->
+    <div class="section" id="sec-clients">
+      <div class="page-title">Clients</div>
+      <div class="stats-row" id="cl-stats"></div>
+      <div class="chart-card" id="cl-referral" style="margin-bottom:24px"></div>
+      <div class="toolbar" id="clients-toolbar"></div>
+      <div class="tbl-wrap"><table class="tbl" id="clients-tbl"><thead></thead><tbody></tbody></table></div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="section" id="sec-content">
+      <div class="page-title">Content</div>
+      <div class="sub-pills" id="content-pills"></div>
+      <div id="content-body"></div>
+    </div>
+
+    <!-- COURSES -->
+    <div class="section" id="sec-courses">
+      <div class="page-title">Courses</div>
+      <div class="toolbar" id="courses-toolbar"></div>
+      <div class="tbl-wrap"><table class="tbl" id="courses-tbl"><thead></thead><tbody></tbody></table></div>
+    </div>
+
+    <!-- COMMONS -->
+    <div class="section" id="sec-commons">
+      <div class="page-title">Coaching Commons</div>
+      <div class="sub-pills" id="commons-pills"></div>
+      <div class="tbl-wrap"><table class="tbl" id="commons-tbl"><thead></thead><tbody></tbody></table></div>
+    </div>
+
+    <!-- REVENUE -->
+    <div class="section" id="sec-revenue">
+      <div class="page-title">Revenue</div>
+      <div class="stats-row" id="rev-stats"></div>
+      <div class="page-title" style="font-size:1.1rem;margin-top:8px">Bookings</div>
+      <div class="tbl-wrap"><table class="tbl" id="rev-bookings-tbl"><thead></thead><tbody></tbody></table></div>
+      <div class="page-title" style="font-size:1.1rem;margin-top:8px">Course Enrollments</div>
+      <div class="tbl-wrap"><table class="tbl" id="rev-enroll-tbl"><thead></thead><tbody></tbody></table></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="section" id="sec-settings">
+      <div class="page-title">Settings</div>
+      <div class="settings-card">
+        <div class="settings-row"><span class="settings-label">Platform</span><span class="settings-val">ineedcoaching.org</span></div>
+        <div class="settings-row"><span class="settings-label">Admin</span><span class="settings-val">Dr. Kimberly McLeod</span></div>
+        <div class="settings-row"><span class="settings-label">Support Email</span><span class="settings-val">admin@ineedcoaching.org</span></div>
+        <div class="settings-row"><span class="settings-label">Supabase Project</span><span class="settings-val">qroizygknxdjsstkezsf</span></div>
+      </div>
+      <div class="settings-note">Admin access is password protected client-side. Move to Supabase authentication before public launch.</div>
+    </div>
+  </main>
+</div>
+
+<script>
+var SUPABASE_URL='https://qroizygknxdjsstkezsf.supabase.co';
+var ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+var API=SUPABASE_URL+'/rest/v1';
+var HEADERS={'apikey':ANON_KEY,'Authorization':'Bearer '+ANON_KEY};
+var loaded={};
+
+// --- AUTH ---
+function doLogin(){
+  var pw=document.getElementById('login-pw').value;
+  if(pw==='admin2026'){localStorage.setItem('coaching_admin','1');showApp();}
+  else{document.getElementById('login-err').textContent='Incorrect password.';}
+}
+function doLogout(){localStorage.removeItem('coaching_admin');location.reload();}
+function showApp(){document.getElementById('login-screen').style.display='none';document.getElementById('app').style.display='';loadSection('overview');}
+(function(){if(localStorage.getItem('coaching_admin')==='1')showApp();})();
+
+// --- FETCH HELPER ---
+async function sGet(path){
+  var r=await fetch(API+'/'+path,{headers:{...HEADERS,'Accept':'application/json'}});
+  return r.ok?r.json():[];
+}
+async function sPatch(table,match,body){
+  var params=Object.entries(match).map(function(e){return e[0]+'='+e[1];}).join('&');
+  return fetch(API+'/'+table+'?'+params,{method:'PATCH',headers:{...HEADERS,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(body)});
+}
+
+// --- NAV ---
+function navTo(s){
+  document.querySelectorAll('.sidebar-item').forEach(function(el){el.classList.toggle('active',el.dataset.section===s);});
+  document.querySelectorAll('.section').forEach(function(el){el.classList.toggle('active',el.id==='sec-'+s);});
+  loadSection(s);
+}
+document.querySelectorAll('.sidebar-item').forEach(function(el){el.addEventListener('click',function(){navTo(el.dataset.section);});});
+
+function loadSection(s){if(!loaded[s]){loaded[s]=true;window['load_'+s]();}}
+
+// --- HELPERS ---
+function relTime(d){var s=Math.floor((Date.now()-new Date(d))/1000);if(s<60)return 'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago';}
+function fmtDate(d){if(!d)return'-';var dt=new Date(d);return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
+function esc(t){if(!t)return'';var d=document.createElement('div');d.textContent=t;return d.innerHTML;}
+function initials(n){if(!n)return'?';var p=n.trim().split(/\s+/);return(p[0][0]+(p.length>1?p[p.length-1][0]:'')).toUpperCase();}
+function downloadCSV(rows,name){
+  var csv=rows.map(function(r){return r.map(function(c){return '"'+(c+'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var b=new Blob([csv],{type:'text/csv'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name+'.csv';a.click();
+}
+
+// ============== OVERVIEW ==============
+async function load_overview(){
+  var [coaches,bookings,articles]=await Promise.all([
+    sGet('coach_profiles?select=id,display_name,email,created_at,is_published'),
+    sGet('coach_bookings?select=id,client_email,coach_id,service_name,status,created_at,scheduled_at,service_price'),
+    sGet('articles?select=id,title,created_at,audience,category&order=created_at.desc&limit=10')
+  ]);
+
+  var pubCoaches=coaches.filter(function(c){return c.is_published;});
+  var clientEmails={};bookings.forEach(function(b){if(b.client_email)clientEmails[b.client_email]=1;});
+  var confirmed=bookings.filter(function(b){return b.status==='confirmed';});
+  var now=new Date(),monthStart=new Date(now.getFullYear(),now.getMonth(),1).toISOString();
+  var monthBookings=confirmed.filter(function(b){return b.created_at>=monthStart;});
+  var estRevenue=0;monthBookings.forEach(function(b){estRevenue+=(parseFloat(b.service_price)||0);});
+
+  document.getElementById('ov-stats').innerHTML=
+    statCard(pubCoaches.length,'Total Coaches','')+
+    statCard(Object.keys(clientEmails).length,'Total Clients','')+
+    statCard(confirmed.length,'Active Bookings','gold')+
+    statCard('$'+estRevenue.toLocaleString(),'Revenue This Month','gold');
+
+  // Charts
+  var days30={},days7={};
+  for(var i=29;i>=0;i--){var d=new Date();d.setDate(d.getDate()-i);days30[d.toISOString().slice(0,10)]=0;}
+  for(var j=6;j>=0;j--){var d2=new Date();d2.setDate(d2.getDate()-j);days7[d2.toISOString().slice(0,10)]=0;}
+  coaches.forEach(function(c){var k=(c.created_at||'').slice(0,10);if(k in days30)days30[k]++;});
+  bookings.forEach(function(b){var k=(b.created_at||'').slice(0,10);if(k in days7)days7[k]++;});
+  var todayKey=new Date().toISOString().slice(0,10);
+
+  var maxS=Math.max(1,...Object.values(days30));
+  var bars30=Object.entries(days30).map(function(e){var h=Math.max(4,e[1]/maxS*70);return '<div class="bar'+(e[0]===todayKey?' today':'')+'" style="height:'+h+'px" title="'+e[0]+': '+e[1]+'"></div>';}).join('');
+  var maxB=Math.max(1,...Object.values(days7));
+  var bars7=Object.entries(days7).map(function(e){var h=Math.max(4,e[1]/maxB*70);return '<div class="bar'+(e[0]===todayKey?' today':'')+'" style="height:'+h+'px" title="'+e[0]+': '+e[1]+'"></div>';}).join('');
+
+  document.getElementById('ov-charts').innerHTML=
+    '<div class="chart-card"><h3>New Signups (30 days)</h3><div class="bar-chart">'+bars30+'</div></div>'+
+    '<div class="chart-card"><h3>Bookings This Week</h3><div class="bar-chart">'+bars7+'</div></div>';
+
+  // Activity feed
+  var feed=[];
+  coaches.slice(0,10).forEach(function(c){feed.push({t:'coach',text:'New coach: '+esc(c.display_name||c.email),time:c.created_at,icon:'👤'});});
+  bookings.slice(0,10).forEach(function(b){feed.push({t:'booking',text:'Booking from '+esc(b.client_email),time:b.created_at,icon:'📅'});});
+  articles.slice(0,10).forEach(function(a){feed.push({t:'article',text:'Article: '+esc(a.title),time:a.created_at,icon:'📄'});});
+  feed.sort(function(a,b){return new Date(b.time)-new Date(a.time);});
+  var feedHTML='';feed.slice(0,10).forEach(function(f){
+    feedHTML+='<div class="feed-item type-'+f.t+'"><span class="feed-icon">'+f.icon+'</span><span class="feed-text">'+f.text+'</span><span class="feed-time">'+relTime(f.time)+'</span></div>';
+  });
+  document.getElementById('ov-feed').innerHTML='<h3>Recent Activity</h3>'+feedHTML;
+}
+function statCard(num,label,cls){return '<div class="stat-card"><div class="stat-num'+(cls?' '+cls:'')+'">'+num+'</div><div class="stat-label">'+label+'</div></div>';}
+
+// ============== COACHES ==============
+var allCoaches=[],coachFilter='all',coachSearch='';
+async function load_coaches(){
+  allCoaches=await sGet('coach_profiles?select=*&order=created_at.desc');
+  document.getElementById('coaches-toolbar').innerHTML=
+    '<input type="search" placeholder="Search coaches..." oninput="coachSearch=this.value.toLowerCase();renderCoaches()">'+
+    '<div class="filter-pills"><button class="fp active" onclick="setCoachFilter(this,\'all\')">All</button><button class="fp" onclick="setCoachFilter(this,\'pub\')">Published</button><button class="fp" onclick="setCoachFilter(this,\'unpub\')">Unpublished</button></div>'+
+    '<button class="csv-btn" onclick="exportCoachesCSV()">CSV Export</button>';
+  renderCoaches();
+}
+function setCoachFilter(el,v){coachFilter=v;el.parentElement.querySelectorAll('.fp').forEach(function(f){f.classList.remove('active');});el.classList.add('active');renderCoaches();}
+function renderCoaches(){
+  var list=allCoaches.filter(function(c){
+    if(coachFilter==='pub'&&!c.is_published)return false;
+    if(coachFilter==='unpub'&&c.is_published)return false;
+    if(coachSearch){var hay=(c.display_name+' '+c.email+' '+(c.specialties||[]).join(' ')).toLowerCase();return hay.indexOf(coachSearch)!==-1;}
+    return true;
+  });
+  var thead='<tr><th></th><th>Name</th><th>Email</th><th>Specialties</th><th>Services</th><th>Status</th><th>Created</th></tr>';
+  var tbody='';
+  list.forEach(function(c,i){
+    var specs=(c.specialties||[]).slice(0,2).map(function(s){return '<span class="pill pill-navy">'+esc(s)+'</span>';}).join(' ');
+    var svcCount=Array.isArray(c.services)?c.services.length:0;
+    var statusPill=c.is_published?'<span class="pill pill-green">Published</span>':'<span class="pill pill-muted">Draft</span>';
+    var photo=c.photo_url?'<div class="avatar"><img src="'+esc(c.photo_url)+'" alt=""></div>':'<div class="avatar">'+initials(c.display_name)+'</div>';
+    tbody+='<tr style="cursor:pointer" onclick="toggleCoachRow('+i+')">'+
+      '<td>'+photo+'</td>'+
+      '<td style="font-weight:700">'+esc(c.display_name||c.full_name||'-')+'</td>'+
+      '<td>'+esc(c.email)+'</td>'+
+      '<td>'+specs+'</td>'+
+      '<td style="text-align:center">'+svcCount+'</td>'+
+      '<td><button class="toggle'+(c.is_published?' on':'')+'" onclick="event.stopPropagation();togglePublish(\''+c.id+'\','+!c.is_published+')"></button></td>'+
+      '<td>'+fmtDate(c.created_at)+'</td></tr>';
+    tbody+='<tr class="tbl-expand" id="coach-exp-'+i+'"><td colspan="7">'+
+      '<strong>Headline:</strong> '+esc(c.headline||'None')+'<br>'+
+      '<strong>Bio:</strong> '+esc((c.bio||'').substring(0,100))+(c.bio&&c.bio.length>100?'...':'')+'<br>'+
+      (c.slug?'<a class="link-btn" href="/coach-profile.html?slug='+esc(c.slug)+'" target="_blank">View Profile &rarr;</a> ':'')+'</td></tr>';
+  });
+  var tbl=document.getElementById('coaches-tbl');
+  tbl.querySelector('thead').innerHTML=thead;
+  tbl.querySelector('tbody').innerHTML=tbody;
+}
+function toggleCoachRow(i){document.getElementById('coach-exp-'+i).classList.toggle('open');}
+async function togglePublish(id,val){
+  if(!confirm('Set coach to '+(val?'Published':'Unpublished')+'?'))return;
+  await sPatch('coach_profiles',{id:'eq.'+id},{is_published:val});
+  var c=allCoaches.find(function(x){return x.id===id;});if(c)c.is_published=val;renderCoaches();
+}
+function exportCoachesCSV(){
+  var rows=[['Name','Email','Specialties','Published','Created']];
+  allCoaches.forEach(function(c){rows.push([c.display_name||c.full_name,c.email,(c.specialties||[]).join('; '),c.is_published?'Yes':'No',fmtDate(c.created_at)]);});
+  downloadCSV(rows,'coaches');
+}
+
+// ============== CLIENTS ==============
+var allBookingsForClients=[];
+async function load_clients(){
+  allBookingsForClients=await sGet('coach_bookings?select=id,client_email,client_name,created_at,referral_source&order=created_at.desc');
+  var seen={},clients=[];
+  allBookingsForClients.forEach(function(b){
+    if(!b.client_email||seen[b.client_email])return;
+    seen[b.client_email]=1;
+    clients.push({name:b.client_name||'',email:b.client_email,created:b.created_at,ref:b.referral_source||'direct'});
+  });
+
+  var now=new Date(),todayStr=now.toISOString().slice(0,10);
+  var weekAgo=new Date(now-7*864e5).toISOString();
+  var monthStart=new Date(now.getFullYear(),now.getMonth(),1).toISOString();
+  var today=clients.filter(function(c){return(c.created||'').slice(0,10)===todayStr;}).length;
+  var week=clients.filter(function(c){return c.created>=weekAgo;}).length;
+  var month=clients.filter(function(c){return c.created>=monthStart;}).length;
+
+  document.getElementById('cl-stats').innerHTML=
+    statCard(clients.length,'Total Clients','')+
+    statCard(today,'New Today','')+
+    statCard(week,'New This Week','gold')+
+    statCard(month,'New This Month','gold');
+
+  // Referral breakdown
+  var refs={};clients.forEach(function(c){var r=c.ref||'direct';refs[r]=(refs[r]||0)+1;});
+  var maxR=Math.max(1,...Object.values(refs));
+  var refHTML='<h3>Referral Sources</h3><div style="margin-top:16px">';
+  Object.entries(refs).sort(function(a,b){return b[1]-a[1];}).forEach(function(e){
+    refHTML+='<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px"><span style="width:100px;font-size:0.8rem;font-weight:700;text-align:right">'+esc(e[0])+'</span><div style="flex:1;height:20px;background:#f0f0f0;border-radius:4px;overflow:hidden"><div style="height:100%;width:'+(e[1]/maxR*100)+'%;background:var(--navy);border-radius:4px"></div></div><span style="font-size:0.8rem;font-weight:700;width:30px">'+e[1]+'</span></div>';
+  });
+  refHTML+='</div>';
+  document.getElementById('cl-referral').innerHTML=refHTML;
+
+  // Table
+  var clientList=clients;
+  document.getElementById('clients-toolbar').innerHTML=
+    '<input type="search" id="cl-search" placeholder="Search clients..." oninput="filterClients()">'+
+    '<button class="csv-btn" onclick="exportClientsCSV()">CSV Export</button>';
+  window._clientList=clientList;
+  renderClients(clientList);
+}
+function filterClients(){
+  var q=(document.getElementById('cl-search').value||'').toLowerCase();
+  var f=window._clientList.filter(function(c){return(c.name+' '+c.email).toLowerCase().indexOf(q)!==-1;});
+  renderClients(f);
+}
+function renderClients(list){
+  var tbl=document.getElementById('clients-tbl');
+  tbl.querySelector('thead').innerHTML='<tr><th>Name</th><th>Email</th><th>Created</th><th>Referral</th></tr>';
+  tbl.querySelector('tbody').innerHTML=list.map(function(c){
+    return '<tr><td style="font-weight:700">'+esc(c.name||'-')+'</td><td>'+esc(c.email)+'</td><td>'+fmtDate(c.created)+'</td><td><span class="pill pill-navy">'+esc(c.ref)+'</span></td></tr>';
+  }).join('');
+}
+function exportClientsCSV(){
+  var rows=[['Name','Email','Created','Referral']];
+  (window._clientList||[]).forEach(function(c){rows.push([c.name,c.email,fmtDate(c.created),c.ref]);});
+  downloadCSV(rows,'clients');
+}
+
+// ============== CONTENT ==============
+var contentView='articles';
+async function load_content(){
+  document.getElementById('content-pills').innerHTML=
+    '<button class="fp active" onclick="switchContent(this,\'articles\')">Articles</button>'+
+    '<button class="fp" onclick="switchContent(this,\'quizzes\')">Quizzes</button>';
+  await loadArticlesView();
+}
+function switchContent(el,v){
+  contentView=v;el.parentElement.querySelectorAll('.fp').forEach(function(f){f.classList.remove('active');});el.classList.add('active');
+  if(v==='articles')loadArticlesView();else loadQuizzesView();
+}
+async function loadArticlesView(){
+  var articles=await sGet('articles?select=id,title,slug,category,audience,created_at&order=created_at.desc&limit=200');
+  var byAud={},byCat={};
+  articles.forEach(function(a){
+    byAud[a.audience]=(byAud[a.audience]||0)+1;
+    byCat[a.category||'uncategorized']=(byCat[a.category||'uncategorized']||0)+1;
+  });
+  var html='<div class="stats-row" style="margin-bottom:20px">';
+  Object.entries(byAud).forEach(function(e){html+=statCard(e[1],e[0]+' articles','');});
+  html+='</div>';
+  html+='<div class="chart-card" style="margin-bottom:20px"><h3>Categories</h3><div style="margin-top:12px">';
+  Object.entries(byCat).sort(function(a,b){return b[1]-a[1];}).forEach(function(e){
+    html+='<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(224,224,224,0.3);font-size:0.84rem"><span>'+esc(e[0])+'</span><span style="font-weight:800">'+e[1]+'</span></div>';
+  });
+  html+='</div></div>';
+  html+='<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Title</th><th>Category</th><th>Audience</th><th>Date</th></tr></thead><tbody>';
+  articles.slice(0,10).forEach(function(a){
+    var aPill=a.audience==='coach'?'pill-navy':a.audience==='consumer'?'pill-green':'pill-gold';
+    html+='<tr><td style="font-weight:700">'+esc(a.title)+'</td><td>'+esc(a.category||'-')+'</td><td><span class="pill '+aPill+'">'+esc(a.audience)+'</span></td><td>'+fmtDate(a.created_at)+'</td></tr>';
+  });
+  html+='</tbody></table></div>';
+  document.getElementById('content-body').innerHTML=html;
+}
+async function loadQuizzesView(){
+  var quizzes=await sGet('quizzes?select=id,title,slug,category,questions,related_article_id&order=created_at.desc');
+  var html=statCard(quizzes.length,'Total Quizzes','')+'<div style="margin:20px 0"></div>';
+  html+='<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Title</th><th>Category</th><th>Questions</th></tr></thead><tbody>';
+  quizzes.forEach(function(q){
+    var qCount=Array.isArray(q.questions)?q.questions.length:0;
+    html+='<tr><td style="font-weight:700">'+esc(q.title)+'</td><td>'+esc(q.category||'-')+'</td><td>'+qCount+'</td></tr>';
+  });
+  html+='</tbody></table></div>';
+  document.getElementById('content-body').innerHTML=html;
+}
+
+// ============== COURSES ==============
+var allCourses=[];
+async function load_courses(){
+  allCourses=await sGet('coach_courses?select=*,coach_profiles(display_name)&order=created_at.desc');
+  var enrollments=await sGet('coach_course_enrollments?select=id,course_id');
+  var enrollMap={};enrollments.forEach(function(e){enrollMap[e.course_id]=(enrollMap[e.course_id]||0)+1;});
+  allCourses.forEach(function(c){c._enrollCount=enrollMap[c.id]||0;});
+
+  document.getElementById('courses-toolbar').innerHTML=
+    '<select id="course-status-filter" onchange="renderCourses()"><option value="all">All Statuses</option><option value="published">Published</option><option value="draft">Draft</option></select>'+
+    '<button class="csv-btn" onclick="exportCoursesCSV()">CSV Export</button>';
+  renderCourses();
+}
+function renderCourses(){
+  var filter=document.getElementById('course-status-filter').value;
+  var list=allCourses.filter(function(c){return filter==='all'||c.status===filter;});
+  var tbl=document.getElementById('courses-tbl');
+  tbl.querySelector('thead').innerHTML='<tr><th>Title</th><th>Coach</th><th>Format</th><th>Status</th><th>Enrollments</th><th>Featured</th><th>Created</th></tr>';
+  var tbody='';
+  list.forEach(function(c,i){
+    var fmtPill=c.format==='self-paced'?'pill-navy':c.format==='cohort'?'pill-gold':'pill-green';
+    var statusPill=c.status==='published'?'pill-green':'pill-muted';
+    var star=c.is_featured?'<span style="color:var(--gold);font-size:1.1rem;cursor:pointer" onclick="event.stopPropagation();toggleFeatured(\''+c.id+'\',false)">&#9733;</span>':'<span style="color:#ccc;font-size:1.1rem;cursor:pointer" onclick="event.stopPropagation();toggleFeatured(\''+c.id+'\',true)">&#9734;</span>';
+    var coachName=(c.coach_profiles&&c.coach_profiles.display_name)||'-';
+    tbody+='<tr style="cursor:pointer" onclick="toggleCourseRow('+i+')">'+
+      '<td style="font-weight:700">'+esc(c.title)+'</td>'+
+      '<td>'+esc(coachName)+'</td>'+
+      '<td><span class="pill '+fmtPill+'">'+esc(c.format||'self-paced')+'</span></td>'+
+      '<td><span class="pill '+statusPill+'">'+esc(c.status||'draft')+'</span></td>'+
+      '<td style="text-align:center;font-weight:700">'+c._enrollCount+'</td>'+
+      '<td style="text-align:center">'+star+'</td>'+
+      '<td>'+fmtDate(c.created_at)+'</td></tr>';
+    tbody+='<tr class="tbl-expand" id="course-exp-'+i+'"><td colspan="7">'+
+      '<strong>Description:</strong> '+esc((c.description||'').substring(0,200))+(c.description&&c.description.length>200?'...':'')+'</td></tr>';
+  });
+  tbl.querySelector('tbody').innerHTML=tbody;
+}
+function toggleCourseRow(i){document.getElementById('course-exp-'+i).classList.toggle('open');}
+async function toggleFeatured(id,val){
+  await sPatch('coach_courses',{id:'eq.'+id},{is_featured:val});
+  var c=allCourses.find(function(x){return x.id===id;});if(c)c.is_featured=val;renderCourses();
+}
+function exportCoursesCSV(){
+  var rows=[['Title','Coach','Format','Status','Enrollments','Featured','Created']];
+  allCourses.forEach(function(c){rows.push([c.title,(c.coach_profiles&&c.coach_profiles.display_name)||'',c.format||'',c.status||'',c._enrollCount,c.is_featured?'Yes':'No',fmtDate(c.created_at)]);});
+  downloadCSV(rows,'courses');
+}
+
+// ============== COMMONS ==============
+var commonsView='individual',allCommonsPosts=[],commonsResponses={};
+async function load_commons(){
+  document.getElementById('commons-pills').innerHTML=
+    '<button class="fp active" onclick="switchCommons(this,\'individual\')">Individual</button>'+
+    '<button class="fp" onclick="switchCommons(this,\'business\')">Business</button>'+
+    '<button class="csv-btn" style="margin-left:auto" onclick="exportCommonsCSV()">CSV Export</button>';
+  allCommonsPosts=await sGet('coaching_commons_posts?select=*&order=created_at.desc');
+  var responses=await sGet('coaching_commons_responses?select=id,post_id');
+  commonsResponses={};responses.forEach(function(r){commonsResponses[r.post_id]=(commonsResponses[r.post_id]||0)+1;});
+  renderCommons();
+}
+function switchCommons(el,v){commonsView=v;el.parentElement.querySelectorAll('.fp').forEach(function(f){f.classList.remove('active');});el.classList.add('active');renderCommons();}
+function renderCommons(){
+  var list=allCommonsPosts.filter(function(p){return p.poster_type===commonsView;});
+  var tbl=document.getElementById('commons-tbl');
+  var isBiz=commonsView==='business';
+  var cols='<tr><th>Name</th><th>Email</th>'+(isBiz?'<th>Org</th><th>Type</th>':'')+'<th>Description</th><th>Budget</th><th>Status</th><th>Responses</th><th>Date</th></tr>';
+  tbl.querySelector('thead').innerHTML=cols;
+  tbl.querySelector('tbody').innerHTML=list.map(function(p){
+    var desc=esc((p.description||'').substring(0,60))+(p.description&&p.description.length>60?'...':'');
+    var statusPill=p.status==='active'?'pill-green':'pill-muted';
+    var resp=commonsResponses[p.id]||0;
+    return '<tr><td style="font-weight:700">'+esc(p.name||'-')+'</td><td>'+esc(p.email)+'</td>'+
+      (isBiz?'<td>'+esc(p.org_name||'-')+'</td><td>'+esc(p.business_type||'-')+'</td>':'')+
+      '<td>'+desc+'</td><td>'+esc(p.budget_range||'-')+'</td><td><span class="pill '+statusPill+'">'+esc(p.status||'active')+'</span></td><td style="text-align:center;font-weight:700">'+resp+'</td><td>'+fmtDate(p.created_at)+'</td></tr>';
+  }).join('');
+}
+function exportCommonsCSV(){
+  var list=allCommonsPosts.filter(function(p){return p.poster_type===commonsView;});
+  var isBiz=commonsView==='business';
+  var header=['Name','Email'];if(isBiz)header.push('Org','Type');header.push('Description','Budget','Status','Responses','Date');
+  var rows=[header];
+  list.forEach(function(p){
+    var r=[''+p.name,''+p.email];if(isBiz)r.push(''+p.org_name,''+p.business_type);
+    r.push(''+p.description,''+p.budget_range,''+p.status,''+(commonsResponses[p.id]||0),fmtDate(p.created_at));rows.push(r);
+  });
+  downloadCSV(rows,'commons-'+commonsView);
+}
+
+// ============== REVENUE ==============
+async function load_revenue(){
+  var [bookings,enrollments]=await Promise.all([
+    sGet('coach_bookings?select=*,coach_profiles(display_name)&order=created_at.desc'),
+    sGet('coach_course_enrollments?select=*,coach_courses(title,coach_profiles(display_name))&order=enrolled_at.desc')
+  ]);
+  var now=new Date(),monthStart=new Date(now.getFullYear(),now.getMonth(),1).toISOString();
+  var monthB=bookings.filter(function(b){return b.created_at>=monthStart;});
+  var est=0;bookings.filter(function(b){return b.status==='confirmed';}).forEach(function(b){est+=(parseFloat(b.service_price)||0);});
+
+  document.getElementById('rev-stats').innerHTML=
+    statCard(bookings.length,'Total Bookings','')+
+    statCard(monthB.length,'Bookings This Month','')+
+    statCard('$'+est.toLocaleString(),'Estimated Revenue','gold');
+
+  // Bookings table
+  var bt=document.getElementById('rev-bookings-tbl');
+  bt.querySelector('thead').innerHTML='<tr><th>Client</th><th>Coach</th><th>Service</th><th>Date</th><th>Status</th><th>Est. Price</th></tr>';
+  bt.querySelector('tbody').innerHTML=bookings.slice(0,50).map(function(b){
+    var sPill=b.status==='confirmed'?'pill-green':b.status==='cancelled'?'pill-red':'pill-muted';
+    var coachName=(b.coach_profiles&&b.coach_profiles.display_name)||'-';
+    return '<tr><td>'+esc(b.client_email)+'</td><td>'+esc(coachName)+'</td><td>'+esc(b.service_name||'-')+'</td><td>'+fmtDate(b.scheduled_at||b.created_at)+'</td><td><span class="pill '+sPill+'">'+esc(b.status||'pending')+'</span></td><td style="font-weight:700;color:var(--gold)">$'+(parseFloat(b.service_price)||0)+'</td></tr>';
+  }).join('');
+
+  // Enrollments table
+  var et=document.getElementById('rev-enroll-tbl');
+  et.querySelector('thead').innerHTML='<tr><th>Student</th><th>Course</th><th>Coach</th><th>Enrolled</th></tr>';
+  et.querySelector('tbody').innerHTML=enrollments.slice(0,50).map(function(e){
+    var course=e.coach_courses||{};
+    var coachName=(course.coach_profiles&&course.coach_profiles.display_name)||'-';
+    return '<tr><td>'+esc(e.student_email)+'</td><td style="font-weight:700">'+esc(course.title||'-')+'</td><td>'+esc(coachName)+'</td><td>'+fmtDate(e.enrolled_at)+'</td></tr>';
+  }).join('');
+}
+
+// ============== SETTINGS ==============
+function load_settings(){}
+</script>
+</body>
+</html>
