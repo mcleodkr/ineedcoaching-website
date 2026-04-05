@@ -31,67 +31,91 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  --navy: #1a3a52; --gold: #c49a3c; --cream: #f7f4ee; --white: #ffffff; --muted: #8a8a9a;
-  --border: rgba(255,255,255,0.1); --r: 14px; --r-sm: 8px;
+  --navy: #1a3a52; --gold: #c49a3c; --cream: #f7f4ee; --warm: #ffffff;
+  --muted: #8a8a9a; --border: rgba(255,255,255,0.1); --border-light: #e0ddd5;
+  --gold-lt: #faf3e0; --r: 14px; --r-sm: 8px;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
-body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--navy); color: var(--cream); overflow-x: hidden; }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); color: var(--navy); overflow-x: hidden; }
 
-/* LOGO */
-.flow-logo { position: fixed; top: 24px; left: 40px; z-index: 400; font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--cream); text-decoration: none; }
-.flow-logo .li { color: var(--gold); font-style: italic; }
+/* NAV */
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; align-items: center; justify-content: space-between; padding: 14px 52px; background: rgba(26,58,82,0.95); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
 
-/* SCREENS */
-.screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.5s ease, transform 0.5s ease; transform: translateY(20px); z-index: 100; background: var(--navy); }
-.screen.active { opacity: 1; pointer-events: auto; transform: translateY(0); }
-.screen-inner { max-width: 640px; width: 100%; padding: 24px; text-align: center; }
-.screen-inner h1 { font-family: 'Playfair Display', serif; font-size: clamp(1.8rem, 4vw, 2.8rem); line-height: 1.15; color: var(--cream); margin-bottom: 36px; }
-.screen-inner h1 em { color: var(--gold); font-style: italic; }
-.screen-inner h2 { font-family: 'Playfair Display', serif; font-size: clamp(1.4rem, 3vw, 2rem); line-height: 1.2; color: var(--cream); margin-bottom: 20px; }
+/* HERO */
+.hero { min-height: 100vh; padding-top: 64px; display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; }
+.hero-left { display: flex; flex-direction: column; justify-content: center; padding: 80px 64px 80px 80px; background: var(--cream); }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); margin-bottom: 24px; }
+.eyebrow-dot { width: 7px; height: 7px; background: var(--gold); border-radius: 50%; animation: pulse 2s ease-in-out infinite; flex-shrink: 0; }
+@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.6); } }
+.hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(2.6rem, 4.5vw, 4.2rem); line-height: 1.08; letter-spacing: -0.02em; color: var(--navy); margin-bottom: 24px; }
+.hero h1 em { color: var(--gold); font-style: italic; }
+.hero-sub { font-size: 1rem; line-height: 1.7; color: var(--muted); max-width: 420px; margin-bottom: 40px; }
+.router-label { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
 
-/* PILLS */
-.pills { display: flex; flex-direction: column; gap: 12px; align-items: center; }
-.pill { display: inline-block; border: 1.5px solid var(--gold); border-radius: 50px; padding: 14px 24px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.88rem; color: var(--cream); background: transparent; cursor: pointer; transition: all 0.2s; max-width: 480px; width: 100%; text-align: center; }
-.pill:hover { background: var(--gold); color: var(--white); }
+/* CONVERSATION FLOW */
+.convo-textarea { width: 100%; padding: 16px; border: 2px solid var(--border-light); border-radius: var(--r); background: var(--warm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.92rem; color: var(--navy); resize: none; outline: none; transition: border-color 0.2s; line-height: 1.6; margin-bottom: 14px; }
+.convo-textarea:focus { border-color: var(--gold); }
+.convo-textarea::placeholder { color: var(--muted); }
+.convo-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.convo-pill { padding: 8px 16px; border: 1.5px solid var(--border-light); border-radius: 50px; background: var(--warm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 600; color: var(--navy); cursor: pointer; transition: all 0.2s; }
+.convo-pill:hover { border-color: var(--gold); background: var(--gold-lt); }
+.convo-pill.convo-special { border-color: rgba(196,154,60,0.5); background: var(--gold-lt); color: var(--gold); }
+.convo-pill.convo-special:hover { border-color: var(--gold); background: rgba(196,154,60,0.2); }
+.btn-begin { display: block; width: 100%; background: var(--navy); color: white; border: none; padding: 16px; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+.btn-begin:hover { background: #244a66; }
+.convo-micro { font-size: 0.75rem; color: var(--muted); text-align: center; margin-top: 10px; }
 
-/* PRIMARY BTN */
-.btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--navy); color: var(--white); padding: 14px 32px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem; font-weight: 700; text-decoration: none; border: 1.5px solid var(--gold); cursor: pointer; transition: all 0.2s; }
-.btn-primary:hover { background: var(--gold); color: var(--white); transform: translateY(-2px); }
-.btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--gold); color: var(--navy); padding: 14px 32px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem; font-weight: 700; text-decoration: none; border: none; cursor: pointer; transition: all 0.2s; }
-.btn-secondary:hover { background: #d4a94c; transform: translateY(-2px); }
-.btn-outline { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: transparent; color: var(--cream); padding: 14px 32px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem; font-weight: 700; text-decoration: none; border: 1.5px solid rgba(255,255,255,0.2); cursor: pointer; transition: all 0.2s; }
-.btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+/* Chat bubbles */
+.chat-bubble { padding: 16px 20px; border-radius: var(--r); margin-bottom: 14px; font-size: 0.88rem; line-height: 1.65; animation: fadeUp 0.4s ease; }
+.chat-user { background: var(--gold-lt); color: var(--navy); border-bottom-right-radius: 4px; }
+.chat-system { background: var(--warm); border: 1.5px solid var(--border-light); color: var(--navy); border-bottom-left-radius: 4px; }
+.chat-loading { display: flex; align-items: center; gap: 8px; padding: 14px 20px; color: var(--muted); font-size: 0.85rem; }
+.chat-loading .ldot { width: 6px; height: 6px; background: var(--gold); border-radius: 50%; animation: dotpulse 1.2s ease-in-out infinite; }
+.chat-loading .ldot:nth-child(2) { animation-delay: 0.2s; }
+.chat-loading .ldot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dotpulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1); } }
+.chat-options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; animation: fadeUp 0.4s ease; }
+.chat-option { padding: 12px 18px; border: 2px solid var(--border-light); border-radius: var(--r-sm); background: var(--warm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; font-weight: 600; color: var(--navy); cursor: pointer; transition: all 0.2s; text-align: left; }
+.chat-option:hover { border-color: var(--gold); background: var(--gold-lt); }
+.chat-btn-row { display: flex; gap: 10px; margin-bottom: 14px; animation: fadeUp 0.4s ease; }
+.chat-btn { flex: 1; padding: 12px; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.2s; border: none; }
+.chat-btn-yes { background: var(--navy); color: white; }
+.chat-btn-yes:hover { background: #244a66; }
+.chat-btn-no { background: var(--warm); color: var(--navy); border: 1.5px solid var(--border-light); }
+.chat-btn-no:hover { border-color: var(--gold); }
+.chat-journal { width: 100%; padding: 14px; border: 1.5px solid var(--border-light); border-radius: var(--r-sm); background: var(--warm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.88rem; color: var(--navy); resize: vertical; min-height: 100px; outline: none; margin-bottom: 12px; }
+.chat-journal:focus { border-color: var(--gold); }
+.path-cards { display: flex; flex-direction: column; gap: 12px; animation: fadeUp 0.4s ease; }
+.path-card { display: flex; align-items: flex-start; gap: 14px; padding: 18px; border: 1.5px solid var(--border-light); border-radius: var(--r); background: var(--warm); text-decoration: none; color: var(--navy); transition: all 0.2s; }
+.path-card:hover { border-color: var(--gold); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+.path-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+.path-card-body .path-title { font-size: 0.88rem; font-weight: 700; margin-bottom: 3px; }
+.path-card-body .path-sub { font-size: 0.78rem; color: var(--muted); }
 
-/* PROGRESS DOTS */
-.progress-dots { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 200; }
-.dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.2); transition: all 0.3s; }
-.dot.active { background: var(--gold); transform: scale(1.2); }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-/* REFLECTION TEXT */
-.reflection-text { font-size: 1.05rem; line-height: 1.8; color: var(--muted); margin-bottom: 32px; max-width: 520px; margin-left: auto; margin-right: auto; }
-.reflection-text em { color: var(--gold); font-style: italic; }
+/* HERO RIGHT */
+.hero-right { background: var(--navy); position: relative; display: flex; flex-direction: column; justify-content: flex-end; padding: 52px; overflow: hidden; }
+.hero-bg-text { position: absolute; top: 10px; left: 0; font-family: 'Playfair Display', serif; font-size: clamp(9rem, 14vw, 18rem); font-weight: 900; line-height: 1; color: rgba(255,255,255,0.08); letter-spacing: -0.04em; pointer-events: none; user-select: none; }
+.hero-float-card { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: var(--r); padding: 28px; position: relative; z-index: 2; animation: float 7s ease-in-out infinite; margin-bottom: 16px; }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.card-label { font-size: 0.65rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
+.card-quote { font-family: 'Playfair Display', serif; font-style: italic; font-size: 1.1rem; color: rgba(255,255,255,0.9); line-height: 1.4; margin-bottom: 14px; }
+.card-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); font-size: 0.68rem; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
+.hero-disclaimer { font-size: 0.7rem; color: rgba(255,255,255,0.5); line-height: 1.5; position: relative; z-index: 2; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; }
 
-/* TEXTAREA */
-.reflect-textarea { width: 100%; max-width: 480px; padding: 16px; border: 1.5px solid rgba(255,255,255,0.15); border-radius: var(--r-sm); background: rgba(255,255,255,0.05); color: var(--cream); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.92rem; line-height: 1.6; resize: vertical; min-height: 100px; margin-bottom: 20px; }
-.reflect-textarea:focus { outline: none; border-color: var(--gold); }
-
-/* PATH CARDS */
-.path-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; max-width: 580px; margin: 0 auto 32px; }
-.path-card { padding: 28px 20px; border: 1.5px solid rgba(255,255,255,0.12); border-radius: var(--r); text-align: center; cursor: pointer; transition: all 0.25s; text-decoration: none; display: block; }
-.path-card:hover { border-color: var(--gold); transform: translateY(-4px); box-shadow: 0 12px 36px rgba(196,154,60,0.1); }
-.path-card h3 { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--gold); margin-bottom: 8px; }
-.path-card p { font-size: 0.8rem; color: var(--muted); line-height: 1.6; }
-
-/* BUTTON ROW */
-.btn-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 24px; }
-
-/* BELOW FOLD */
-.below-fold { position: relative; z-index: 50; background: var(--navy); display: none; }
-.below-fold.visible { display: block; }
+/* VALUES */
+.values-section { padding: 80px 80px; background: var(--navy); }
+.values-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 960px; margin: 0 auto; }
+.value-card { padding: 32px 24px; border: 1.5px solid rgba(255,255,255,0.12); border-radius: var(--r); transition: border-color 0.2s; }
+.value-card:hover { border-color: var(--gold); }
+.value-card h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--gold); margin-bottom: 10px; }
+.value-card p { font-size: 0.84rem; color: var(--muted); line-height: 1.65; }
 
 /* ARTICLES */
-.articles-section { padding: 80px 80px; }
+.articles-section { padding: 80px 80px; background: var(--navy); }
 .section-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 36px; max-width: 1100px; margin-left: auto; margin-right: auto; }
 .section-title { font-family: 'Playfair Display', serif; font-size: clamp(1.8rem, 3vw, 2.6rem); color: var(--cream); line-height: 1.1; }
 .section-title em { color: var(--gold); font-style: italic; }
@@ -108,120 +132,51 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--navy); colo
 .article-card .card-read { font-size: 0.75rem; font-weight: 700; color: var(--gold); }
 
 /* COMMONS */
-.commons-section { padding: 80px 80px; }
+.commons-section { padding: 80px 80px; background: var(--navy); }
 .commons-card { max-width: 800px; margin: 0 auto; background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.12); border-radius: var(--r); padding: 48px; text-align: center; transition: border-color 0.2s; }
 .commons-card:hover { border-color: var(--gold); }
-.commons-card .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 0.63rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin-bottom: 16px; }
-.commons-card .eyebrow-dot { width: 7px; height: 7px; background: var(--gold); border-radius: 50%; animation: pulse 2s ease-in-out infinite; }
-@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.6); } }
+.commons-card .sec-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 0.63rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin-bottom: 16px; }
+.commons-card .sec-eyebrow-dot { width: 7px; height: 7px; background: var(--gold); border-radius: 50%; animation: pulse 2s ease-in-out infinite; }
 .commons-card h2 { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--cream); margin-bottom: 12px; line-height: 1.2; }
 .commons-card h2 em { color: var(--gold); font-style: italic; }
 .commons-card p { font-size: 0.9rem; color: var(--muted); line-height: 1.7; margin-bottom: 28px; max-width: 520px; margin-left: auto; margin-right: auto; }
+.btn-secondary { display: inline-flex; align-items: center; gap: 8px; background: var(--gold); color: var(--navy); padding: 14px 32px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem; font-weight: 700; text-decoration: none; border: none; cursor: pointer; transition: all 0.2s; }
+.btn-secondary:hover { background: #d4a94c; transform: translateY(-2px); }
 
 /* SPRIXLE */
-.sprixle-section { padding: 0 80px 80px; }
+.sprixle-section { padding: 0 80px 80px; background: var(--navy); }
 .sprixle-card { max-width: 800px; margin: 0 auto; background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.12); border-radius: var(--r); padding: 48px; text-align: center; transition: border-color 0.2s; }
 .sprixle-card:hover { border-color: var(--gold); }
-.sprixle-card .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 0.63rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin-bottom: 16px; }
-.sprixle-card .eyebrow-dot { width: 7px; height: 7px; background: var(--gold); border-radius: 50%; }
+.sprixle-card .sec-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 0.63rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin-bottom: 16px; }
+.sprixle-card .sec-eyebrow-dot { width: 7px; height: 7px; background: var(--gold); border-radius: 50%; }
 .sprixle-card h2 { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--cream); margin-bottom: 12px; line-height: 1.2; }
 .sprixle-card h2 em { color: var(--gold); font-style: italic; }
 .sprixle-card p { font-size: 0.9rem; color: var(--muted); line-height: 1.7; margin-bottom: 28px; max-width: 520px; margin-left: auto; margin-right: auto; }
 
-/* VALUES */
-.values-section { padding: 80px 80px; }
-.values-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 960px; margin: 0 auto; }
-.value-card { padding: 32px 24px; border: 1.5px solid rgba(255,255,255,0.12); border-radius: var(--r); transition: border-color 0.2s; }
-.value-card:hover { border-color: var(--gold); }
-.value-card h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--gold); margin-bottom: 10px; }
-.value-card p { font-size: 0.84rem; color: var(--muted); line-height: 1.65; }
-
 /* FOOTER */
-footer { padding: 40px 80px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+footer { padding: 40px 80px; border-top: 1px solid rgba(255,255,255,0.1); background: var(--navy); display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
 .footer-logo { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--cream); text-decoration: none; }
 .footer-note { font-size: 0.72rem; color: var(--muted); }
 .footer-note a { color: var(--gold); text-decoration: none; }
+.footer-links { display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; margin-top: 4px; }
+.footer-links a { font-size: 0.72rem; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.footer-links a:hover { color: var(--gold); }
 .footer-crisis { font-size: 0.68rem; color: var(--muted); margin-top: 4px; }
 
-@media (max-width: 768px) {
-  .flow-logo { top: 16px; left: 20px; font-size: 1rem; }
-  .screen-inner { padding: 16px; }
-  .screen-inner h1 { font-size: 1.6rem; margin-bottom: 24px; }
-  .pill { padding: 12px 20px; font-size: 0.82rem; }
-  .path-cards { grid-template-columns: 1fr; }
-  .articles-section, .commons-section, .sprixle-section, .values-section { padding: 60px 24px; }
+@media (max-width: 900px) {
+  nav { padding: 12px 20px; }
+  .hero { grid-template-columns: 1fr; }
+  .hero-left { padding: 80px 24px 40px; }
+  .hero-right { display: none; }
+  .values-section, .articles-section, .commons-section, .sprixle-section { padding: 60px 24px; }
   .articles-grid { grid-template-columns: 1fr; }
   .values-grid { grid-template-columns: 1fr; }
   .section-header { flex-direction: column; align-items: flex-start; gap: 16px; }
   footer { padding: 32px 24px; }
-  .progress-dots { bottom: 20px; }
 }
 </style>
 </head>
 <body>
-
-<!-- LOGO -->
-<a class="flow-logo" href="/"><span class="li">i</span>need<span class="li">coaching</span>.org</a>
-
-<!-- PROGRESS DOTS -->
-<div class="progress-dots" id="progress-dots">
-  <div class="dot active" data-screen="1"></div>
-  <div class="dot" data-screen="2"></div>
-  <div class="dot" data-screen="3"></div>
-  <div class="dot" data-screen="4"></div>
-</div>
-
-<!-- SCREEN 1: What brings you here? -->
-<div class="screen active" id="screen1">
-  <div class="screen-inner">
-    <h1>What brings you here today?</h1>
-    <div class="pills">
-      <button class="pill" onclick="choose(1,'stuck')">I'm feeling stuck and not sure why</button>
-      <button class="pill" onclick="choose(1,'leader')">I want to grow as a leader</button>
-      <button class="pill" onclick="choose(1,'transition')">I'm going through a big transition</button>
-      <button class="pill" onclick="choose(1,'burnout')">I'm burned out and need to find my way back</button>
-      <button class="pill" onclick="choose(1,'better')">I want to be better at what I do</button>
-      <button class="pill" onclick="choose(1,'business')">I'm looking for coaching for my team or organization</button>
-      <button class="pill" onclick="window.location.href='/coach-dashboard.html'">I'm a coach looking to list my services</button>
-    </div>
-  </div>
-</div>
-
-<!-- SCREEN 2: Follow-up question (dynamic) -->
-<div class="screen" id="screen2">
-  <div class="screen-inner">
-    <h1 id="screen2-question"></h1>
-    <div class="pills" id="screen2-pills"></div>
-  </div>
-</div>
-
-<!-- SCREEN 3: Reflection -->
-<div class="screen" id="screen3">
-  <div class="screen-inner">
-    <h2>Does this sound right?</h2>
-    <p class="reflection-text" id="reflection-text"></p>
-    <div class="btn-row" id="reflection-buttons">
-      <button class="btn-secondary" onclick="reflectionYes()">Yes, that resonates</button>
-      <button class="btn-outline" onclick="reflectionNo()">Not quite</button>
-    </div>
-    <div id="reflection-edit" style="display:none;margin-top:24px;">
-      <textarea class="reflect-textarea" id="reflect-textarea" placeholder="Tell us more about what you're looking for..."></textarea>
-      <br>
-      <button class="btn-secondary" onclick="reflectionContinue()">Continue</button>
-    </div>
-  </div>
-</div>
-
-<!-- SCREEN 4: Path choices -->
-<div class="screen" id="screen4">
-  <div class="screen-inner">
-    <h1>Here's how we can help</h1>
-    <div id="screen4-content"></div>
-  </div>
-</div>
-
-<!-- BELOW FOLD: Articles, Commons, Values, Footer -->
-<div class="below-fold" id="below-fold">
 
 <nav style="position:fixed;top:0;left:0;right:0;z-index:300;display:flex;align-items:center;justify-content:space-between;padding:14px 52px;background:rgba(26,58,82,0.95);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,0.1);">
   <a href="/" style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:#f7f4ee;text-decoration:none;"><span style="color:#c49a3c;font-style:italic;">i</span>need<span style="color:#c49a3c;font-style:italic;">coaching</span>.org</a>
@@ -236,8 +191,46 @@ footer { padding: 40px 80px; border-top: 1px solid rgba(255,255,255,0.1); displa
   </div>
 </nav>
 
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="eyebrow"><span class="eyebrow-dot"></span> Coaching Marketplace</div>
+    <h1>Find the support<br>that fits where<br>you <em>are.</em></h1>
+    <p class="hero-sub">Tell us what brought you here. We will point you toward a coach, a course, or a resource that actually fits where you are right now.</p>
+    <div class="router-label">What brings you here today?</div>
+    <div id="convo-flow">
+      <div id="convo-input-phase">
+        <textarea id="convo-input" class="convo-textarea" placeholder="Just say it in your own words..." rows="3" oninput="togglePills()"></textarea>
+        <div class="convo-pills" id="convo-pills">
+          <button class="convo-pill" onclick="fillConvo(this.textContent)">I'm feeling stuck</button>
+          <button class="convo-pill" onclick="fillConvo(this.textContent)">I want to grow as a leader</button>
+          <button class="convo-pill" onclick="fillConvo(this.textContent)">I'm going through a transition</button>
+          <button class="convo-pill" onclick="fillConvo(this.textContent)">I'm burned out</button>
+          <button class="convo-pill" onclick="fillConvo(this.textContent)">I want to be better at what I do</button>
+          <button class="convo-pill convo-special" onclick="fillConvo('Coaching for my team or organization')">Coaching for my team or organization</button>
+          <button class="convo-pill convo-special" onclick="window.location.href='/coach-dashboard.html'">I'm a coach — list my services</button>
+        </div>
+        <button class="btn-begin" id="btn-begin-main" onclick="beginConvo()">Begin &rarr;</button>
+        <p class="convo-micro">No account needed to start.</p>
+      </div>
+      <div id="convo-chat" style="display:none;"></div>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="hero-bg-text">GROW</div>
+    <div class="hero-float-card">
+      <div class="card-label">Someone is searching right now...</div>
+      <div class="card-quote" id="rotating-quote">"I have been doing everything right on paper, but something still feels off."</div>
+      <div class="card-chips" id="rotating-chips">
+        <span class="chip">Leadership</span><span class="chip">Career Change</span><span class="chip">Burnout</span><span class="chip">Growth</span>
+      </div>
+    </div>
+    <div class="hero-disclaimer">This is not a clinical tool. We do not store your responses. Need mental health support? Visit <a href="https://www.ineedtherapy.org" style="color:rgba(255,255,255,0.7);text-decoration:underline;">ineedtherapy.org</a>.</div>
+  </div>
+</section>
+
 <!-- VALUES -->
-<section class="values-section" style="padding-top:120px;">
+<section class="values-section">
   <div class="values-grid">
     <div class="value-card">
       <h3>No commissions.</h3>
@@ -274,7 +267,7 @@ footer { padding: 40px 80px; border-top: 1px solid rgba(255,255,255,0.1); displa
 <!-- THE COMMONS -->
 <section class="commons-section">
   <div class="commons-card">
-    <div class="eyebrow"><span class="eyebrow-dot"></span> The Commons</div>
+    <div class="sec-eyebrow"><span class="sec-eyebrow-dot"></span> The Commons</div>
     <h2>Find your match on <em>The Commons</em></h2>
     <p>The shared request board across all ineed sites. Real people posting what they need. Real providers responding. No middleman.</p>
     <a href="/coaching-commons.html" class="btn-secondary">Browse The Commons &rarr;</a>
@@ -284,7 +277,7 @@ footer { padding: 40px 80px; border-top: 1px solid rgba(255,255,255,0.1); displa
 <!-- SPRIXLE -->
 <section class="sprixle-section">
   <div class="sprixle-card">
-    <div class="eyebrow"><span class="eyebrow-dot"></span> Sprixle</div>
+    <div class="sec-eyebrow"><span class="sec-eyebrow-dot"></span> Sprixle</div>
     <h2>Continue your journey on <em>Sprixle</em></h2>
     <p>Private journaling, pattern tracking, and AI companion. Free to start.</p>
     <a href="https://www.sprixle.com" target="_blank" class="btn-secondary">Try Sprixle &rarr;</a>
@@ -294,126 +287,300 @@ footer { padding: 40px 80px; border-top: 1px solid rgba(255,255,255,0.1); displa
 <!-- FOOTER -->
 <footer>
   <a class="footer-logo" href="/"><span style="color:var(--gold);font-style:italic;">i</span>need<span style="color:var(--gold);font-style:italic;">coaching</span>.org</a>
+  <div class="footer-links">
+    <a href="/coaches.html">Coaches</a>
+    <a href="/sessions.html">Sessions</a>
+    <a href="/coach-courses.html">Courses</a>
+    <a href="/#articles">Articles</a>
+    <a href="/coaching-commons.html">Commons</a>
+    <a href="/coach-dashboard.html">Dashboard</a>
+  </div>
   <p class="footer-note">A project from <a href="https://www.ineedtherapy.org">ineedtherapy.org</a></p>
   <p class="footer-crisis">Not a crisis service — In crisis? Call or text 988</p>
 </footer>
-
-</div><!-- /below-fold -->
 
 <script>
 var SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
 var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
 
-var currentScreen = 1;
-var userChoice = '';
-var userAnswer = '';
+/* ── Conversation state ── */
+var convoState = { input: '', intent: '', step: 0, followUpAnswers: [], notQuiteCount: 0 };
 
-var questions = {
-  stuck: { q: 'What does stuck feel like for you right now?', opts: ['I keep doing the same things expecting different results', 'I know something needs to change but I don\'t know what', 'I\'ve lost the motivation I used to have', 'I feel like I\'m performing but not actually living'] },
-  leader: { q: 'What would feel different if you had support?', opts: ['I\'d make better decisions', 'I\'d communicate more clearly', 'I\'d finally feel confident in my role', 'I\'d have someone in my corner'] },
-  transition: { q: 'What kind of transition are you navigating?', opts: ['Changing jobs or careers', 'New role or promotion', 'Life changes affecting my work', 'I\'m not sure yet'] },
+/* ── Intent detection ── */
+var intentKeywords = {
+  stuck: ['stuck', 'stagnant', 'lost', 'direction', 'unclear', 'confused', 'same'],
+  leader: ['leader', 'leadership', 'lead', 'manage', 'executive', 'influence', 'strategic'],
+  transition: ['transition', 'change', 'career', 'new role', 'promotion', 'moving', 'pivot'],
+  burnout: ['burned out', 'burnout', 'exhausted', 'depleted', 'empty', 'drained', 'tired'],
+  better: ['better', 'improve', 'grow', 'develop', 'skills', 'performance', 'level up'],
+  business: ['team', 'organization', 'corporate', 'company', 'business', 'workshop', 'retreat']
+};
+
+function detectIntent(text) {
+  var lower = text.toLowerCase();
+  var scores = {};
+  for (var key in intentKeywords) {
+    scores[key] = 0;
+    intentKeywords[key].forEach(function(kw) {
+      if (lower.indexOf(kw) !== -1) scores[key]++;
+    });
+  }
+  var best = 'stuck';
+  var max = 0;
+  for (var k in scores) {
+    if (scores[k] > max) { max = scores[k]; best = k; }
+  }
+  return best;
+}
+
+/* ── Follow-up questions per intent ── */
+var followUps = {
+  stuck: { q: 'What does stuck feel like for you right now?', opts: ['I keep doing the same things expecting different results', 'I know something needs to change but I cannot name it', 'I have lost the motivation I used to have', 'I feel like I am performing but not actually living'] },
+  leader: { q: 'What would feel different if you had support?', opts: ['I would make better decisions', 'I would communicate more clearly', 'I would finally feel confident in my role', 'I would have someone in my corner'] },
+  transition: { q: 'What kind of transition are you navigating?', opts: ['Changing jobs or careers', 'New role or promotion', 'Life changes affecting my work', 'I am not sure yet'] },
   burnout: { q: 'What part of you feels most depleted right now?', opts: ['My energy', 'My creativity', 'My sense of purpose', 'My relationships at work'] },
   better: { q: 'What area feels most important to develop?', opts: ['My leadership presence', 'How I handle difficult conversations', 'My strategic thinking', 'My ability to manage and inspire others'] },
   business: { q: 'What is your organization looking for?', opts: ['Executive coaching for a leader or leadership team', 'A workshop or training program', 'A leadership retreat or offsite', 'A keynote or speaking engagement', 'We have a specific need'] }
 };
 
+/* ── Reflections (hardcoded per intent) ── */
 var reflections = {
-  stuck: {
-    'I keep doing the same things expecting different results': 'You already see the pattern — that takes awareness most people skip. A coach can help you interrupt the loop and find the leverage points you\'re missing. <em>You don\'t need more willpower. You need a new vantage point.</em>',
-    'I know something needs to change but I don\'t know what': 'The feeling of knowing something is off without being able to name it is one of the most common reasons people seek coaching. A great coach helps you find language for what you\'re sensing. <em>Clarity is closer than you think.</em>',
-    'I\'ve lost the motivation I used to have': 'Losing motivation isn\'t a character flaw — it\'s a signal. Often it means you\'ve outgrown the story you\'ve been telling yourself about what matters. <em>A coach can help you reconnect with what actually drives you.</em>',
-    'I feel like I\'m performing but not actually living': 'That gap between the version of you the world sees and the one you actually are — coaching is one of the few spaces where you can close it. <em>You deserve to feel as real on the outside as you do on the inside.</em>'
-  },
-  burnout: {
-    'My energy': 'When your energy is gone, everything feels heavier than it should. Coaching won\'t just help you manage your calendar — it will help you understand what\'s been draining you and what would actually fill you back up. <em>Recovery starts with honesty.</em>',
-    'My creativity': 'Creative depletion often comes from working in systems that reward output over thinking. A coach can help you rebuild the conditions where ideas come naturally again. <em>Your creativity isn\'t gone. It\'s just been redirected.</em>',
-    'My sense of purpose': 'Purpose doesn\'t disappear — it gets buried under obligations and expectations. A good coach helps you dig it out again, dust it off, and figure out how to build around it. <em>It\'s still there.</em>',
-    'My relationships at work': 'When burnout affects your relationships, it\'s a sign you\'ve been giving from an empty well. Coaching can help you set boundaries that actually stick and rebuild trust — starting with yourself. <em>You can\'t pour from empty.</em>'
-  },
-  leader: {
-    'I\'d make better decisions': 'Decision-making improves dramatically when you have a thinking partner who isn\'t attached to the outcome. A coach gives you the space to think clearly before you act. <em>Better decisions start with better questions.</em>',
-    'I\'d communicate more clearly': 'Most communication breakdowns aren\'t about words — they\'re about alignment. A coach helps you understand what you\'re really trying to say and how to land it. <em>Clarity in communication starts with clarity in yourself.</em>',
-    'I\'d finally feel confident in my role': 'Confidence isn\'t something you find once and keep forever. It\'s something you build through honest reflection and support. A coach can help you stop second-guessing and start leading. <em>You already have what it takes.</em>',
-    'I\'d have someone in my corner': 'Leadership can be isolating. Having someone who is fully in your corner — not your boss, not your team, not your partner — changes everything. <em>A great coach sees you clearly and believes in you completely.</em>'
-  },
-  _default: 'Something brought you here, and that matters. Whether you can name it yet or not, coaching creates the space to figure it out — with someone who is fully on your side. <em>The first step is showing up. You\'re already here.</em>'
+  stuck: 'It sounds like you have been carrying something that does not have a name yet. That is not a character flaw. Sometimes the clearest sign you need support is the feeling that something is off but you cannot point to exactly what.',
+  burnout: 'Running on empty for too long is not laziness. It is what happens when high-performing people give everything and quietly wonder when it will be their turn to be refueled.',
+  leader: 'Wanting to lead better is already leadership. The fact that you are here says something about the kind of leader you want to be.',
+  transition: 'Transitions are hard because everything feels temporary. Nothing has settled yet and you are making decisions in the fog. That is not weakness. That is just what in-between feels like.',
+  better: 'The desire to grow is one of the most underrated forms of strength. You are not broken. You are building.',
+  business: 'Finding the right support for your team takes clarity about what you actually need. Let us help you get there.'
 };
 
-function goToScreen(num) {
-  document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
-  var target = document.getElementById('screen' + num);
-  if (target) target.classList.add('active');
-  currentScreen = num;
-  document.querySelectorAll('.dot').forEach(function(d, i) {
-    d.classList.toggle('active', i < num);
+/* ── Rotating quotes ── */
+var quotes = [
+  { text: '"I have been doing everything right on paper, but something still feels off."', chips: ['Leadership', 'Career Change', 'Burnout', 'Growth'] },
+  { text: '"I keep waiting for the right time to make a change. It never comes."', chips: ['Transition', 'Clarity', 'Purpose', 'Momentum'] },
+  { text: '"Everyone thinks I have it together. I am not so sure anymore."', chips: ['Leadership', 'Burnout', 'Identity', 'Confidence'] },
+  { text: '"I want to be great at what I do, not just good enough."', chips: ['Performance', 'Development', 'Mastery', 'Growth'] },
+  { text: '"My team needs something. I am just not sure what yet."', chips: ['Team', 'Culture', 'Workshop', 'Strategy'] }
+];
+var quoteIndex = 0;
+setInterval(function() {
+  quoteIndex = (quoteIndex + 1) % quotes.length;
+  var q = quotes[quoteIndex];
+  var el = document.getElementById('rotating-quote');
+  var ch = document.getElementById('rotating-chips');
+  if (el) el.style.opacity = 0;
+  setTimeout(function() {
+    if (el) { el.textContent = q.text; el.style.opacity = 1; }
+    if (ch) ch.innerHTML = q.chips.map(function(c) { return '<span class="chip">' + c + '</span>'; }).join('');
+  }, 400);
+}, 6000);
+
+/* ── Pill / textarea logic ── */
+function fillConvo(text) {
+  document.getElementById('convo-input').value = text;
+  togglePills();
+}
+
+function togglePills() {
+  var val = document.getElementById('convo-input').value.trim();
+  var pills = document.getElementById('convo-pills');
+  pills.style.display = val.length > 0 ? 'none' : 'flex';
+}
+
+/* ── Begin conversation ── */
+function beginConvo() {
+  var input = document.getElementById('convo-input').value.trim();
+  if (!input) { document.getElementById('convo-input').focus(); return; }
+  convoState.input = input;
+  convoState.intent = detectIntent(input);
+  convoState.step = 1;
+  convoState.notQuiteCount = 0;
+  convoState.followUpAnswers = [];
+
+  document.getElementById('convo-input-phase').style.display = 'none';
+  var chat = document.getElementById('convo-chat');
+  chat.style.display = 'block';
+  chat.innerHTML = '';
+
+  addBubble('user', input);
+  showFollowUp1();
+}
+
+function addBubble(type, text) {
+  var chat = document.getElementById('convo-chat');
+  var div = document.createElement('div');
+  div.className = 'chat-bubble chat-' + type;
+  div.innerHTML = text;
+  chat.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function addLoading() {
+  var chat = document.getElementById('convo-chat');
+  var div = document.createElement('div');
+  div.className = 'chat-loading';
+  div.id = 'chat-loading';
+  div.innerHTML = '<div class="ldot"></div><div class="ldot"></div><div class="ldot"></div><span>Sitting with what you shared...</span>';
+  chat.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function removeLoading() {
+  var el = document.getElementById('chat-loading');
+  if (el) el.remove();
+}
+
+/* ── Follow-up 1: intent-based question ── */
+function showFollowUp1() {
+  var fu = followUps[convoState.intent];
+  setTimeout(function() {
+    addBubble('system', fu.q);
+    var opts = document.createElement('div');
+    opts.className = 'chat-options';
+    fu.opts.forEach(function(opt) {
+      var btn = document.createElement('button');
+      btn.className = 'chat-option';
+      btn.textContent = opt;
+      btn.onclick = function() { answerFollowUp1(opt); };
+      opts.appendChild(btn);
+    });
+    document.getElementById('convo-chat').appendChild(opts);
+    opts.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 600);
+}
+
+function answerFollowUp1(answer) {
+  convoState.followUpAnswers.push(answer);
+  document.querySelectorAll('.chat-options').forEach(function(el) { el.remove(); });
+  addBubble('user', answer);
+  setTimeout(function() {
+    addBubble('system', 'Thank you for sharing that. One more thing...');
+    setTimeout(showFollowUp2, 300);
+  }, 300);
+}
+
+/* ── Follow-up 2: how long ── */
+function showFollowUp2() {
+  setTimeout(function() {
+    addBubble('system', 'How long have you been sitting with this?');
+    var opts = document.createElement('div');
+    opts.className = 'chat-options';
+    ['Days or weeks', 'Months', 'Years, honestly', 'I am not sure when it started'].forEach(function(opt) {
+      var btn = document.createElement('button');
+      btn.className = 'chat-option';
+      btn.textContent = opt;
+      btn.onclick = function() { answerFollowUp2(opt); };
+      opts.appendChild(btn);
+    });
+    document.getElementById('convo-chat').appendChild(opts);
+    opts.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 600);
+}
+
+function answerFollowUp2(answer) {
+  convoState.followUpAnswers.push(answer);
+  document.querySelectorAll('.chat-options').forEach(function(el) { el.remove(); });
+  addBubble('user', answer);
+  setTimeout(function() {
+    addLoading();
+    setTimeout(function() {
+      removeLoading();
+      var reflection = reflections[convoState.intent] || reflections.stuck;
+      addBubble('system', reflection);
+      setTimeout(function() {
+        addBubble('system', 'Does this feel close?');
+        showYesNotQuite();
+      }, 600);
+    }, 1200);
+  }, 300);
+}
+
+/* ── Yes / Not quite ── */
+function showYesNotQuite() {
+  var chat = document.getElementById('convo-chat');
+  var row = document.createElement('div');
+  row.className = 'chat-btn-row';
+  row.innerHTML = '<button class="chat-btn chat-btn-yes" onclick="mirrorYes()">Yes</button>' +
+    '<button class="chat-btn chat-btn-no" onclick="mirrorNotQuite()">Not quite</button>';
+  chat.appendChild(row);
+  row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function mirrorYes() {
+  document.querySelectorAll('.chat-btn-row').forEach(function(el) { el.remove(); });
+  convoState.step = 3;
+  addBubble('system', 'Okay. I am with you.');
+  setTimeout(function() {
+    addBubble('system', 'Based on what you shared, here are three ways to move forward:');
+    setTimeout(showThreePaths, 600);
+  }, 800);
+}
+
+function mirrorNotQuite() {
+  convoState.notQuiteCount++;
+  document.querySelectorAll('.chat-btn-row').forEach(function(el) { el.remove(); });
+  addBubble('system', 'That is okay. Can you tell me more about what feels off?');
+  var chat = document.getElementById('convo-chat');
+  var ta = document.createElement('textarea');
+  ta.className = 'chat-journal';
+  ta.id = 'notquite-ta';
+  ta.placeholder = 'Say more here...';
+  chat.appendChild(ta);
+  ta.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  ta.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey && ta.value.trim().length > 3) {
+      e.preventDefault();
+      submitNotQuite(ta.value.trim());
+    }
   });
-  if (num === 4) {
-    document.getElementById('below-fold').classList.add('visible');
-  }
-}
-
-function choose(screen, value) {
-  if (screen === 1) {
-    userChoice = value;
-    var q = questions[value];
-    if (q) {
-      document.getElementById('screen2-question').textContent = q.q;
-      var pillsHtml = '';
-      q.opts.forEach(function(opt) {
-        pillsHtml += '<button class="pill" onclick="choose(2,\'' + opt.replace(/'/g, "\\'") + '\')">' + opt + '</button>';
-      });
-      document.getElementById('screen2-pills').innerHTML = pillsHtml;
-      goToScreen(2);
+  setTimeout(function() {
+    if (document.getElementById('notquite-ta')) {
+      var btn = document.createElement('button');
+      btn.className = 'btn-begin';
+      btn.id = 'notquite-btn';
+      btn.textContent = 'Continue \u2192';
+      btn.style.cssText = 'margin-top:8px;';
+      btn.onclick = function() { var v = ta.value.trim(); if (v.length > 0) submitNotQuite(v); };
+      chat.appendChild(btn);
     }
-  } else if (screen === 2) {
-    userAnswer = value;
-    var refText = '';
-    if (reflections[userChoice] && reflections[userChoice][value]) {
-      refText = reflections[userChoice][value];
-    } else {
-      refText = reflections._default;
-    }
-    document.getElementById('reflection-text').innerHTML = refText;
-    document.getElementById('reflection-buttons').style.display = 'flex';
-    document.getElementById('reflection-edit').style.display = 'none';
-    goToScreen(3);
-  }
+  }, 2000);
 }
 
-function reflectionYes() {
-  showScreen4();
+function submitNotQuite(text) {
+  var ta = document.getElementById('notquite-ta');
+  var btn = document.getElementById('notquite-btn');
+  if (ta) ta.remove();
+  if (btn) btn.remove();
+  convoState.followUpAnswers.push(text);
+  addBubble('user', text);
+  setTimeout(function() {
+    addBubble('system', 'Thank you for sharing that. Here are three paths that might help:');
+    setTimeout(showThreePaths, 600);
+  }, 600);
 }
 
-function reflectionNo() {
-  document.getElementById('reflection-buttons').style.display = 'none';
-  document.getElementById('reflection-edit').style.display = 'block';
-}
+/* ── Three path cards ── */
+function showThreePaths() {
+  var chat = document.getElementById('convo-chat');
+  var cards = document.createElement('div');
+  cards.className = 'path-cards';
 
-function reflectionContinue() {
-  showScreen4();
-}
-
-function showScreen4() {
-  var content = document.getElementById('screen4-content');
-  if (userChoice === 'business') {
-    content.innerHTML =
-      '<div class="path-cards">' +
-        '<a href="/coaching-commons.html" class="path-card"><h3>Post a Request</h3><p>Describe what your organization needs. Coaches will come to you.</p></a>' +
-        '<a href="/coaches.html" class="path-card"><h3>Browse Coaches</h3><p>Search our directory for coaches who specialize in business and teams.</p></a>' +
-        '<a href="/business-dashboard.html" class="path-card"><h3>Business Dashboard</h3><p>Manage your requests, review proposals, and track engagement.</p></a>' +
-      '</div>';
+  if (convoState.intent === 'business') {
+    cards.innerHTML =
+      '<a href="/coaching-commons.html" class="path-card"><span class="path-dot" style="background:#4a7c59;"></span><div class="path-card-body"><div class="path-title">Post your need in the Commons</div><div class="path-sub">Describe what your organization needs. Coaches will come to you.</div></div></a>' +
+      '<a href="/coaches.html" class="path-card"><span class="path-dot" style="background:#c49a3c;"></span><div class="path-card-body"><div class="path-title">Browse coaches directly</div><div class="path-sub">Search our directory for coaches who specialize in business and teams.</div></div></a>' +
+      '<a href="/business-dashboard.html" class="path-card"><span class="path-dot" style="background:#1a3a52;"></span><div class="path-card-body"><div class="path-title">Create a business profile</div><div class="path-sub">Manage your requests, review proposals, and track engagement.</div></div></a>';
   } else {
-    content.innerHTML =
-      '<div class="path-cards">' +
-        '<a href="/coaches.html" class="path-card"><h3>Browse Coaches</h3><p>Find a coach who fits your style, goals, and budget.</p></a>' +
-        '<a href="/sessions.html" class="path-card"><h3>Explore Sessions</h3><p>See what types of coaching sessions are available right now.</p></a>' +
-        '<a href="/coaching-commons.html" class="path-card"><h3>Post What You Need</h3><p>Tell us what you\'re looking for. Let coaches find you.</p></a>' +
-      '</div>';
+    cards.innerHTML =
+      '<a href="/coaches.html" class="path-card"><span class="path-dot" style="background:#4a7c59;"></span><div class="path-card-body"><div class="path-title">Find a coach who gets this</div><div class="path-sub">Browse coaches who match your goals, style, and budget.</div></div></a>' +
+      '<a href="/coach-courses.html" class="path-card"><span class="path-dot" style="background:#c49a3c;"></span><div class="path-card-body"><div class="path-title">Browse courses and workshops</div><div class="path-sub">Self-paced or live. Learn at your own pace.</div></div></a>' +
+      '<a href="/#articles" class="path-card"><span class="path-dot" style="background:#1a3a52;"></span><div class="path-card-body"><div class="path-title">Read an article that fits</div><div class="path-sub">Written by coaches, for people navigating exactly this.</div></div></a>';
   }
-  goToScreen(4);
+
+  chat.appendChild(cards);
+  cards.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-// Articles
+/* ── Articles ── */
 var allArticles = [];
 
 async function loadArticles() {
@@ -449,7 +616,6 @@ function renderArticles(category) {
   }).join('');
 }
 
-// Filter pills
 document.getElementById('filter-pills').addEventListener('click', function(e) {
   var pill = e.target.closest('.filter-pill');
   if (!pill) return;

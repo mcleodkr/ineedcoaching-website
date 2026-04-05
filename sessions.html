@@ -16,15 +16,6 @@
 html { scroll-behavior: smooth; }
 body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--warm); color: var(--ink); }
 
-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; align-items: center; justify-content: space-between; padding: 14px 52px; background: rgba(26,30,46,0.95); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
-.logo { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--warm); text-decoration: none; }
-.logo-i { color: var(--gold); font-style: italic; }
-.logo-coaching { color: var(--gold); font-style: italic; }
-.nav-links { display: flex; align-items: center; gap: 22px; list-style: none; }
-.nav-links a { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
-.nav-links a:hover { color: var(--gold); }
-.nav-pill { background: var(--gold); color: var(--navy) !important; padding: 8px 18px; border-radius: 50px; }
-
 .page-wrap { max-width: 1100px; margin: 0 auto; padding: 120px 24px 80px; }
 
 .page-header { text-align: center; margin-bottom: 40px; }
@@ -32,10 +23,18 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
 .page-header h1 em { color: var(--gold); font-style: italic; }
 .page-header p { font-size: 0.92rem; color: var(--muted); max-width: 500px; margin: 0 auto; line-height: 1.7; }
 
+.search-wrap { text-align: center; margin-bottom: 24px; }
+.search-wrap input { width: 100%; max-width: 500px; padding: 12px 18px; border: 1.5px solid #e0ddd5; border-radius: 50px; font-family: inherit; font-size: 0.85rem; outline: none; }
+
 .filters { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 20px; }
 .filter-pill { padding: 8px 18px; border-radius: 50px; border: 1.5px solid #e0ddd5; background: var(--white); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 700; color: var(--muted); cursor: pointer; transition: all 0.2s; }
 .filter-pill:hover { border-color: var(--gold); color: var(--ink); }
 .filter-pill.active { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+
+.section-divider { border: none; border-top: 1px solid #e0ddd5; margin: 48px 0 40px; }
+
+.section-heading { font-family: 'Playfair Display', serif; font-size: clamp(1.4rem, 3vw, 1.8rem); color: var(--ink); margin-bottom: 20px; }
+.section-heading em { color: var(--gold); font-style: italic; }
 
 .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 
@@ -64,13 +63,11 @@ footer { background: var(--navy); padding: 40px 52px; text-align: center; border
 
 @media (max-width: 900px) {
   nav { padding: 12px 20px; }
-  .nav-links { gap: 14px; }
   .grid { grid-template-columns: 1fr 1fr; }
   .page-wrap { padding: 100px 18px 60px; }
 }
 @media (max-width: 600px) {
   .grid { grid-template-columns: 1fr; }
-  .nav-links a:not(.nav-pill) { display: none; }
   footer { padding: 32px 20px; }
 }
 </style>
@@ -96,28 +93,45 @@ footer { background: var(--navy); padding: 40px 52px; text-align: center; border
     <p>Find the right coaching session for where you are right now.</p>
   </div>
 
-  <div style="text-align:center;">
-    <input type="text" id="session-search" placeholder="Search by session name or coach..." oninput="applyFilters()" style="width:100%;max-width:500px;padding:12px 18px;border:1.5px solid #e0ddd5;border-radius:50px;font-family:inherit;font-size:0.85rem;outline:none;margin-bottom:16px;">
+  <div class="search-wrap">
+    <input type="text" id="session-search" placeholder="Search by session name or coach..." oninput="applyFilters()">
   </div>
 
-  <div class="filters" id="specialty-filters">
-    <button class="filter-pill active" onclick="setSpecFilter('')">All</button>
+  <!-- INDIVIDUAL SESSIONS -->
+  <h2 class="section-heading">Individual <em>Sessions</em></h2>
+  <div class="filters" id="individual-spec-filters">
+    <button class="filter-pill active" onclick="setIndSpecFilter(this, '')">All</button>
   </div>
-
-  <div class="filters" id="price-filters">
-    <button class="filter-pill active" onclick="setPriceFilter('')">Any price</button>
-    <button class="filter-pill" onclick="setPriceFilter('under100')">Under $100</button>
-    <button class="filter-pill" onclick="setPriceFilter('100-200')">$100-$200</button>
-    <button class="filter-pill" onclick="setPriceFilter('over200')">$200+</button>
+  <div class="filters" id="individual-price-filters">
+    <button class="filter-pill active" onclick="setIndPriceFilter(this, '')">Any price</button>
+    <button class="filter-pill" onclick="setIndPriceFilter(this, 'under100')">Under $100</button>
+    <button class="filter-pill" onclick="setIndPriceFilter(this, '100-200')">$100-$200</button>
+    <button class="filter-pill" onclick="setIndPriceFilter(this, 'over200')">$200+</button>
   </div>
-
-  <div class="grid" id="sessions-grid">
+  <div class="grid" id="individual-grid">
     <div class="empty" style="grid-column:1/-1;">Loading sessions...</div>
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- CORPORATE & ORGANIZATIONAL SERVICES -->
+  <h2 class="section-heading">Corporate &amp; Organizational <em>Services</em></h2>
+  <div class="filters" id="corporate-spec-filters">
+    <button class="filter-pill active" onclick="setCorpSpecFilter(this, '')">All</button>
+  </div>
+  <div class="filters" id="corporate-price-filters">
+    <button class="filter-pill active" onclick="setCorpPriceFilter(this, '')">Any price</button>
+    <button class="filter-pill" onclick="setCorpPriceFilter(this, 'under100')">Under $100</button>
+    <button class="filter-pill" onclick="setCorpPriceFilter(this, '100-200')">$100-$200</button>
+    <button class="filter-pill" onclick="setCorpPriceFilter(this, 'over200')">$200+</button>
+  </div>
+  <div class="grid" id="corporate-grid">
+    <div class="empty" style="grid-column:1/-1;">Loading services...</div>
   </div>
 </div>
 
 <footer>
-  <div class="f-logo"><span class="logo-i">i</span><span>need</span><span class="logo-coaching">coaching</span><span>.org</span></div>
+  <div class="f-logo"><span style="color:#c49a3c;font-style:italic;">i</span>need<span style="color:#c49a3c;font-style:italic;">coaching</span>.org</div>
   <p class="f-note">A project from <a href="https://www.ineedtherapy.org">ineedtherapy.org</a></p>
 </footer>
 
@@ -125,9 +139,22 @@ footer { background: var(--navy); padding: 40px 52px; text-align: center; border
 var SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
 var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
 
-var _allSessions = [];
-var _currentSpecFilter = '';
-var _currentPriceFilter = '';
+var _individualSessions = [];
+var _corporateSessions = [];
+var _indSpecFilter = '';
+var _indPriceFilter = '';
+var _corpSpecFilter = '';
+var _corpPriceFilter = '';
+
+var CORPORATE_KEYWORDS = ['corporate', 'workshop', 'retreat', 'speaking', 'consulting', 'keynote', 'training', 'team'];
+
+function isCorporate(name) {
+  var lower = (name || '').toLowerCase();
+  for (var i = 0; i < CORPORATE_KEYWORDS.length; i++) {
+    if (lower.indexOf(CORPORATE_KEYWORDS[i]) !== -1) return true;
+  }
+  return false;
+}
 
 function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
@@ -139,19 +166,19 @@ async function loadSessions() {
     var coaches = await res.json();
     if (!coaches || coaches.error) coaches = [];
 
-    var sessions = [];
-    var allSpecs = {};
+    var indSpecs = {};
+    var corpSpecs = {};
 
     coaches.forEach(function(c) {
       var services = [];
       try { services = typeof c.services === 'string' ? JSON.parse(c.services) : (c.services || []); } catch(e) {}
       var firstSpec = (c.specialties || [])[0] || null;
-      (c.specialties || []).forEach(function(s) { allSpecs[s] = (allSpecs[s] || 0) + 1; });
 
       services.forEach(function(svc) {
         if (!svc.name && !svc.title) return;
-        sessions.push({
-          serviceName: svc.name || svc.title || 'Session',
+        var serviceName = svc.name || svc.title || 'Session';
+        var session = {
+          serviceName: serviceName,
           price: svc.price != null && svc.price !== '' ? Number(svc.price) : null,
           duration: svc.duration || null,
           coachName: c.display_name || 'Coach',
@@ -159,65 +186,91 @@ async function loadSessions() {
           coachSlug: c.slug,
           specialty: firstSpec,
           specialties: c.specialties || []
-        });
+        };
+
+        if (isCorporate(serviceName)) {
+          _corporateSessions.push(session);
+          (c.specialties || []).forEach(function(s) { corpSpecs[s] = (corpSpecs[s] || 0) + 1; });
+        } else {
+          _individualSessions.push(session);
+          (c.specialties || []).forEach(function(s) { indSpecs[s] = (indSpecs[s] || 0) + 1; });
+        }
       });
     });
 
-    _allSessions = sessions;
-    buildSpecFilters(allSpecs);
+    buildSpecFilters('individual-spec-filters', indSpecs, 'setIndSpecFilter');
+    buildSpecFilters('corporate-spec-filters', corpSpecs, 'setCorpSpecFilter');
     applyFilters();
   } catch(e) {
-    document.getElementById('sessions-grid').innerHTML = '<div class="empty" style="grid-column:1/-1;">Could not load sessions.</div>';
+    document.getElementById('individual-grid').innerHTML = '<div class="empty" style="grid-column:1/-1;">Could not load sessions.</div>';
+    document.getElementById('corporate-grid').innerHTML = '<div class="empty" style="grid-column:1/-1;">Could not load services.</div>';
   }
 }
 
-function buildSpecFilters(specs) {
+function buildSpecFilters(containerId, specs, fnName) {
   var sorted = Object.entries(specs).sort(function(a, b) { return b[1] - a[1]; });
-  var html = '<button class="filter-pill active" onclick="setSpecFilter(\'\')">All</button>';
+  var html = '<button class="filter-pill active" onclick="' + fnName + '(this, \'\')">' + 'All</button>';
   sorted.forEach(function(e) {
-    html += '<button class="filter-pill" onclick="setSpecFilter(\'' + esc(e[0]).replace(/'/g, "\\'") + '\')">' + esc(e[0]) + '</button>';
+    html += '<button class="filter-pill" onclick="' + fnName + '(this, \'' + esc(e[0]).replace(/'/g, "\\'") + '\')">' + esc(e[0]) + '</button>';
   });
-  document.getElementById('specialty-filters').innerHTML = html;
+  document.getElementById(containerId).innerHTML = html;
 }
 
-function setSpecFilter(spec) {
-  _currentSpecFilter = spec;
-  document.querySelectorAll('#specialty-filters .filter-pill').forEach(function(p) { p.classList.remove('active'); });
-  event.target.classList.add('active');
+function setIndSpecFilter(el, spec) {
+  _indSpecFilter = spec;
+  document.querySelectorAll('#individual-spec-filters .filter-pill').forEach(function(p) { p.classList.remove('active'); });
+  el.classList.add('active');
+  applyFilters();
+}
+function setIndPriceFilter(el, range) {
+  _indPriceFilter = range;
+  document.querySelectorAll('#individual-price-filters .filter-pill').forEach(function(p) { p.classList.remove('active'); });
+  el.classList.add('active');
+  applyFilters();
+}
+function setCorpSpecFilter(el, spec) {
+  _corpSpecFilter = spec;
+  document.querySelectorAll('#corporate-spec-filters .filter-pill').forEach(function(p) { p.classList.remove('active'); });
+  el.classList.add('active');
+  applyFilters();
+}
+function setCorpPriceFilter(el, range) {
+  _corpPriceFilter = range;
+  document.querySelectorAll('#corporate-price-filters .filter-pill').forEach(function(p) { p.classList.remove('active'); });
+  el.classList.add('active');
   applyFilters();
 }
 
-function setPriceFilter(range) {
-  _currentPriceFilter = range;
-  document.querySelectorAll('#price-filters .filter-pill').forEach(function(p) { p.classList.remove('active'); });
-  event.target.classList.add('active');
-  applyFilters();
-}
-
-function applyFilters() {
+function filterSessions(sessions, specFilter, priceFilter) {
   var searchText = (document.getElementById('session-search').value || '').toLowerCase().trim();
-  var filtered = _allSessions.filter(function(s) {
-    if (_currentSpecFilter && (s.specialties || []).indexOf(_currentSpecFilter) === -1) return false;
+  return sessions.filter(function(s) {
+    if (specFilter && (s.specialties || []).indexOf(specFilter) === -1) return false;
     if (searchText) {
       var name = (s.serviceName || '').toLowerCase();
       var coach = (s.coachName || '').toLowerCase();
       if (name.indexOf(searchText) === -1 && coach.indexOf(searchText) === -1) return false;
     }
-    if (_currentPriceFilter) {
+    if (priceFilter) {
       if (s.price === null) return false;
-      if (_currentPriceFilter === 'under100' && s.price >= 100) return false;
-      if (_currentPriceFilter === '100-200' && (s.price < 100 || s.price > 200)) return false;
-      if (_currentPriceFilter === 'over200' && s.price <= 200) return false;
+      if (priceFilter === 'under100' && s.price >= 100) return false;
+      if (priceFilter === '100-200' && (s.price < 100 || s.price > 200)) return false;
+      if (priceFilter === 'over200' && s.price <= 200) return false;
     }
     return true;
   });
-  renderSessions(filtered);
 }
 
-function renderSessions(sessions) {
-  var grid = document.getElementById('sessions-grid');
+function applyFilters() {
+  var indFiltered = filterSessions(_individualSessions, _indSpecFilter, _indPriceFilter);
+  var corpFiltered = filterSessions(_corporateSessions, _corpSpecFilter, _corpPriceFilter);
+  renderSessions(indFiltered, 'individual-grid', 'No individual sessions found.');
+  renderSessions(corpFiltered, 'corporate-grid', 'No corporate services found.');
+}
+
+function renderSessions(sessions, gridId, emptyMsg) {
+  var grid = document.getElementById(gridId);
   if (!sessions.length) {
-    grid.innerHTML = '<div class="empty" style="grid-column:1/-1;">No sessions found.</div>';
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1;">' + emptyMsg + '</div>';
     return;
   }
   grid.innerHTML = sessions.map(function(s) {
