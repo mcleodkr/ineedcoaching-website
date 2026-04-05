@@ -31,9 +31,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  --navy: #1a3a52; --gold: #c49a3c; --cream: #f7f4ee; --warm: #ffffff;
+  --navy: #1a3a52; --gold: #c49a3c; --gold-hover: #a87d1f; --cream: #f7f4ee; --warm: #ffffff;
   --muted: #8a8a9a; --border: rgba(255,255,255,0.1); --border-light: #e0ddd5;
-  --gold-lt: #faf3e0; --r: 14px; --r-sm: 8px;
+  --gold-lt: #faf3e0; --forest: #4a7c59; --r: 14px; --r-sm: 8px;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
@@ -42,28 +42,36 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 /* NAV */
 nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; align-items: center; justify-content: space-between; padding: 14px 52px; background: rgba(26,58,82,0.95); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
 
-/* HERO */
+/* ═══════════ HERO ═══════════ */
 .hero { min-height: 100vh; padding-top: 64px; display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; }
 .hero-left { display: flex; flex-direction: column; justify-content: center; padding: 80px 64px 80px 80px; background: var(--cream); }
-.eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); margin-bottom: 24px; }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); margin-bottom: 24px; opacity: 0; animation: fadeUp 0.6s ease forwards 0.1s; }
 .eyebrow-dot { width: 7px; height: 7px; background: var(--gold); border-radius: 50%; animation: pulse 2s ease-in-out infinite; flex-shrink: 0; }
 @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.6); } }
-.hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(2.6rem, 4.5vw, 4.2rem); line-height: 1.08; letter-spacing: -0.02em; color: var(--navy); margin-bottom: 24px; }
+.hero h1 { font-family: 'Playfair Display', serif; font-size: clamp(2.6rem, 4.5vw, 4.2rem); line-height: 1.08; letter-spacing: -0.02em; color: var(--navy); margin-bottom: 24px; text-wrap: balance; }
 .hero h1 em { color: var(--gold); font-style: italic; }
-.hero-sub { font-size: 1rem; line-height: 1.7; color: var(--muted); max-width: 420px; margin-bottom: 40px; }
+.hero h1 .hw { display: inline-block; opacity: 0; animation: fadeUp 0.5s ease forwards; }
+.hero h1 .hw:nth-child(1) { animation-delay: 0.15s; }
+.hero h1 .hw:nth-child(2) { animation-delay: 0.2s; }
+.hero h1 .hw:nth-child(3) { animation-delay: 0.25s; }
+.hero h1 .hw:nth-child(4) { animation-delay: 0.3s; }
+.hero h1 .hw:nth-child(5) { animation-delay: 0.35s; }
+.hero h1 .hw:nth-child(6) { animation-delay: 0.4s; }
+.hero-sub { font-size: 1rem; line-height: 1.7; color: var(--muted); max-width: 420px; margin-bottom: 40px; opacity: 0; animation: fadeUp 0.6s ease forwards 0.5s; }
 .router-label { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
 
-/* CONVERSATION FLOW */
+/* Conversation Flow */
 .convo-textarea { width: 100%; padding: 16px; border: 2px solid var(--border-light); border-radius: var(--r); background: var(--warm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.92rem; color: var(--navy); resize: none; outline: none; transition: border-color 0.2s; line-height: 1.6; margin-bottom: 14px; }
 .convo-textarea:focus { border-color: var(--gold); }
 .convo-textarea::placeholder { color: var(--muted); }
 .convo-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
-.convo-pill { padding: 8px 16px; border: 1.5px solid var(--border-light); border-radius: 50px; background: var(--warm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 600; color: var(--navy); cursor: pointer; transition: all 0.2s; }
-.convo-pill:hover { border-color: var(--gold); background: var(--gold-lt); }
+.convo-pill { padding: 8px 16px; border: 1.5px solid var(--border-light); border-radius: 50px; background: var(--warm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 600; color: var(--navy); cursor: pointer; transition: all 0.15s; }
+.convo-pill:hover { border-color: var(--gold); background: var(--gold-lt); transform: translateY(-2px); }
+.convo-pill:active { transform: translateY(0) scale(0.97); }
 .convo-pill.convo-special { border-color: rgba(196,154,60,0.5); background: var(--gold-lt); color: var(--gold); }
 .convo-pill.convo-special:hover { border-color: var(--gold); background: rgba(196,154,60,0.2); }
-.btn-begin { display: block; width: 100%; background: var(--navy); color: white; border: none; padding: 16px; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
-.btn-begin:hover { background: #244a66; }
+.btn-begin { display: block; width: 100%; background: var(--navy); color: white; border: none; padding: 16px; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.btn-begin:hover { background: #244a66; transform: translateY(-1px); }
 .convo-micro { font-size: 0.75rem; color: var(--muted); text-align: center; margin-top: 10px; }
 
 /* Chat bubbles */
@@ -95,84 +103,168 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
 
 @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-/* HERO RIGHT */
+/* Hero Right */
 .hero-right { background: var(--navy); position: relative; display: flex; flex-direction: column; justify-content: flex-end; padding: 52px; overflow: hidden; }
-.hero-bg-text { position: absolute; top: 10px; left: 0; font-family: 'Playfair Display', serif; font-size: clamp(9rem, 14vw, 18rem); font-weight: 900; line-height: 1; color: rgba(255,255,255,0.08); letter-spacing: -0.04em; pointer-events: none; user-select: none; }
-.hero-float-card { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: var(--r); padding: 28px; position: relative; z-index: 2; animation: float 7s ease-in-out infinite; margin-bottom: 16px; }
-@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.hero-bg-text { position: absolute; top: 10px; left: 0; font-family: 'Playfair Display', serif; font-size: clamp(9rem, 14vw, 18rem); font-weight: 900; line-height: 1; color: rgba(255,255,255,0.06); letter-spacing: -0.04em; pointer-events: none; user-select: none; transition: opacity 0.8s ease; }
+.hero-float-card { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: var(--r); padding: 28px; position: relative; z-index: 2; animation: float1 7s ease-in-out infinite; margin-bottom: 16px; }
+.hero-float-card-2 { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--r); padding: 22px; position: relative; z-index: 1; animation: float2 11s ease-in-out infinite; margin-bottom: 16px; max-width: 85%; margin-left: auto; }
+@keyframes float1 { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes float2 { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
 .card-label { font-size: 0.65rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
-.card-quote { font-family: 'Playfair Display', serif; font-style: italic; font-size: 1.1rem; color: rgba(255,255,255,0.9); line-height: 1.4; margin-bottom: 14px; }
+.card-quote { font-family: 'Playfair Display', serif; font-style: italic; font-size: 1.1rem; color: rgba(255,255,255,0.9); line-height: 1.4; margin-bottom: 14px; transition: opacity 0.4s ease; }
 .card-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); font-size: 0.68rem; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
 .hero-disclaimer { font-size: 0.7rem; color: rgba(255,255,255,0.5); line-height: 1.5; position: relative; z-index: 2; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; }
+.hero-disclaimer a { color: rgba(255,255,255,0.7); text-decoration: underline; }
 
-/* VALUES */
-.values-section { padding: 80px 80px; background: var(--navy); }
-.values-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 960px; margin: 0 auto; }
-.value-card { padding: 32px 24px; border: 1.5px solid rgba(255,255,255,0.12); border-radius: var(--r); transition: border-color 0.2s; }
-.value-card:hover { border-color: var(--gold); }
-.value-card h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--gold); margin-bottom: 10px; }
-.value-card p { font-size: 0.84rem; color: var(--muted); line-height: 1.65; }
+/* Mobile hero testimonial (hidden on desktop) */
+.mobile-testimonial { display: none; padding: 18px 24px; background: var(--navy); }
+.mobile-testimonial .card-quote { font-size: 0.92rem; margin-bottom: 0; text-align: center; }
 
-/* ARTICLES */
-.articles-section { padding: 80px 80px; background: var(--navy); }
-.section-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 36px; max-width: 1100px; margin-left: auto; margin-right: auto; }
-.section-title { font-family: 'Playfair Display', serif; font-size: clamp(1.8rem, 3vw, 2.6rem); color: var(--cream); line-height: 1.1; }
-.section-title em { color: var(--gold); font-style: italic; }
+/* ═══════════ SOCIAL PROOF BAR ═══════════ */
+.proof-bar { padding: 20px 52px; background: var(--warm); border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: center; gap: 32px; }
+.proof-item { font-size: 0.78rem; font-weight: 700; color: var(--navy); letter-spacing: 0.02em; white-space: nowrap; }
+.proof-item .proof-num { color: var(--gold); font-variant-numeric: tabular-nums; }
+.proof-divider { width: 1px; height: 18px; background: var(--border-light); flex-shrink: 0; }
+.proof-scroll { overflow: hidden; flex: 1; max-width: 400px; position: relative; }
+.proof-scroll::before, .proof-scroll::after { content: ''; position: absolute; top: 0; bottom: 0; width: 40px; z-index: 2; pointer-events: none; }
+.proof-scroll::before { left: 0; background: linear-gradient(90deg, var(--warm), transparent); }
+.proof-scroll::after { right: 0; background: linear-gradient(270deg, var(--warm), transparent); }
+.proof-scroll-inner { display: flex; gap: 12px; animation: scrollProof 30s linear infinite; width: max-content; }
+@keyframes scrollProof { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.proof-pill { padding: 4px 14px; border-radius: 50px; border: 1px solid var(--border-light); font-size: 0.7rem; font-weight: 600; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+
+/* ═══════════ HOW IT WORKS ═══════════ */
+.how-section { padding: 80px 80px; background: var(--cream); max-width: 900px; margin: 0 auto; }
+.how-section-full { padding: 80px 0; background: var(--cream); }
+.how-step { display: flex; gap: 28px; align-items: flex-start; margin-bottom: 40px; opacity: 0; transform: translateY(30px); transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+.how-step.visible { opacity: 1; transform: translateY(0); }
+.how-step:nth-child(2) { padding-left: 40px; transition-delay: 0.15s; }
+.how-step:nth-child(3) { padding-left: 80px; transition-delay: 0.3s; }
+.how-num { font-family: 'Playfair Display', serif; font-size: 3.5rem; font-weight: 900; color: var(--gold); line-height: 1; flex-shrink: 0; opacity: 0.35; min-width: 60px; }
+.how-text h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--navy); margin-bottom: 4px; }
+.how-text p { font-size: 0.88rem; color: var(--muted); line-height: 1.6; }
+
+/* ═══════════ FEATURED COACHES ═══════════ */
+.coaches-section { padding: 80px 52px; background: var(--navy); }
+.sec-header { max-width: 1100px; margin: 0 auto 40px; display: flex; align-items: flex-end; justify-content: space-between; }
+.sec-title { font-family: 'Playfair Display', serif; font-size: clamp(1.8rem, 3vw, 2.4rem); color: var(--cream); line-height: 1.1; }
+.sec-title em { color: var(--gold); font-style: italic; }
+.sec-link { font-size: 0.82rem; font-weight: 700; color: var(--gold); text-decoration: none; transition: opacity 0.2s; }
+.sec-link:hover { opacity: 0.8; }
+.coaches-scroll { max-width: 1100px; margin: 0 auto; display: flex; gap: 20px; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; padding-bottom: 8px; scrollbar-width: none; }
+.coaches-scroll::-webkit-scrollbar { display: none; }
+.coach-card { flex: 0 0 280px; scroll-snap-align: start; background: var(--cream); border-radius: var(--r); overflow: hidden; transition: transform 0.25s, box-shadow 0.25s; text-decoration: none; color: var(--navy); }
+.coach-card:hover { transform: translateY(-6px); box-shadow: 0 16px 40px rgba(0,0,0,0.2); }
+.coach-card-photo { width: 100%; height: 180px; background: var(--navy); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.coach-card-photo img { width: 100%; height: 100%; object-fit: cover; }
+.coach-card-initials { font-family: 'Playfair Display', serif; font-size: 2.8rem; font-weight: 900; color: var(--gold); }
+.coach-card-body { padding: 22px; }
+.coach-card-name { font-family: 'Playfair Display', serif; font-size: 1.05rem; margin-bottom: 4px; }
+.coach-card-headline { font-size: 0.78rem; color: var(--muted); line-height: 1.5; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.coach-card-pills { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
+.coach-card-pill { font-size: 0.62rem; font-weight: 700; background: var(--gold-lt); color: var(--gold); padding: 3px 9px; border-radius: 20px; }
+.coach-card-link { font-size: 0.78rem; font-weight: 700; color: var(--gold); }
+
+/* ═══════════ ARTICLES ═══════════ */
+.articles-section { padding: 80px 80px; background: var(--cream); }
+.articles-header { max-width: 1100px; margin: 0 auto; display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 36px; }
+.articles-title { font-family: 'Playfair Display', serif; font-size: clamp(1.8rem, 3vw, 2.4rem); color: var(--navy); line-height: 1.1; }
+.articles-title em { color: var(--gold); font-style: italic; }
 .filter-pills { display: flex; flex-wrap: wrap; gap: 8px; max-width: 1100px; margin: 0 auto 32px; }
-.filter-pill { padding: 8px 18px; border-radius: 50px; border: 1.5px solid rgba(255,255,255,0.12); background: transparent; color: var(--muted); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
-.filter-pill:hover { border-color: var(--gold); color: var(--cream); }
+.filter-pill { padding: 8px 18px; border-radius: 50px; border: 1.5px solid var(--border-light); background: var(--warm); color: var(--muted); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.filter-pill:hover { border-color: var(--gold); color: var(--navy); }
 .filter-pill.active { background: var(--gold); color: var(--navy); border-color: var(--gold); }
 .articles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 1100px; margin: 0 auto; }
-.article-card { display: block; padding: 28px 24px; border: 1.5px solid rgba(255,255,255,0.12); border-radius: var(--r); text-decoration: none; transition: all 0.25s; }
+.article-card { display: block; padding: 28px 24px; background: var(--warm); border: 1.5px solid var(--border-light); border-radius: var(--r); text-decoration: none; transition: all 0.25s; opacity: 0; transform: translateY(20px); }
+.article-card.visible { opacity: 1; transform: translateY(0); }
 .article-card:hover { border-color: var(--gold); transform: translateY(-4px); box-shadow: 0 12px 36px rgba(196,154,60,0.08); }
 .article-card .card-category { font-size: 0.63rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
-.article-card .card-title { font-size: 0.95rem; font-weight: 700; color: var(--cream); line-height: 1.4; margin-bottom: 8px; }
+.article-card .card-title { font-size: 0.95rem; font-weight: 700; color: var(--navy); line-height: 1.4; margin-bottom: 8px; }
 .article-card .card-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.6; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .article-card .card-read { font-size: 0.75rem; font-weight: 700; color: var(--gold); }
 
-/* COMMONS */
+/* ═══════════ THE COMMONS ═══════════ */
 .commons-section { padding: 80px 80px; background: var(--navy); }
-.commons-card { max-width: 800px; margin: 0 auto; background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.12); border-radius: var(--r); padding: 48px; text-align: center; transition: border-color 0.2s; }
-.commons-card:hover { border-color: var(--gold); }
-.commons-card .sec-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 0.63rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin-bottom: 16px; }
-.commons-card .sec-eyebrow-dot { width: 7px; height: 7px; background: var(--gold); border-radius: 50%; animation: pulse 2s ease-in-out infinite; }
-.commons-card h2 { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--cream); margin-bottom: 12px; line-height: 1.2; }
-.commons-card h2 em { color: var(--gold); font-style: italic; }
-.commons-card p { font-size: 0.9rem; color: var(--muted); line-height: 1.7; margin-bottom: 28px; max-width: 520px; margin-left: auto; margin-right: auto; }
+.commons-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+.commons-text .sec-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 0.63rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin-bottom: 16px; }
+.sec-eyebrow-dot { width: 7px; height: 7px; background: var(--gold); border-radius: 50%; animation: pulse 2s ease-in-out infinite; }
+.commons-text h2 { font-family: 'Playfair Display', serif; font-size: clamp(1.6rem, 3vw, 2.2rem); color: var(--cream); margin-bottom: 14px; line-height: 1.15; }
+.commons-text h2 em { color: var(--gold); font-style: italic; }
+.commons-text p { font-size: 0.9rem; color: var(--muted); line-height: 1.7; margin-bottom: 28px; max-width: 440px; }
 .btn-secondary { display: inline-flex; align-items: center; gap: 8px; background: var(--gold); color: var(--navy); padding: 14px 32px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem; font-weight: 700; text-decoration: none; border: none; cursor: pointer; transition: all 0.2s; }
 .btn-secondary:hover { background: #d4a94c; transform: translateY(-2px); }
+.commons-feed { display: flex; flex-direction: column; gap: 12px; }
+.commons-post { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--r-sm); padding: 18px 20px; transition: border-color 0.2s; }
+.commons-post:first-child { border-color: rgba(196,154,60,0.3); }
+.commons-post-type { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
+.commons-post-text { font-size: 0.85rem; color: rgba(255,255,255,0.75); line-height: 1.55; margin-bottom: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.commons-post-time { font-size: 0.68rem; color: var(--muted); }
 
-/* SPRIXLE */
-.sprixle-section { padding: 0 80px 80px; background: var(--navy); }
-.sprixle-card { max-width: 800px; margin: 0 auto; background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.12); border-radius: var(--r); padding: 48px; text-align: center; transition: border-color 0.2s; }
-.sprixle-card:hover { border-color: var(--gold); }
-.sprixle-card .sec-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 0.63rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin-bottom: 16px; }
-.sprixle-card .sec-eyebrow-dot { width: 7px; height: 7px; background: var(--gold); border-radius: 50%; }
-.sprixle-card h2 { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--cream); margin-bottom: 12px; line-height: 1.2; }
-.sprixle-card h2 em { color: var(--gold); font-style: italic; }
-.sprixle-card p { font-size: 0.9rem; color: var(--muted); line-height: 1.7; margin-bottom: 28px; max-width: 520px; margin-left: auto; margin-right: auto; }
+/* ═══════════ FOR COACHES ═══════════ */
+.forcoaches-section { padding: 80px 80px; background: var(--cream); }
+.forcoaches-grid { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 1.2fr 1fr; gap: 48px; align-items: center; }
+.forcoaches-text h2 { font-family: 'Playfair Display', serif; font-size: clamp(1.6rem, 3vw, 2.2rem); color: var(--navy); margin-bottom: 20px; line-height: 1.15; }
+.forcoaches-text h2 em { color: var(--gold); font-style: italic; }
+.forcoaches-list { list-style: none; margin-bottom: 28px; }
+.forcoaches-list li { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; font-size: 0.9rem; color: var(--navy); line-height: 1.5; }
+.forcoaches-list li span { color: var(--gold); font-weight: 800; flex-shrink: 0; margin-top: 2px; }
+.forcoaches-cta { background: var(--navy); border-radius: var(--r); padding: 36px; text-align: center; }
+.forcoaches-cta .price-tag { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
+.forcoaches-cta .price { font-family: 'Playfair Display', serif; font-size: 2.8rem; font-weight: 900; color: var(--cream); line-height: 1; margin-bottom: 4px; }
+.forcoaches-cta .price-sub { font-size: 0.82rem; color: var(--muted); margin-bottom: 6px; }
+.forcoaches-cta .price-lock { display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem; font-weight: 700; color: var(--gold); background: rgba(196,154,60,0.12); padding: 5px 14px; border-radius: 50px; margin-bottom: 22px; }
+.forcoaches-cta a { display: block; background: var(--gold); color: var(--navy); padding: 14px 28px; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; font-weight: 700; text-decoration: none; transition: all 0.2s; }
+.forcoaches-cta a:hover { background: #d4a94c; }
 
-/* FOOTER */
-footer { padding: 40px 80px; border-top: 1px solid rgba(255,255,255,0.1); background: var(--navy); display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
-.footer-logo { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--cream); text-decoration: none; }
+/* ═══════════ FOOTER ═══════════ */
+footer { padding: 48px 80px 32px; background: var(--navy); border-top: 1px solid var(--border); }
+.footer-grid { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 40px; margin-bottom: 32px; }
+.footer-brand { }
+.footer-logo { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--cream); text-decoration: none; display: block; margin-bottom: 10px; }
+.footer-brand p { font-size: 0.82rem; color: var(--muted); line-height: 1.6; max-width: 280px; }
+.footer-col h4 { font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); margin-bottom: 14px; }
+.footer-col a { display: block; font-size: 0.82rem; color: var(--muted); text-decoration: none; padding: 4px 0; transition: color 0.2s; }
+.footer-col a:hover { color: var(--gold); }
+.footer-bottom { max-width: 900px; margin: 0 auto; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
 .footer-note { font-size: 0.72rem; color: var(--muted); }
 .footer-note a { color: var(--gold); text-decoration: none; }
-.footer-links { display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; margin-top: 4px; }
-.footer-links a { font-size: 0.72rem; color: var(--muted); text-decoration: none; transition: color 0.2s; }
-.footer-links a:hover { color: var(--gold); }
-.footer-crisis { font-size: 0.68rem; color: var(--muted); margin-top: 4px; }
+.footer-crisis { font-size: 0.68rem; color: var(--muted); }
 
+/* ═══════════ SCROLL REVEAL ═══════════ */
+.reveal { opacity: 0; transform: translateY(30px); transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+/* ═══════════ RESPONSIVE ═══════════ */
 @media (max-width: 900px) {
   nav { padding: 12px 20px; }
   .hero { grid-template-columns: 1fr; }
   .hero-left { padding: 80px 24px 40px; }
   .hero-right { display: none; }
-  .values-section, .articles-section, .commons-section, .sprixle-section { padding: 60px 24px; }
+  .mobile-testimonial { display: block; }
+  .proof-bar { padding: 16px 20px; gap: 16px; flex-wrap: wrap; justify-content: center; }
+  .proof-scroll { display: none; }
+  .how-section { padding: 60px 24px; }
+  .how-step, .how-step:nth-child(2), .how-step:nth-child(3) { padding-left: 0; }
+  .coaches-section, .articles-section, .commons-section, .forcoaches-section { padding: 60px 24px; }
   .articles-grid { grid-template-columns: 1fr; }
-  .values-grid { grid-template-columns: 1fr; }
-  .section-header { flex-direction: column; align-items: flex-start; gap: 16px; }
-  footer { padding: 32px 24px; }
+  .commons-grid { grid-template-columns: 1fr; }
+  .forcoaches-grid { grid-template-columns: 1fr; }
+  .footer-grid { grid-template-columns: 1fr; gap: 28px; }
+  footer { padding: 40px 24px 24px; }
+  .footer-bottom { flex-direction: column; text-align: center; }
+  .sec-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .articles-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+}
+@media (max-width: 600px) {
+  .nav-links a:not(.nav-pill) { display: none; }
+  .how-num { font-size: 2.5rem; min-width: 44px; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  .proof-scroll-inner { animation: none; }
 }
 </style>
 </head>
@@ -191,11 +283,11 @@ footer { padding: 40px 80px; border-top: 1px solid rgba(255,255,255,0.1); backgr
   </div>
 </nav>
 
-<!-- HERO -->
+<!-- ═══════════ HERO ═══════════ -->
 <section class="hero">
   <div class="hero-left">
     <div class="eyebrow"><span class="eyebrow-dot"></span> Coaching Marketplace</div>
-    <h1>Find the support<br>that fits where<br>you <em>are.</em></h1>
+    <h1><span class="hw">Find </span><span class="hw">the </span><span class="hw">support</span><br><span class="hw">that </span><span class="hw">fits </span><span class="hw">where</span><br><span class="hw">you </span><em class="hw">are.</em></h1>
     <p class="hero-sub">Tell us what brought you here. We will point you toward a coach, a course, or a resource that actually fits where you are right now.</p>
     <div class="router-label">What brings you here today?</div>
     <div id="convo-flow">
@@ -217,7 +309,7 @@ footer { padding: 40px 80px; border-top: 1px solid rgba(255,255,255,0.1); backgr
     </div>
   </div>
   <div class="hero-right">
-    <div class="hero-bg-text">GROW</div>
+    <div class="hero-bg-text" id="hero-bg-word">GROW</div>
     <div class="hero-float-card">
       <div class="card-label">Someone is searching right now...</div>
       <div class="card-quote" id="rotating-quote">"I have been doing everything right on paper, but something still feels off."</div>
@@ -225,32 +317,71 @@ footer { padding: 40px 80px; border-top: 1px solid rgba(255,255,255,0.1); backgr
         <span class="chip">Leadership</span><span class="chip">Career Change</span><span class="chip">Burnout</span><span class="chip">Growth</span>
       </div>
     </div>
-    <div class="hero-disclaimer">This is not a clinical tool. We do not store your responses. Need mental health support? Visit <a href="https://www.ineedtherapy.org" style="color:rgba(255,255,255,0.7);text-decoration:underline;">ineedtherapy.org</a>.</div>
+    <div class="hero-float-card-2">
+      <div class="card-quote" style="font-size:0.95rem;margin-bottom:0;" id="rotating-quote-2">"I keep waiting for the right time to make a change. It never comes."</div>
+    </div>
+    <div class="hero-disclaimer">This is not a clinical tool. We do not store your responses. Need mental health support? Visit <a href="https://www.ineedtherapy.org">ineedtherapy.org</a>.</div>
   </div>
 </section>
 
-<!-- VALUES -->
-<section class="values-section">
-  <div class="values-grid">
-    <div class="value-card">
-      <h3>No commissions.</h3>
-      <p>You keep what you earn. We connect. You handle the rest.</p>
+<!-- Mobile testimonial (visible only on mobile when hero-right is hidden) -->
+<div class="mobile-testimonial">
+  <div class="card-quote" id="mobile-quote">"I have been doing everything right on paper, but something still feels off."</div>
+</div>
+
+<!-- ═══════════ SOCIAL PROOF BAR ═══════════ -->
+<div class="proof-bar">
+  <span class="proof-item"><span class="proof-num" id="coach-count">0</span> coaches and growing</span>
+  <span class="proof-divider"></span>
+  <span class="proof-item">Zero commissions, ever</span>
+  <span class="proof-divider"></span>
+  <div class="proof-scroll">
+    <div class="proof-scroll-inner" id="proof-pills"></div>
+  </div>
+</div>
+
+<!-- ═══════════ HOW IT WORKS ═══════════ -->
+<section class="how-section-full">
+  <div class="how-section">
+    <div class="how-step">
+      <div class="how-num">01</div>
+      <div class="how-text">
+        <h3>Tell us what you're looking for</h3>
+        <p>In your own words. No signup needed.</p>
+      </div>
     </div>
-    <div class="value-card">
-      <h3>No algorithms.</h3>
-      <p>No ranking. No pay-to-play. Every coach gets seen.</p>
+    <div class="how-step">
+      <div class="how-num">02</div>
+      <div class="how-text">
+        <h3>We match you with the right path</h3>
+        <p>A coach, a course, or a resource that fits.</p>
+      </div>
     </div>
-    <div class="value-card">
-      <h3>Just real people.</h3>
-      <p>Finding each other. That is how it should work.</p>
+    <div class="how-step">
+      <div class="how-num">03</div>
+      <div class="how-text">
+        <h3>Take the first step</h3>
+        <p>Book a session, start a course, or just keep reading.</p>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- ARTICLES -->
+<!-- ═══════════ FEATURED COACHES ═══════════ -->
+<section class="coaches-section">
+  <div class="sec-header">
+    <h2 class="sec-title">Coaches who are <em>ready.</em></h2>
+    <a href="/coaches.html" class="sec-link">Browse all &rarr;</a>
+  </div>
+  <div class="coaches-scroll" id="coaches-scroll">
+    <p style="color:var(--muted);font-size:0.85rem;padding:20px;">Loading coaches...</p>
+  </div>
+</section>
+
+<!-- ═══════════ ARTICLES ═══════════ -->
 <section class="articles-section" id="articles">
-  <div class="section-header">
-    <h2 class="section-title">Articles for <em>coaches</em></h2>
+  <div class="articles-header">
+    <h2 class="articles-title">Worth <em>reading.</em></h2>
   </div>
   <div class="filter-pills" id="filter-pills">
     <button class="filter-pill active" data-cat="all">All</button>
@@ -264,49 +395,95 @@ footer { padding: 40px 80px; border-top: 1px solid rgba(255,255,255,0.1); backgr
   </div>
 </section>
 
-<!-- THE COMMONS -->
+<!-- ═══════════ THE COMMONS ═══════════ -->
 <section class="commons-section">
-  <div class="commons-card">
-    <div class="sec-eyebrow"><span class="sec-eyebrow-dot"></span> The Commons</div>
-    <h2>Find your match on <em>The Commons</em></h2>
-    <p>The shared request board across all ineed sites. Real people posting what they need. Real providers responding. No middleman.</p>
-    <a href="/coaching-commons.html" class="btn-secondary">Browse The Commons &rarr;</a>
+  <div class="commons-grid">
+    <div class="commons-text reveal">
+      <div class="sec-eyebrow"><span class="sec-eyebrow-dot"></span> The Commons</div>
+      <h2>People are posting what they <em>need.</em> Right now.</h2>
+      <p>The shared request board across all ineed sites. Real people posting what they need. Real providers responding. No middleman.</p>
+      <a href="/coaching-commons.html" class="btn-secondary">Browse The Commons &rarr;</a>
+    </div>
+    <div class="commons-feed reveal" id="commons-feed">
+      <div class="commons-post">
+        <div class="commons-post-type">Looking for a coach</div>
+        <div class="commons-post-text">Loading recent posts...</div>
+      </div>
+    </div>
   </div>
 </section>
 
-<!-- SPRIXLE -->
-<section class="sprixle-section">
-  <div class="sprixle-card">
-    <div class="sec-eyebrow"><span class="sec-eyebrow-dot"></span> Sprixle</div>
-    <h2>Continue your journey on <em>Sprixle</em></h2>
-    <p>Private journaling, pattern tracking, and AI companion. Free to start.</p>
-    <a href="https://www.sprixle.com" target="_blank" class="btn-secondary">Try Sprixle &rarr;</a>
+<!-- ═══════════ FOR COACHES ═══════════ -->
+<section class="forcoaches-section">
+  <div class="forcoaches-grid">
+    <div class="reveal">
+      <h2>If you're a coach, this is <em>your</em> platform.</h2>
+      <ul class="forcoaches-list">
+        <li><span>&#10003;</span> No commissions on your sessions. You keep what you earn.</li>
+        <li><span>&#10003;</span> Professional profile with booking, intake forms, and messaging.</li>
+        <li><span>&#10003;</span> Courses, articles, and tools to grow your practice.</li>
+        <li><span>&#10003;</span> Get discovered by clients looking for exactly what you offer.</li>
+      </ul>
+    </div>
+    <div class="forcoaches-cta reveal">
+      <div class="price-tag">Founding Rate</div>
+      <div class="price">$47</div>
+      <div class="price-sub">per month</div>
+      <div class="price-lock">&#x1F512; Locked for life</div>
+      <a href="/coach-signup.html">List Your Practice &rarr;</a>
+    </div>
   </div>
 </section>
 
-<!-- FOOTER -->
+<!-- ═══════════ FOOTER ═══════════ -->
 <footer>
-  <a class="footer-logo" href="/"><span style="color:var(--gold);font-style:italic;">i</span>need<span style="color:var(--gold);font-style:italic;">coaching</span>.org</a>
-  <div class="footer-links">
-    <a href="/coaches.html">Coaches</a>
-    <a href="/sessions.html">Sessions</a>
-    <a href="/coach-courses.html">Courses</a>
-    <a href="/#articles">Articles</a>
-    <a href="/coaching-commons.html">Commons</a>
-    <a href="/coach-dashboard.html">Dashboard</a>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a class="footer-logo" href="/"><span style="color:var(--gold);font-style:italic;">i</span>need<span style="color:var(--gold);font-style:italic;">coaching</span>.org</a>
+      <p>A coaching marketplace where real people find each other. No commissions. No algorithms.</p>
+    </div>
+    <div class="footer-col">
+      <h4>For Clients</h4>
+      <a href="/coaches.html">Find a Coach</a>
+      <a href="/sessions.html">Browse Sessions</a>
+      <a href="/coach-courses.html">Courses</a>
+      <a href="/#articles">Articles</a>
+      <a href="/coaching-commons.html">The Commons</a>
+    </div>
+    <div class="footer-col">
+      <h4>For Coaches</h4>
+      <a href="/coach-signup.html">List Your Practice</a>
+      <a href="/coach-dashboard.html">Coach Dashboard</a>
+      <a href="/proposal-builder.html">Proposal Builder</a>
+    </div>
   </div>
-  <p class="footer-note">A project from <a href="https://www.ineedtherapy.org">ineedtherapy.org</a></p>
-  <p class="footer-crisis">Not a crisis service — In crisis? Call or text 988</p>
+  <div class="footer-bottom">
+    <p class="footer-note">A project from <a href="https://www.ineedtherapy.org">ineedtherapy.org</a></p>
+    <p class="footer-crisis">Not a crisis service. In crisis? Call or text 988</p>
+  </div>
 </footer>
 
 <script>
 var SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
 var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
 
-/* ── Conversation state ── */
+/* ═══════════ SCROLL REVEAL ═══════════ */
+var observer = new IntersectionObserver(function(entries) {
+  entries.forEach(function(entry) {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.15 });
+
+document.querySelectorAll('.reveal, .how-step').forEach(function(el) {
+  observer.observe(el);
+});
+
+/* ═══════════ CONVERSATION STATE ═══════════ */
 var convoState = { input: '', intent: '', step: 0, followUpAnswers: [], notQuiteCount: 0 };
 
-/* ── Intent detection ── */
 var intentKeywords = {
   stuck: ['stuck', 'stagnant', 'lost', 'direction', 'unclear', 'confused', 'same'],
   leader: ['leader', 'leadership', 'lead', 'manage', 'executive', 'influence', 'strategic'],
@@ -321,19 +498,13 @@ function detectIntent(text) {
   var scores = {};
   for (var key in intentKeywords) {
     scores[key] = 0;
-    intentKeywords[key].forEach(function(kw) {
-      if (lower.indexOf(kw) !== -1) scores[key]++;
-    });
+    intentKeywords[key].forEach(function(kw) { if (lower.indexOf(kw) !== -1) scores[key]++; });
   }
-  var best = 'stuck';
-  var max = 0;
-  for (var k in scores) {
-    if (scores[k] > max) { max = scores[k]; best = k; }
-  }
+  var best = 'stuck', max = 0;
+  for (var k in scores) { if (scores[k] > max) { max = scores[k]; best = k; } }
   return best;
 }
 
-/* ── Follow-up questions per intent ── */
 var followUps = {
   stuck: { q: 'What does stuck feel like for you right now?', opts: ['I keep doing the same things expecting different results', 'I know something needs to change but I cannot name it', 'I have lost the motivation I used to have', 'I feel like I am performing but not actually living'] },
   leader: { q: 'What would feel different if you had support?', opts: ['I would make better decisions', 'I would communicate more clearly', 'I would finally feel confident in my role', 'I would have someone in my corner'] },
@@ -343,7 +514,6 @@ var followUps = {
   business: { q: 'What is your organization looking for?', opts: ['Executive coaching for a leader or leadership team', 'A workshop or training program', 'A leadership retreat or offsite', 'A keynote or speaking engagement', 'We have a specific need'] }
 };
 
-/* ── Reflections (hardcoded per intent) ── */
 var reflections = {
   stuck: 'It sounds like you have been carrying something that does not have a name yet. That is not a character flaw. Sometimes the clearest sign you need support is the feeling that something is off but you cannot point to exactly what.',
   burnout: 'Running on empty for too long is not laziness. It is what happens when high-performing people give everything and quietly wonder when it will be their turn to be refueled.',
@@ -353,20 +523,20 @@ var reflections = {
   business: 'Finding the right support for your team takes clarity about what you actually need. Let us help you get there.'
 };
 var businessReflections = {
-  'Executive coaching for a leader or leadership team': 'It sounds like your organization has a leader — or a team of leaders — who would benefit from focused one-on-one support. That kind of investment pays for itself in clearer decisions and stronger culture.',
+  'Executive coaching for a leader or leadership team': 'It sounds like your organization has a leader, or a team of leaders, who would benefit from focused one-on-one support. That kind of investment pays for itself in clearer decisions and stronger culture.',
   'A workshop or training program': 'A well-designed workshop can shift how an entire team thinks and works together. The coaches on this platform specialize in exactly that.',
-  'A leadership retreat or offsite': 'Leadership retreats do something workshops cannot — they create space to think without interruption. That is rare and valuable.',
+  'A leadership retreat or offsite': 'Leadership retreats do something workshops cannot. They create space to think without interruption. That is rare and valuable.',
   'A keynote or speaking engagement': 'The right voice in a room can change the energy of an entire organization. We have coaches who do this well.',
   'We have a specific need': 'Every organization is different. Let us help you find exactly the right fit for what you need.'
 };
 
-/* ── Rotating quotes ── */
+/* ═══════════ ROTATING QUOTES ═══════════ */
 var quotes = [
-  { text: '"I have been doing everything right on paper, but something still feels off."', chips: ['Leadership', 'Career Change', 'Burnout', 'Growth'] },
-  { text: '"I keep waiting for the right time to make a change. It never comes."', chips: ['Transition', 'Clarity', 'Purpose', 'Momentum'] },
-  { text: '"Everyone thinks I have it together. I am not so sure anymore."', chips: ['Leadership', 'Burnout', 'Identity', 'Confidence'] },
-  { text: '"I want to be great at what I do, not just good enough."', chips: ['Performance', 'Development', 'Mastery', 'Growth'] },
-  { text: '"My team needs something. I am just not sure what yet."', chips: ['Team', 'Culture', 'Workshop', 'Strategy'] }
+  { text: '"I have been doing everything right on paper, but something still feels off."', chips: ['Leadership', 'Career Change', 'Burnout', 'Growth'], bg: 'GROW' },
+  { text: '"I keep waiting for the right time to make a change. It never comes."', chips: ['Transition', 'Clarity', 'Purpose', 'Momentum'], bg: 'LEAD' },
+  { text: '"Everyone thinks I have it together. I am not so sure anymore."', chips: ['Leadership', 'Burnout', 'Identity', 'Confidence'], bg: 'HEAL' },
+  { text: '"I want to be great at what I do, not just good enough."', chips: ['Performance', 'Development', 'Mastery', 'Growth'], bg: 'BUILD' },
+  { text: '"My team needs something. I am just not sure what yet."', chips: ['Team', 'Culture', 'Workshop', 'Strategy'], bg: 'GROW' }
 ];
 var quoteIndex = 0;
 setInterval(function() {
@@ -374,226 +544,133 @@ setInterval(function() {
   var q = quotes[quoteIndex];
   var el = document.getElementById('rotating-quote');
   var ch = document.getElementById('rotating-chips');
+  var bg = document.getElementById('hero-bg-word');
+  var q2 = document.getElementById('rotating-quote-2');
+  var mq = document.getElementById('mobile-quote');
   if (el) el.style.opacity = 0;
+  if (q2) q2.style.opacity = 0;
   setTimeout(function() {
     if (el) { el.textContent = q.text; el.style.opacity = 1; }
     if (ch) ch.innerHTML = q.chips.map(function(c) { return '<span class="chip">' + c + '</span>'; }).join('');
+    if (bg) { bg.style.opacity = 0; setTimeout(function() { bg.textContent = q.bg; bg.style.opacity = 1; }, 200); }
+    var next = quotes[(quoteIndex + 1) % quotes.length];
+    if (q2) { q2.textContent = next.text; q2.style.opacity = 1; }
+    if (mq) mq.textContent = q.text;
   }, 400);
 }, 6000);
 
-/* ── Pill / textarea logic ── */
-function fillConvo(text) {
-  document.getElementById('convo-input').value = text;
-  togglePills();
-}
+/* ═══════════ CONVERSATION FLOW ═══════════ */
+function fillConvo(text) { document.getElementById('convo-input').value = text; togglePills(); }
+function togglePills() { var val = document.getElementById('convo-input').value.trim(); document.getElementById('convo-pills').style.display = val.length > 0 ? 'none' : 'flex'; }
 
-function togglePills() {
-  var val = document.getElementById('convo-input').value.trim();
-  var pills = document.getElementById('convo-pills');
-  pills.style.display = val.length > 0 ? 'none' : 'flex';
-}
-
-/* ── Begin conversation ── */
 function beginConvo() {
   var input = document.getElementById('convo-input').value.trim();
   if (!input) { document.getElementById('convo-input').focus(); return; }
-  convoState.input = input;
-  convoState.intent = detectIntent(input);
-  convoState.step = 1;
-  convoState.notQuiteCount = 0;
-  convoState.followUpAnswers = [];
-
+  convoState.input = input; convoState.intent = detectIntent(input); convoState.step = 1; convoState.notQuiteCount = 0; convoState.followUpAnswers = [];
   document.getElementById('convo-input-phase').style.display = 'none';
-  var chat = document.getElementById('convo-chat');
-  chat.style.display = 'block';
-  chat.innerHTML = '';
-
-  addBubble('user', input);
-  showFollowUp1();
+  var chat = document.getElementById('convo-chat'); chat.style.display = 'block'; chat.innerHTML = '';
+  addBubble('user', input); showFollowUp1();
 }
+function addBubble(type, text) { var chat = document.getElementById('convo-chat'); var div = document.createElement('div'); div.className = 'chat-bubble chat-' + type; div.innerHTML = text; chat.appendChild(div); div.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+function addLoading() { var chat = document.getElementById('convo-chat'); var div = document.createElement('div'); div.className = 'chat-loading'; div.id = 'chat-loading'; div.innerHTML = '<div class="ldot"></div><div class="ldot"></div><div class="ldot"></div><span>Sitting with what you shared...</span>'; chat.appendChild(div); div.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+function removeLoading() { var el = document.getElementById('chat-loading'); if (el) el.remove(); }
 
-function addBubble(type, text) {
-  var chat = document.getElementById('convo-chat');
-  var div = document.createElement('div');
-  div.className = 'chat-bubble chat-' + type;
-  div.innerHTML = text;
-  chat.appendChild(div);
-  div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
+function showFollowUp1() { var fu = followUps[convoState.intent]; setTimeout(function() { addBubble('system', fu.q); var opts = document.createElement('div'); opts.className = 'chat-options'; fu.opts.forEach(function(opt) { var btn = document.createElement('button'); btn.className = 'chat-option'; btn.textContent = opt; btn.onclick = function() { answerFollowUp1(opt); }; opts.appendChild(btn); }); document.getElementById('convo-chat').appendChild(opts); opts.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 600); }
+function answerFollowUp1(answer) { convoState.followUpAnswers.push(answer); convoState.followUp1 = answer; document.querySelectorAll('.chat-options').forEach(function(el) { el.remove(); }); addBubble('user', answer); setTimeout(function() { addBubble('system', 'Thank you for sharing that. One more thing...'); setTimeout(showFollowUp2, 300); }, 300); }
+function showFollowUp2() { setTimeout(function() { var isBusiness = convoState.intent === 'business'; var question = isBusiness ? 'How soon is your organization looking to get started?' : 'How long have you been sitting with this?'; var options = isBusiness ? ['We have an immediate need — within 30 days', 'We are planning ahead — 1 to 3 months out', 'We are still in early planning stages', 'We are exploring our options for now'] : ['Days or weeks', 'Months', 'Years, honestly', 'I am not sure when it started']; addBubble('system', question); var opts = document.createElement('div'); opts.className = 'chat-options'; options.forEach(function(opt) { var btn = document.createElement('button'); btn.className = 'chat-option'; btn.textContent = opt; btn.onclick = function() { answerFollowUp2(opt); }; opts.appendChild(btn); }); document.getElementById('convo-chat').appendChild(opts); opts.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 600); }
+function answerFollowUp2(answer) { convoState.followUpAnswers.push(answer); document.querySelectorAll('.chat-options').forEach(function(el) { el.remove(); }); addBubble('user', answer); setTimeout(function() { addLoading(); setTimeout(function() { removeLoading(); var reflection = convoState.intent === 'business' && convoState.followUp1 ? (businessReflections[convoState.followUp1] || reflections.business) : (reflections[convoState.intent] || reflections.stuck); addBubble('system', reflection); setTimeout(function() { addBubble('system', 'Does this feel close?'); showYesNotQuite(); }, 600); }, 1200); }, 300); }
 
-function addLoading() {
-  var chat = document.getElementById('convo-chat');
-  var div = document.createElement('div');
-  div.className = 'chat-loading';
-  div.id = 'chat-loading';
-  div.innerHTML = '<div class="ldot"></div><div class="ldot"></div><div class="ldot"></div><span>Sitting with what you shared...</span>';
-  chat.appendChild(div);
-  div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
+function showYesNotQuite() { var chat = document.getElementById('convo-chat'); var row = document.createElement('div'); row.className = 'chat-btn-row'; row.innerHTML = '<button class="chat-btn chat-btn-yes" onclick="mirrorYes()">Yes</button><button class="chat-btn chat-btn-no" onclick="mirrorNotQuite()">Not quite</button>'; chat.appendChild(row); row.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+function mirrorYes() { document.querySelectorAll('.chat-btn-row').forEach(function(el) { el.remove(); }); convoState.step = 3; addBubble('system', 'Okay. I am with you.'); setTimeout(function() { addBubble('system', 'Based on what you shared, here are three ways to move forward:'); setTimeout(showThreePaths, 600); }, 800); }
+function mirrorNotQuite() { convoState.notQuiteCount++; document.querySelectorAll('.chat-btn-row').forEach(function(el) { el.remove(); }); addBubble('system', 'That is okay. Can you tell me more about what feels off?'); var chat = document.getElementById('convo-chat'); var ta = document.createElement('textarea'); ta.className = 'chat-journal'; ta.id = 'notquite-ta'; ta.placeholder = 'Say more here...'; chat.appendChild(ta); ta.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); ta.addEventListener('keydown', function(e) { if (e.key === 'Enter' && !e.shiftKey && ta.value.trim().length > 3) { e.preventDefault(); submitNotQuite(ta.value.trim()); } }); setTimeout(function() { if (document.getElementById('notquite-ta')) { var btn = document.createElement('button'); btn.className = 'btn-begin'; btn.id = 'notquite-btn'; btn.textContent = 'Continue \u2192'; btn.style.cssText = 'margin-top:8px;'; btn.onclick = function() { var v = ta.value.trim(); if (v.length > 0) submitNotQuite(v); }; chat.appendChild(btn); } }, 2000); }
+function submitNotQuite(text) { var ta = document.getElementById('notquite-ta'); var btn = document.getElementById('notquite-btn'); if (ta) ta.remove(); if (btn) btn.remove(); convoState.followUpAnswers.push(text); addBubble('user', text); setTimeout(function() { addBubble('system', 'Thank you for sharing that. Here are three paths that might help:'); setTimeout(showThreePaths, 600); }, 600); }
 
-function removeLoading() {
-  var el = document.getElementById('chat-loading');
-  if (el) el.remove();
-}
-
-/* ── Follow-up 1: intent-based question ── */
-function showFollowUp1() {
-  var fu = followUps[convoState.intent];
-  setTimeout(function() {
-    addBubble('system', fu.q);
-    var opts = document.createElement('div');
-    opts.className = 'chat-options';
-    fu.opts.forEach(function(opt) {
-      var btn = document.createElement('button');
-      btn.className = 'chat-option';
-      btn.textContent = opt;
-      btn.onclick = function() { answerFollowUp1(opt); };
-      opts.appendChild(btn);
-    });
-    document.getElementById('convo-chat').appendChild(opts);
-    opts.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, 600);
-}
-
-function answerFollowUp1(answer) {
-  convoState.followUpAnswers.push(answer);
-  convoState.followUp1 = answer;
-  document.querySelectorAll('.chat-options').forEach(function(el) { el.remove(); });
-  addBubble('user', answer);
-  setTimeout(function() {
-    addBubble('system', 'Thank you for sharing that. One more thing...');
-    setTimeout(showFollowUp2, 300);
-  }, 300);
-}
-
-/* ── Follow-up 2: timeline ── */
-function showFollowUp2() {
-  setTimeout(function() {
-    var isBusiness = convoState.intent === 'business';
-    var question = isBusiness ? 'How soon is your organization looking to get started?' : 'How long have you been sitting with this?';
-    var options = isBusiness
-      ? ['We have an immediate need — within 30 days', 'We are planning ahead — 1 to 3 months out', 'We are still in early planning stages', 'We are exploring our options for now']
-      : ['Days or weeks', 'Months', 'Years, honestly', 'I am not sure when it started'];
-    addBubble('system', question);
-    var opts = document.createElement('div');
-    opts.className = 'chat-options';
-    options.forEach(function(opt) {
-      var btn = document.createElement('button');
-      btn.className = 'chat-option';
-      btn.textContent = opt;
-      btn.onclick = function() { answerFollowUp2(opt); };
-      opts.appendChild(btn);
-    });
-    document.getElementById('convo-chat').appendChild(opts);
-    opts.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, 600);
-}
-
-function answerFollowUp2(answer) {
-  convoState.followUpAnswers.push(answer);
-  document.querySelectorAll('.chat-options').forEach(function(el) { el.remove(); });
-  addBubble('user', answer);
-  setTimeout(function() {
-    addLoading();
-    setTimeout(function() {
-      removeLoading();
-      var reflection = convoState.intent === 'business' && convoState.followUp1 ? (businessReflections[convoState.followUp1] || reflections.business) : (reflections[convoState.intent] || reflections.stuck);
-      addBubble('system', reflection);
-      setTimeout(function() {
-        addBubble('system', 'Does this feel close?');
-        showYesNotQuite();
-      }, 600);
-    }, 1200);
-  }, 300);
-}
-
-/* ── Yes / Not quite ── */
-function showYesNotQuite() {
-  var chat = document.getElementById('convo-chat');
-  var row = document.createElement('div');
-  row.className = 'chat-btn-row';
-  row.innerHTML = '<button class="chat-btn chat-btn-yes" onclick="mirrorYes()">Yes</button>' +
-    '<button class="chat-btn chat-btn-no" onclick="mirrorNotQuite()">Not quite</button>';
-  chat.appendChild(row);
-  row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-function mirrorYes() {
-  document.querySelectorAll('.chat-btn-row').forEach(function(el) { el.remove(); });
-  convoState.step = 3;
-  addBubble('system', 'Okay. I am with you.');
-  setTimeout(function() {
-    addBubble('system', 'Based on what you shared, here are three ways to move forward:');
-    setTimeout(showThreePaths, 600);
-  }, 800);
-}
-
-function mirrorNotQuite() {
-  convoState.notQuiteCount++;
-  document.querySelectorAll('.chat-btn-row').forEach(function(el) { el.remove(); });
-  addBubble('system', 'That is okay. Can you tell me more about what feels off?');
-  var chat = document.getElementById('convo-chat');
-  var ta = document.createElement('textarea');
-  ta.className = 'chat-journal';
-  ta.id = 'notquite-ta';
-  ta.placeholder = 'Say more here...';
-  chat.appendChild(ta);
-  ta.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  ta.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey && ta.value.trim().length > 3) {
-      e.preventDefault();
-      submitNotQuite(ta.value.trim());
-    }
-  });
-  setTimeout(function() {
-    if (document.getElementById('notquite-ta')) {
-      var btn = document.createElement('button');
-      btn.className = 'btn-begin';
-      btn.id = 'notquite-btn';
-      btn.textContent = 'Continue \u2192';
-      btn.style.cssText = 'margin-top:8px;';
-      btn.onclick = function() { var v = ta.value.trim(); if (v.length > 0) submitNotQuite(v); };
-      chat.appendChild(btn);
-    }
-  }, 2000);
-}
-
-function submitNotQuite(text) {
-  var ta = document.getElementById('notquite-ta');
-  var btn = document.getElementById('notquite-btn');
-  if (ta) ta.remove();
-  if (btn) btn.remove();
-  convoState.followUpAnswers.push(text);
-  addBubble('user', text);
-  setTimeout(function() {
-    addBubble('system', 'Thank you for sharing that. Here are three paths that might help:');
-    setTimeout(showThreePaths, 600);
-  }, 600);
-}
-
-/* ── Three path cards ── */
 function showThreePaths() {
-  var chat = document.getElementById('convo-chat');
-  var cards = document.createElement('div');
-  cards.className = 'path-cards';
-
+  var chat = document.getElementById('convo-chat'); var cards = document.createElement('div'); cards.className = 'path-cards';
   if (convoState.intent === 'business') {
-    cards.innerHTML =
-      '<a href="/coaching-commons.html" class="path-card"><span class="path-dot" style="background:#4a7c59;"></span><div class="path-card-body"><div class="path-title">Post your need in the Commons</div><div class="path-sub">Describe what your organization needs. Coaches will come to you.</div></div></a>' +
-      '<a href="/coaches.html" class="path-card"><span class="path-dot" style="background:#c49a3c;"></span><div class="path-card-body"><div class="path-title">Browse coaches directly</div><div class="path-sub">Search our directory for coaches who specialize in business and teams.</div></div></a>' +
-      '<a href="/business-dashboard.html" class="path-card"><span class="path-dot" style="background:#1a3a52;"></span><div class="path-card-body"><div class="path-title">Create a business profile</div><div class="path-sub">Manage your requests, review proposals, and track engagement.</div></div></a>';
+    cards.innerHTML = '<a href="/coaching-commons.html" class="path-card"><span class="path-dot" style="background:#4a7c59;"></span><div class="path-card-body"><div class="path-title">Post your need in the Commons</div><div class="path-sub">Describe what your organization needs. Coaches will come to you.</div></div></a>' + '<a href="/coaches.html" class="path-card"><span class="path-dot" style="background:#c49a3c;"></span><div class="path-card-body"><div class="path-title">Browse coaches directly</div><div class="path-sub">Search our directory for coaches who specialize in business and teams.</div></div></a>' + '<a href="/business-dashboard.html" class="path-card"><span class="path-dot" style="background:#1a3a52;"></span><div class="path-card-body"><div class="path-title">Create a business profile</div><div class="path-sub">Manage your requests, review proposals, and track engagement.</div></div></a>';
   } else {
-    cards.innerHTML =
-      '<a href="/coaches.html" class="path-card"><span class="path-dot" style="background:#4a7c59;"></span><div class="path-card-body"><div class="path-title">Find a coach who gets this</div><div class="path-sub">Browse coaches who match your goals, style, and budget.</div></div></a>' +
-      '<a href="/coach-courses.html" class="path-card"><span class="path-dot" style="background:#c49a3c;"></span><div class="path-card-body"><div class="path-title">Browse courses and workshops</div><div class="path-sub">Self-paced or live. Learn at your own pace.</div></div></a>' +
-      '<a href="/#articles" class="path-card"><span class="path-dot" style="background:#1a3a52;"></span><div class="path-card-body"><div class="path-title">Read an article that fits</div><div class="path-sub">Written by coaches, for people navigating exactly this.</div></div></a>';
+    cards.innerHTML = '<a href="/coaches.html" class="path-card"><span class="path-dot" style="background:#4a7c59;"></span><div class="path-card-body"><div class="path-title">Find a coach who gets this</div><div class="path-sub">Browse coaches who match your goals, style, and budget.</div></div></a>' + '<a href="/coach-courses.html" class="path-card"><span class="path-dot" style="background:#c49a3c;"></span><div class="path-card-body"><div class="path-title">Browse courses and workshops</div><div class="path-sub">Self-paced or live. Learn at your own pace.</div></div></a>' + '<a href="/#articles" class="path-card"><span class="path-dot" style="background:#1a3a52;"></span><div class="path-card-body"><div class="path-title">Read an article that fits</div><div class="path-sub">Written by coaches, for people navigating exactly this.</div></div></a>';
   }
-
-  chat.appendChild(cards);
-  cards.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  chat.appendChild(cards); cards.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-/* ── Articles ── */
+/* ═══════════ FEATURED COACHES ═══════════ */
+async function loadFeaturedCoaches() {
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles?is_published=eq.true&select=display_name,headline,specialties,photo_url,slug&limit=8', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
+    });
+    var coaches = await res.json();
+    document.getElementById('coach-count').textContent = coaches.length;
+
+    if (!coaches || !coaches.length) {
+      document.getElementById('coaches-scroll').innerHTML = '<p style="color:var(--muted);font-size:0.85rem;padding:20px;">Coaches coming soon.</p>';
+      return;
+    }
+
+    // Proof bar specialty pills
+    var allSpecs = [];
+    coaches.forEach(function(c) {
+      var sp = Array.isArray(c.specialties) ? c.specialties : [];
+      sp.forEach(function(s) { if (allSpecs.indexOf(s) === -1) allSpecs.push(s); });
+    });
+    var pillsHtml = allSpecs.concat(allSpecs).map(function(s) { return '<span class="proof-pill">' + s + '</span>'; }).join('');
+    document.getElementById('proof-pills').innerHTML = pillsHtml;
+
+    // Coach cards
+    var html = coaches.map(function(c) {
+      var specs = Array.isArray(c.specialties) ? c.specialties.slice(0, 3) : [];
+      var initials = (c.display_name || '').split(' ').map(function(w) { return w[0]; }).join('').slice(0, 2).toUpperCase();
+      var photo = c.photo_url
+        ? '<img src="' + c.photo_url + '" alt="' + (c.display_name || '') + '" loading="lazy" width="280" height="180">'
+        : '<span class="coach-card-initials">' + initials + '</span>';
+      return '<a href="/coach-profile.html?slug=' + encodeURIComponent(c.slug || '') + '" class="coach-card">'
+        + '<div class="coach-card-photo">' + photo + '</div>'
+        + '<div class="coach-card-body">'
+        + '<div class="coach-card-name">' + (c.display_name || '') + '</div>'
+        + '<div class="coach-card-headline">' + (c.headline || '') + '</div>'
+        + '<div class="coach-card-pills">' + specs.map(function(s) { return '<span class="coach-card-pill">' + s + '</span>'; }).join('') + '</div>'
+        + '<span class="coach-card-link">View Profile &rarr;</span>'
+        + '</div></a>';
+    }).join('');
+    document.getElementById('coaches-scroll').innerHTML = html;
+  } catch(e) {
+    document.getElementById('coaches-scroll').innerHTML = '<p style="color:var(--muted);font-size:0.85rem;padding:20px;">Coaches coming soon.</p>';
+  }
+}
+
+/* ═══════════ COMMONS FEED ═══════════ */
+async function loadCommonsFeed() {
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coaching_commons_posts?select=description,poster_type,specialty_preference,created_at&order=created_at.desc&limit=3', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
+    });
+    var posts = await res.json();
+    if (!posts || !posts.length) return;
+    var feed = document.getElementById('commons-feed');
+    feed.innerHTML = posts.map(function(p, i) {
+      var type = p.poster_type === 'business' ? 'Business request' : 'Looking for a coach';
+      var spec = p.specialty_preference ? ' in ' + p.specialty_preference : '';
+      var ago = timeAgo(p.created_at);
+      return '<div class="commons-post' + (i === 0 ? '' : '') + '">'
+        + '<div class="commons-post-type">' + type + spec + '</div>'
+        + '<div class="commons-post-text">' + (p.description || '').slice(0, 120) + '</div>'
+        + '<div class="commons-post-time">' + ago + '</div></div>';
+    }).join('');
+  } catch(e) { /* keep placeholder */ }
+}
+
+function timeAgo(dateStr) {
+  var diff = Date.now() - new Date(dateStr).getTime();
+  var mins = Math.floor(diff / 60000);
+  if (mins < 60) return mins + 'm ago';
+  var hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  return Math.floor(hrs / 24) + 'd ago';
+}
+
+/* ═══════════ ARTICLES ═══════════ */
 var allArticles = [];
 
 async function loadArticles() {
@@ -620,13 +697,19 @@ function renderArticles(category) {
     grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:0.85rem;">No articles in this category yet.</p>';
     return;
   }
-  grid.innerHTML = filtered.map(function(a) {
+  grid.innerHTML = filtered.slice(0, 6).map(function(a) {
     return '<a href="/article.html?slug=' + encodeURIComponent(a.slug) + '" class="article-card">' +
       '<div class="card-category">' + (a.category || 'Coaching') + '</div>' +
       '<div class="card-title">' + a.title + '</div>' +
       '<div class="card-desc">' + (a.meta_description || '') + '</div>' +
       '<span class="card-read">Read &rarr;</span></a>';
   }).join('');
+  // Stagger article card entrance
+  setTimeout(function() {
+    document.querySelectorAll('.article-card').forEach(function(card, i) {
+      setTimeout(function() { card.classList.add('visible'); }, i * 100);
+    });
+  }, 50);
 }
 
 document.getElementById('filter-pills').addEventListener('click', function(e) {
@@ -637,6 +720,9 @@ document.getElementById('filter-pills').addEventListener('click', function(e) {
   renderArticles(pill.dataset.cat);
 });
 
+/* ═══════════ INIT ═══════════ */
+loadFeaturedCoaches();
+loadCommonsFeed();
 loadArticles();
 </script>
 </body>
