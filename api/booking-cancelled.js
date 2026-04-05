@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     if (!booking_id) return res.status(400).json({ error: 'Missing booking_id' });
 
     const bRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/coach_bookings?id=eq.${booking_id}&select=*,coach_profiles(display_name,user_email,zoom_meeting_link,slug)`,
+      `${SUPABASE_URL}/rest/v1/coach_bookings?id=eq.${booking_id}&select=*,coach_profiles(display_name,user_email,slug)`,
       { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
     );
     const bookings = await bRes.json();
@@ -23,34 +23,32 @@ export default async function handler(req, res) {
     const coach = booking.coach_profiles;
     const clientName = booking.client_name || booking.client_email;
     const coachName = coach.display_name || 'Your Coach';
-    const serviceName = booking.service_name || 'Coaching Session';
+    const coachSlug = coach.slug || '';
     const sessionDate = booking.scheduled_at
       ? new Date(booking.scheduled_at).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' })
-      : 'TBD';
-    const zoomLink = coach.zoom_meeting_link || booking.zoom_link || 'Will be provided before the session';
-    const notes = booking.notes || 'None';
+      : 'the scheduled date';
 
     // Client email
-    const clientSubject = `Your session with ${coachName} is confirmed`;
-    const clientBody = `Hi ${clientName},\n\nYour coaching session is confirmed.\n\nCoach: ${coachName}\nService: ${serviceName}\nDate and Time: ${sessionDate}\nZoom Link: ${zoomLink}\n\nIf you need to reschedule, reply to this email.\n\nWe're glad you're here.\n\nThe ineedcoaching.org team`;
+    const clientSubject = 'Your session has been cancelled';
+    const clientBody = `Hi ${clientName},\n\nYour session with ${coachName} on ${sessionDate} has been cancelled.\n\nIf you'd like to reschedule, visit their profile and request a new time. They would love to connect with you when the timing works.\n\nhttps://www.ineedcoaching.org/coach/${coachSlug}\n\nThe ineedcoaching.org team`;
 
-    console.log('=== CLIENT EMAIL ===');
+    console.log('=== CLIENT CANCELLATION EMAIL ===');
     console.log('To:', booking.client_email);
     console.log('Subject:', clientSubject);
     console.log('Body:', clientBody);
 
     // Coach email
-    const coachSubject = `New booking request from ${clientName}`;
-    const coachBody = `Hi ${coachName},\n\nYou have a new booking request.\n\nClient: ${clientName}\nService: ${serviceName}\nRequested Date: ${sessionDate}\nNotes: ${notes}\n\nLog in to your dashboard to confirm or decline.\nhttps://www.ineedcoaching.org/coach-dashboard.html\n\nThe ineedcoaching.org team`;
+    const coachSubject = 'A session has been cancelled';
+    const coachBody = `Hi ${coachName},\n\n${clientName}'s session on ${sessionDate} has been cancelled.\n\nYou can view your upcoming bookings anytime in your dashboard.\nhttps://www.ineedcoaching.org/coach-dashboard.html\n\nThe ineedcoaching.org team`;
 
-    console.log('=== COACH EMAIL ===');
+    console.log('=== COACH CANCELLATION EMAIL ===');
     console.log('To:', coach.user_email);
     console.log('Subject:', coachSubject);
     console.log('Body:', coachBody);
 
     return res.status(200).json({ sent: true, to: booking.client_email, subject: clientSubject });
   } catch (e) {
-    console.error('booking-confirmation error:', e);
+    console.error('booking-cancelled error:', e);
     return res.status(500).json({ error: e.message });
   }
 }
