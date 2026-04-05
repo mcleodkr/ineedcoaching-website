@@ -352,6 +352,13 @@ var reflections = {
   better: 'The desire to grow is one of the most underrated forms of strength. You are not broken. You are building.',
   business: 'Finding the right support for your team takes clarity about what you actually need. Let us help you get there.'
 };
+var businessReflections = {
+  'Executive coaching for a leader or leadership team': 'It sounds like your organization has a leader — or a team of leaders — who would benefit from focused one-on-one support. That kind of investment pays for itself in clearer decisions and stronger culture.',
+  'A workshop or training program': 'A well-designed workshop can shift how an entire team thinks and works together. The coaches on this platform specialize in exactly that.',
+  'A leadership retreat or offsite': 'Leadership retreats do something workshops cannot — they create space to think without interruption. That is rare and valuable.',
+  'A keynote or speaking engagement': 'The right voice in a room can change the energy of an entire organization. We have coaches who do this well.',
+  'We have a specific need': 'Every organization is different. Let us help you find exactly the right fit for what you need.'
+};
 
 /* ── Rotating quotes ── */
 var quotes = [
@@ -450,6 +457,7 @@ function showFollowUp1() {
 
 function answerFollowUp1(answer) {
   convoState.followUpAnswers.push(answer);
+  convoState.followUp1 = answer;
   document.querySelectorAll('.chat-options').forEach(function(el) { el.remove(); });
   addBubble('user', answer);
   setTimeout(function() {
@@ -458,13 +466,18 @@ function answerFollowUp1(answer) {
   }, 300);
 }
 
-/* ── Follow-up 2: how long ── */
+/* ── Follow-up 2: timeline ── */
 function showFollowUp2() {
   setTimeout(function() {
-    addBubble('system', 'How long have you been sitting with this?');
+    var isBusiness = convoState.intent === 'business';
+    var question = isBusiness ? 'How soon is your organization looking to get started?' : 'How long have you been sitting with this?';
+    var options = isBusiness
+      ? ['We have an immediate need — within 30 days', 'We are planning ahead — 1 to 3 months out', 'We are still in early planning stages', 'We are exploring our options for now']
+      : ['Days or weeks', 'Months', 'Years, honestly', 'I am not sure when it started'];
+    addBubble('system', question);
     var opts = document.createElement('div');
     opts.className = 'chat-options';
-    ['Days or weeks', 'Months', 'Years, honestly', 'I am not sure when it started'].forEach(function(opt) {
+    options.forEach(function(opt) {
       var btn = document.createElement('button');
       btn.className = 'chat-option';
       btn.textContent = opt;
@@ -484,7 +497,7 @@ function answerFollowUp2(answer) {
     addLoading();
     setTimeout(function() {
       removeLoading();
-      var reflection = reflections[convoState.intent] || reflections.stuck;
+      var reflection = convoState.intent === 'business' && convoState.followUp1 ? (businessReflections[convoState.followUp1] || reflections.business) : (reflections[convoState.intent] || reflections.stuck);
       addBubble('system', reflection);
       setTimeout(function() {
         addBubble('system', 'Does this feel close?');
