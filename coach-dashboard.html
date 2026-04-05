@@ -171,6 +171,23 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .badge-pending-review { background: rgba(196,154,60,0.15); color: var(--gold); }
 .review-card-actions { display: flex; gap: 8px; margin-top: 14px; }
 
+/* DRAFT ARTICLES */
+.draft-article-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 28px; margin-bottom: 16px; transition: border-color 0.2s; }
+.draft-article-card:hover { border-color: var(--gold); }
+.draft-article-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.draft-article-title { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--ink); flex: 1; }
+.draft-article-meta { font-size: 0.75rem; color: var(--muted); margin-bottom: 14px; }
+.draft-article-preview { font-size: 0.88rem; color: var(--ink); line-height: 1.7; max-height: 120px; overflow: hidden; margin-bottom: 16px; }
+.draft-article-preview.expanded { max-height: none; }
+.draft-article-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.draft-edit-form { display: none; margin-top: 16px; }
+.draft-edit-form.open { display: block; }
+.draft-edit-form input { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.92rem; color: var(--ink); background: var(--cream); margin-bottom: 12px; }
+.draft-edit-form input:focus { outline: none; border-color: var(--gold); }
+.draft-edit-form textarea { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.88rem; color: var(--ink); background: var(--cream); min-height: 300px; line-height: 1.7; resize: vertical; }
+.draft-edit-form textarea:focus { outline: none; border-color: var(--gold); }
+.draft-edit-actions { display: flex; gap: 8px; margin-top: 12px; }
+
 /* EMPTY STATES */
 .empty-state { text-align: center; padding: 48px 24px; }
 .empty-state p { font-size: 0.92rem; color: var(--muted); font-style: italic; line-height: 1.6; }
@@ -337,6 +354,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
     <button class="tab-btn" data-tab="messages" id="tab-btn-messages">Messages</button>
     <button class="tab-btn" data-tab="goals">Goals</button>
     <button class="tab-btn" data-tab="courses">Courses</button>
+    <button class="tab-btn" data-tab="articles">Draft Articles</button>
   </div>
 
   <!-- LOADING -->
@@ -639,6 +657,14 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
       <div id="courses-content" class="hidden"></div>
     </div>
 
+    <!-- DRAFT ARTICLES TAB -->
+    <div id="tab-articles" class="tab-panel">
+      <div id="articles-loading" class="loading-state" style="min-height:30vh;">
+        <div class="loading-spinner"></div>
+      </div>
+      <div id="articles-content" class="hidden"></div>
+    </div>
+
   </div>
 </div>
 
@@ -858,6 +884,10 @@ function setupTabs() {
       if (btn.dataset.tab === 'courses' && !btn._loaded) {
         btn._loaded = true;
         loadDashCourses();
+      }
+      if (btn.dataset.tab === 'articles' && !btn._loaded) {
+        btn._loaded = true;
+        loadDashArticles();
       }
     });
   });
@@ -2403,6 +2433,141 @@ async function updateCertTemplate(courseId, template) {
       body: JSON.stringify({ certificate_template: template })
     });
   } catch (e) { /* ignore */ }
+}
+
+/* ================================================
+   DRAFT ARTICLES
+   ================================================ */
+async function loadDashArticles() {
+  try {
+    var data = await supabaseGet(
+      'articles?author_coach_id=eq.' + coachProfile.id + '&site=eq.ineedcoaching&order=created_at.desc&select=id,title,slug,meta_description,content,is_published,created_at,key_insights,faq_schema'
+    );
+    $('articles-loading').style.display = 'none';
+    $('articles-content').classList.remove('hidden');
+
+    if (!data || data.length === 0) {
+      $('articles-content').innerHTML = '<div class="empty-state"><p>No articles yet. Articles are generated weekly based on your coaching specialty.</p></div>';
+      return;
+    }
+
+    var drafts = data.filter(function(a) { return !a.is_published; });
+    var published = data.filter(function(a) { return a.is_published; });
+
+    var html = '';
+
+    if (drafts.length > 0) {
+      html += '<h3 style="font-family:\'Playfair Display\',serif;font-size:1.1rem;color:var(--ink);margin-bottom:16px;">Pending Review (' + drafts.length + ')</h3>';
+      drafts.forEach(function(a) { html += renderArticleCard(a, false); });
+    }
+
+    if (published.length > 0) {
+      html += '<h3 style="font-family:\'Playfair Display\',serif;font-size:1.1rem;color:var(--ink);margin:28px 0 16px;">Published (' + published.length + ')</h3>';
+      published.forEach(function(a) { html += renderArticleCard(a, true); });
+    }
+
+    $('articles-content').innerHTML = html;
+    attachArticleHandlers();
+  } catch (err) {
+    $('articles-loading').style.display = 'none';
+    $('articles-content').classList.remove('hidden');
+    $('articles-content').innerHTML = '<div class="empty-state"><p>Error loading articles.</p></div>';
+  }
+}
+
+function renderArticleCard(a, isPublished) {
+  var date = a.created_at ? new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+  var statusPill = isPublished
+    ? '<span class="status-pill status-confirmed">Published</span>'
+    : '<span class="status-pill status-pending">Draft</span>';
+  var preview = (a.content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 280);
+
+  var actions = '';
+  if (!isPublished) {
+    actions = '<button class="action-btn action-approve" data-article-id="' + a.id + '" data-article-action="preview">Preview</button>'
+      + '<button class="action-btn action-confirm" data-article-id="' + a.id + '" data-article-action="edit">Edit</button>'
+      + '<button class="action-btn action-confirm" style="background:rgba(74,124,89,0.2);" data-article-id="' + a.id + '" data-article-action="publish">Publish</button>'
+      + '<button class="action-btn action-decline" data-article-id="' + a.id + '" data-article-action="delete">Delete</button>';
+  } else {
+    actions = '<a href="/article.html?slug=' + encodeURIComponent(a.slug) + '" target="_blank" class="action-btn action-approve" style="text-decoration:none;">View Live</a>'
+      + '<button class="action-btn action-decline" data-article-id="' + a.id + '" data-article-action="unpublish">Unpublish</button>';
+  }
+
+  return '<div class="draft-article-card" id="article-card-' + a.id + '">'
+    + '<div class="draft-article-header">'
+    + '<div class="draft-article-title">' + escapeHtml(a.title) + '</div>'
+    + statusPill
+    + '</div>'
+    + '<div class="draft-article-meta">' + escapeHtml(date) + (a.meta_description ? ' &middot; ' + escapeHtml(a.meta_description) : '') + '</div>'
+    + '<div class="draft-article-preview" id="preview-' + a.id + '">' + escapeHtml(preview) + (preview.length >= 280 ? '...' : '') + '</div>'
+    + '<div class="draft-article-actions">' + actions + '</div>'
+    + '<div class="draft-edit-form" id="edit-form-' + a.id + '">'
+    + '<input type="text" id="edit-title-' + a.id + '" value="' + escapeHtml(a.title).replace(/"/g, '&quot;') + '" placeholder="Article title">'
+    + '<textarea id="edit-content-' + a.id + '" placeholder="Article content (HTML)">' + escapeHtml(a.content || '') + '</textarea>'
+    + '<div class="draft-edit-actions">'
+    + '<button class="save-btn" data-article-id="' + a.id + '" data-article-action="save">Save Changes</button>'
+    + '<button class="action-btn" data-article-id="' + a.id + '" data-article-action="cancel-edit" style="margin-left:4px;">Cancel</button>'
+    + '</div></div></div>';
+}
+
+function attachArticleHandlers() {
+  $('articles-content').querySelectorAll('[data-article-action]').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      var id = this.dataset.articleId;
+      var action = this.dataset.articleAction;
+
+      if (action === 'preview') {
+        var previewEl = $('preview-' + id);
+        previewEl.classList.toggle('expanded');
+        this.textContent = previewEl.classList.contains('expanded') ? 'Collapse' : 'Preview';
+        return;
+      }
+
+      if (action === 'edit') {
+        $('edit-form-' + id).classList.add('open');
+        return;
+      }
+
+      if (action === 'cancel-edit') {
+        $('edit-form-' + id).classList.remove('open');
+        return;
+      }
+
+      if (action === 'save') {
+        this.disabled = true;
+        this.textContent = 'Saving...';
+        var newTitle = $('edit-title-' + id).value.trim();
+        var newContent = $('edit-content-' + id).value;
+        await supabasePatch('articles', { id: 'eq.' + id }, { title: newTitle, content: newContent });
+        loadDashArticles();
+        return;
+      }
+
+      if (action === 'publish') {
+        this.disabled = true;
+        this.textContent = 'Publishing...';
+        var now = new Date().toISOString();
+        await supabasePatch('articles', { id: 'eq.' + id }, { is_published: true, published_at: now });
+        loadDashArticles();
+        return;
+      }
+
+      if (action === 'unpublish') {
+        this.disabled = true;
+        await supabasePatch('articles', { id: 'eq.' + id }, { is_published: false, published_at: null });
+        loadDashArticles();
+        return;
+      }
+
+      if (action === 'delete') {
+        if (!confirm('Delete this article permanently?')) return;
+        this.disabled = true;
+        await supabaseDelete('articles', { id: 'eq.' + id });
+        loadDashArticles();
+        return;
+      }
+    });
+  });
 }
 
 /* ================================================

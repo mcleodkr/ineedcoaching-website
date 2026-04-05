@@ -147,6 +147,16 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
 .ext-link { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 50px; font-size: 0.85rem; font-weight: 700; text-decoration: none; border: 1.5px solid var(--border); color: var(--ink); transition: all 0.2s; }
 .ext-link:hover { border-color: var(--gold); color: var(--gold); }
 
+/* COACH ARTICLES */
+.coach-articles-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
+.coach-article-card { background: white; border: 1px solid var(--border); border-radius: var(--r); padding: 32px; display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s; }
+.coach-article-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.08); }
+.coach-article-card h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--ink); margin-bottom: 10px; line-height: 1.3; }
+.coach-article-card p { font-size: 0.88rem; line-height: 1.65; color: var(--muted); margin-bottom: 16px; flex: 1; }
+.coach-article-date { font-size: 0.75rem; color: var(--muted); margin-bottom: 12px; }
+.coach-article-link { display: inline-flex; align-items: center; gap: 6px; color: var(--gold); text-decoration: none; font-weight: 700; font-size: 0.85rem; transition: color 0.2s; }
+.coach-article-link:hover { color: var(--gold-hover); }
+
 /* FOOTER */
 .coach-footer { background: var(--ink); padding: 48px 80px; text-align: center; }
 .footer-name { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--gold); margin-bottom: 8px; }
@@ -261,6 +271,12 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
   <section class="section section-dark hidden" id="recommendations-section">
     <h2 class="section-title">Recommendations</h2>
     <div class="recs-grid" id="recs-grid"></div>
+  </section>
+
+  <!-- ARTICLES -->
+  <section class="section section-cream hidden" id="articles-section">
+    <h2 class="section-title">Articles by <span id="articles-coach-name"></span></h2>
+    <div class="coach-articles-grid" id="coach-articles-grid"></div>
   </section>
 
   <!-- BOOKING -->
@@ -406,19 +422,21 @@ async function loadProfile() {
     const coachId = coachData.id;
 
     // Fetch related data in parallel
-    const [servicesRes, testimonialsRes, recsRes, coursesRes] = await Promise.all([
+    const [servicesRes, testimonialsRes, recsRes, coursesRes, articlesRes] = await Promise.all([
       fetch(`${API}/coach_services?coach_id=eq.${coachId}&is_active=eq.true&select=*`, { headers: GET_HEADERS }),
       fetch(`${API}/coach_testimonials?coach_id=eq.${coachId}&is_approved=eq.true&select=*`, { headers: GET_HEADERS }),
       fetch(`${API}/coach_recommendations?coach_id=eq.${coachId}&is_approved=eq.true&select=*`, { headers: GET_HEADERS }),
-      fetch(`${API}/coach_courses?coach_id=eq.${coachId}&status=neq.draft&select=*&order=is_featured.desc,created_at.desc`, { headers: GET_HEADERS })
+      fetch(`${API}/coach_courses?coach_id=eq.${coachId}&status=neq.draft&select=*&order=is_featured.desc,created_at.desc`, { headers: GET_HEADERS }),
+      fetch(`${API}/articles?author_coach_id=eq.${coachId}&is_published=eq.true&site=eq.ineedcoaching&select=title,slug,meta_description,published_at&order=published_at.desc&limit=6`, { headers: GET_HEADERS })
     ]);
 
     const services = await servicesRes.json();
     const testimonials = await testimonialsRes.json();
     const recommendations = await recsRes.json();
     const courses = await coursesRes.json();
+    const articles = await articlesRes.json();
 
-    renderProfile(coachData, services, testimonials, recommendations, courses);
+    renderProfile(coachData, services, testimonials, recommendations, courses, articles);
 
     // Update hero book button for calendly
     if (coachData.calendly_url && coachData.calendly_url.trim()) {
@@ -439,7 +457,7 @@ function showError() {
   document.getElementById('error').classList.remove('hidden');
 }
 
-function renderProfile(coach, services, testimonials, recommendations, courses) {
+function renderProfile(coach, services, testimonials, recommendations, courses, articles) {
   // Update page title
   document.title = `${coach.display_name || coach.full_name} — Coach Profile | ineedcoaching.org`;
 
@@ -628,6 +646,27 @@ function renderProfile(coach, services, testimonials, recommendations, courses) 
       `;
     });
     document.getElementById('recs-grid').innerHTML = recHtml;
+  }
+
+  // Articles by coach
+  if (articles && articles.length > 0) {
+    document.getElementById('articles-section').classList.remove('hidden');
+    document.getElementById('articles-coach-name').textContent = coach.display_name || coach.full_name || 'This Coach';
+    let artHtml = '';
+    articles.forEach(a => {
+      const pubDate = a.published_at
+        ? new Date(a.published_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+        : '';
+      artHtml += `
+        <div class="coach-article-card">
+          <h3>${escapeHtml(a.title)}</h3>
+          ${pubDate ? `<div class="coach-article-date">${pubDate}</div>` : ''}
+          <p>${escapeHtml(a.meta_description || '')}</p>
+          <a href="/article.html?slug=${encodeURIComponent(a.slug)}" class="coach-article-link">Read article &#8594;</a>
+        </div>
+      `;
+    });
+    document.getElementById('coach-articles-grid').innerHTML = artHtml;
   }
 
   // External links
