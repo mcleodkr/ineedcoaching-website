@@ -62,11 +62,38 @@ nav {
 }
 .nav-links .nav-cta:hover { background: #a05840; }
 
+/* HERO IMAGE */
+.article-hero {
+  position: relative;
+  width: 100%;
+  height: 460px;
+  margin-top: 54px;
+  overflow: hidden;
+  display: none;
+}
+.article-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+.article-hero-overlay {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 50%;
+  background: linear-gradient(to bottom, transparent 0%, var(--warm-bg) 100%);
+  pointer-events: none;
+}
+
 /* ARTICLE WRAPPER */
 .article-wrap {
   max-width: 740px;
   margin: 0 auto;
   padding: 140px 40px 80px;
+}
+.article-wrap.has-hero {
+  padding-top: 40px;
 }
 
 /* TAG */
@@ -613,6 +640,7 @@ footer {
   .article-wrap { padding: 100px 20px 60px; }
   .three-doors { grid-template-columns: 1fr; }
   .related-grid { grid-template-columns: 1fr; }
+  .article-hero { height: 280px; }
   .burnout-cta-band { margin: 48px -20px; padding: 40px 24px; }
   .pull-quote { padding: 18px 0 18px 20px; }
   .pull-quote p { font-size: 1.25rem; }
@@ -638,6 +666,11 @@ footer {
     <a href="/coach-signup.html" class="nav-cta">List Your Practice</a>
   </div>
 </nav>
+
+<div class="article-hero" id="article-hero">
+  <img id="hero-img" src="" alt="" width="1792" height="1024" loading="eager" fetchpriority="high">
+  <div class="article-hero-overlay"></div>
+</div>
 
 <div class="article-wrap" id="article-wrap">
   <div class="loading" style="text-align:center;padding:40px 0;">
@@ -851,12 +884,46 @@ async function loadRelatedArticles(category, currentSlug) {
   } catch(e) { slot.style.display = 'none'; }
 }
 
+function showHeroImage(article) {
+  var heroEl = document.getElementById('article-hero');
+  var heroImg = document.getElementById('hero-img');
+  if (!heroEl || !heroImg) return;
+
+  function reveal(url) {
+    heroImg.src = url;
+    heroImg.alt = article.title;
+    heroEl.style.display = 'block';
+    document.getElementById('article-wrap').classList.add('has-hero');
+  }
+
+  if (article.image_url) {
+    reveal(article.image_url);
+  } else {
+    // Generate hero image via API
+    var origin = window.location.origin;
+    fetch(origin + '/api/generate-hero-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        article_id: article.id,
+        title: article.title,
+        category: article.category || 'Coaching',
+      }),
+    })
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      if (data && data.image_url) reveal(data.image_url);
+    })
+    .catch(function() { /* no hero image, page still works */ });
+  }
+}
+
 async function loadArticle() {
   var slug = getSlug();
   var wrap = document.getElementById('article-wrap');
 
   try {
-    var res = await fetch(SUPABASE_URL + '/rest/v1/articles?slug=eq.' + slug + '&select=title,slug,meta_description,quick_answer,if_this_is_you,content,id,audience,key_insights,category&limit=1', {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/articles?slug=eq.' + slug + '&select=title,slug,meta_description,quick_answer,if_this_is_you,content,id,audience,key_insights,category,image_url&limit=1', {
       headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
     });
     var data = await res.json();
@@ -869,6 +936,9 @@ async function loadArticle() {
     var article = data[0];
     document.title = article.title + ' | ineedcoaching.org';
     if (article.meta_description) document.querySelector('meta[name="description"]').content = article.meta_description;
+
+    // Hero image
+    showHeroImage(article);
 
     var html = '';
 
