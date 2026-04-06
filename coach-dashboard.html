@@ -823,31 +823,26 @@ async function init() {
     return;
   }
 
-  // Load coach profile by user email (public read via anon key — no auth token needed)
+  // Load coach profile by user email
   var email = currentUser.email;
-  alert('Debug: auth email is "' + email + '"');
+  var profiles;
   try {
-    var profileRes = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles?user_email=eq.' + encodeURIComponent(email) + '&select=*', {
-      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
-    });
-    var profiles = await profileRes.json();
-    if (!profiles || profiles.length === 0) {
-      var profileRes2 = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles?user_email=eq.' + encodeURIComponent(email.toLowerCase()) + '&select=*', {
-        headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
-      });
-      profiles = await profileRes2.json();
-    }
+    var profileRes = await fetch(
+      SUPABASE_URL + '/rest/v1/coach_profiles?user_email=eq.' + encodeURIComponent(email.toLowerCase()) + '&select=*',
+      { headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY } }
+    );
+    profiles = await profileRes.json();
     if (!profiles || profiles.length === 0) {
       $('dash-loading').style.display = 'none';
-      $('no-profile-email').textContent = 'Searched for: ' + email;
       $('no-profile').classList.remove('hidden');
+      $('no-profile-email').textContent = 'No profile found for: ' + email;
       return;
     }
     coachProfile = profiles[0];
-  } catch (err) {
+  } catch(err) {
     $('dash-loading').style.display = 'none';
-    $('no-profile-email').textContent = 'Searched for: ' + email + ' (error: ' + err.message + ')';
     $('no-profile').classList.remove('hidden');
+    $('no-profile-email').textContent = 'Error: ' + err.message;
     return;
   }
 
