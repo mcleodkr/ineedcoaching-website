@@ -464,6 +464,10 @@ footer { padding: 48px 80px 32px; background: var(--navy); border-top: 1px solid
 </footer>
 
 <script>
+if (window.location.hash && window.location.hash.indexOf('access_token') !== -1) {
+  window.location.replace('/coach-dashboard.html' + window.location.hash);
+}
+
 var SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
 var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
 
