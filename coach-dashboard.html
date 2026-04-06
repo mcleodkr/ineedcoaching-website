@@ -339,7 +339,9 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
       <a href="/#articles" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Articles</a>
       <a href="/coaching-commons.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Commons</a>
       <a href="/coach-dashboard.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Dashboard</a>
-      <a href="/coach-signup.html" style="font-size:0.78rem;font-weight:700;background:#c49a3c;color:#1a3a52;padding:8px 18px;border-radius:50px;text-decoration:none;">List Your Practice</a>
+      <span id="nav-coach-name" class="nav-coach-name"></span>
+      <a id="nav-profile-link" class="nav-profile-link" href="#">View Profile</a>
+      <button id="sign-out-btn" class="sign-out-btn">Sign out</button>
     </div>
   </nav>
 
@@ -849,8 +851,8 @@ async function init() {
   // Show dashboard
   $('dash-loading').style.display = 'none';
   $('dash-content').classList.remove('hidden');
-  $('nav-coach-name').textContent = coachProfile.display_name || coachProfile.full_name || '';
-  $('nav-profile-link').href = '/coach/' + (coachProfile.slug || '');
+  if ($('nav-coach-name')) $('nav-coach-name').textContent = coachProfile.display_name || coachProfile.full_name || '';
+  if ($('nav-profile-link')) $('nav-profile-link').href = '/coach/' + (coachProfile.slug || '');
 
   populateProfileForm();
   setupTabs();
@@ -1125,7 +1127,7 @@ function setupProfileHandlers() {
   });
 
   // Sign out
-  $('sign-out-btn').addEventListener('click', function() {
+  if ($('sign-out-btn')) $('sign-out-btn').addEventListener('click', function() {
     localStorage.removeItem(TOKEN_KEY);
     window.location.reload();
   });
@@ -1177,7 +1179,7 @@ async function saveProfile() {
     var result = await supabasePatch('coach_profiles', { id: 'eq.' + coachProfile.id }, payload);
     if (result && result.length > 0) {
       coachProfile = Object.assign(coachProfile, result[0]);
-      $('nav-coach-name').textContent = coachProfile.display_name || coachProfile.full_name || '';
+      if ($('nav-coach-name')) $('nav-coach-name').textContent = coachProfile.display_name || coachProfile.full_name || '';
     }
     msg.textContent = 'Saved';
     msg.style.color = 'var(--forest)';
