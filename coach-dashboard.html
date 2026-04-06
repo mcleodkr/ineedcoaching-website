@@ -389,6 +389,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
             </label>
             <input type="file" id="photo-input" accept="image/*">
             <p class="photo-hint">JPG or PNG, max 5MB</p>
+            <p id="photo-error" style="color:#c44;font-size:0.82rem;margin-top:6px;display:none;"></p>
           </div>
         </div>
       </div>
@@ -1025,15 +1026,18 @@ function setupProfileHandlers() {
   $('photo-input').addEventListener('change', async function() {
     var file = this.files[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { alert('File too large. Max 5MB.'); return; }
+    var photoErr = $('photo-error');
+    photoErr.style.display = 'none';
+
+    if (file.size > 5 * 1024 * 1024) { photoErr.textContent = 'File too large. Max 5MB.'; photoErr.style.display = 'block'; return; }
 
     var ext = file.name.split('.').pop().toLowerCase();
-    if (!['jpg', 'jpeg', 'png', 'webp'].includes(ext)) { alert('Please upload a JPG or PNG.'); return; }
+    if (!['jpg', 'jpeg', 'png', 'webp'].includes(ext)) { photoErr.textContent = 'Please upload a JPG or PNG.'; photoErr.style.display = 'block'; return; }
 
     var filename = coachProfile.slug + '-' + Date.now() + '.' + ext;
     try {
       var res = await fetch(SUPABASE_URL + '/storage/v1/object/coach-photos/' + filename, {
-        method: 'POST',
+        method: 'PUT',
         headers: {
           'apikey': ANON_KEY,
           'Authorization': 'Bearer ' + currentToken,
@@ -1042,13 +1046,40 @@ function setupProfileHandlers() {
         },
         body: file
       });
-      if (!res.ok) { alert('Upload failed. Please try again.'); return; }
+      if (!res.ok) {
+        var errBody = await res.text();
+        console.error('Photo upload failed — status:', res.status, 'body:', errBody);
+        // Fallback: store as base64 data URL if storage bucket is missing
+        if (res.status === 404 || res.status === 400) {
+          var reader = new FileReader();
+          reader.onload = async function() {
+            try {
+              await supabasePatch('coach_profiles', { id: 'eq.' + coachProfile.id }, { photo_url: reader.result });
+              coachProfile.photo_url = reader.result;
+              renderPhotoPreview();
+              photoErr.style.display = 'none';
+            } catch (patchErr) {
+              console.error('Base64 fallback failed:', patchErr);
+              photoErr.textContent = 'Upload failed: ' + patchErr.message;
+              photoErr.style.display = 'block';
+            }
+          };
+          reader.readAsDataURL(file);
+          return;
+        }
+        photoErr.textContent = 'Upload failed (status ' + res.status + '): ' + errBody;
+        photoErr.style.display = 'block';
+        return;
+      }
       var publicUrl = SUPABASE_URL + '/storage/v1/object/public/coach-photos/' + filename;
       await supabasePatch('coach_profiles', { id: 'eq.' + coachProfile.id }, { photo_url: publicUrl });
       coachProfile.photo_url = publicUrl;
       renderPhotoPreview();
+      photoErr.style.display = 'none';
     } catch (err) {
-      alert('Upload error: ' + err.message);
+      console.error('Photo upload error:', err);
+      photoErr.textContent = 'Upload error: ' + err.message;
+      photoErr.style.display = 'block';
     }
   });
 
