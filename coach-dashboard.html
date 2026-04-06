@@ -367,6 +367,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
   <!-- NO PROFILE -->
   <div id="no-profile" class="no-profile hidden">
     <h2>No coach profile found for this email.</h2>
+    <p id="no-profile-email" style="color:var(--ink);font-weight:600;margin-bottom:8px;"></p>
     <p>If you believe this is an error, contact <a href="mailto:admin@ineedcoaching.org">admin@ineedcoaching.org</a>.</p>
   </div>
 
@@ -830,12 +831,14 @@ async function init() {
     }
     if (!profiles || profiles.length === 0) {
       $('dash-loading').style.display = 'none';
+      $('no-profile-email').textContent = 'Searched for: ' + email;
       $('no-profile').classList.remove('hidden');
       return;
     }
     coachProfile = profiles[0];
   } catch (err) {
     $('dash-loading').style.display = 'none';
+    $('no-profile-email').textContent = 'Searched for: ' + email;
     $('no-profile').classList.remove('hidden');
     return;
   }
