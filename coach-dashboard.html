@@ -824,7 +824,10 @@ async function init() {
   // Load coach profile by user email
   var email = currentUser.email;
   try {
-    var profiles = await supabaseGet('coach_profiles?email=eq.' + encodeURIComponent(email) + '&select=*', token);
+    var profiles = await supabaseGet('coach_profiles?user_email=eq.' + encodeURIComponent(email) + '&select=*', token);
+    if (!profiles || profiles.length === 0) {
+      profiles = await supabaseGet('coach_profiles?user_email=eq.' + encodeURIComponent(email.toLowerCase()) + '&select=*', token);
+    }
     if (!profiles || profiles.length === 0) {
       $('dash-loading').style.display = 'none';
       $('no-profile').classList.remove('hidden');
