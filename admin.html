@@ -297,7 +297,7 @@ async function doLogin(){
     var res=await fetch(AUTH_URL+'/magiclink',{
       method:'POST',
       headers:{'apikey':ANON_KEY,'Content-Type':'application/json'},
-      body:JSON.stringify({email:email})
+      body:JSON.stringify({email:email,options:{emailRedirectTo:'https://www.ineedcoaching.org/admin.html'}})
     });
     if(!res.ok){var e=await res.json().catch(function(){return{};});errEl.textContent=e.msg||'Failed to send magic link. Try again.';btn.disabled=false;btn.textContent='Send magic link';return;}
     document.getElementById('login-form').style.display='none';

@@ -770,7 +770,7 @@ $('login-form').addEventListener('submit', async function(e) {
       headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email: email,
-        options: { emailRedirectTo: window.location.origin + '/coach-dashboard.html' }
+        options: { emailRedirectTo: 'https://www.ineedcoaching.org/coach-dashboard.html' }
       })
     });
     if (res.ok || res.status === 200) {

@@ -287,7 +287,7 @@ function handleLogin(e) {
   fetch(SUPABASE_URL + '/auth/v1/magiclink', {
     method: 'POST',
     headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: email, options: { emailRedirectTo: window.location.origin + '/proposal-builder.html' } })
+    body: JSON.stringify({ email: email, options: { emailRedirectTo: 'https://www.ineedcoaching.org/proposal-builder.html' } })
   }).then(function(res) {
     if (res.ok) {
       $('login-msg').textContent = 'Check your email for the login link.';

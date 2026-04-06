@@ -241,7 +241,7 @@ $('login-form').addEventListener('submit', async function(e) {
     var res = await fetch(SUPABASE_URL + '/auth/v1/magiclink', {
       method: 'POST',
       headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email, options: { emailRedirectTo: window.location.origin + '/client-portal.html' } })
+      body: JSON.stringify({ email: email, options: { emailRedirectTo: 'https://www.ineedcoaching.org/client-portal.html' } })
     });
     if (res.ok) {
       msg.textContent = 'Check your email for the magic link.';

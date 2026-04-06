@@ -139,7 +139,7 @@ async function sendMagicLink() {
       body: JSON.stringify({
         email: email,
         options: {
-          emailRedirectTo: window.location.origin + '/dashboard.html'
+          emailRedirectTo: 'https://www.ineedcoaching.org/dashboard.html'
         }
       })
     });

@@ -250,7 +250,7 @@ async function sendMagicLink() {
     var res = await fetch(SUPABASE_URL + '/auth/v1/magiclink', {
       method: 'POST',
       headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email })
+      body: JSON.stringify({ email: email, options: { emailRedirectTo: 'https://www.ineedcoaching.org/business-dashboard.html' } })
     });
     if (res.ok) {
       msg.textContent = 'Check your email for a login link!';
