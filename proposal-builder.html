@@ -602,18 +602,17 @@ async function sendProposal() {
 
     if (insertedId) {
       var proposalUrl = 'https://www.ineedcoaching.org/proposal-view.html?id=' + insertedId;
-
-      fetch('/api/send-proposal', {
+      var sendRes = await fetch('/api/send-proposal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: sendTo,
+          to: d.sendEmail || d.email,
           coachName: coachName,
-          clientName: d.contact,
+          clientName: d.contact || d.company,
           company: d.company,
           proposalUrl: proposalUrl
         })
-      }).catch(function() {});
+      });
 
       console.log('=== PROPOSAL SENT ===');
       console.log('To:', sendTo);
