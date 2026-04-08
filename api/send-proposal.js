@@ -42,11 +42,31 @@ export default async function handler(req, res) {
 </body>
 </html>`;
 
-    console.log('=== PROPOSAL EMAIL ===');
-    console.log('To:', to);
-    console.log('Subject:', subject);
-    console.log('Proposal URL:', proposalUrl);
-    console.log('===');
+    const RESEND_API_KEY = process.env.RESEND_API_KEY;
+    if (!RESEND_API_KEY) {
+      console.error('RESEND_API_KEY not set');
+      return res.status(500).json({ error: 'Email not configured' });
+    }
+
+    const emailRes = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + RESEND_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: 'ineedcoaching.org <proposals@ineedcoaching.org>',
+        to: [to],
+        subject: subject,
+        html: html
+      })
+    });
+
+    const emailData = await emailRes.json();
+    if (!emailRes.ok) {
+      console.error('Resend error:', emailData);
+      return res.status(500).json({ error: 'Email failed to send' });
+    }
 
     return res.status(200).json({ ok: true, to, subject });
   } catch (e) {
