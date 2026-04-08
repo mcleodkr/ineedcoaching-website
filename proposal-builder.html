@@ -181,8 +181,13 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
         </div>
         <div class="field">
           <label for="f-email">Contact Email</label>
-          <input type="email" id="f-email" required placeholder="jane@acme.com">
+          <input type="email" id="f-email" required placeholder="jane@acme.com" oninput="prefillSendEmail()">
         </div>
+      </div>
+
+      <div class="field">
+        <label for="f-send-email">Send Proposal To (email)</label>
+        <input type="email" id="f-send-email" placeholder="jane@acme.com">
       </div>
 
       <div class="field">
@@ -220,6 +225,11 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
           <input type="text" id="f-inclusion-input" placeholder="e.g. Two 90-minute sessions" onkeydown="if(event.key==='Enter'){event.preventDefault();addInclusion();}">
           <button type="button" onclick="addInclusion()">Add</button>
         </div>
+      </div>
+
+      <div class="field">
+        <label for="f-scope">Scope of Work</label>
+        <textarea id="f-scope" style="min-height:140px;" placeholder="Describe the full scope of this engagement..." oninput="updatePreview()"></textarea>
       </div>
 
       <div class="field">
@@ -354,6 +364,14 @@ function renderInclusions() {
   $('inclusions-list').innerHTML = html;
 }
 
+function prefillSendEmail() {
+  var sendField = $('f-send-email');
+  if (!sendField.dataset.userEdited) {
+    sendField.value = $('f-email').value;
+  }
+}
+$('f-send-email').addEventListener('input', function() { this.dataset.userEdited = this.value ? 'true' : ''; });
+
 /* ── PREVIEW ── */
 function getFormData() {
   return {
@@ -365,7 +383,9 @@ function getFormData() {
     dates: $('f-dates').value.trim(),
     investment: parseFloat($('f-investment').value) || 0,
     inclusions: inclusions,
+    scope: $('f-scope').value.trim(),
     message: $('f-message').value.trim(),
+    sendEmail: $('f-send-email').value.trim(),
   };
 }
 
@@ -414,6 +434,13 @@ function updatePreview() {
     html += '<div class="proposal-section">'
       + '<div class="proposal-section-label">What\'s Included</div>'
       + inclusionsHtml
+      + '</div>';
+  }
+
+  if (d.scope) {
+    html += '<div class="proposal-section">'
+      + '<div class="proposal-section-label">Scope of Work</div>'
+      + '<div style="font-size:0.92rem;color:var(--ink);line-height:1.7;">' + escHtml(d.scope).replace(/\n/g, '<br>') + '</div>'
       + '</div>';
   }
 
@@ -502,21 +529,23 @@ async function sendProposal() {
   if (res.ok) {
     var coachName = coachProfile.display_name || coachProfile.full_name || 'A coach';
 
+    var sendTo = d.sendEmail || d.email;
+
     // Send email notification via coach-welcome-style endpoint (logs for now)
     fetch('/api/booking-confirmation', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ proposal_email: d.email, coach_name: coachName, service: d.service, company: d.company })
+      body: JSON.stringify({ proposal_email: sendTo, coach_name: coachName, service: d.service, company: d.company })
     }).catch(function() {});
 
     console.log('=== PROPOSAL SENT ===');
-    console.log('To:', d.email);
+    console.log('To:', sendTo);
     console.log('From:', coachName);
     console.log('Service:', d.service);
     console.log('Investment:', d.investment);
     console.log('===');
 
-    showMsg('Proposal sent to ' + d.email + '.', 'var(--forest)');
+    showMsg('Proposal sent to ' + sendTo + '.', 'var(--forest)');
   } else {
     showMsg('Failed to send. Try again.', '#c44');
   }
