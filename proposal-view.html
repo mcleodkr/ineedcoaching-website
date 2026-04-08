@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Proposal | ineedcoaching.org</title>
+<meta name="robots" content="noindex, nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: #f7f4ee; color: #1a3a52; min-height: 100vh; }
+
+.pv-wrap { max-width: 680px; margin: 0 auto; padding: 40px 24px 60px; }
+.pv-logo { text-align: center; margin-bottom: 32px; }
+.pv-logo a { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: #1a3a52; text-decoration: none; }
+.pv-logo .pl-i { color: #c49a3c; font-style: italic; }
+.pv-logo .pl-c { color: #c49a3c; font-style: italic; }
+
+.pv-card { background: #fff; border-radius: 16px; box-shadow: 0 4px 32px rgba(26,58,82,0.10); overflow: hidden; }
+.pv-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 40px 40px 0; }
+.pv-date { font-size: 0.72rem; color: #8a8a9a; text-align: right; line-height: 1.6; }
+.pv-divider { border: none; border-top: 2px solid #c49a3c; margin: 20px 40px 32px; }
+.pv-title { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900; color: #1a3a52; margin-bottom: 4px; padding: 0 40px; }
+.pv-subtitle { font-size: 0.9rem; color: #8a8a9a; margin-bottom: 32px; padding: 0 40px; }
+
+.pv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; background: #f7f4ee; border-radius: 10px; padding: 20px; margin: 0 40px 32px; }
+.pv-grid-label { font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #8a8a9a; margin-bottom: 4px; }
+.pv-grid-val { font-size: 0.95rem; font-weight: 700; color: #1a3a52; }
+
+.pv-investment { background: #1a3a52; padding: 40px; text-align: center; margin: 0; }
+.pv-investment-label { font-size: 0.65rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #c49a3c; margin-bottom: 8px; }
+.pv-investment-amount { font-family: 'Playfair Display', serif; font-size: 3rem; font-weight: 900; color: #c49a3c; }
+
+.pv-body { padding: 32px 40px; }
+.pv-section-label { font-size: 0.65rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #c49a3c; border-bottom: 1px solid #c49a3c; padding-bottom: 6px; margin-bottom: 16px; margin-top: 28px; }
+.pv-section-label:first-child { margin-top: 0; }
+.pv-inclusion { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #e0ddd5; font-size: 0.9rem; color: #1a3a52; }
+.pv-inclusion::before { content: '\2713'; color: #c49a3c; font-weight: 900; }
+.pv-scope { font-size: 0.9rem; color: #4a4a5a; line-height: 1.7; }
+.pv-note { background: #faf3e0; border-left: 3px solid #c49a3c; padding: 16px 20px; border-radius: 0 8px 8px 0; font-size: 0.9rem; color: #1a3a52; font-style: italic; line-height: 1.7; }
+.pv-terms { font-size: 0.8rem; color: #8a8a9a; line-height: 1.6; }
+
+.pv-coach { text-align: center; padding-top: 32px; border-top: 1px solid #e0ddd5; margin-top: 32px; }
+.pv-coach-name { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700; color: #1a3a52; }
+.pv-coach-headline { font-style: italic; color: #8a8a9a; font-size: 0.88rem; margin: 4px 0; }
+.pv-coach-company { font-size: 0.82rem; color: #c49a3c; font-weight: 700; margin-bottom: 8px; }
+.pv-coach-details { font-size: 0.78rem; color: #1a3a52; line-height: 2; }
+.pv-coach-details a { color: #c49a3c; text-decoration: none; font-weight: 500; }
+
+.pv-accept { text-align: center; padding: 32px 40px 40px; }
+.pv-accept-btn { display: inline-block; padding: 16px 48px; background: #1a3a52; color: #c49a3c; border: none; border-radius: 8px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 1rem; font-weight: 800; cursor: pointer; letter-spacing: 0.03em; transition: background 0.2s; }
+.pv-accept-btn:hover { background: #24506e; }
+.pv-accept-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.pv-accept-msg { font-size: 0.9rem; margin-top: 12px; min-height: 20px; }
+
+.pv-status { text-align: center; padding: 20px 40px; }
+.pv-status-badge { display: inline-block; padding: 8px 24px; border-radius: 50px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.pv-status-sent { background: #faf3e0; color: #c49a3c; }
+.pv-status-accepted { background: #e8f5e9; color: #4a7c59; }
+
+.pv-loading { text-align: center; padding: 80px 40px; color: #8a8a9a; font-size: 0.9rem; }
+.pv-error { text-align: center; padding: 80px 40px; color: #c44; font-size: 0.9rem; }
+
+.pv-footer { text-align: center; margin-top: 32px; font-size: 0.68rem; color: #8a8a9a; letter-spacing: 0.06em; text-transform: uppercase; }
+
+@media (max-width: 600px) {
+  .pv-wrap { padding: 24px 16px 40px; }
+  .pv-header, .pv-body, .pv-accept { padding-left: 24px; padding-right: 24px; }
+  .pv-title { padding: 0 24px; font-size: 1.5rem; }
+  .pv-subtitle { padding: 0 24px; }
+  .pv-divider { margin-left: 24px; margin-right: 24px; }
+  .pv-grid { margin-left: 24px; margin-right: 24px; grid-template-columns: 1fr; }
+  .pv-investment { padding: 32px 24px; }
+  .pv-investment-amount { font-size: 2.4rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="pv-wrap">
+  <div class="pv-logo">
+    <a href="/"><span class="pl-i">i</span>need<span class="pl-c">coaching</span>.org</a>
+  </div>
+
+  <div class="pv-card">
+    <div id="pv-content">
+      <div class="pv-loading">Loading proposal...</div>
+    </div>
+  </div>
+
+  <div class="pv-footer">via ineedcoaching.org</div>
+</div>
+
+<script>
+var SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+
+function escHtml(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function formatCurrency(n) { return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }); }
+
+var proposalId = new URLSearchParams(window.location.search).get('id');
+if (!proposalId) {
+  document.getElementById('pv-content').innerHTML = '<div class="pv-error">No proposal ID provided.</div>';
+} else {
+  loadProposal(proposalId);
+}
+
+async function loadProposal(id) {
+  try {
+    var headers = { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY };
+
+    var pRes = await fetch(SUPABASE_URL + '/rest/v1/coach_proposals?id=eq.' + id + '&select=*', { headers: headers });
+    if (!pRes.ok) throw new Error('Failed to load proposal');
+    var proposals = await pRes.json();
+    if (!proposals || !proposals.length) throw new Error('Proposal not found');
+    var p = proposals[0];
+
+    var coach = null;
+    if (p.coach_id) {
+      var cRes = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles?id=eq.' + p.coach_id + '&select=*', { headers: headers });
+      if (cRes.ok) {
+        var coaches = await cRes.json();
+        if (coaches && coaches.length) coach = coaches[0];
+      }
+    }
+
+    renderProposal(p, coach);
+  } catch (err) {
+    document.getElementById('pv-content').innerHTML = '<div class="pv-error">' + escHtml(err.message) + '</div>';
+  }
+}
+
+function renderProposal(p, coach) {
+  var coachName = coach ? (coach.display_name || coach.full_name || 'Coach') : 'Coach';
+  var coachHeadline = coach ? (coach.headline || '') : '';
+  var coachCompany = coach ? (coach.company_name || '') : '';
+  var coachEmail = coach ? (coach.email || coach.user_email || '') : '';
+  var coachWebsite = coach ? (coach.website_url || '') : '';
+  var coachPhone = coach ? (coach.phone || '') : '';
+
+  var today = p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
+  var inclusions = Array.isArray(p.inclusions) ? p.inclusions : [];
+
+  var html = '';
+
+  // Header
+  html += '<div class="pv-header">'
+    + '<div style="font-family:Playfair Display,serif;font-size:1.05rem;color:#1a3a52;"><span class="pl-i">i</span>need<span class="pl-c">coaching</span>.org</div>'
+    + '<div class="pv-date">' + escHtml(today) + '<br>Prepared for ' + escHtml(p.client_company || 'Client') + '</div>'
+    + '</div>';
+  html += '<hr class="pv-divider">';
+
+  // Title
+  html += '<div class="pv-title">' + escHtml(p.service_type || 'Coaching Proposal') + '</div>';
+  html += '<div class="pv-subtitle">Prepared by ' + escHtml(coachName) + (coachCompany ? ', ' + escHtml(coachCompany) : '') + '</div>';
+
+  // Status badge
+  if (p.status === 'accepted') {
+    html += '<div class="pv-status"><span class="pv-status-badge pv-status-accepted">Accepted</span></div>';
+  }
+
+  // Detail grid
+  html += '<div class="pv-grid">'
+    + '<div><div class="pv-grid-label">Client</div><div class="pv-grid-val">' + escHtml(p.client_company || '\u2014') + '</div></div>'
+    + '<div><div class="pv-grid-label">Contact</div><div class="pv-grid-val">' + escHtml(p.client_name || '\u2014') + '</div></div>'
+    + '<div><div class="pv-grid-label">Participants</div><div class="pv-grid-val">' + (p.participants || '\u2014') + '</div></div>'
+    + '<div><div class="pv-grid-label">Proposed Dates</div><div class="pv-grid-val">' + escHtml(p.proposed_dates || 'TBD') + '</div></div>'
+    + '</div>';
+
+  // Investment
+  if (p.investment && p.investment > 0) {
+    html += '<div class="pv-investment">'
+      + '<div class="pv-investment-label">Investment</div>'
+      + '<div class="pv-investment-amount">' + formatCurrency(p.investment) + '</div>'
+      + '</div>';
+  }
+
+  html += '<div class="pv-body">';
+
+  // Inclusions
+  if (inclusions.length > 0) {
+    html += '<div class="pv-section-label">What\'s Included</div>';
+    inclusions.forEach(function(item) {
+      html += '<div class="pv-inclusion">' + escHtml(item) + '</div>';
+    });
+  }
+
+  // Scope
+  if (p.scope) {
+    html += '<div class="pv-section-label">Scope of Work</div>';
+    html += '<div class="pv-scope">' + escHtml(p.scope).replace(/\n/g, '<br>') + '</div>';
+  }
+
+  // Custom message
+  if (p.custom_message) {
+    html += '<div class="pv-section-label">A Personal Note</div>';
+    html += '<div class="pv-note">' + escHtml(p.custom_message).replace(/\n/g, '<br>') + '</div>';
+  }
+
+  // Terms
+  if (p.terms_and_conditions) {
+    html += '<div class="pv-section-label">Terms &amp; Conditions</div>';
+    html += '<div class="pv-terms">' + escHtml(p.terms_and_conditions).replace(/\n/g, '<br>') + '</div>';
+  }
+
+  // Coach footer
+  html += '<div class="pv-coach">';
+  html += '<div class="pv-coach-name">' + escHtml(coachName) + '</div>';
+  if (coachHeadline) html += '<div class="pv-coach-headline">' + escHtml(coachHeadline) + '</div>';
+  if (coachCompany) html += '<div class="pv-coach-company">' + escHtml(coachCompany) + '</div>';
+  html += '<div class="pv-coach-details">';
+  if (coachEmail) html += escHtml(coachEmail) + '<br>';
+  if (coachWebsite) html += '<a href="' + escHtml(coachWebsite) + '">' + escHtml(coachWebsite.replace(/^https?:\/\//, '')) + '</a><br>';
+  if (coachPhone) html += escHtml(coachPhone);
+  html += '</div></div>';
+
+  html += '</div>';
+
+  // Accept button (only if not already accepted)
+  if (p.status !== 'accepted') {
+    html += '<div class="pv-accept">'
+      + '<button class="pv-accept-btn" id="accept-btn" onclick="acceptProposal(\'' + escHtml(p.id) + '\')">Accept Proposal</button>'
+      + '<div class="pv-accept-msg" id="accept-msg"></div>'
+      + '</div>';
+  } else {
+    html += '<div class="pv-accept">'
+      + '<div class="pv-accept-msg" style="color:#4a7c59;font-weight:600;">Thank you — your coach will be in touch shortly.</div>'
+      + '</div>';
+  }
+
+  document.getElementById('pv-content').innerHTML = html;
+}
+
+async function acceptProposal(id) {
+  var btn = document.getElementById('accept-btn');
+  var msg = document.getElementById('accept-msg');
+  btn.disabled = true;
+  btn.textContent = 'Accepting...';
+
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_proposals?id=eq.' + id, {
+      method: 'PATCH',
+      headers: {
+        'apikey': ANON_KEY,
+        'Authorization': 'Bearer ' + ANON_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({ status: 'accepted' })
+    });
+
+    if (res.ok) {
+      btn.style.display = 'none';
+      msg.textContent = 'Thank you — your coach will be in touch shortly.';
+      msg.style.color = '#4a7c59';
+    } else {
+      msg.textContent = 'Something went wrong. Please try again.';
+      msg.style.color = '#c44';
+      btn.disabled = false;
+      btn.textContent = 'Accept Proposal';
+    }
+  } catch (err) {
+    msg.textContent = 'Connection error. Please try again.';
+    msg.style.color = '#c44';
+    btn.disabled = false;
+    btn.textContent = 'Accept Proposal';
+  }
+}
+</script>
+</body>
+</html>

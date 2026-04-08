@@ -595,25 +595,34 @@ async function sendProposal() {
   });
 
   if (res.ok) {
+    var inserted = await res.json();
+    var insertedId = Array.isArray(inserted) && inserted.length > 0 ? inserted[0].id : null;
     var coachName = coachProfile.display_name || coachProfile.full_name || 'A coach';
-
     var sendTo = d.sendEmail || d.email;
 
-    // Send email notification via coach-welcome-style endpoint (logs for now)
-    fetch('/api/booking-confirmation', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ proposal_email: sendTo, coach_name: coachName, service: d.service, company: d.company })
-    }).catch(function() {});
+    if (insertedId) {
+      var proposalUrl = 'https://www.ineedcoaching.org/proposal-view.html?id=' + insertedId;
 
-    console.log('=== PROPOSAL SENT ===');
-    console.log('To:', sendTo);
-    console.log('From:', coachName);
-    console.log('Service:', d.service);
-    console.log('Investment:', d.investment);
-    console.log('===');
+      fetch('/api/send-proposal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: sendTo,
+          coachName: coachName,
+          clientName: d.contact,
+          company: d.company,
+          proposalUrl: proposalUrl
+        })
+      }).catch(function() {});
 
-    showMsg('Proposal sent to ' + sendTo + '.', 'var(--forest)');
+      console.log('=== PROPOSAL SENT ===');
+      console.log('To:', sendTo);
+      console.log('From:', coachName);
+      console.log('Proposal URL:', proposalUrl);
+      console.log('===');
+    }
+
+    showMsg('Proposal sent to ' + sendTo + '.', '#4a7c59');
   } else {
     showMsg('Failed to send. Try again.', '#c44');
   }
