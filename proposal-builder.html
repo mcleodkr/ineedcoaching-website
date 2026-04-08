@@ -437,8 +437,8 @@ function updatePreview() {
     + '<div class="proposal-subtitle">Prepared by ' + escHtml(coachName) + (coachProfile && coachProfile.company_name ? ', ' + escHtml(coachProfile.company_name) : '') + '</div>'
 
     + '<div class="proposal-detail-grid">'
-    + '<div class="proposal-detail-item"><label>Client</label><span>' + escHtml(d.company || '&mdash;') + '</span></div>'
-    + '<div class="proposal-detail-item"><label>Contact</label><span>' + escHtml(d.contact || '&mdash;') + '</span></div>'
+    + '<div class="proposal-detail-item"><label>Client</label><span>' + (d.company ? escHtml(d.company) : '\u2014') + '</span></div>'
+    + '<div class="proposal-detail-item"><label>Contact</label><span>' + (d.contact ? escHtml(d.contact) : '\u2014') + '</span></div>'
     + '<div class="proposal-detail-item"><label>Participants</label><span>' + d.participants + '</span></div>'
     + '<div class="proposal-detail-item"><label>Proposed Dates</label><span>' + escHtml(d.dates || 'TBD') + '</span></div>'
     + '</div>';
