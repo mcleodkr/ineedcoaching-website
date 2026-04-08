@@ -350,6 +350,7 @@ async function verifyAndInit(token) {
     }
 
     coachProfile = profiles[0];
+    updatePreview();
     $('login-screen').style.display = 'none';
     $('app').style.display = 'block';
     updatePreview();
@@ -420,7 +421,8 @@ function formatCurrency(n) {
 function updatePreview() {
   var d = getFormData();
   var coachName = coachProfile ? (coachProfile.display_name || coachProfile.full_name || 'Coach') : 'Coach';
-  var headline = coachProfile ? (coachProfile.headline || '') : '';
+  var coachCompany = coachProfile ? (coachProfile.company_name || '') : '';
+  var coachHeadline = coachProfile ? (coachProfile.headline || '') : '';
   var today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
   var inclusionsHtml = '';
@@ -438,7 +440,7 @@ function updatePreview() {
     + '</div>'
 
     + '<div class="proposal-title">' + escHtml(d.service || 'Coaching Proposal') + '</div>'
-    + '<div class="proposal-subtitle">Prepared by ' + escHtml(coachName) + (coachProfile && coachProfile.company_name ? ', ' + escHtml(coachProfile.company_name) : '') + '</div>'
+    + '<div class="proposal-subtitle">Prepared by ' + escHtml(coachName) + (coachCompany ? ', ' + escHtml(coachCompany) : '') + '</div>'
 
     + '<div class="proposal-detail-grid">'
     + '<div class="proposal-detail-item"><label>Client</label><span>' + (d.company ? escHtml(d.company) : '\u2014') + '</span></div>'
@@ -489,7 +491,8 @@ function updatePreview() {
   html += '<div class="proposal-footer">'
     + '<div class="proposal-footer-label">Your Coach</div>'
     + '<div class="proposal-footer-name">' + escHtml(coachName) + '</div>'
-    + (headline ? '<div class="proposal-footer-headline">' + escHtml(headline) + '</div>' : '')
+    + (coachHeadline ? '<div class="proposal-footer-headline">' + escHtml(coachHeadline) + '</div>' : '')
+    + (coachCompany ? '<div style="font-size:0.78rem;color:var(--ink);margin-bottom:10px;font-weight:600;">' + escHtml(coachCompany) + '</div>' : '')
     + '<div class="proposal-footer-details">'
     + (coachEmail ? escHtml(coachEmail) + '<br>' : '')
     + (coachWebsite ? '<a href="' + escHtml(coachWebsite) + '">' + escHtml(coachWebsite.replace(/^https?:\/\//, '')) + '</a><br>' : '')
