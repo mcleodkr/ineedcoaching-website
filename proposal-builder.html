@@ -237,6 +237,16 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
         <textarea id="f-message" placeholder="A personal note to the client about why this engagement matters..." oninput="updatePreview()"></textarea>
       </div>
 
+      <div class="field" style="margin-bottom:24px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;font-size:0.85rem;font-weight:600;letter-spacing:0;">
+          <input type="checkbox" id="f-terms-toggle" onchange="toggleTerms(); updatePreview();" style="width:auto;padding:0;margin:0;">
+          Include Terms &amp; Conditions in proposal
+        </label>
+        <div id="terms-section" style="display:none;margin-top:12px;">
+          <textarea id="f-terms" style="min-height:140px;" oninput="updatePreview()">Payment is due within 14 days of proposal acceptance. A 50% deposit is required to confirm the engagement. Cancellations made less than 7 days before the start date are non-refundable. All materials developed remain the intellectual property of the coach unless otherwise agreed in writing. This proposal is valid for 30 days. Both parties agree to keep the terms of this engagement confidential.</textarea>
+        </div>
+      </div>
+
       <div class="form-actions">
         <button class="btn-gold" onclick="saveDraft()">Save Draft</button>
         <button class="btn-outline" onclick="window.print()">Download PDF</button>
@@ -372,6 +382,10 @@ function prefillSendEmail() {
 }
 $('f-send-email').addEventListener('input', function() { this.dataset.userEdited = this.value ? 'true' : ''; });
 
+function toggleTerms() {
+  $('terms-section').style.display = $('f-terms-toggle').checked ? 'block' : 'none';
+}
+
 /* ── PREVIEW ── */
 function getFormData() {
   return {
@@ -386,6 +400,7 @@ function getFormData() {
     scope: $('f-scope').value.trim(),
     message: $('f-message').value.trim(),
     sendEmail: $('f-send-email').value.trim(),
+    terms: $('f-terms-toggle').checked ? $('f-terms').value.trim() : '',
   };
 }
 
@@ -451,8 +466,16 @@ function updatePreview() {
       + '</div>';
   }
 
+  if (d.terms) {
+    html += '<div class="proposal-section">'
+      + '<div class="proposal-section-label">Terms &amp; Conditions</div>'
+      + '<div style="font-size:0.82rem;color:var(--muted);line-height:1.7;">' + escHtml(d.terms).replace(/\n/g, '<br>') + '</div>'
+      + '</div>';
+  }
+
   html += '<div class="proposal-footer">'
     + '<div class="proposal-footer-name">' + escHtml(coachName) + '</div>'
+    + (headline ? '<div style="font-size:0.82rem;color:var(--muted);margin-bottom:4px;">' + escHtml(headline) + '</div>' : '')
     + '<div class="proposal-footer-via">via ineedcoaching.org</div>'
     + '</div></div>';
 
@@ -479,6 +502,7 @@ async function saveDraft() {
     investment: d.investment || null,
     inclusions: d.inclusions,
     custom_message: d.message,
+    terms_and_conditions: d.terms || null,
     status: 'draft',
   };
 
@@ -517,6 +541,7 @@ async function sendProposal() {
     investment: d.investment || null,
     inclusions: d.inclusions,
     custom_message: d.message,
+    terms_and_conditions: d.terms || null,
     status: 'sent',
   };
 
