@@ -80,30 +80,35 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 #proposal-preview { padding: 0; }
 
 /* PRINT PROPOSAL */
-.proposal-doc { padding: 48px; font-family: 'Cabinet Grotesk', sans-serif; }
-.proposal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; padding-bottom: 24px; border-bottom: 2px solid var(--gold); }
+.proposal-doc { padding: 52px 48px; font-family: 'Cabinet Grotesk', sans-serif; }
+.proposal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 44px; padding-bottom: 28px; border-bottom: 2px solid var(--gold); }
 .proposal-logo { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--ink); }
 .proposal-logo .pl-i { color: var(--gold); font-style: italic; }
 .proposal-logo .pl-c { color: var(--gold); font-style: italic; }
-.proposal-date { font-size: 0.78rem; color: var(--muted); text-align: right; }
-.proposal-title { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--ink); margin-bottom: 6px; line-height: 1.2; }
-.proposal-subtitle { font-size: 0.88rem; color: var(--muted); margin-bottom: 32px; }
-.proposal-section { margin-bottom: 28px; }
-.proposal-section-label { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
-.proposal-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
-.proposal-detail-item label { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 4px; }
+.proposal-date { font-size: 0.78rem; color: var(--muted); text-align: right; line-height: 1.5; }
+.proposal-title { font-family: 'Playfair Display', serif; font-size: 1.8rem; color: var(--ink); margin-bottom: 8px; line-height: 1.15; font-weight: 900; }
+.proposal-subtitle { font-size: 0.88rem; color: var(--muted); margin-bottom: 36px; letter-spacing: 0.01em; }
+.proposal-section { margin-bottom: 32px; }
+.proposal-section-label { font-size: 0.6rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--gold-lt); }
+.proposal-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px; }
+.proposal-detail-item label { font-size: 0.68rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 5px; }
 .proposal-detail-item span { font-size: 0.95rem; color: var(--ink); font-weight: 600; }
 .proposal-inclusions { list-style: none; }
-.proposal-inclusions li { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; color: var(--ink); display: flex; align-items: flex-start; gap: 10px; }
+.proposal-inclusions li { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; color: var(--ink); display: flex; align-items: flex-start; gap: 10px; }
 .proposal-inclusions li:last-child { border-bottom: none; }
 .proposal-check { color: var(--gold); font-weight: 700; flex-shrink: 0; }
-.proposal-message { font-size: 0.92rem; color: var(--ink); line-height: 1.7; padding: 24px; background: var(--gold-lt); border-radius: var(--r-sm); border-left: 3px solid var(--gold); }
-.proposal-investment { text-align: center; padding: 28px; background: var(--navy); border-radius: var(--r); margin: 28px 0; }
-.proposal-investment-label { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
-.proposal-investment-amount { font-family: 'Playfair Display', serif; font-size: 2.4rem; font-weight: 900; color: var(--cream); }
-.proposal-footer { margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border); text-align: center; }
-.proposal-footer-name { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--ink); margin-bottom: 4px; }
-.proposal-footer-via { font-size: 0.72rem; color: var(--muted); }
+.proposal-message { font-size: 0.92rem; color: var(--ink); line-height: 1.7; padding: 24px 28px; background: var(--gold-lt); border-radius: var(--r-sm); border-left: 3px solid var(--gold); }
+.proposal-investment { text-align: center; padding: 40px 28px; background: var(--navy); border-radius: var(--r); margin: 32px 0; position: relative; overflow: hidden; }
+.proposal-investment::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--gold), var(--gold-hover), var(--gold)); }
+.proposal-investment-label { font-size: 0.6rem; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px; }
+.proposal-investment-amount { font-family: 'Playfair Display', serif; font-size: 2.8rem; font-weight: 900; color: var(--cream); letter-spacing: -0.02em; }
+.proposal-footer { margin-top: 44px; padding-top: 28px; border-top: 1.5px solid var(--gold); text-align: center; }
+.proposal-footer-name { font-family: 'Playfair Display', serif; font-size: 1.15rem; color: var(--ink); margin-bottom: 2px; font-weight: 700; }
+.proposal-footer-headline { font-size: 0.82rem; color: var(--muted); margin-bottom: 12px; font-style: italic; }
+.proposal-footer-details { font-size: 0.8rem; color: var(--ink); line-height: 1.8; }
+.proposal-footer-details a { color: var(--gold); text-decoration: none; }
+.proposal-footer-details a:hover { text-decoration: underline; }
+.proposal-footer-via { font-size: 0.68rem; color: var(--muted); margin-top: 16px; letter-spacing: 0.04em; }
 
 /* RESPONSIVE */
 @media (max-width: 900px) {
@@ -455,7 +460,7 @@ function updatePreview() {
   if (d.scope) {
     html += '<div class="proposal-section">'
       + '<div class="proposal-section-label">Scope of Work</div>'
-      + '<div style="font-size:0.92rem;color:var(--ink);line-height:1.7;">' + escHtml(d.scope).replace(/\n/g, '<br>') + '</div>'
+      + '<div class="proposal-message" style="background:transparent;border-left:none;padding:0;">' + escHtml(d.scope).replace(/\n/g, '<br>') + '</div>'
       + '</div>';
   }
 
@@ -478,12 +483,14 @@ function updatePreview() {
   var coachPhone = coachProfile ? (coachProfile.phone || '') : '';
 
   html += '<div class="proposal-footer">'
-    + '<div class="proposal-section-label" style="text-align:center;margin-bottom:14px;">Your Coach</div>'
+    + '<div class="proposal-section-label" style="text-align:center;border-bottom:none;padding-bottom:0;margin-bottom:16px;">Your Coach</div>'
     + '<div class="proposal-footer-name">' + escHtml(coachName) + '</div>'
-    + (headline ? '<div style="font-size:0.85rem;color:var(--muted);margin-bottom:6px;">' + escHtml(headline) + '</div>' : '')
-    + (coachEmail ? '<div style="font-size:0.85rem;color:var(--ink);margin-bottom:4px;">' + escHtml(coachEmail) + '</div>' : '')
-    + (coachWebsite ? '<div style="font-size:0.85rem;margin-bottom:4px;"><a href="' + escHtml(coachWebsite) + '" style="color:var(--gold);text-decoration:none;">' + escHtml(coachWebsite) + '</a></div>' : '')
-    + (coachPhone ? '<div style="font-size:0.85rem;color:var(--ink);margin-bottom:4px;">' + escHtml(coachPhone) + '</div>' : '')
+    + (headline ? '<div class="proposal-footer-headline">' + escHtml(headline) + '</div>' : '')
+    + '<div class="proposal-footer-details">'
+    + (coachEmail ? escHtml(coachEmail) + '<br>' : '')
+    + (coachWebsite ? '<a href="' + escHtml(coachWebsite) + '">' + escHtml(coachWebsite) + '</a><br>' : '')
+    + (coachPhone ? escHtml(coachPhone) : '')
+    + '</div>'
     + '<div class="proposal-footer-via">via ineedcoaching.org</div>'
     + '</div></div>';
 
