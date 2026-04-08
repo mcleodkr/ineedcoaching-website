@@ -429,7 +429,7 @@ function updatePreview() {
     + '</div>'
 
     + '<div class="proposal-title">' + escHtml(d.service || 'Coaching Proposal') + '</div>'
-    + '<div class="proposal-subtitle">Prepared by ' + escHtml(coachName) + (headline ? ' &mdash; ' + escHtml(headline) : '') + '</div>'
+    + '<div class="proposal-subtitle">Prepared by ' + escHtml(coachName) + (coachProfile && coachProfile.company_name ? ', ' + escHtml(coachProfile.company_name) : '') + '</div>'
 
     + '<div class="proposal-detail-grid">'
     + '<div class="proposal-detail-item"><label>Client</label><span>' + escHtml(d.company || '&mdash;') + '</span></div>'
@@ -473,9 +473,17 @@ function updatePreview() {
       + '</div>';
   }
 
+  var coachEmail = coachProfile ? (coachProfile.email || '') : '';
+  var coachWebsite = coachProfile ? (coachProfile.website_url || '') : '';
+  var coachPhone = coachProfile ? (coachProfile.phone || '') : '';
+
   html += '<div class="proposal-footer">'
+    + '<div class="proposal-section-label" style="text-align:center;margin-bottom:14px;">Your Coach</div>'
     + '<div class="proposal-footer-name">' + escHtml(coachName) + '</div>'
-    + (headline ? '<div style="font-size:0.82rem;color:var(--muted);margin-bottom:4px;">' + escHtml(headline) + '</div>' : '')
+    + (headline ? '<div style="font-size:0.85rem;color:var(--muted);margin-bottom:6px;">' + escHtml(headline) + '</div>' : '')
+    + (coachEmail ? '<div style="font-size:0.85rem;color:var(--ink);margin-bottom:4px;">' + escHtml(coachEmail) + '</div>' : '')
+    + (coachWebsite ? '<div style="font-size:0.85rem;margin-bottom:4px;"><a href="' + escHtml(coachWebsite) + '" style="color:var(--gold);text-decoration:none;">' + escHtml(coachWebsite) + '</a></div>' : '')
+    + (coachPhone ? '<div style="font-size:0.85rem;color:var(--ink);margin-bottom:4px;">' + escHtml(coachPhone) + '</div>' : '')
     + '<div class="proposal-footer-via">via ineedcoaching.org</div>'
     + '</div></div>';
 
