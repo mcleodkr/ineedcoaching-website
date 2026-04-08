@@ -79,44 +79,36 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .preview-label { padding: 10px 24px; background: var(--navy); font-size: 0.62rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); border-bottom: none; }
 #proposal-preview { padding: 0; background: white; }
 
-/* PRINT PROPOSAL — premium executive document */
-.proposal-doc { padding: 40px; font-family: 'Cabinet Grotesk', sans-serif; background: white; min-height: 400px; }
-.proposal-doc h1, .proposal-doc h2, .proposal-doc h3 { font-family: 'Playfair Display', serif; }
-.proposal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 48px; padding-bottom: 24px; border-bottom: 2px solid #c49a3c; }
-.proposal-logo { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: #1a3a52; letter-spacing: 0.01em; }
-.proposal-logo .pl-i { color: #c49a3c; font-style: italic; }
-.proposal-logo .pl-c { color: #c49a3c; font-style: italic; }
-.proposal-date { font-size: 0.72rem; color: #8a8a9a; text-align: right; line-height: 1.6; letter-spacing: 0.02em; }
-.proposal-title { font-family: 'Playfair Display', serif; font-size: 2rem; color: #1a3a52; margin-bottom: 10px; line-height: 1.1; font-weight: 900; }
-.proposal-subtitle { font-size: 0.85rem; color: #8a8a9a; margin-bottom: 40px; letter-spacing: 0.02em; }
-.proposal-section { margin-bottom: 36px; }
-.proposal-section-label { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #c49a3c; margin-bottom: 16px; padding-bottom: 6px; border-bottom: 1px solid #c49a3c; }
-.proposal-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 36px; padding: 20px; background: #f7f4ee; border-radius: 8px; }
-.proposal-detail-item label { font-size: 0.62rem; font-weight: 800; color: #8a8a9a; text-transform: uppercase; letter-spacing: 0.08em; display: block; margin-bottom: 6px; }
-.proposal-detail-item span { font-family: 'Playfair Display', serif; font-size: 1rem; color: #1a3a52; font-weight: 700; }
-.proposal-inclusions { list-style: none; }
-.proposal-inclusions li { padding: 12px 0; border-bottom: 1px solid #e0ddd5; font-size: 0.9rem; color: #1a3a52; display: flex; align-items: flex-start; gap: 12px; line-height: 1.5; }
-.proposal-inclusions li:last-child { border-bottom: none; }
-.proposal-check { color: #c49a3c; font-size: 1.1rem; font-weight: 700; flex-shrink: 0; line-height: 1.3; }
-.proposal-message { font-size: 0.9rem; color: #1a3a52; line-height: 1.8; padding: 28px 32px; background: #faf3e0; border-radius: 8px; border-left: 3px solid #c49a3c; font-style: italic; }
-.proposal-terms { font-size: 0.78rem; color: #8a8a9a; line-height: 1.8; }
-.proposal-scope { font-size: 0.9rem; color: #1a3a52; line-height: 1.8; }
-/* Legacy investment class (kept for compatibility) */
-.proposal-investment { text-align: center; padding: 32px; background: #1a3a52; border-radius: 8px; margin: 32px 0; }
-.proposal-investment-label { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(196,154,60,0.7); margin-bottom: 12px; }
-.proposal-investment-amount { font-family: 'Playfair Display', serif; font-size: 3rem; font-weight: 900; color: #c49a3c; }
-/* New investment wrapper */
-.prev-investment { text-align: center; padding: 32px; background: #1a3a52; border-radius: 8px; margin: 32px 0; }
-.prev-investment .proposal-investment-label { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(196,154,60,0.7); margin-bottom: 12px; }
-.prev-investment .proposal-investment-amount { font-family: 'Playfair Display', serif; font-size: 3rem; font-weight: 900; color: #c49a3c; }
-.proposal-footer { margin-top: 48px; padding-top: 32px; border-top: 1px solid #e0ddd5; text-align: center; }
-.proposal-footer-label { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #c49a3c; margin-bottom: 16px; padding-bottom: 6px; border-bottom: 1px solid #c49a3c; display: inline-block; }
-.proposal-footer-name { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: #1a3a52; margin-bottom: 4px; font-weight: 700; }
-.proposal-footer-headline { font-size: 0.9rem; color: #8a8a9a; margin-bottom: 14px; font-style: italic; }
-.proposal-footer-details { font-size: 0.78rem; color: #1a3a52; line-height: 2; letter-spacing: 0.01em; }
-.proposal-footer-details a { color: #c49a3c; text-decoration: none; font-weight: 500; }
-.proposal-footer-details a:hover { text-decoration: underline; }
-.proposal-footer-via { font-size: 0.65rem; color: #8a8a9a; margin-top: 20px; letter-spacing: 0.06em; text-transform: uppercase; }
+/* PROPOSAL PREVIEW — premium executive document */
+.preview-doc { background: #fff; padding: 48px 40px; font-family: 'Cabinet Grotesk', sans-serif; }
+.prev-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+.prev-logo { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: #1a3a52; }
+.prev-logo .pl-i { color: #c49a3c; font-style: italic; }
+.prev-logo .pl-c { color: #c49a3c; font-style: italic; }
+.prev-date { font-size: 0.72rem; color: #8a8a9a; text-align: right; line-height: 1.6; }
+.prev-divider { border: none; border-top: 2px solid #c49a3c; margin: 16px 0 32px; }
+.prev-title { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900; color: #1a3a52; margin-bottom: 4px; }
+.prev-subtitle { font-size: 0.9rem; color: #8a8a9a; margin-bottom: 32px; }
+.prev-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; background: #f7f4ee; border-radius: 10px; padding: 20px; margin-bottom: 32px; }
+.prev-grid-label { font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #8a8a9a; margin-bottom: 4px; }
+.prev-grid-val { font-size: 0.95rem; font-weight: 700; color: #1a3a52; }
+.prev-investment { background: #1a3a52; border-radius: 10px; padding: 32px; text-align: center; margin-bottom: 32px; }
+.prev-investment-label { font-size: 0.65rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #c49a3c; margin-bottom: 8px; }
+.prev-investment-amount { font-family: 'Playfair Display', serif; font-size: 3rem; font-weight: 900; color: #c49a3c; }
+.prev-section-label { font-size: 0.65rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #c49a3c; border-bottom: 1px solid #c49a3c; padding-bottom: 6px; margin-bottom: 16px; margin-top: 28px; }
+.prev-inclusion { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #e0ddd5; font-size: 0.9rem; color: #1a3a52; }
+.prev-inclusion::before { content: '\2713'; color: #c49a3c; font-weight: 900; }
+.prev-scope { font-size: 0.9rem; color: #4a4a5a; line-height: 1.7; }
+.prev-note { background: #faf3e0; border-left: 3px solid #c49a3c; padding: 16px 20px; border-radius: 0 8px 8px 0; font-size: 0.9rem; color: #1a3a52; font-style: italic; }
+.prev-terms { font-size: 0.8rem; color: #8a8a9a; line-height: 1.6; }
+.prev-coach-footer { text-align: center; padding-top: 32px; border-top: 1px solid #e0ddd5; margin-top: 32px; }
+.prev-coach-name { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700; color: #1a3a52; }
+.prev-coach-headline { font-style: italic; color: #8a8a9a; font-size: 0.88rem; margin: 4px 0; }
+.prev-coach-company { font-size: 0.82rem; color: #c49a3c; font-weight: 700; margin-bottom: 8px; }
+.prev-coach-details { font-size: 0.78rem; color: #1a3a52; line-height: 2; }
+.prev-coach-details a { color: #c49a3c; text-decoration: none; font-weight: 500; }
+.prev-coach-details a:hover { text-decoration: underline; }
+.prev-coach-via { font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: #8a8a9a; margin-top: 16px; }
 
 /* RESPONSIVE */
 @media (max-width: 900px) {
@@ -124,7 +116,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
   .builder-grid { grid-template-columns: 1fr; }
   .preview-card { position: static; }
   .page-wrap { padding: 100px 18px 60px; }
-  .proposal-detail-grid { grid-template-columns: 1fr; }
+  .prev-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
   .nav-links a:not(.nav-pill) { display: none; }
@@ -139,8 +131,8 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
   nav, #login-screen, .form-card, .form-actions, .preview-label, .page-header { display: none !important; }
   .builder-grid { grid-template-columns: 1fr; }
   .preview-card { position: static; border: none; box-shadow: none; }
-  .proposal-doc { padding: 24px; }
-  .proposal-investment { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .preview-doc { padding: 24px; }
+  .prev-investment { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 </style>
 </head>
@@ -431,78 +423,69 @@ function updatePreview() {
 
   var inclusionsHtml = '';
   if (d.inclusions.length > 0) {
-    inclusionsHtml = '<ul class="proposal-inclusions">' +
-      d.inclusions.map(function(item) {
-        return '<li><span class="proposal-check">&#10003;</span> ' + escHtml(item) + '</li>';
-      }).join('') + '</ul>';
+    inclusionsHtml = d.inclusions.map(function(item) {
+      return '<div class="prev-inclusion">' + escHtml(item) + '</div>';
+    }).join('');
   }
 
-  var html = '<div class="proposal-doc">'
-    + '<div class="proposal-header">'
-    + '<div class="proposal-logo"><span class="pl-i">i</span>need<span class="pl-c">coaching</span>.org</div>'
-    + '<div class="proposal-date">' + today + '<br>Prepared for ' + escHtml(d.company || 'Client') + '</div>'
+  var html = '<div class="preview-doc">'
+    + '<div class="prev-header">'
+    + '<div class="prev-logo"><span class="pl-i">i</span>need<span class="pl-c">coaching</span>.org</div>'
+    + '<div class="prev-date">' + today + '<br>Prepared for ' + escHtml(d.company || 'Client') + '</div>'
     + '</div>'
+    + '<hr class="prev-divider">'
 
-    + '<div class="proposal-title">' + escHtml(d.service || 'Coaching Proposal') + '</div>'
-    + '<div class="proposal-subtitle">Prepared by ' + escHtml(coachName) + (coachCompany ? ', ' + escHtml(coachCompany) : '') + '</div>'
+    + '<div class="prev-title">' + escHtml(d.service || 'Coaching Proposal') + '</div>'
+    + '<div class="prev-subtitle">Prepared by ' + escHtml(coachName) + (coachCompany ? ', ' + escHtml(coachCompany) : '') + '</div>'
 
-    + '<div class="proposal-detail-grid">'
-    + '<div class="proposal-detail-item"><label>Client</label><span>' + (d.company ? escHtml(d.company) : '\u2014') + '</span></div>'
-    + '<div class="proposal-detail-item"><label>Contact</label><span>' + (d.contact ? escHtml(d.contact) : '\u2014') + '</span></div>'
-    + '<div class="proposal-detail-item"><label>Participants</label><span>' + d.participants + '</span></div>'
-    + '<div class="proposal-detail-item"><label>Proposed Dates</label><span>' + escHtml(d.dates || 'TBD') + '</span></div>'
+    + '<div class="prev-grid">'
+    + '<div><div class="prev-grid-label">Client</div><div class="prev-grid-val">' + (d.company ? escHtml(d.company) : '\u2014') + '</div></div>'
+    + '<div><div class="prev-grid-label">Contact</div><div class="prev-grid-val">' + (d.contact ? escHtml(d.contact) : '\u2014') + '</div></div>'
+    + '<div><div class="prev-grid-label">Participants</div><div class="prev-grid-val">' + d.participants + '</div></div>'
+    + '<div><div class="prev-grid-label">Proposed Dates</div><div class="prev-grid-val">' + escHtml(d.dates || 'TBD') + '</div></div>'
     + '</div>';
 
   if (d.investment > 0) {
     html += '<div class="prev-investment">'
-      + '<div class="proposal-investment-label">Investment</div>'
-      + '<div class="proposal-investment-amount">' + formatCurrency(d.investment) + '</div>'
+      + '<div class="prev-investment-label">Investment</div>'
+      + '<div class="prev-investment-amount">' + formatCurrency(d.investment) + '</div>'
       + '</div>';
   }
 
   if (inclusionsHtml) {
-    html += '<div class="proposal-section">'
-      + '<div class="proposal-section-label">What\'s Included</div>'
-      + inclusionsHtml
-      + '</div>';
+    html += '<div class="prev-section-label">What\'s Included</div>'
+      + inclusionsHtml;
   }
 
   if (d.scope) {
-    html += '<div class="proposal-section">'
-      + '<div class="proposal-section-label">Scope of Work</div>'
-      + '<div class="proposal-scope">' + escHtml(d.scope).replace(/\n/g, '<br>') + '</div>'
-      + '</div>';
+    html += '<div class="prev-section-label">Scope of Work</div>'
+      + '<div class="prev-scope">' + escHtml(d.scope).replace(/\n/g, '<br>') + '</div>';
   }
 
   if (d.message) {
-    html += '<div class="proposal-section">'
-      + '<div class="proposal-section-label">A Note From Your Coach</div>'
-      + '<div class="proposal-message">' + escHtml(d.message).replace(/\n/g, '<br>') + '</div>'
-      + '</div>';
+    html += '<div class="prev-section-label">A Note From Your Coach</div>'
+      + '<div class="prev-note">' + escHtml(d.message).replace(/\n/g, '<br>') + '</div>';
   }
 
   if (d.terms) {
-    html += '<div class="proposal-section">'
-      + '<div class="proposal-section-label">Terms &amp; Conditions</div>'
-      + '<div class="proposal-terms">' + escHtml(d.terms).replace(/\n/g, '<br>') + '</div>'
-      + '</div>';
+    html += '<div class="prev-section-label">Terms &amp; Conditions</div>'
+      + '<div class="prev-terms">' + escHtml(d.terms).replace(/\n/g, '<br>') + '</div>';
   }
 
   var coachEmail = coachProfile ? (coachProfile.email || '') : '';
   var coachWebsite = coachProfile ? (coachProfile.website_url || '') : '';
   var coachPhone = coachProfile ? (coachProfile.phone || '') : '';
 
-  html += '<div class="proposal-footer">'
-    + '<div class="proposal-footer-label">Your Coach</div>'
-    + '<div class="proposal-footer-name">' + escHtml(coachName) + '</div>'
-    + (coachHeadline ? '<div class="proposal-footer-headline">' + escHtml(coachHeadline) + '</div>' : '')
-    + (coachCompany ? '<div style="font-size:0.78rem;color:var(--ink);margin-bottom:10px;font-weight:600;">' + escHtml(coachCompany) + '</div>' : '')
-    + '<div class="proposal-footer-details">'
+  html += '<div class="prev-coach-footer">'
+    + '<div class="prev-coach-name">' + escHtml(coachName) + '</div>'
+    + (coachHeadline ? '<div class="prev-coach-headline">' + escHtml(coachHeadline) + '</div>' : '')
+    + (coachCompany ? '<div class="prev-coach-company">' + escHtml(coachCompany) + '</div>' : '')
+    + '<div class="prev-coach-details">'
     + (coachEmail ? escHtml(coachEmail) + '<br>' : '')
     + (coachWebsite ? '<a href="' + escHtml(coachWebsite) + '">' + escHtml(coachWebsite.replace(/^https?:\/\//, '')) + '</a><br>' : '')
     + (coachPhone ? escHtml(coachPhone) : '')
     + '</div>'
-    + '<div class="proposal-footer-via">via ineedcoaching.org</div>'
+    + '<div class="prev-coach-via">via ineedcoaching.org</div>'
     + '</div></div>';
 
   $('proposal-preview').innerHTML = html;
