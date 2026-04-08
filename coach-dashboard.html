@@ -1051,32 +1051,14 @@ function setupProfileHandlers() {
         body: file
       });
       if (!res.ok) {
-        var errBody = await res.text();
-        console.error('Photo upload failed — status:', res.status, 'body:', errBody);
-        // Fallback: store as base64 data URL if storage bucket is missing
-        if (res.status === 404 || res.status === 400) {
-          var reader = new FileReader();
-          reader.onload = async function() {
-            try {
-              await supabasePatch('coach_profiles', { id: 'eq.' + coachProfile.id }, { photo_url: reader.result });
-              coachProfile.photo_url = reader.result;
-              renderPhotoPreview();
-              photoErr.style.display = 'none';
-            } catch (patchErr) {
-              console.error('Base64 fallback failed:', patchErr);
-              photoErr.textContent = 'Upload failed: ' + patchErr.message;
-              photoErr.style.display = 'block';
-            }
-          };
-          reader.readAsDataURL(file);
-          return;
-        }
-        photoErr.textContent = 'Upload failed (status ' + res.status + '): ' + errBody;
-        photoErr.style.display = 'block';
+        var errBody = await res.json().catch(() => ({}));
+        console.error('Storage upload failed:', res.status, errBody);
+        alert('Upload failed (' + res.status + '): ' + (errBody.message || errBody.error || 'Check console for details'));
         return;
       }
       var publicUrl = SUPABASE_URL + '/storage/v1/object/public/coach-photos/' + filename;
-      await supabasePatch('coach_profiles', { id: 'eq.' + coachProfile.id }, { photo_url: publicUrl });
+      var patchResult = await supabasePatch('coach_profiles', { id: 'eq.' + coachProfile.id }, { photo_url: publicUrl });
+      console.log('Patch result:', patchResult);
       coachProfile.photo_url = publicUrl;
       renderPhotoPreview();
       photoErr.style.display = 'none';
