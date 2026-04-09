@@ -758,40 +758,48 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 
     <!-- INTAKE FORMS TAB -->
     <div id="tab-intake" class="tab-panel">
-      <div class="form-section">
-        <h2 class="form-section-title">Intake Form Builder</h2>
-        <div id="intake-form-status" style="margin-bottom:16px;"></div>
-
-        <div id="intake-templates" style="margin-bottom:24px;">
-          <p style="font-size:0.88rem;color:var(--muted);margin-bottom:16px;">Start with a template or build your own from scratch.</p>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;">
-            <div class="intake-tpl-card" style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:20px;">
-              <div style="font-weight:700;font-size:0.92rem;color:var(--ink);margin-bottom:4px;">General Coaching Intake</div>
-              <div style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5;">Goals, obstacles, readiness, commitment, and focus areas.</div>
-              <button class="pill-add-btn" data-template="general" style="width:100%;">Use This Template</button>
-            </div>
-            <div class="intake-tpl-card" style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:20px;">
-              <div style="font-weight:700;font-size:0.92rem;color:var(--ink);margin-bottom:4px;">Wheel of Life Assessment</div>
-              <div style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5;">Rate satisfaction across 8 life areas and identify urgency.</div>
-              <button class="pill-add-btn" data-template="wheel" style="width:100%;">Use This Template</button>
-            </div>
-            <div class="intake-tpl-card" style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:20px;">
-              <div style="font-weight:700;font-size:0.92rem;color:var(--ink);margin-bottom:4px;">Leadership & Executive Coaching</div>
-              <div style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5;">Role challenges, leadership style, success vision, and blind spots.</div>
-              <button class="pill-add-btn" data-template="leadership" style="width:100%;">Use This Template</button>
-            </div>
-            <div class="intake-tpl-card" style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:20px;">
-              <div style="font-weight:700;font-size:0.92rem;color:var(--ink);margin-bottom:4px;">Burnout & Wellness Intake</div>
-              <div style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5;">Stress levels, energy, boundaries, depletion, and restoration.</div>
-              <button class="pill-add-btn" data-template="burnout" style="width:100%;">Use This Template</button>
-            </div>
-            <div class="intake-tpl-card" style="background:var(--cream);border:1px dashed var(--border);border-radius:var(--r);padding:20px;">
-              <div style="font-weight:700;font-size:0.92rem;color:var(--ink);margin-bottom:4px;">Build from Scratch</div>
-              <div style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5;">Create your own custom intake form with any questions you want.</div>
-              <button class="pill-add-btn" data-template="scratch" style="width:100%;">Start Blank</button>
-            </div>
-          </div>
+      <!-- MY FORMS LIBRARY -->
+      <div class="form-section" id="intake-library-section">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+          <h2 class="form-section-title" style="margin-bottom:0;">My Forms</h2>
+          <button class="save-btn" id="create-new-form-btn">+ Create New Form</button>
         </div>
+        <div id="intake-forms-list"></div>
+      </div>
+
+      <!-- TEMPLATE SELECTOR (hidden by default) -->
+      <div class="form-section" id="intake-template-section" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <h2 class="form-section-title" style="margin-bottom:0;">Choose a Template</h2>
+          <button class="action-btn action-decline" id="back-to-library-btn" style="padding:10px 20px;">Back to My Forms</button>
+        </div>
+        <p style="font-size:0.88rem;color:var(--muted);margin-bottom:20px;">Pick a starting point. You can edit, add, or remove questions after selecting.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;" id="intake-templates-grid"></div>
+      </div>
+
+      <!-- FORM NAME PROMPT (hidden by default) -->
+      <div class="form-section" id="intake-name-section" style="display:none;">
+        <h2 class="form-section-title">Name This Form</h2>
+        <div class="form-group" style="max-width:400px;">
+          <label for="intake-form-name">Form Name</label>
+          <input type="text" id="intake-form-name" placeholder="e.g. General Coaching Intake">
+        </div>
+        <div style="display:flex;gap:12px;">
+          <button class="action-btn action-decline" id="name-back-btn" style="padding:12px 20px;">Back</button>
+          <button class="save-btn" id="name-continue-btn">Continue to Builder</button>
+        </div>
+      </div>
+
+      <!-- FORM BUILDER (hidden by default) -->
+      <div class="form-section" id="intake-builder-section" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:12px;">
+          <h2 class="form-section-title" style="margin-bottom:0;">
+            <span id="intake-builder-title">Editing Form</span>
+            <span id="intake-form-status" style="margin-left:12px;"></span>
+          </h2>
+          <button class="action-btn action-decline" id="builder-back-btn" style="padding:10px 20px;">Back to My Forms</button>
+        </div>
+        <p id="intake-builder-name" style="font-size:0.85rem;color:var(--muted);margin-bottom:20px;"></p>
 
         <div id="intake-questions-list" style="margin-bottom:20px;"></div>
 
@@ -827,10 +835,10 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
         </div>
 
         <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-          <button class="save-btn" id="save-intake-form-btn">Save Intake Form</button>
+          <button class="save-btn" id="save-intake-form-btn">Save Form</button>
           <button class="save-btn" id="preview-intake-btn" style="background:var(--ink);">Preview Form</button>
           <span class="save-msg" id="save-intake-msg">Saved</span>
-          <button class="action-btn action-decline" id="deactivate-intake-btn" style="display:none;padding:12px 20px;">Deactivate Form</button>
+          <button class="action-btn action-decline" id="deactivate-intake-btn" style="display:none;padding:12px 20px;">Deactivate</button>
         </div>
       </div>
 
@@ -1884,83 +1892,229 @@ async function saveAvailability() {
    INTAKE FORMS
    ================================================ */
 var intakeFormId = null;
+var intakeFormName = '';
 var intakeQuestions = [];
 var intakeFormActive = false;
+var allIntakeForms = [];
 
 var INTAKE_TEMPLATES = {
-  general: [
-    { text: 'What are your top 3 coaching goals?', type: 'long_text', required: true },
-    { text: 'What obstacles have prevented you from achieving these goals?', type: 'long_text', required: true },
-    { text: 'How ready are you to make changes in your life right now?', type: 'scale', required: true },
-    { text: 'How would you rate your commitment to this coaching process?', type: 'scale', required: true },
-    { text: 'Which area do you most want to focus on?', type: 'multiple_choice', required: true, options: ['Career', 'Relationships', 'Health & Wellness', 'Personal Growth', 'Leadership', 'Work-Life Balance', 'Other'] },
-    { text: 'Is there anything else your coach should know before your first session?', type: 'long_text', required: false }
-  ],
-  wheel: [
-    { text: 'Rate your satisfaction with your Career (1-10)', type: 'scale', required: true },
-    { text: 'Rate your satisfaction with your Health (1-10)', type: 'scale', required: true },
-    { text: 'Rate your satisfaction with your Relationships (1-10)', type: 'scale', required: true },
-    { text: 'Rate your satisfaction with your Finances (1-10)', type: 'scale', required: true },
-    { text: 'Rate your satisfaction with Personal Growth (1-10)', type: 'scale', required: true },
-    { text: 'Rate your satisfaction with Fun & Recreation (1-10)', type: 'scale', required: true },
-    { text: 'Rate your satisfaction with your Physical Environment (1-10)', type: 'scale', required: true },
-    { text: 'Rate your satisfaction with Family & Friends (1-10)', type: 'scale', required: true },
-    { text: 'Which area feels most urgent to address right now, and why?', type: 'long_text', required: true }
-  ],
-  leadership: [
-    { text: 'What is your current role and what are your biggest challenges in it?', type: 'long_text', required: true },
-    { text: 'How would you describe your leadership style?', type: 'long_text', required: true },
-    { text: 'What does success look like for you in 6 months?', type: 'long_text', required: true },
-    { text: 'Who are your key stakeholders and what do they need from you?', type: 'long_text', required: true },
-    { text: 'What do you think is your biggest blind spot as a leader?', type: 'long_text', required: false },
-    { text: 'What has gotten in the way of your growth before?', type: 'long_text', required: true }
-  ],
-  burnout: [
-    { text: 'Rate your current stress level (1-10)', type: 'scale', required: true },
-    { text: 'How many hours of sleep do you get on average?', type: 'short_text', required: true },
-    { text: 'How would you rate your daily energy levels?', type: 'scale', required: true },
-    { text: 'Do you feel comfortable setting boundaries at work and in personal life?', type: 'yes_no', required: true },
-    { text: 'What has been depleting your energy the most lately?', type: 'long_text', required: true },
-    { text: 'What activities or practices help you feel restored?', type: 'long_text', required: true },
-    { text: 'What needs to change most urgently for your wellbeing?', type: 'long_text', required: true }
-  ]
+  general: {
+    name: 'General Coaching Intake',
+    desc: 'Core coaching readiness — goals, obstacles, urgency, and focus areas.',
+    questions: [
+      { text: 'What brings you to coaching now?', type: 'long_text', required: true },
+      { text: 'What does success look like in 90 days?', type: 'long_text', required: true },
+      { text: 'What has gotten in your way before?', type: 'long_text', required: true },
+      { text: 'How urgent is this on a scale 1-10?', type: 'scale', required: true },
+      { text: 'Which area are you focused on?', type: 'multiple_choice', required: true, options: ['Career & Leadership', 'Burnout & Stress', 'Life Transitions', 'Relationships', 'Health & Wellness', 'Business Growth'] },
+      { text: 'Anything your coach should know?', type: 'long_text', required: false }
+    ]
+  },
+  wheel: {
+    name: 'Wheel of Life Assessment',
+    desc: 'Rate satisfaction 1-10 across 8 life areas and identify what feels most urgent.',
+    questions: [
+      { text: 'Rate your satisfaction with your Career (1-10)', type: 'scale', required: true },
+      { text: 'Rate your satisfaction with your Health (1-10)', type: 'scale', required: true },
+      { text: 'Rate your satisfaction with your Relationships (1-10)', type: 'scale', required: true },
+      { text: 'Rate your satisfaction with your Finances (1-10)', type: 'scale', required: true },
+      { text: 'Rate your satisfaction with Personal Growth (1-10)', type: 'scale', required: true },
+      { text: 'Rate your satisfaction with Fun & Recreation (1-10)', type: 'scale', required: true },
+      { text: 'Rate your satisfaction with your Physical Environment (1-10)', type: 'scale', required: true },
+      { text: 'Rate your satisfaction with Family & Friends (1-10)', type: 'scale', required: true },
+      { text: 'Which area feels most urgent and why?', type: 'long_text', required: true }
+    ]
+  },
+  leadership: {
+    name: 'Leadership & Executive Coaching',
+    desc: 'Role challenges, leadership style, 6-month vision, stakeholders, and blind spots.',
+    questions: [
+      { text: 'Describe your current role and biggest challenge', type: 'long_text', required: true },
+      { text: 'What does success look like in 6 months?', type: 'long_text', required: true },
+      { text: 'How would you describe your leadership style?', type: 'long_text', required: true },
+      { text: 'Who are your key stakeholders?', type: 'short_text', required: true },
+      { text: 'What is your biggest blind spot?', type: 'long_text', required: false },
+      { text: 'What has gotten in your way before?', type: 'long_text', required: true }
+    ]
+  },
+  burnout: {
+    name: 'Burnout & Wellness',
+    desc: 'Stress levels, sleep and energy, boundaries, depletion, and what restores you.',
+    questions: [
+      { text: 'Rate your current stress level 1-10', type: 'scale', required: true },
+      { text: 'How is your sleep and energy?', type: 'long_text', required: true },
+      { text: 'Where are your boundaries breaking down?', type: 'long_text', required: true },
+      { text: 'What depletes you most?', type: 'long_text', required: true },
+      { text: 'What restores you?', type: 'long_text', required: true },
+      { text: 'What needs to change most urgently?', type: 'long_text', required: true }
+    ]
+  }
 };
 
-function applyIntakeTemplate(name) {
-  if (name === 'scratch') {
-    intakeQuestions = [];
-  } else {
-    intakeQuestions = JSON.parse(JSON.stringify(INTAKE_TEMPLATES[name]));
+var pendingTemplateName = '';
+var pendingTemplateQuestions = [];
+
+function showIntakeSection(section) {
+  ['intake-library-section', 'intake-template-section', 'intake-name-section', 'intake-builder-section'].forEach(function(id) {
+    $(id).style.display = 'none';
+  });
+  $(section).style.display = '';
+}
+
+function renderFormsLibrary() {
+  var container = $('intake-forms-list');
+  if (!allIntakeForms.length) {
+    container.innerHTML = '<div class="empty-state" style="padding:24px;"><p>No intake forms yet. Create your first form to get started.</p></div>';
+    return;
   }
-  $('intake-templates').style.display = 'none';
+  var html = '';
+  allIntakeForms.forEach(function(f) {
+    var qCount = Array.isArray(f.questions) ? f.questions.length : 0;
+    var isActive = f.is_active;
+    html += '<div style="background:var(--white);border:1px solid ' + (isActive ? 'var(--gold)' : 'var(--border)') + ';border-radius:var(--r);padding:20px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">'
+      + '<div style="flex:1;min-width:200px;">'
+      + '<div style="font-weight:700;font-size:0.95rem;color:var(--ink);margin-bottom:4px;">' + escapeHtml(f.name || 'Untitled Form') + '</div>'
+      + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+      + '<span style="font-size:0.8rem;color:var(--muted);">' + qCount + ' question' + (qCount !== 1 ? 's' : '') + '</span>'
+      + (isActive ? '<span class="status-pill status-confirmed" style="font-size:0.68rem;padding:3px 10px;">Active</span>' : '<span class="status-pill status-completed" style="font-size:0.68rem;padding:3px 10px;">Inactive</span>')
+      + '</div></div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+      + '<button class="action-btn action-confirm" data-form-edit="' + f.id + '" style="padding:8px 16px;">Edit</button>'
+      + '<button class="action-btn" data-form-preview="' + f.id + '" style="padding:8px 16px;background:var(--ink);color:#fff;">Preview</button>'
+      + (isActive
+        ? '<button class="action-btn action-decline" data-form-deactivate="' + f.id + '" style="padding:8px 16px;">Deactivate</button>'
+        : '<button class="action-btn" data-form-activate="' + f.id + '" style="padding:8px 16px;background:var(--gold);color:#fff;">Set Active</button>')
+      + '</div></div>';
+  });
+  container.innerHTML = html;
+
+  // Wire buttons
+  container.querySelectorAll('[data-form-edit]').forEach(function(btn) {
+    btn.addEventListener('click', function() { openFormEditor(this.dataset.formEdit); });
+  });
+  container.querySelectorAll('[data-form-preview]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var f = allIntakeForms.find(function(x) { return x.id === btn.dataset.formPreview; });
+      if (f) { intakeQuestions = Array.isArray(f.questions) ? f.questions : []; openIntakePreview(); }
+    });
+  });
+  container.querySelectorAll('[data-form-activate]').forEach(function(btn) {
+    btn.addEventListener('click', function() { setFormActive(this.dataset.formActivate); });
+  });
+  container.querySelectorAll('[data-form-deactivate]').forEach(function(btn) {
+    btn.addEventListener('click', function() { deactivateForm(this.dataset.formDeactivate); });
+  });
+}
+
+function openFormEditor(formId) {
+  var f = allIntakeForms.find(function(x) { return x.id === formId; });
+  if (!f) return;
+  intakeFormId = f.id;
+  intakeFormName = f.name || 'Untitled Form';
+  intakeQuestions = Array.isArray(f.questions) ? JSON.parse(JSON.stringify(f.questions)) : [];
+  intakeFormActive = f.is_active;
+  $('intake-builder-title').textContent = 'Editing: ' + escapeHtml(intakeFormName);
+  $('intake-form-status').innerHTML = intakeFormActive ? '<span class="status-pill status-confirmed" style="font-size:0.78rem;">Active</span>' : '';
+  $('deactivate-intake-btn').style.display = intakeFormActive ? 'inline-flex' : 'none';
   renderIntakeQuestions();
+  showIntakeSection('intake-builder-section');
+}
+
+async function setFormActive(formId) {
+  // Deactivate all first
+  for (var i = 0; i < allIntakeForms.length; i++) {
+    if (allIntakeForms[i].is_active) {
+      await supabasePatch('coach_intake_forms', { id: 'eq.' + allIntakeForms[i].id }, { is_active: false });
+      allIntakeForms[i].is_active = false;
+    }
+  }
+  await supabasePatch('coach_intake_forms', { id: 'eq.' + formId }, { is_active: true });
+  var f = allIntakeForms.find(function(x) { return x.id === formId; });
+  if (f) f.is_active = true;
+  renderFormsLibrary();
+}
+
+async function deactivateForm(formId) {
+  if (!confirm('Deactivate this form? New bookings will not see it.')) return;
+  await supabasePatch('coach_intake_forms', { id: 'eq.' + formId }, { is_active: false });
+  var f = allIntakeForms.find(function(x) { return x.id === formId; });
+  if (f) f.is_active = false;
+  renderFormsLibrary();
+}
+
+function renderTemplateCards() {
+  var keys = Object.keys(INTAKE_TEMPLATES);
+  var html = '';
+  keys.forEach(function(key) {
+    var t = INTAKE_TEMPLATES[key];
+    html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:20px;">'
+      + '<div style="font-weight:700;font-size:0.92rem;color:var(--ink);margin-bottom:4px;">' + escapeHtml(t.name) + '</div>'
+      + '<div style="font-size:0.8rem;color:var(--muted);margin-bottom:4px;line-height:1.5;">' + escapeHtml(t.desc) + '</div>'
+      + '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:14px;">' + t.questions.length + ' questions</div>'
+      + '<button class="pill-add-btn" data-tpl-key="' + key + '" style="width:100%;">Use This Template</button>'
+      + '</div>';
+  });
+  html += '<div style="background:var(--cream);border:1px dashed var(--border);border-radius:var(--r);padding:20px;">'
+    + '<div style="font-weight:700;font-size:0.92rem;color:var(--ink);margin-bottom:4px;">Build from Scratch</div>'
+    + '<div style="font-size:0.8rem;color:var(--muted);margin-bottom:4px;line-height:1.5;">Create your own custom intake form with any questions.</div>'
+    + '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:14px;">0 questions</div>'
+    + '<button class="pill-add-btn" data-tpl-key="scratch" style="width:100%;">Start Blank</button>'
+    + '</div>';
+  $('intake-templates-grid').innerHTML = html;
+
+  document.querySelectorAll('[data-tpl-key]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var key = this.dataset.tplKey;
+      if (key === 'scratch') {
+        pendingTemplateName = '';
+        pendingTemplateQuestions = [];
+      } else {
+        pendingTemplateName = INTAKE_TEMPLATES[key].name;
+        pendingTemplateQuestions = JSON.parse(JSON.stringify(INTAKE_TEMPLATES[key].questions));
+      }
+      $('intake-form-name').value = pendingTemplateName;
+      showIntakeSection('intake-name-section');
+    });
+  });
 }
 
 async function loadIntakeForms() {
-  // Fetch active intake form
   try {
-    var forms = await supabaseGet(
-      'coach_intake_forms?coach_id=eq.' + coachProfile.id + '&is_active=eq.true&order=created_at.desc&limit=1'
+    allIntakeForms = await supabaseGet(
+      'coach_intake_forms?coach_id=eq.' + coachProfile.id + '&order=is_active.desc,created_at.desc&select=*'
     );
-    if (forms && forms.length > 0) {
-      intakeFormId = forms[0].id;
-      intakeQuestions = Array.isArray(forms[0].questions) ? forms[0].questions : [];
-      intakeFormActive = forms[0].is_active;
-      $('deactivate-intake-btn').style.display = 'inline-flex';
-      $('intake-form-status').innerHTML = '<span class="status-pill status-confirmed" style="font-size:0.78rem;">Active</span>';
-    } else {
-      intakeFormId = null;
-      intakeQuestions = [];
-      intakeFormActive = false;
-      $('deactivate-intake-btn').style.display = 'none';
-      $('intake-form-status').innerHTML = '<span style="font-size:0.85rem;color:var(--muted);font-style:italic;">No active intake form. Add questions below to create one.</span>';
-    }
-    renderIntakeQuestions();
+    if (!Array.isArray(allIntakeForms)) allIntakeForms = [];
+    renderFormsLibrary();
   } catch (e) {
-    $('intake-form-status').innerHTML = '<span style="color:#c44;font-size:0.85rem;">Error loading intake form.</span>';
+    $('intake-forms-list').innerHTML = '<div class="empty-state"><p>Error loading forms.</p></div>';
   }
 
-  // Wire up handlers
+  // Wire create new form button
+  $('create-new-form-btn').onclick = function() {
+    renderTemplateCards();
+    showIntakeSection('intake-template-section');
+  };
+  $('back-to-library-btn').onclick = function() { showIntakeSection('intake-library-section'); };
+  $('name-back-btn').onclick = function() { showIntakeSection('intake-template-section'); };
+  $('name-continue-btn').onclick = function() {
+    var name = $('intake-form-name').value.trim();
+    if (!name) { alert('Please enter a form name.'); return; }
+    intakeFormId = null;
+    intakeFormName = name;
+    intakeQuestions = pendingTemplateQuestions;
+    intakeFormActive = false;
+    $('intake-builder-title').textContent = 'New Form: ' + escapeHtml(name);
+    $('intake-form-status').innerHTML = '';
+    $('deactivate-intake-btn').style.display = 'none';
+    renderIntakeQuestions();
+    showIntakeSection('intake-builder-section');
+  };
+  $('builder-back-btn').onclick = function() {
+    loadIntakeForms();
+    showIntakeSection('intake-library-section');
+  };
+
+  // Wire builder handlers
   $('add-intake-question-btn').onclick = addIntakeQuestion;
   $('save-intake-form-btn').onclick = saveIntakeForm;
   $('preview-intake-btn').onclick = openIntakePreview;
@@ -1968,16 +2122,6 @@ async function loadIntakeForms() {
   $('iq-type').onchange = function() {
     $('iq-options-group').classList.toggle('hidden', this.value !== 'multiple_choice');
   };
-
-  // Show templates only if no questions exist
-  $('intake-templates').style.display = intakeQuestions.length ? 'none' : '';
-
-  // Wire template buttons
-  document.querySelectorAll('[data-template]').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      applyIntakeTemplate(this.dataset.template);
-    });
-  });
 
   // Load responses
   loadIntakeResponses();
@@ -2078,23 +2222,21 @@ async function saveIntakeForm() {
 
   try {
     if (intakeFormId) {
-      // Update existing
-      await supabasePatch('coach_intake_forms', { id: 'eq.' + intakeFormId }, { questions: intakeQuestions, is_active: true });
+      await supabasePatch('coach_intake_forms', { id: 'eq.' + intakeFormId }, { name: intakeFormName, questions: intakeQuestions });
+      var existing = allIntakeForms.find(function(f) { return f.id === intakeFormId; });
+      if (existing) { existing.questions = intakeQuestions; existing.name = intakeFormName; }
     } else {
-      // Create new
       var res = await fetch(SUPABASE_URL + '/rest/v1/coach_intake_forms', {
         method: 'POST',
         headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
-        body: JSON.stringify({ coach_id: coachProfile.id, questions: intakeQuestions, is_active: true })
+        body: JSON.stringify({ coach_id: coachProfile.id, name: intakeFormName, questions: intakeQuestions, is_active: false })
       });
       var data = await res.json();
       if (data && data.length > 0) {
         intakeFormId = data[0].id;
+        allIntakeForms.unshift(data[0]);
       }
     }
-    intakeFormActive = true;
-    $('deactivate-intake-btn').style.display = 'inline-flex';
-    $('intake-form-status').innerHTML = '<span class="status-pill status-confirmed" style="font-size:0.78rem;">Active</span>';
     msg.textContent = 'Saved';
     msg.style.color = 'var(--forest)';
     msg.classList.add('show');
@@ -2105,20 +2247,21 @@ async function saveIntakeForm() {
     msg.classList.add('show');
   }
   btn.disabled = false;
-  btn.textContent = 'Save Intake Form';
+  btn.textContent = 'Save Form';
 }
 
 async function deactivateIntakeForm() {
   if (!intakeFormId) return;
-  if (!confirm('Deactivate this intake form? New bookings will not see it.')) return;
+  if (!confirm('Deactivate this form? New bookings will not see it.')) return;
   try {
     await supabasePatch('coach_intake_forms', { id: 'eq.' + intakeFormId }, { is_active: false });
     intakeFormActive = false;
-    intakeFormId = null;
-    intakeQuestions = [];
+    var f = allIntakeForms.find(function(x) { return x.id === intakeFormId; });
+    if (f) f.is_active = false;
     $('deactivate-intake-btn').style.display = 'none';
-    $('intake-form-status').innerHTML = '<span style="font-size:0.85rem;color:var(--muted);font-style:italic;">No active intake form. Add questions below to create one.</span>';
-    renderIntakeQuestions();
+    $('intake-form-status').innerHTML = '';
+    showIntakeSection('intake-library-section');
+    renderFormsLibrary();
   } catch (e) {
     alert('Error deactivating form.');
   }
