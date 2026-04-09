@@ -325,7 +325,10 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
         <h3 style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--ink);margin-bottom:6px;">Step 2: Intake Form</h3>
         <p style="font-size:0.88rem;color:var(--muted);margin-bottom:24px;">Please complete this form so the coach can prepare for your session.</p>
         <div id="intake-questions-render"></div>
-        <button class="btn-gold booking-submit" id="submit-intake-btn" style="margin-top:20px;width:100%;">Submit Intake Form</button>
+        <div style="display:flex;gap:12px;margin-top:20px;">
+          <button class="btn-outline" id="intake-back-btn" style="flex:0 0 auto;color:var(--ink);border-color:var(--border);padding:14px 24px;">Back</button>
+          <button class="btn-gold booking-submit" id="submit-intake-btn" style="flex:1;">Submit Request</button>
+        </div>
       </div>
       <div class="booking-success" id="booking-success">
         <h3>Booking Request Sent!</h3>
@@ -891,6 +894,14 @@ function renderIntakeForm(form, clientEmail, bookingId) {
   container.innerHTML = html;
   document.getElementById('intake-step').classList.remove('hidden');
 
+  // Wire back button
+  document.getElementById('intake-back-btn').addEventListener('click', function() {
+    document.getElementById('intake-step').classList.add('hidden');
+    document.getElementById('booking-form').style.display = '';
+    const btn = document.querySelector('.booking-submit');
+    if (btn) { btn.disabled = false; btn.textContent = 'Request Booking'; }
+  });
+
   // Wire submit
   document.getElementById('submit-intake-btn').addEventListener('click', async function() {
     const btn = this;
@@ -927,11 +938,20 @@ function renderIntakeForm(form, clientEmail, bookingId) {
         booking_id: bookingId,
         responses: responses
       };
+      // Save to intake_responses table
       await fetch(`${API}/coach_intake_responses`, {
         method: 'POST',
         headers: HEADERS,
         body: JSON.stringify(intakePayload)
       });
+      // Also save to the booking record itself
+      if (bookingId) {
+        await fetch(`${API}/coach_bookings?id=eq.${bookingId}`, {
+          method: 'PATCH',
+          headers: { ...HEADERS, 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ intake_responses: responses })
+        });
+      }
     } catch(e) {
       console.log('Intake submission error', e);
     }
