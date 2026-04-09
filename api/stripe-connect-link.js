@@ -1,11 +1,4 @@
-import Stripe from 'stripe';
-
 export default async function handler(req, res) {
-  console.log('ENV CHECK:', {
-    hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
-    stripeKeyPrefix: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 10) : 'MISSING',
-    nodeEnv: process.env.NODE_ENV
-  });
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -16,9 +9,17 @@ export default async function handler(req, res) {
   const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!STRIPE_SECRET_KEY || !SUPABASE_KEY) {
-    return res.status(500).json({ error: 'Server not configured' });
+    return res.status(500).json({
+      error: 'Server not configured',
+      debug: {
+        hasStripeKey: !!STRIPE_SECRET_KEY,
+        hasSupabaseKey: !!SUPABASE_KEY,
+        stripeEnvVars: Object.keys(process.env).filter(function(k) { return k.includes('STRIPE') || k.includes('stripe'); })
+      }
+    });
   }
 
+  const { default: Stripe } = await import('stripe');
   const stripe = new Stripe(STRIPE_SECRET_KEY);
   const SB_HEADERS = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
 
