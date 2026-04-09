@@ -368,6 +368,10 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .cb-bullet-item { display: flex; align-items: center; gap: 10px; background: #faf3e0; border: 1px solid #e8dfc0; border-radius: 8px; padding: 9px 14px; font-size: 0.85rem; color: #1a3a52; }
 .cb-bullet-item button { background: none; border: none; color: #c44; cursor: pointer; font-size: 1rem; padding: 0 0 0 6px; margin-left: auto; }
 .cb-bullet-dot { width: 6px; height: 6px; border-radius: 50%; background: #c49a3c; flex-shrink: 0; }
+.cb-lesson-card { background: #fff; border: 1px solid #e0ddd5; border-left: 3px solid #c49a3c; border-radius: 10px; padding: 16px 18px; margin-bottom: 10px; }
+.cb-lesson-tab { padding: 5px 14px; border-radius: 50px; font-size: 0.72rem; font-weight: 700; font-family: inherit; cursor: pointer; border: 1.5px solid #e0ddd5; background: #fff; color: #8a8a9a; transition: all 0.15s; }
+.cb-lesson-tab.active { background: #1a3a52; color: #fff; border-color: #1a3a52; }
+.cb-lesson-tab:hover:not(.active) { border-color: #8a8a9a; }
 .course-mgmt-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 24px; margin-bottom: 14px; }
 .course-mgmt-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
 .course-mgmt-header h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--ink); }
@@ -3006,24 +3010,64 @@ async function cbLoadModuleLessons(modId) {
 
     var html = '';
     lessons.forEach(function(l, idx) {
-      html += '<div class="cb-bullet-item" style="flex-direction:column;align-items:stretch;gap:4px;">'
-        + '<div style="display:flex;align-items:center;gap:10px;">'
-        + '<span class="cb-bullet-dot" style="background:#1a3a52;"></span>'
-        + '<span style="flex:1;font-weight:600;">' + escapeHtml(l.title) + '</span>'
-        + '<button onclick="cbDeleteLesson(\'' + modId + '\',\'' + l.id + '\')" style="background:none;border:none;color:#c44;cursor:pointer;font-size:0.9rem;">&times;</button>'
+      var activeTab = l.content ? 'write' : (l.video_url ? 'video' : 'write');
+
+      html += '<div class="cb-lesson-card">'
+        // Header: title + delete
+        + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
+        + '<span style="font-size:0.72rem;font-weight:800;color:#c49a3c;min-width:20px;">' + (idx + 1) + '</span>'
+        + '<span style="flex:1;font-weight:700;font-size:0.92rem;color:#1a3a52;">' + escapeHtml(l.title) + '</span>'
+        + '<button onclick="cbDeleteLesson(\'' + modId + '\',\'' + l.id + '\')" style="background:none;border:none;color:#c44;cursor:pointer;font-size:0.9rem;padding:2px 6px;">&times;</button>'
+        + '</div>'
+
+        // Description
+        + '<div class="cb-field" style="margin-bottom:10px;">'
+        + '<textarea class="cb-input cb-lesson-autosave" data-lesson-id="' + l.id + '" data-lesson-field="description" data-mod-id="' + modId + '" placeholder="Add a description..." style="font-size:0.82rem;min-height:50px;resize:vertical;">' + escapeHtml(l.description || '') + '</textarea>'
+        + '</div>'
+
+        // Content tabs
+        + '<div style="margin-bottom:8px;">'
+        + '<div style="display:flex;gap:4px;margin-bottom:8px;">'
+        + '<button onclick="cbLessonTab(\'' + l.id + '\',\'write\')" class="cb-lesson-tab' + (activeTab === 'write' ? ' active' : '') + '" id="lt-write-' + l.id + '">Write</button>'
+        + '<button onclick="cbLessonTab(\'' + l.id + '\',\'video\')" class="cb-lesson-tab' + (activeTab === 'video' ? ' active' : '') + '" id="lt-video-' + l.id + '">Video</button>'
+        + '<button onclick="cbLessonTab(\'' + l.id + '\',\'upload\')" class="cb-lesson-tab" id="lt-upload-' + l.id + '">Upload File</button>'
+        + '</div>'
+
+        // Write panel
+        + '<div id="lp-write-' + l.id + '" style="display:' + (activeTab === 'write' ? 'block' : 'none') + ';">'
+        + '<textarea class="cb-input cb-lesson-autosave" data-lesson-id="' + l.id + '" data-lesson-field="content" data-mod-id="' + modId + '" placeholder="Write your lesson content here..." style="font-size:0.82rem;min-height:100px;resize:vertical;">' + escapeHtml(l.content || '') + '</textarea>'
+        + '</div>'
+
+        // Video panel
+        + '<div id="lp-video-' + l.id + '" style="display:' + (activeTab === 'video' ? 'block' : 'none') + ';">'
+        + '<input type="text" class="cb-input cb-lesson-autosave" data-lesson-id="' + l.id + '" data-lesson-field="video_url" data-mod-id="' + modId + '" value="' + escapeHtml(l.video_url || '') + '" placeholder="Paste video URL (YouTube, Vimeo, Zoom recording...)" style="font-size:0.82rem;">'
+        + '</div>'
+
+        // Upload panel
+        + '<div id="lp-upload-' + l.id + '" style="display:none;">'
+        + '<input type="file" id="lesson-file-' + l.id + '" accept=".pdf,.mp4,.mp3,.jpg,.jpeg,.png,.doc,.docx,.ppt,.pptx" style="font-size:0.82rem;" onchange="cbUploadLessonFile(\'' + modId + '\',\'' + l.id + '\')">'
+        + '<div id="lesson-upload-status-' + l.id + '" style="font-size:0.78rem;margin-top:4px;"></div>'
+        + (l.video_url && l.video_url.includes('/storage/') ? '<div style="font-size:0.75rem;color:#4a7c59;margin-top:4px;">File attached: ' + escapeHtml(l.video_url.split('/').pop()) + '</div>' : '')
+        + '</div>'
+
+        + '</div>'
         + '</div>';
-      if (l.description) {
-        html += '<div style="font-size:0.78rem;color:#8a8a9a;padding-left:16px;">' + escapeHtml(l.description) + '</div>';
-      } else {
-        html += '<div style="padding-left:16px;"><a href="#" onclick="event.preventDefault();cbShowLessonDesc(\'' + modId + '\',\'' + l.id + '\')" style="font-size:0.72rem;color:#c49a3c;text-decoration:none;">+ Add description</a></div>';
-      }
-      html += '<div id="lesson-desc-form-' + l.id + '" style="display:none;padding-left:16px;margin-top:4px;">'
-        + '<textarea class="cb-input" id="lesson-desc-' + l.id + '" placeholder="Lesson description..." style="font-size:0.82rem;min-height:60px;resize:vertical;"></textarea>'
-        + '<button onclick="cbSaveLessonDesc(\'' + modId + '\',\'' + l.id + '\')" style="margin-top:4px;padding:6px 14px;background:#1a3a52;color:#fff;border:none;border-radius:6px;font-family:inherit;font-size:0.78rem;font-weight:700;cursor:pointer;">Save</button>'
-        + '</div>';
-      html += '</div>';
     });
     container.innerHTML = html;
+
+    // Attach autosave listeners
+    container.querySelectorAll('.cb-lesson-autosave').forEach(function(el) {
+      el.addEventListener('blur', function() {
+        var lessonId = el.dataset.lessonId;
+        var field = el.dataset.lessonField;
+        var payload = {};
+        payload[field] = el.value.trim();
+        fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?id=eq.' + lessonId, {
+          method: 'PATCH', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+          body: JSON.stringify(payload)
+        }).catch(function(e) { console.error('Lesson autosave error:', e); });
+      });
+    });
   } catch (e) { console.error('Load lessons error:', e); container.innerHTML = ''; }
 }
 
@@ -3069,21 +3113,50 @@ async function cbDeleteLesson(modId, lessonId) {
   } catch (e) { /* ignore */ }
 }
 
-function cbShowLessonDesc(modId, lessonId) {
-  var form = $('lesson-desc-form-' + lessonId);
-  if (form) form.style.display = 'block';
+function cbLessonTab(lessonId, tab) {
+  ['write', 'video', 'upload'].forEach(function(t) {
+    var panel = $('lp-' + t + '-' + lessonId);
+    var btn = $('lt-' + t + '-' + lessonId);
+    if (panel) panel.style.display = t === tab ? 'block' : 'none';
+    if (btn) { btn.classList.toggle('active', t === tab); }
+  });
 }
 
-async function cbSaveLessonDesc(modId, lessonId) {
-  var textarea = $('lesson-desc-' + lessonId);
-  var desc = textarea ? textarea.value.trim() : '';
+async function cbUploadLessonFile(modId, lessonId) {
+  var fileInput = $('lesson-file-' + lessonId);
+  var statusEl = $('lesson-upload-status-' + lessonId);
+  if (!fileInput || !fileInput.files[0]) return;
+
+  var file = fileInput.files[0];
+  var filePath = modId + '/lessons/' + lessonId + '-' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  if (statusEl) { statusEl.textContent = 'Uploading...'; statusEl.style.color = '#8a8a9a'; }
+
   try {
+    var uploadRes = await fetch(SUPABASE_URL + '/storage/v1/object/course-resources/' + filePath, {
+      method: 'PUT',
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + currentToken, 'Content-Type': file.type, 'x-upsert': 'true' },
+      body: file
+    });
+
+    if (!uploadRes.ok) {
+      var errBody = await uploadRes.json().catch(function() { return {}; });
+      console.error('Lesson file upload failed:', uploadRes.status, errBody);
+      if (statusEl) { statusEl.textContent = 'Upload failed: ' + (errBody.message || errBody.error || uploadRes.status); statusEl.style.color = '#c44'; }
+      return;
+    }
+
+    var publicUrl = SUPABASE_URL + '/storage/v1/object/public/course-resources/' + filePath;
     await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?id=eq.' + lessonId, {
       method: 'PATCH', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ description: desc })
+      body: JSON.stringify({ video_url: publicUrl })
     });
-    cbLoadModuleLessons(modId);
-  } catch (e) { console.error('Save lesson desc error:', e); }
+
+    if (statusEl) { statusEl.innerHTML = '<span style="color:#4a7c59;">&#10003; ' + escapeHtml(file.name) + ' attached</span>'; }
+    fileInput.value = '';
+  } catch (e) {
+    console.error('Lesson upload error:', e);
+    if (statusEl) { statusEl.textContent = 'Upload error: ' + e.message; statusEl.style.color = '#c44'; }
+  }
 }
 
 /* Resources */
