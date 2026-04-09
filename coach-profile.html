@@ -473,9 +473,9 @@ function renderProfile(coach, services, testimonials, recommendations, courses, 
 
   // Hero
   if (coach.photo_url) {
-    document.getElementById('hero-section').style.backgroundImage = `linear-gradient(rgba(26,46,26,0.88), rgba(26,46,26,0.95)), url('${coach.photo_url}')`;
+    document.getElementById('hero-section').style.backgroundImage = `linear-gradient(rgba(26,58,82,0.55), rgba(26,58,82,0.75)), url('${coach.photo_url}')`;
     document.getElementById('hero-section').style.backgroundSize = 'cover';
-    document.getElementById('hero-section').style.backgroundPosition = 'center';
+    document.getElementById('hero-section').style.backgroundPosition = 'center top';
   }
 
   document.getElementById('hero-name').textContent = coach.display_name || coach.full_name || 'Coach';

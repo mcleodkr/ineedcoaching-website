@@ -141,17 +141,17 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 
 /* STATUS PILLS */
 .status-pill { display: inline-block; padding: 4px 12px; border-radius: 50px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
-.status-pending { background: rgba(196,154,60,0.15); color: var(--gold); }
-.status-confirmed { background: rgba(74,124,89,0.15); color: var(--forest); }
-.status-rejected { background: rgba(107,107,96,0.12); color: var(--muted); }
+.status-pending { background: #c49a3c; color: #fff; }
+.status-confirmed { background: #2d6a4f; color: #fff; }
+.status-rejected { background: #c0392b; color: #fff; }
 .status-completed { background: rgba(26,46,26,0.12); color: var(--ink); }
 
 /* ACTION BUTTONS */
 .action-btn { padding: 6px 14px; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; margin-right: 6px; }
-.action-confirm { background: var(--forest); color: var(--white); }
-.action-confirm:hover { background: #3a6c49; }
-.action-decline { background: var(--cream); color: var(--muted); border: 1px solid var(--border); }
-.action-decline:hover { border-color: var(--muted); }
+.action-confirm { background: #1a3a52; color: #fff; }
+.action-confirm:hover { background: #153045; }
+.action-decline { background: #fff; color: #c0392b; border: 1px solid #c0392b; }
+.action-decline:hover { background: #fdf2f2; }
 .action-approve { background: var(--forest); color: var(--white); }
 .action-approve:hover { background: #3a6c49; }
 .action-remove { background: var(--cream); color: var(--muted); border: 1px solid var(--border); }
@@ -1337,6 +1337,12 @@ function extractClientName(notes) {
   return match ? match[1].trim() : '';
 }
 
+function extractServiceName(notes) {
+  if (!notes) return '';
+  var match = notes.match(/^Service:\s*(.+)/m);
+  return match ? match[1].trim() : '';
+}
+
 async function loadBookings() {
   try {
     var data = await supabaseGet(
@@ -1351,14 +1357,17 @@ async function loadBookings() {
     }
 
     var html = '<div class="bookings-table-wrap"><table class="bookings-table"><thead><tr>'
-      + '<th>Client</th><th>Email</th><th>Date</th><th>Notes</th><th>Status</th><th>Actions</th>'
+      + '<th>Client</th><th>Service</th><th>Date</th><th>Notes</th><th>Status</th><th>Actions</th>'
       + '</tr></thead><tbody>';
 
     data.forEach(function(b) {
       var statusClass = 'status-' + (b.status || 'pending');
       var statusText = (b.status || 'pending').charAt(0).toUpperCase() + (b.status || 'pending').slice(1);
-      var dateStr = b.scheduled_at ? new Date(b.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      var dt = b.scheduled_at ? new Date(b.scheduled_at) : null;
+      var dateStr = dt ? dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      var timeStr = dt ? dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
       var clientName = extractClientName(b.notes);
+      var serviceName = extractServiceName(b.notes);
       var actions = '';
       if (b.status === 'pending') {
         actions = '<button class="action-btn action-confirm" data-booking-id="' + b.id + '" data-action="confirmed">Confirm</button>'
@@ -1366,10 +1375,10 @@ async function loadBookings() {
       }
 
       html += '<tr data-booking-id="' + b.id + '">'
-        + '<td>' + escapeHtml(clientName) + '</td>'
-        + '<td>' + escapeHtml(b.client_email || '') + '</td>'
-        + '<td>' + escapeHtml(dateStr) + '</td>'
-        + '<td>' + escapeHtml(b.notes || '') + '</td>'
+        + '<td><div style="font-weight:600;">' + escapeHtml(clientName) + '</div><div style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(b.client_email || '') + '</div>' + (b.client_phone ? '<div style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(b.client_phone) + '</div>' : '') + '</td>'
+        + '<td>' + escapeHtml(serviceName) + '</td>'
+        + '<td><div>' + escapeHtml(dateStr) + '</div>' + (timeStr ? '<div style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(timeStr) + '</div>' : '') + '</td>'
+        + '<td style="max-width:200px;white-space:pre-line;font-size:0.82rem;">' + escapeHtml(b.notes || '') + '</td>'
         + '<td class="booking-status-cell"><span class="status-pill ' + statusClass + '">' + escapeHtml(statusText) + '</span></td>'
         + '<td class="booking-actions-cell">' + actions + '</td>'
         + '</tr>';
