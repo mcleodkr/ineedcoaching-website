@@ -42,12 +42,9 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
 .error-state p { color: var(--muted); font-size: 1.05rem; }
 
 /* HERO */
-.hero { background: var(--ink); padding: 100px 60px 40px; position: relative; overflow: hidden; }
+.hero { background: var(--ink); padding: 140px 80px 80px; position: relative; overflow: hidden; height: 320px; }
 .hero::after { content: 'COACH'; font-family: 'Playfair Display', serif; font-size: 14rem; font-weight: 900; color: rgba(255,255,255,0.04); position: absolute; right: -30px; top: 50%; transform: translateY(-50%); pointer-events: none; user-select: none; line-height: 1; }
-.hero-inner { max-width: 900px; position: relative; z-index: 2; display: flex; align-items: center; gap: 40px; }
-.hero-left { flex: 1; }
-.hero-photo { width: 160px; height: 160px; border-radius: 14px; object-fit: cover; object-position: top center; border: 3px solid var(--gold); flex-shrink: 0; }
-.hero-photo-initials { width: 160px; height: 160px; border-radius: 14px; background: rgba(196,154,60,0.15); display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-size: 2.8rem; font-weight: 700; color: var(--gold); flex-shrink: 0; border: 3px solid var(--gold); }
+.hero-inner { max-width: 900px; position: relative; z-index: 2; }
 .hero-name { font-family: 'Playfair Display', serif; font-size: clamp(2.6rem, 5vw, 4.2rem); font-weight: 900; color: var(--gold); line-height: 1.08; margin-bottom: 16px; }
 .hero-headline { font-size: 1.15rem; line-height: 1.7; color: #f7f4ee; max-width: 640px; margin-bottom: 28px; opacity: 0.85; }
 .hero-specialties { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 36px; }
@@ -173,9 +170,7 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
 /* MOBILE */
 @media (max-width: 768px) {
   nav { padding: 12px 20px; }
-  .hero { padding: 80px 24px 32px; }
-  .hero-inner { flex-direction: column-reverse; gap: 24px; align-items: flex-start; }
-  .hero-photo, .hero-photo-initials { width: 120px; height: 120px; }
+  .hero { padding: 110px 24px 60px; height: auto; }
   .hero-name { font-size: 2.2rem; }
   .section { padding: 60px 24px; }
   .about-grid { grid-template-columns: 1fr; gap: 32px; }
@@ -229,17 +224,14 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
   <!-- HERO -->
   <section class="hero" id="hero-section">
     <div class="hero-inner">
-      <div class="hero-left">
-        <div class="hero-location hidden" id="hero-location"></div>
-        <h1 class="hero-name" id="hero-name"></h1>
-        <p class="hero-headline" id="hero-headline"></p>
-        <div class="hero-specialties" id="hero-specialties"></div>
-        <div class="hero-buttons">
-          <a href="#booking" class="btn-gold" id="hero-book-btn">Book a Session</a>
-          <a href="#services" class="btn-outline">View Services</a>
-        </div>
+      <div class="hero-location hidden" id="hero-location"></div>
+      <h1 class="hero-name" id="hero-name"></h1>
+      <p class="hero-headline" id="hero-headline"></p>
+      <div class="hero-specialties" id="hero-specialties"></div>
+      <div class="hero-buttons">
+        <a href="#booking" class="btn-gold" id="hero-book-btn">Book a Session</a>
+        <a href="#services" class="btn-outline">View Services</a>
       </div>
-      <div id="hero-photo-container"></div>
     </div>
   </section>
 
@@ -523,13 +515,11 @@ function renderProfile(coach, services, testimonials, recommendations, courses, 
   // Update page title
   document.title = `${coach.display_name || coach.full_name} — Coach Profile | ineedcoaching.org`;
 
-  // Hero photo
-  const photoContainer = document.getElementById('hero-photo-container');
+  // Hero background photo
   if (coach.photo_url) {
-    photoContainer.innerHTML = `<img class="hero-photo" src="${escapeHtml(coach.photo_url)}" alt="${escapeHtml(coach.display_name || coach.full_name)}">`;
-  } else {
-    const initials = (coach.display_name || coach.full_name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-    photoContainer.innerHTML = `<div class="hero-photo-initials">${escapeHtml(initials)}</div>`;
+    document.getElementById('hero-section').style.backgroundImage = `linear-gradient(rgba(26,58,82,0.65), rgba(26,58,82,0.65)), url('${coach.photo_url}')`;
+    document.getElementById('hero-section').style.backgroundSize = 'cover';
+    document.getElementById('hero-section').style.backgroundPosition = 'center 20%';
   }
 
   document.getElementById('hero-name').textContent = coach.display_name || coach.full_name || 'Coach';
