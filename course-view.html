@@ -216,35 +216,53 @@ function formatDate(d) {
 
 async function loadPage() {
   var params = new URLSearchParams(window.location.search);
+  var courseId = params.get('id');
   var courseSlug = params.get('slug');
   var coachSlug = params.get('coach');
 
-  if (!courseSlug || !coachSlug) {
+  if (!courseId && (!courseSlug || !coachSlug)) {
     showError();
     return;
   }
 
   try {
-    var coachRes = await fetch(API + '/coach_profiles?slug=eq.' + encodeURIComponent(coachSlug) + '&select=id,display_name,full_name,slug,photo_url,headline,bio', {
-      headers: GET_HEADERS
-    });
-    var coaches = await coachRes.json();
-    if (!coaches || !coaches.length) { showError(); return; }
-    var coach = coaches[0];
+    var course, coach;
 
-    var courseRes = await fetch(API + '/coach_courses?slug=eq.' + encodeURIComponent(courseSlug) + '&coach_id=eq.' + coach.id + '&status=neq.draft&select=*', {
-      headers: GET_HEADERS
-    });
-    var courses = await courseRes.json();
-    if (!courses || !courses.length) { showError(); return; }
+    if (courseId) {
+      // Fetch course by UUID, embed coach profile
+      var courseRes = await fetch(API + '/coach_courses?id=eq.' + encodeURIComponent(courseId) + '&select=*,coach_profiles(id,display_name,full_name,slug,photo_url,headline,bio)', {
+        headers: GET_HEADERS
+      });
+      var courses = await courseRes.json();
+      if (!courses || !courses.length) { showError(); return; }
+      course = courses[0];
+      coach = course.coach_profiles;
+      if (!coach) { showError(); return; }
+      delete course.coach_profiles;
+    } else {
+      // Fetch coach by slug, then course by slug + coach_id
+      var coachRes = await fetch(API + '/coach_profiles?slug=eq.' + encodeURIComponent(coachSlug) + '&select=id,display_name,full_name,slug,photo_url,headline,bio', {
+        headers: GET_HEADERS
+      });
+      var coaches = await coachRes.json();
+      if (!coaches || !coaches.length) { showError(); return; }
+      coach = coaches[0];
 
-    var syllabusRes = await fetch(API + '/coach_course_lessons?course_id=eq.' + courses[0].id + '&select=title,sort_order&order=sort_order.asc', {
+      var courseRes = await fetch(API + '/coach_courses?slug=eq.' + encodeURIComponent(courseSlug) + '&coach_id=eq.' + coach.id + '&status=neq.draft&select=*', {
+        headers: GET_HEADERS
+      });
+      var courses = await courseRes.json();
+      if (!courses || !courses.length) { showError(); return; }
+      course = courses[0];
+    }
+
+    var syllabusRes = await fetch(API + '/coach_course_lessons?course_id=eq.' + course.id + '&select=title,sort_order&order=sort_order.asc', {
       headers: GET_HEADERS
     });
     var lessons = await syllabusRes.json();
     if (!Array.isArray(lessons)) lessons = [];
 
-    renderPage(courses[0], coach, lessons);
+    renderPage(course, coach, lessons);
   } catch (e) {
     showError();
   }
