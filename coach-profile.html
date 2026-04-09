@@ -42,7 +42,7 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
 .error-state p { color: var(--muted); font-size: 1.05rem; }
 
 /* HERO */
-.hero { background: var(--ink); padding: 140px 80px 80px; position: relative; overflow: hidden; max-height: 420px; }
+.hero { background: var(--ink); padding: 140px 80px 80px; position: relative; overflow: hidden; max-height: 320px; min-height: 280px; }
 .hero::after { content: 'COACH'; font-family: 'Playfair Display', serif; font-size: 14rem; font-weight: 900; color: rgba(255,255,255,0.04); position: absolute; right: -30px; top: 50%; transform: translateY(-50%); pointer-events: none; user-select: none; line-height: 1; }
 .hero-inner { max-width: 900px; position: relative; z-index: 2; }
 .hero-name { font-family: 'Playfair Display', serif; font-size: clamp(2.6rem, 5vw, 4.2rem); font-weight: 900; color: var(--gold); line-height: 1.08; margin-bottom: 16px; }
@@ -514,9 +514,9 @@ function renderProfile(coach, services, testimonials, recommendations, courses, 
 
   // Hero
   if (coach.photo_url) {
-    document.getElementById('hero-section').style.backgroundImage = `linear-gradient(rgba(26,58,82,0.5), rgba(26,58,82,0.7)), url('${coach.photo_url}')`;
+    document.getElementById('hero-section').style.backgroundImage = `linear-gradient(rgba(26,58,82,0.45), rgba(26,58,82,0.6)), url('${coach.photo_url}')`;
     document.getElementById('hero-section').style.backgroundSize = 'cover';
-    document.getElementById('hero-section').style.backgroundPosition = 'center 15%';
+    document.getElementById('hero-section').style.backgroundPosition = 'center top';
   }
 
   document.getElementById('hero-name').textContent = coach.display_name || coach.full_name || 'Coach';
@@ -775,7 +775,8 @@ document.getElementById('booking-form').addEventListener('submit', async functio
     client_phone: clientPhone || null,
     scheduled_at: new Date(document.getElementById('booking-date').value + 'T' + (document.getElementById('booking-time').value || '09:00') + ':00').toISOString(),
     notes: `Name: ${document.getElementById('booking-name').value}\nService: ${document.getElementById('booking-service').selectedOptions[0].textContent}\n${document.getElementById('booking-notes').value}`,
-    status: 'pending'
+    status: 'pending',
+    zoom_link: coachData.zoom_meeting_link || null
   };
 
   if (isUuid) {
