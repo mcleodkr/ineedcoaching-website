@@ -748,6 +748,38 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
       <div class="form-section">
         <h2 class="form-section-title">Intake Form Builder</h2>
         <div id="intake-form-status" style="margin-bottom:16px;"></div>
+
+        <div id="intake-templates" style="margin-bottom:24px;">
+          <p style="font-size:0.88rem;color:var(--muted);margin-bottom:16px;">Start with a template or build your own from scratch.</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;">
+            <div class="intake-tpl-card" style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:20px;">
+              <div style="font-weight:700;font-size:0.92rem;color:var(--ink);margin-bottom:4px;">General Coaching Intake</div>
+              <div style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5;">Goals, obstacles, readiness, commitment, and focus areas.</div>
+              <button class="pill-add-btn" data-template="general" style="width:100%;">Use This Template</button>
+            </div>
+            <div class="intake-tpl-card" style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:20px;">
+              <div style="font-weight:700;font-size:0.92rem;color:var(--ink);margin-bottom:4px;">Wheel of Life Assessment</div>
+              <div style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5;">Rate satisfaction across 8 life areas and identify urgency.</div>
+              <button class="pill-add-btn" data-template="wheel" style="width:100%;">Use This Template</button>
+            </div>
+            <div class="intake-tpl-card" style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:20px;">
+              <div style="font-weight:700;font-size:0.92rem;color:var(--ink);margin-bottom:4px;">Leadership & Executive Coaching</div>
+              <div style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5;">Role challenges, leadership style, success vision, and blind spots.</div>
+              <button class="pill-add-btn" data-template="leadership" style="width:100%;">Use This Template</button>
+            </div>
+            <div class="intake-tpl-card" style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:20px;">
+              <div style="font-weight:700;font-size:0.92rem;color:var(--ink);margin-bottom:4px;">Burnout & Wellness Intake</div>
+              <div style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5;">Stress levels, energy, boundaries, depletion, and restoration.</div>
+              <button class="pill-add-btn" data-template="burnout" style="width:100%;">Use This Template</button>
+            </div>
+            <div class="intake-tpl-card" style="background:var(--cream);border:1px dashed var(--border);border-radius:var(--r);padding:20px;">
+              <div style="font-weight:700;font-size:0.92rem;color:var(--ink);margin-bottom:4px;">Build from Scratch</div>
+              <div style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5;">Create your own custom intake form with any questions you want.</div>
+              <button class="pill-add-btn" data-template="scratch" style="width:100%;">Start Blank</button>
+            </div>
+          </div>
+        </div>
+
         <div id="intake-questions-list" style="margin-bottom:20px;"></div>
 
         <div id="intake-add-form" style="background:var(--cream);border:1px solid var(--border);border-radius:var(--r);padding:24px;margin-bottom:16px;">
@@ -1841,6 +1873,55 @@ var intakeFormId = null;
 var intakeQuestions = [];
 var intakeFormActive = false;
 
+var INTAKE_TEMPLATES = {
+  general: [
+    { text: 'What are your top 3 coaching goals?', type: 'long_text', required: true },
+    { text: 'What obstacles have prevented you from achieving these goals?', type: 'long_text', required: true },
+    { text: 'How ready are you to make changes in your life right now?', type: 'scale', required: true },
+    { text: 'How would you rate your commitment to this coaching process?', type: 'scale', required: true },
+    { text: 'Which area do you most want to focus on?', type: 'multiple_choice', required: true, options: ['Career', 'Relationships', 'Health & Wellness', 'Personal Growth', 'Leadership', 'Work-Life Balance', 'Other'] },
+    { text: 'Is there anything else your coach should know before your first session?', type: 'long_text', required: false }
+  ],
+  wheel: [
+    { text: 'Rate your satisfaction with your Career (1-10)', type: 'scale', required: true },
+    { text: 'Rate your satisfaction with your Health (1-10)', type: 'scale', required: true },
+    { text: 'Rate your satisfaction with your Relationships (1-10)', type: 'scale', required: true },
+    { text: 'Rate your satisfaction with your Finances (1-10)', type: 'scale', required: true },
+    { text: 'Rate your satisfaction with Personal Growth (1-10)', type: 'scale', required: true },
+    { text: 'Rate your satisfaction with Fun & Recreation (1-10)', type: 'scale', required: true },
+    { text: 'Rate your satisfaction with your Physical Environment (1-10)', type: 'scale', required: true },
+    { text: 'Rate your satisfaction with Family & Friends (1-10)', type: 'scale', required: true },
+    { text: 'Which area feels most urgent to address right now, and why?', type: 'long_text', required: true }
+  ],
+  leadership: [
+    { text: 'What is your current role and what are your biggest challenges in it?', type: 'long_text', required: true },
+    { text: 'How would you describe your leadership style?', type: 'long_text', required: true },
+    { text: 'What does success look like for you in 6 months?', type: 'long_text', required: true },
+    { text: 'Who are your key stakeholders and what do they need from you?', type: 'long_text', required: true },
+    { text: 'What do you think is your biggest blind spot as a leader?', type: 'long_text', required: false },
+    { text: 'What has gotten in the way of your growth before?', type: 'long_text', required: true }
+  ],
+  burnout: [
+    { text: 'Rate your current stress level (1-10)', type: 'scale', required: true },
+    { text: 'How many hours of sleep do you get on average?', type: 'short_text', required: true },
+    { text: 'How would you rate your daily energy levels?', type: 'scale', required: true },
+    { text: 'Do you feel comfortable setting boundaries at work and in personal life?', type: 'yes_no', required: true },
+    { text: 'What has been depleting your energy the most lately?', type: 'long_text', required: true },
+    { text: 'What activities or practices help you feel restored?', type: 'long_text', required: true },
+    { text: 'What needs to change most urgently for your wellbeing?', type: 'long_text', required: true }
+  ]
+};
+
+function applyIntakeTemplate(name) {
+  if (name === 'scratch') {
+    intakeQuestions = [];
+  } else {
+    intakeQuestions = JSON.parse(JSON.stringify(INTAKE_TEMPLATES[name]));
+  }
+  $('intake-templates').style.display = 'none';
+  renderIntakeQuestions();
+}
+
 async function loadIntakeForms() {
   // Fetch active intake form
   try {
@@ -1872,6 +1953,16 @@ async function loadIntakeForms() {
   $('iq-type').onchange = function() {
     $('iq-options-group').classList.toggle('hidden', this.value !== 'multiple_choice');
   };
+
+  // Show templates only if no questions exist
+  $('intake-templates').style.display = intakeQuestions.length ? 'none' : '';
+
+  // Wire template buttons
+  document.querySelectorAll('[data-template]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      applyIntakeTemplate(this.dataset.template);
+    });
+  });
 
   // Load responses
   loadIntakeResponses();
