@@ -148,6 +148,14 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .booking-details-row { display: none; }
 .booking-details-row.open { display: table-row; }
 .booking-details-row td { padding: 12px 16px; background: rgba(196,154,60,0.04); font-size: 0.82rem; color: var(--muted); white-space: pre-line; line-height: 1.6; }
+.booking-zoom-btn { font-size: 0.75rem; color: var(--gold); cursor: pointer; border: 1px solid var(--gold); background: none; font-weight: 700; padding: 4px 10px; border-radius: 50px; transition: all 0.2s; margin-top: 6px; display: inline-block; }
+.booking-zoom-btn:hover { background: var(--gold); color: #fff; }
+.booking-zoom-input-wrap { display: flex; gap: 6px; margin-top: 6px; align-items: center; }
+.booking-zoom-input-wrap input { padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; flex: 1; min-width: 160px; }
+.booking-zoom-input-wrap input:focus { outline: none; border-color: var(--gold); }
+.booking-zoom-input-wrap button { padding: 6px 14px; background: var(--gold); color: #fff; border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.75rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.booking-zoom-link { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; color: var(--gold); text-decoration: none; font-weight: 600; margin-top: 6px; cursor: pointer; }
+.booking-zoom-link:hover { text-decoration: underline; }
 
 /* STATUS PILLS */
 .status-pill { display: inline-block; padding: 6px 16px; border-radius: 50px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
@@ -688,13 +696,40 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
       </div>
 
       <div class="form-section">
-        <h2 class="form-section-title">Zoom Meeting Link</h2>
-        <div class="form-group">
-          <label for="f-zoom-link">Zoom meeting link (shown to clients after booking)</label>
-          <input type="url" id="f-zoom-link" placeholder="https://zoom.us/j/your-meeting-id">
+        <h2 class="form-section-title">Video Meetings</h2>
+        <p style="font-size:0.88rem;color:var(--muted);margin-bottom:20px;line-height:1.6;">Choose how you'll meet with clients. Most coaches use one recurring Zoom link for all sessions &mdash; it's the simplest setup.</p>
+
+        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
+          <label class="zoom-option-card" id="zoom-option-recurring" style="display:flex;align-items:flex-start;gap:12px;padding:18px 20px;border:2px solid var(--gold);border-radius:var(--r);background:rgba(196,154,60,0.04);cursor:pointer;">
+            <input type="radio" name="zoom-mode" value="recurring" checked style="width:18px;height:18px;accent-color:var(--gold);margin-top:2px;flex-shrink:0;">
+            <div>
+              <div style="font-weight:700;font-size:0.92rem;color:var(--ink);margin-bottom:2px;">Use one link for all sessions</div>
+              <div style="font-size:0.8rem;color:var(--muted);">Recommended for most coaches</div>
+            </div>
+          </label>
+          <label class="zoom-option-card" id="zoom-option-individual" style="display:flex;align-items:flex-start;gap:12px;padding:18px 20px;border:2px solid var(--border);border-radius:var(--r);background:var(--white);cursor:pointer;">
+            <input type="radio" name="zoom-mode" value="individual" style="width:18px;height:18px;accent-color:var(--gold);margin-top:2px;flex-shrink:0;">
+            <div>
+              <div style="font-weight:700;font-size:0.92rem;color:var(--ink);margin-bottom:2px;">I'll add a link to each session individually</div>
+              <div style="font-size:0.8rem;color:var(--muted);">Add unique links per booking from the Bookings tab</div>
+            </div>
+          </label>
         </div>
-        <button class="save-btn" id="save-zoom-btn">Save Zoom Link</button>
-        <span class="save-msg" id="save-zoom-msg">Saved</span>
+
+        <div id="zoom-recurring-fields">
+          <div class="form-group">
+            <label for="f-zoom-link">Meeting link</label>
+            <input type="url" id="f-zoom-link" placeholder="Paste your recurring Zoom, Google Meet, or Teams link">
+          </div>
+          <p style="font-size:0.78rem;color:var(--muted);line-height:1.6;margin-top:-8px;margin-bottom:12px;">Use a recurring meeting link so the same link works for every session. In Zoom: go to Meetings &rarr; Schedule a Meeting &rarr; check &ldquo;Recurring meeting&rdquo; with No Fixed Time &rarr; copy that link and paste it here.</p>
+          <p style="margin-bottom:16px;"><a href="https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0060485" target="_blank" rel="noopener noreferrer" style="font-size:0.78rem;color:var(--gold);font-weight:600;text-decoration:none;">How to create a recurring Zoom meeting &rarr;</a></p>
+          <button class="save-btn" id="save-zoom-btn">Save Meeting Link</button>
+          <span class="save-msg" id="save-zoom-msg">Saved</span>
+        </div>
+
+        <div id="zoom-individual-msg" style="display:none;padding:16px 20px;background:var(--cream);border-radius:var(--r-sm);font-size:0.88rem;color:var(--muted);line-height:1.6;">
+          After confirming a booking, you can add a unique meeting link directly to that session from your Bookings tab.
+        </div>
       </div>
 
       <div class="form-section" id="availability-section">
@@ -1403,6 +1438,12 @@ async function loadBookings() {
         if (status === 'pending') {
           actions = '<button class="action-btn action-confirm" data-booking-id="' + b.id + '" data-action="confirmed">Confirm</button>'
             + '<button class="action-btn action-decline" data-booking-id="' + b.id + '" data-action="rejected">Decline</button>';
+        } else if (status === 'confirmed') {
+          if (b.zoom_link) {
+            actions = '<a href="' + escapeHtml(b.zoom_link) + '" target="_blank" rel="noopener noreferrer" class="booking-zoom-link" title="Click to open meeting link">&#127909; Meeting link</a>';
+          } else {
+            actions = '<button class="booking-zoom-btn" data-booking-id="' + b.id + '">Add meeting link</button>';
+          }
         }
         var hasNotes = b.notes && b.notes.trim();
 
@@ -1456,6 +1497,30 @@ async function loadBookings() {
           var label = action.charAt(0).toUpperCase() + action.slice(1);
           row.querySelector('.booking-status-cell').innerHTML = '<span class="status-pill status-' + action + '">' + escapeHtml(label) + '</span>';
           row.querySelector('.booking-actions-cell').innerHTML = '';
+        });
+      });
+
+      // Zoom link handlers for confirmed bookings
+      $('bookings-content').querySelectorAll('.booking-zoom-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var id = this.dataset.bookingId;
+          var cell = this.closest('.booking-actions-cell');
+          cell.innerHTML = '<div class="booking-zoom-input-wrap">'
+            + '<input type="url" placeholder="Paste meeting link" id="zoom-input-' + id + '">'
+            + '<button data-booking-id="' + id + '" class="booking-zoom-save-btn">Save</button>'
+            + '</div>';
+          cell.querySelector('.booking-zoom-save-btn').addEventListener('click', async function() {
+            var input = $('zoom-input-' + id);
+            var url = input.value.trim();
+            if (!url) return;
+            this.disabled = true;
+            this.textContent = 'Saving...';
+            await supabasePatch('coach_bookings', { id: 'eq.' + id }, { zoom_link: url });
+            var booking = allBookings.find(function(b) { return b.id === id; });
+            if (booking) booking.zoom_link = url;
+            cell.innerHTML = '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer" class="booking-zoom-link" title="Click to open meeting link">&#127909; Meeting link</a>';
+          });
+          cell.querySelector('input').focus();
         });
       });
 
@@ -1630,6 +1695,34 @@ function loadScheduling() {
   $('f-calendly-url').value = p.calendly_url || '';
   $('f-zoom-link').value = p.zoom_meeting_link || '';
 
+  // Zoom mode toggle
+  var hasRecurring = !!(p.zoom_meeting_link && p.zoom_meeting_link.trim());
+  var radios = document.querySelectorAll('input[name="zoom-mode"]');
+  if (!hasRecurring && p._zoom_mode_individual) {
+    radios[1].checked = true;
+  }
+  updateZoomMode();
+  radios.forEach(function(r) {
+    r.addEventListener('change', function() {
+      updateZoomMode();
+      if (this.value === 'individual' && p.zoom_meeting_link) {
+        supabasePatch('coach_profiles', { id: 'eq.' + p.id }, { zoom_meeting_link: null });
+        p.zoom_meeting_link = null;
+        $('f-zoom-link').value = '';
+      }
+    });
+  });
+
+  function updateZoomMode() {
+    var mode = document.querySelector('input[name="zoom-mode"]:checked').value;
+    $('zoom-recurring-fields').style.display = mode === 'recurring' ? '' : 'none';
+    $('zoom-individual-msg').style.display = mode === 'individual' ? '' : 'none';
+    $('zoom-option-recurring').style.borderColor = mode === 'recurring' ? 'var(--gold)' : 'var(--border)';
+    $('zoom-option-recurring').style.background = mode === 'recurring' ? 'rgba(196,154,60,0.04)' : 'var(--white)';
+    $('zoom-option-individual').style.borderColor = mode === 'individual' ? 'var(--gold)' : 'var(--border)';
+    $('zoom-option-individual').style.background = mode === 'individual' ? 'rgba(196,154,60,0.04)' : 'var(--white)';
+  }
+
   // Toggle availability section visibility based on calendly_url
   var hasExternal = !!(p.calendly_url && p.calendly_url.trim());
   $('availability-section').style.display = hasExternal ? 'none' : '';
@@ -1708,7 +1801,7 @@ async function saveZoomLink() {
     msg.classList.add('show');
   }
   btn.disabled = false;
-  btn.textContent = 'Save Zoom Link';
+  btn.textContent = 'Save Meeting Link';
 }
 
 async function saveAvailability() {
