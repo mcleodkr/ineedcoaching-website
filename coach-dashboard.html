@@ -3016,23 +3016,37 @@ async function cbLoadModuleLessons(modId) {
 }
 
 async function cbAddLesson(modId) {
+  console.log('cbAddLesson called with moduleId:', modId);
   var titleInput = $('mod-lesson-title-' + modId);
   var title = titleInput ? titleInput.value.trim() : '';
-  if (!title) return;
+  if (!title) {
+    if (titleInput) { titleInput.style.borderColor = '#c44'; titleInput.placeholder = 'Please enter a lesson title'; }
+    return;
+  }
+  if (titleInput) { titleInput.style.borderColor = '#e0ddd5'; titleInput.placeholder = 'Lesson title'; }
+  if (!modId) { console.error('Cannot add lesson: moduleId is undefined'); return; }
 
   try {
-    var countRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?module_id=eq.' + modId + '&select=sort_order&order=sort_order.desc&limit=1', { headers: apiHeaders() });
-    if (!countRes.ok) { console.error('Lesson count query failed:', countRes.status); return; }
-    var existing = await countRes.json();
-    var nextOrder = (Array.isArray(existing) && existing.length > 0) ? (existing[0].sort_order + 1) : 0;
+    // Get next sort order
+    var countRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?module_id=eq.' + modId + '&select=id', { headers: apiHeaders() });
+    var existing = [];
+    if (countRes.ok) { existing = await countRes.json(); }
+    var nextOrder = Array.isArray(existing) ? existing.length : 0;
 
-    await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons', {
-      method: 'POST', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ module_id: modId, course_id: currentCourseId, title: title, sort_order: nextOrder })
+    var postRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons', {
+      method: 'POST', headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
+      body: JSON.stringify({ module_id: modId, title: title, description: '', sort_order: nextOrder })
     });
+
+    if (!postRes.ok) {
+      var errBody = await postRes.json().catch(function() { return {}; });
+      console.error('Lesson POST failed:', postRes.status, errBody);
+      return;
+    }
+
     titleInput.value = '';
     cbLoadModuleLessons(modId);
-  } catch (e) { /* ignore */ }
+  } catch (e) { console.error('cbAddLesson error:', e); }
 }
 
 async function cbDeleteLesson(modId, lessonId) {
@@ -3136,23 +3150,30 @@ async function cbUploadResource(modId) {
 }
 
 async function cbAddResource(modId) {
+  console.log('cbAddResource called with moduleId:', modId);
   var typeEl = $('mod-res-type-' + modId);
   var titleEl = $('mod-res-title-' + modId);
   var urlEl = $('mod-res-url-' + modId);
   var title = titleEl ? titleEl.value.trim() : '';
   var url = urlEl ? urlEl.value.trim() : '';
   var type = typeEl ? typeEl.value : 'Link';
-  if (!title || !url) return;
+  if (!title || !url) { console.log('Resource add skipped: title or url empty', { title: title, url: url }); return; }
+  if (!modId) { console.error('Cannot add resource: moduleId is undefined'); return; }
 
   try {
-    await fetch(SUPABASE_URL + '/rest/v1/coach_course_resources', {
-      method: 'POST', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ module_id: modId, title: title, file_url: url, resource_type: type })
+    var postRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_resources', {
+      method: 'POST', headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
+      body: JSON.stringify({ module_id: modId, title: title, file_url: url, url: url, resource_type: type })
     });
+    if (!postRes.ok) {
+      var errBody = await postRes.json().catch(function() { return {}; });
+      console.error('Resource POST failed:', postRes.status, errBody);
+      return;
+    }
     if (titleEl) titleEl.value = '';
     if (urlEl) urlEl.value = '';
     cbLoadModuleResources(modId);
-  } catch (e) { /* ignore */ }
+  } catch (e) { console.error('cbAddResource error:', e); }
 }
 
 async function cbDeleteResource(modId, resId) {
