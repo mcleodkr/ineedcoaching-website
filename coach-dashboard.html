@@ -1055,6 +1055,8 @@ function escapeHtml(str) {
 }
 
 function $(id) { return document.getElementById(id); }
+function safeText(id, text) { var el = $(id); if (el) el.textContent = text; }
+function safeHTML(id, html) { var el = $(id); if (el) el.innerHTML = html; }
 
 /* ================================================
    AUTH: CHECK URL HASH FOR TOKEN
@@ -2973,7 +2975,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
             if (!transcript) { alert('Please paste your session transcript or notes.'); return; }
             this.disabled = true;
             this.textContent = 'Processing...';
-            $('proc-status-' + bid).textContent = 'Claude is analyzing your session...';
+            safeText('proc-status-' + bid, 'Claude is analyzing your session...');
 
             try {
               var apiRes = await fetch('/api/process-session', {
@@ -3007,7 +3009,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
               var s2el = panel.querySelector('.proc-step2');
               if (s2el) s2el.remove();
               panel.insertAdjacentHTML('beforeend', step3Html);
-              $('proc-status-' + bid).textContent = '';
+              safeText('proc-status-' + bid, '');
 
               // Wire save
               panel.querySelector('.proc-save-btn').addEventListener('click', async function() {
@@ -3050,9 +3052,9 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
 
             } catch(e) {
               console.error('[ProcessSession] Error:', e);
-              var statusEl = $('proc-status-' + bid);
-              if (statusEl) {
-                statusEl.innerHTML = '<span style="color:#c44;">Error: ' + escapeHtml(e.message) + '</span>';
+              var errStatusEl = $('proc-status-' + bid);
+              if (errStatusEl) {
+                errStatusEl.innerHTML = '<span style="color:#c44;">Error: ' + escapeHtml(e.message) + '</span>';
               } else {
                 alert('Error processing session: ' + (e.message || e));
               }
