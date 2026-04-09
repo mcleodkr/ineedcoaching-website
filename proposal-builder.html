@@ -129,10 +129,11 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 
 /* PRINT */
 @media print {
-  body { background: white; }
-  nav, #login-screen, .form-card, .form-actions, .preview-label, .page-header { display: none !important; }
-  .builder-grid { grid-template-columns: 1fr; }
-  .preview-card { position: static; border: none; box-shadow: none; }
+  nav, .page-header, .form-card, .form-actions, .form-msg, #login-screen { display: none !important; }
+  .builder-grid { display: block !important; }
+  .preview-card { position: static !important; box-shadow: none !important; border: none !important; }
+  body { background: white !important; }
+  .page-wrap { padding: 0 !important; }
   .preview-doc { padding: 24px; }
   .prev-investment { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
