@@ -1555,15 +1555,30 @@ function extractServiceName(notes) {
 
 async function loadBookings() {
   try {
-    var data = await supabaseGet(
-      'coach_bookings?coach_id=eq.' + coachProfile.id + '&order=scheduled_at.desc&select=id,client_email,client_phone,scheduled_at,status,notes,zoom_link,service_id'
-    );
+    var [data, checkinData] = await Promise.all([
+      supabaseGet('coach_bookings?coach_id=eq.' + coachProfile.id + '&order=scheduled_at.desc&select=id,client_email,client_phone,scheduled_at,status,notes,zoom_link,service_id'),
+      supabaseGet('coach_checkin_responses?coach_id=eq.' + coachProfile.id + '&select=booking_id,token,form_id,submitted_at,coach_intake_forms(name)')
+    ]);
     $('bookings-loading').style.display = 'none';
     $('bookings-content').classList.remove('hidden');
 
     if (!data || data.length === 0) {
       $('bookings-content').innerHTML = '<div class="empty-state"><p>No booking requests yet.</p></div>';
       return;
+    }
+
+    // Build checkin lookup by booking_id
+    var checkinByBooking = {};
+    if (Array.isArray(checkinData)) {
+      checkinData.forEach(function(ci) {
+        if (ci.booking_id) {
+          checkinByBooking[ci.booking_id] = {
+            token: ci.token,
+            formName: (ci.coach_intake_forms && ci.coach_intake_forms.name) || 'Check-in',
+            submitted: !!ci.submitted_at
+          };
+        }
+      });
     }
 
     // Store data for filtering
@@ -1609,7 +1624,18 @@ async function loadBookings() {
           } else {
             actions = '<button class="booking-zoom-btn" data-booking-id="' + b.id + '">Add meeting link</button>';
           }
-          actions += ' <button class="booking-checkin-btn" data-send-checkin="' + b.id + '" data-client-email="' + escapeHtml(b.client_email || '') + '" data-client-name="' + escapeHtml(clientName) + '" style="font-size:0.75rem;color:var(--ink);cursor:pointer;border:1px solid var(--ink);background:none;font-weight:700;padding:4px 10px;border-radius:50px;margin-left:4px;">Send check-in</button>';
+          var existingCheckin = checkinByBooking[b.id];
+          if (existingCheckin) {
+            var ciUrl = window.location.origin + '/checkin.html?token=' + existingCheckin.token;
+            actions += ' <span style="display:inline-flex;align-items:center;gap:6px;margin-left:4px;">'
+              + '<span style="font-size:0.72rem;color:var(--gold);font-weight:600;">' + escapeHtml(existingCheckin.formName) + '</span>'
+              + '<a href="' + escapeHtml(ciUrl) + '" target="_blank" style="font-size:0.72rem;color:var(--gold);font-weight:700;text-decoration:none;">View form &rarr;</a>'
+              + '<button onclick="navigator.clipboard.writeText(\'' + escapeHtml(ciUrl) + '\');this.textContent=\'Copied!\';setTimeout(()=>this.textContent=\'Copy\',1500)" style="font-size:0.68rem;color:var(--muted);background:none;border:1px solid var(--border);padding:2px 8px;border-radius:50px;cursor:pointer;">Copy</button>'
+              + (existingCheckin.submitted ? '<span class="status-pill status-confirmed" style="font-size:0.62rem;padding:2px 8px;">Submitted</span>' : '<span class="status-pill status-pending" style="font-size:0.62rem;padding:2px 8px;">Pending</span>')
+              + '</span>';
+          } else {
+            actions += ' <button class="booking-checkin-btn" data-send-checkin="' + b.id + '" data-client-email="' + escapeHtml(b.client_email || '') + '" data-client-name="' + escapeHtml(clientName) + '" style="font-size:0.75rem;color:var(--ink);cursor:pointer;border:1px solid var(--ink);background:none;font-weight:700;padding:4px 10px;border-radius:50px;margin-left:4px;">Send check-in</button>';
+          }
         }
         var hasNotes = b.notes && b.notes.trim();
 
@@ -1662,7 +1688,12 @@ async function loadBookings() {
           // Update DOM directly
           var label = action.charAt(0).toUpperCase() + action.slice(1);
           row.querySelector('.booking-status-cell').innerHTML = '<span class="status-pill status-' + action + '">' + escapeHtml(label) + '</span>';
-          row.querySelector('.booking-actions-cell').innerHTML = '';
+          if (action === 'confirmed') {
+            // Re-render the full table to get proper zoom + checkin buttons wired
+            renderBookingsTable(filter);
+          } else {
+            row.querySelector('.booking-actions-cell').innerHTML = '';
+          }
         });
       });
 
@@ -3278,6 +3309,7 @@ function wireSendCheckinButtons() {
 
       cell.querySelector('.checkin-send-final').addEventListener('click', async function() {
         var formId = $('checkin-select-' + bookingId).value;
+        var formName = $('checkin-select-' + bookingId).selectedOptions[0] ? $('checkin-select-' + bookingId).selectedOptions[0].textContent : 'Check-in';
         if (!formId) { alert('Select a form first.'); return; }
         this.disabled = true;
         this.textContent = 'Sending...';
@@ -3295,8 +3327,13 @@ function wireSendCheckinButtons() {
               token: token
             })
           });
-          var checkinUrl = window.location.origin + '/checkin.html?token=' + token;
-          this.parentElement.innerHTML = '<span style="font-size:0.75rem;color:var(--forest);font-weight:600;">Sent! Link: </span><a href="' + checkinUrl + '" target="_blank" style="font-size:0.75rem;color:var(--gold);word-break:break-all;">' + checkinUrl + '</a>';
+          // Update in-memory checkin lookup
+          checkinByBooking[bookingId] = { token: token, formName: formName, submitted: false };
+          var ciUrl = window.location.origin + '/checkin.html?token=' + token;
+          this.parentElement.innerHTML = '<span style="font-size:0.72rem;color:var(--gold);font-weight:600;">' + escapeHtml(formName) + '</span> '
+            + '<a href="' + escapeHtml(ciUrl) + '" target="_blank" style="font-size:0.72rem;color:var(--gold);font-weight:700;text-decoration:none;">View form &rarr;</a> '
+            + '<button onclick="navigator.clipboard.writeText(\'' + escapeHtml(ciUrl) + '\');this.textContent=\'Copied!\';setTimeout(()=>this.textContent=\'Copy\',1500)" style="font-size:0.68rem;color:var(--muted);background:none;border:1px solid var(--border);padding:2px 8px;border-radius:50px;cursor:pointer;">Copy</button> '
+            + '<span class="status-pill status-pending" style="font-size:0.62rem;padding:2px 8px;">Pending</span>';
         } catch(e) {
           alert('Error sending check-in.');
           this.disabled = false;
