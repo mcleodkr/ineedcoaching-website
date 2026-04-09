@@ -297,6 +297,63 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .add-goal-form h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--ink); margin-bottom: 18px; }
 
 /* COURSES TAB */
+/* COURSE BUILDER — premium design */
+.cb-header { background: #1a3a52; border-radius: 12px 12px 0 0; padding: 24px 28px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0; }
+.cb-header-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; font-weight: 900; color: #fff; }
+.cb-header-sub { font-size: 0.82rem; color: rgba(255,255,255,0.6); margin-top: 2px; }
+.cb-header-status { font-size: 0.72rem; color: #c49a3c; font-weight: 600; }
+.cb-body { background: #fff; border: 1px solid #e0ddd5; border-top: none; border-radius: 0 0 12px 12px; padding: 28px; }
+.cb-steps { display: flex; align-items: center; justify-content: center; gap: 0; margin-bottom: 28px; position: relative; }
+.cb-step { display: flex; flex-direction: column; align-items: center; position: relative; z-index: 1; flex: 1; }
+.cb-step-circle { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 800; border: 2px solid #e0ddd5; background: #fff; color: #8a8a9a; transition: all 0.2s; }
+.cb-step-circle.done { background: #c49a3c; border-color: #c49a3c; color: #fff; }
+.cb-step-circle.active { background: #1a3a52; border-color: #1a3a52; color: #fff; }
+.cb-step-label { font-size: 0.68rem; font-weight: 700; color: #8a8a9a; margin-top: 6px; letter-spacing: 0.04em; }
+.cb-step-label.done { color: #c49a3c; }
+.cb-step-label.active { color: #1a3a52; }
+.cb-step-line { position: absolute; top: 16px; left: 0; right: 0; height: 2px; background: #e0ddd5; z-index: 0; }
+.cb-section { border-left: 3px solid #c49a3c; padding-left: 20px; margin-bottom: 28px; }
+.cb-section-title { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 700; color: #1a3a52; margin-bottom: 16px; }
+.cb-field { margin-bottom: 16px; }
+.cb-label { display: block; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #8a8a9a; margin-bottom: 6px; }
+.cb-input { width: 100%; padding: 11px 14px; border: 1.5px solid #e0ddd5; border-radius: 8px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem; color: #1a3a52; background: #fff; outline: none; transition: all 0.2s; }
+.cb-input:focus { border-color: #c49a3c; box-shadow: 0 0 0 3px rgba(196,154,60,0.12); }
+.cb-textarea { width: 100%; padding: 11px 14px; border: 1.5px solid #e0ddd5; border-radius: 8px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem; color: #1a3a52; background: #fff; outline: none; min-height: 100px; resize: vertical; transition: all 0.2s; }
+.cb-textarea:focus { border-color: #c49a3c; box-shadow: 0 0 0 3px rgba(196,154,60,0.12); }
+.cb-type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cb-type-card { padding: 14px 16px; border: 2px solid #e0ddd5; border-radius: 10px; cursor: pointer; background: #fff; transition: all 0.15s; }
+.cb-type-card.selected { border-color: #c49a3c; background: #faf3e0; }
+.cb-type-card-title { font-weight: 700; font-size: 0.88rem; color: #1a3a52; }
+.cb-type-card-desc { font-size: 0.75rem; color: #8a8a9a; margin-top: 2px; }
+.cb-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cb-hint { font-size: 0.72rem; color: #8a8a9a; margin-top: 4px; }
+.cb-slug-preview { font-size: 0.78rem; color: #8a8a9a; margin-top: 4px; }
+.cb-slug-preview span { color: #c49a3c; font-weight: 600; }
+.cb-obj-item { display: flex; align-items: center; justify-content: space-between; background: #faf3e0; border: 1px solid #e8dfc0; border-radius: 8px; padding: 9px 14px; margin-bottom: 6px; font-size: 0.88rem; color: #1a3a52; }
+.cb-obj-item button { background: none; border: none; color: #c44; cursor: pointer; font-size: 1rem; padding: 0 0 0 8px; }
+.cb-add-row { display: flex; gap: 8px; }
+.cb-add-row input { flex: 1; }
+.cb-add-row button { padding: 10px 18px; background: #1a3a52; color: #fff; border: none; border-radius: 8px; font-family: inherit; font-size: 0.88rem; font-weight: 700; cursor: pointer; }
+.cb-info-box { padding: 14px 16px; background: #f7f4ee; border-radius: 8px; font-size: 0.85rem; color: #1a3a52; margin-bottom: 12px; }
+.cb-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 28px; padding-top: 20px; border-top: 1px solid #e0ddd5; }
+.cb-btn-back { padding: 12px 24px; background: #fff; color: #8a8a9a; border: 1.5px solid #e0ddd5; border-radius: 8px; font-family: inherit; font-size: 0.88rem; font-weight: 700; cursor: pointer; }
+.cb-btn-back:hover { border-color: #8a8a9a; }
+.cb-btn-draft { padding: 12px 24px; background: #fff; color: #1a3a52; border: 2px solid #c49a3c; border-radius: 8px; font-family: inherit; font-size: 0.88rem; font-weight: 700; cursor: pointer; }
+.cb-btn-draft:hover { background: #faf3e0; }
+.cb-btn-next { padding: 12px 24px; background: #1a3a52; color: #c49a3c; border: none; border-radius: 8px; font-family: inherit; font-size: 0.88rem; font-weight: 700; cursor: pointer; }
+.cb-btn-next:hover { background: #24506e; }
+.cb-btn-publish { width: 100%; padding: 16px; background: #c49a3c; color: #1a3a52; border: none; border-radius: 8px; font-family: inherit; font-size: 1rem; font-weight: 800; cursor: pointer; letter-spacing: 0.03em; }
+.cb-btn-publish:hover { background: #d4a94c; }
+.cb-btn-preview { width: 100%; padding: 14px; background: #fff; color: #1a3a52; border: 1.5px solid #1a3a52; border-radius: 8px; font-family: inherit; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
+.cb-fee-box { background: #f7f4ee; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+.cb-fee-row { display: flex; justify-content: space-between; font-size: 0.88rem; color: #1a3a52; margin-bottom: 8px; }
+.cb-fee-total { display: flex; justify-content: space-between; font-size: 0.95rem; color: #c49a3c; font-weight: 700; padding-top: 8px; border-top: 1px solid #e0ddd5; }
+.cb-email-preview { border-radius: 10px; overflow: hidden; margin-bottom: 20px; border: 1px solid #e0ddd5; }
+.cb-email-header { background: #1a3a52; padding: 12px 20px; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #c49a3c; }
+.cb-email-body { padding: 20px; background: #faf3e0; font-size: 0.85rem; color: #1a3a52; line-height: 1.7; }
+.cb-email-detail { background: #fff; border: 1px solid #e0ddd5; border-radius: 8px; padding: 14px; font-size: 0.82rem; }
+.cb-module-add { margin-top: 16px; width: 100%; padding: 14px; background: transparent; color: #c49a3c; border: 2px dashed #c49a3c; border-radius: 10px; font-family: inherit; font-size: 0.88rem; font-weight: 700; cursor: pointer; }
+.cb-module-add:hover { background: #faf3e0; }
 .course-mgmt-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 24px; margin-bottom: 14px; }
 .course-mgmt-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
 .course-mgmt-header h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--ink); }
@@ -2224,22 +2281,30 @@ function renderCourseBuilder() {
   var title = courseData.title || 'New Course';
   var steps = ['Basics', 'Schedule', 'Syllabus', 'Enrollment'];
 
-  var html = '<div style="margin-bottom:24px;">'
+  var html = '<div style="margin-bottom:16px;">'
     + '<a href="#" onclick="event.preventDefault();renderCourseList()" style="font-size:0.78rem;color:var(--muted);text-decoration:none;">&larr; Back to Courses</a>'
     + '</div>';
 
   // Header
-  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">'
-    + '<div><div style="font-family:Playfair Display,serif;font-size:1.3rem;font-weight:900;color:#1a3a52;">' + escapeHtml(title) + '</div>'
-    + '<div style="font-size:0.82rem;color:var(--muted);">Step ' + courseStep + ': ' + steps[courseStep - 1] + '</div></div>'
-    + '<div id="cb-save-status" style="font-size:0.78rem;color:var(--muted);"></div>'
+  html += '<div class="cb-header">'
+    + '<div><div class="cb-header-title">' + escapeHtml(title) + '</div>'
+    + '<div class="cb-header-sub">Step ' + courseStep + ': ' + steps[courseStep - 1] + '</div></div>'
+    + '<div><div class="cb-header-status" id="cb-save-status">Draft auto-saves</div></div>'
     + '</div>';
 
-  // Step indicator
-  html += '<div style="display:flex;gap:4px;margin-bottom:28px;">';
+  // Body wrapper
+  html += '<div class="cb-body">';
+
+  // Step indicator with circles
+  html += '<div class="cb-steps"><div class="cb-step-line"></div>';
   for (var s = 1; s <= 4; s++) {
-    var stepColor = s < courseStep ? '#4a7c59' : (s === courseStep ? '#c49a3c' : '#e0ddd5');
-    html += '<div style="flex:1;height:4px;border-radius:2px;background:' + stepColor + ';"></div>';
+    var circleClass = s < courseStep ? 'done' : (s === courseStep ? 'active' : '');
+    var labelClass = s < courseStep ? 'done' : (s === courseStep ? 'active' : '');
+    var circleContent = s < courseStep ? '&#10003;' : s;
+    html += '<div class="cb-step">'
+      + '<div class="cb-step-circle ' + circleClass + '">' + circleContent + '</div>'
+      + '<div class="cb-step-label ' + labelClass + '">' + steps[s - 1] + '</div>'
+      + '</div>';
   }
   html += '</div>';
 
@@ -2250,19 +2315,21 @@ function renderCourseBuilder() {
   else if (courseStep === 4) html += renderStep4();
 
   // Navigation
-  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:28px;padding-top:20px;border-top:1px solid #e0ddd5;">';
+  html += '<div class="cb-nav">';
   if (courseStep > 1) {
-    html += '<button onclick="cbPrev()" style="padding:12px 24px;background:#fff;color:#1a3a52;border:1.5px solid #1a3a52;border-radius:8px;font-family:inherit;font-size:0.88rem;font-weight:700;cursor:pointer;">Back</button>';
+    html += '<button onclick="cbPrev()" class="cb-btn-back">Back</button>';
   } else {
     html += '<div></div>';
   }
   html += '<div style="display:flex;gap:10px;">';
-  html += '<button onclick="cbSaveDraft()" style="padding:12px 24px;background:#fff;color:#c49a3c;border:2px solid #c49a3c;border-radius:8px;font-family:inherit;font-size:0.88rem;font-weight:700;cursor:pointer;">Save Draft</button>';
+  html += '<button onclick="cbSaveDraft()" class="cb-btn-draft">Save Draft</button>';
   if (courseStep < 4) {
-    html += '<button onclick="cbNext()" style="padding:12px 24px;background:#1a3a52;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:0.88rem;font-weight:700;cursor:pointer;">Next</button>';
+    html += '<button onclick="cbNext()" class="cb-btn-next">Next</button>';
   }
   html += '</div></div>';
   html += '<div id="cb-msg" style="font-size:0.85rem;margin-top:10px;min-height:20px;"></div>';
+
+  html += '</div>'; // close cb-body
 
   content.innerHTML = html;
 
@@ -2280,55 +2347,52 @@ function renderStep1() {
     { val: 'hybrid', label: 'Hybrid', desc: 'Combination of virtual and in-person delivery' }
   ];
 
-  var html = '<div class="form-section" style="border-left:3px solid #c49a3c;padding-left:16px;margin:0 0 24px;">'
-    + '<div style="font-family:Playfair Display,serif;font-size:0.95rem;font-weight:700;color:#1a3a52;margin-bottom:16px;">Course Basics</div>';
+  var html = '<div class="cb-section">'
+    + '<div class="cb-section-title">Course Basics</div>';
 
-  html += '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">Course Title</label>'
-    + '<input type="text" id="cb-title" value="' + escapeHtml(d.title || '') + '" placeholder="e.g. Mindful Leadership Masterclass" oninput="cbAutoSlug()" style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:Cabinet Grotesk,sans-serif;font-size:0.9rem;color:#1a3a52;outline:none;"></div>';
+  html += '<div class="cb-field"><label class="cb-label">Course Title</label>'
+    + '<input type="text" id="cb-title" class="cb-input" value="' + escapeHtml(d.title || '') + '" placeholder="e.g. Mindful Leadership Masterclass" oninput="cbAutoSlug()"></div>';
 
-  html += '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">Description</label>'
-    + '<textarea id="cb-desc" placeholder="What is this course about?" style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:Cabinet Grotesk,sans-serif;font-size:0.9rem;color:#1a3a52;outline:none;min-height:100px;resize:vertical;">' + escapeHtml(d.description || '') + '</textarea></div>';
+  html += '<div class="cb-field"><label class="cb-label">Description</label>'
+    + '<textarea id="cb-desc" class="cb-textarea" placeholder="What is this course about?">' + escapeHtml(d.description || '') + '</textarea></div>';
 
   // Course type radio cards
-  html += '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:10px;display:block;">Course Type</label>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
+  html += '<div class="cb-field"><label class="cb-label">Course Type</label>'
+    + '<div class="cb-type-grid">';
   types.forEach(function(t) {
     var sel = (d.course_type || 'self-paced') === t.val;
-    html += '<div onclick="cbSelectType(\'' + t.val + '\')" style="padding:14px 16px;border:2px solid ' + (sel ? '#c49a3c' : '#e0ddd5') + ';border-radius:10px;cursor:pointer;background:' + (sel ? '#faf3e0' : '#fff') + ';">'
-      + '<div style="font-weight:700;font-size:0.88rem;color:#1a3a52;">' + t.label + '</div>'
-      + '<div style="font-size:0.75rem;color:#8a8a9a;margin-top:2px;">' + t.desc + '</div>'
-      + '</div>';
+    html += '<div onclick="cbSelectType(\'' + t.val + '\')" class="cb-type-card' + (sel ? ' selected' : '') + '">'
+      + '<div class="cb-type-card-title">' + t.label + '</div>'
+      + '<div class="cb-type-card-desc">' + t.desc + '</div></div>';
   });
   html += '</div></div>';
 
   // Slug
-  html += '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">Course Web Address</label>'
-    + '<input type="text" id="cb-slug" value="' + escapeHtml(d.slug || '') + '" placeholder="my-course-slug" oninput="cbUpdateSlugPreview()" style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:Cabinet Grotesk,sans-serif;font-size:0.9rem;color:#1a3a52;outline:none;">'
-    + '<div style="font-size:0.78rem;color:#8a8a9a;margin-top:6px;">This is the link you\'ll share with clients to enroll.</div>'
-    + '<div style="font-size:0.78rem;color:#8a8a9a;margin-top:2px;">Your course link: <span style="color:#c49a3c;font-weight:600;">ineedcoaching.org/coach/' + escapeHtml(coachProfile.slug || '') + '/courses/<span id="cb-slug-val">' + escapeHtml(d.slug || '...') + '</span></span></div>'
-    + '</div>';
+  html += '<div class="cb-field"><label class="cb-label">Course Web Address</label>'
+    + '<input type="text" id="cb-slug" class="cb-input" value="' + escapeHtml(d.slug || '') + '" placeholder="my-course-slug" oninput="cbUpdateSlugPreview()">'
+    + '<div class="cb-hint">This is the link you\'ll share with clients to enroll.</div>'
+    + '<div class="cb-slug-preview">Your course link: <span>ineedcoaching.org/coach/' + escapeHtml(coachProfile.slug || '') + '/courses/<span id="cb-slug-val">' + escapeHtml(d.slug || '...') + '</span></span></div></div>';
 
   // Password
-  html += '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">Course Password (optional)</label>'
-    + '<input type="text" id="cb-password" value="' + escapeHtml(d.course_password || '') + '" placeholder="Students receive this in their enrollment email" style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:Cabinet Grotesk,sans-serif;font-size:0.9rem;color:#1a3a52;outline:none;"></div>';
+  html += '<div class="cb-field"><label class="cb-label">Course Password (optional)</label>'
+    + '<input type="text" id="cb-password" class="cb-input" value="' + escapeHtml(d.course_password || '') + '" placeholder="Students receive this in their enrollment email"></div>';
 
   // Objectives
-  html += '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">What Participants Will Learn</label>'
+  html += '<div class="cb-field"><label class="cb-label">What Participants Will Learn</label>'
     + '<div id="cb-objectives-list"></div>'
-    + '<div style="display:flex;gap:8px;"><input type="text" id="cb-obj-input" placeholder="Add a learning outcome..." style="flex:1;padding:10px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:inherit;font-size:0.88rem;outline:none;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();cbAddObjective();}"><button onclick="cbAddObjective()" style="padding:10px 18px;background:#1a3a52;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:0.88rem;font-weight:700;cursor:pointer;">Add</button></div>'
-    + '</div>';
+    + '<div class="cb-add-row"><input type="text" id="cb-obj-input" class="cb-input" placeholder="Add a learning outcome..." onkeydown="if(event.key===\'Enter\'){event.preventDefault();cbAddObjective();}"><button onclick="cbAddObjective()" style="padding:10px 18px;background:#1a3a52;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:0.88rem;font-weight:700;cursor:pointer;">Add</button></div></div>';
 
   // Price + Enrollment limit
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'
-    + '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">Price ($)</label>'
-    + '<input type="number" id="cb-price" value="' + (d.price || '') + '" placeholder="0" min="0" step="1" style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:Cabinet Grotesk,sans-serif;font-size:0.9rem;color:#1a3a52;outline:none;"></div>'
-    + '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">Enrollment Limit</label>'
-    + '<input type="number" id="cb-limit" value="' + (d.enrollment_limit || '') + '" placeholder="Leave blank for unlimited" min="1" style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:Cabinet Grotesk,sans-serif;font-size:0.9rem;color:#1a3a52;outline:none;"></div>'
+  html += '<div class="cb-row">'
+    + '<div class="cb-field"><label class="cb-label">Price ($)</label>'
+    + '<input type="number" id="cb-price" class="cb-input" value="' + (d.price || '') + '" placeholder="0" min="0" step="1"></div>'
+    + '<div class="cb-field"><label class="cb-label">Enrollment Limit</label>'
+    + '<input type="number" id="cb-limit" class="cb-input" value="' + (d.enrollment_limit || '') + '" placeholder="Leave blank for unlimited" min="1"></div>'
     + '</div>';
 
   // Who it's for
-  html += '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">Who This Course Is For</label>'
-    + '<textarea id="cb-who" placeholder="Describe the ideal student..." style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:Cabinet Grotesk,sans-serif;font-size:0.9rem;color:#1a3a52;outline:none;min-height:80px;resize:vertical;">' + escapeHtml(d.who_its_for || '') + '</textarea></div>';
+  html += '<div class="cb-field"><label class="cb-label">Who This Course Is For</label>'
+    + '<textarea id="cb-who" class="cb-textarea" style="min-height:80px;" placeholder="Describe the ideal student...">' + escapeHtml(d.who_its_for || '') + '</textarea></div>';
 
   html += '</div>';
   return html;
@@ -2339,11 +2403,11 @@ function renderStep2() {
   var d = courseData;
   var opt = d.enrollment_date_option || 'always';
 
-  var html = '<div class="form-section" style="border-left:3px solid #c49a3c;padding-left:16px;margin:0 0 24px;">'
-    + '<div style="font-family:Playfair Display,serif;font-size:0.95rem;font-weight:700;color:#1a3a52;margin-bottom:16px;">Schedule &amp; Access</div>';
+  var html = '<div class="cb-section">'
+    + '<div class="cb-section-title">Schedule &amp; Access</div>';
 
   // Enrollment availability
-  html += '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:10px;display:block;">Enrollment Availability</label>';
+  html += '<div class="cb-field"><label class="cb-label">Enrollment Availability</label>';
   var opts = [
     { val: 'always', label: 'Always open', desc: 'Students can enroll anytime' },
     { val: 'opens', label: 'Opens on a specific date', desc: 'Enrollment starts on a set date' },
@@ -2351,33 +2415,33 @@ function renderStep2() {
   ];
   opts.forEach(function(o) {
     var sel = opt === o.val;
-    html += '<div onclick="cbSelectEnrollOpt(\'' + o.val + '\')" style="padding:12px 16px;border:2px solid ' + (sel ? '#c49a3c' : '#e0ddd5') + ';border-radius:8px;cursor:pointer;background:' + (sel ? '#faf3e0' : '#fff') + ';margin-bottom:8px;">'
-      + '<div style="font-weight:700;font-size:0.85rem;color:#1a3a52;">' + o.label + '</div>'
-      + '<div style="font-size:0.75rem;color:#8a8a9a;">' + o.desc + '</div></div>';
+    html += '<div onclick="cbSelectEnrollOpt(\'' + o.val + '\')" class="cb-type-card' + (sel ? ' selected' : '') + '" style="margin-bottom:8px;">'
+      + '<div class="cb-type-card-title">' + o.label + '</div>'
+      + '<div class="cb-type-card-desc">' + o.desc + '</div></div>';
   });
 
   if (opt === 'opens' || opt === 'window') {
-    html += '<div class="field" style="margin-top:12px;"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">Enrollment Opens</label>'
-      + '<input type="date" id="cb-enroll-open" value="' + (d.enrollment_open_date || '') + '" style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:inherit;font-size:0.9rem;outline:none;"></div>';
+    html += '<div class="cb-field" style="margin-top:12px;"><label class="cb-label">Enrollment Opens</label>'
+      + '<input type="date" id="cb-enroll-open" class="cb-input" value="' + (d.enrollment_open_date || '') + '"></div>';
   }
   if (opt === 'window') {
-    html += '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">Enrollment Closes</label>'
-      + '<input type="date" id="cb-enroll-close" value="' + (d.enrollment_close_date || '') + '" style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:inherit;font-size:0.9rem;outline:none;"></div>';
+    html += '<div class="cb-field"><label class="cb-label">Enrollment Closes</label>'
+      + '<input type="date" id="cb-enroll-close" class="cb-input" value="' + (d.enrollment_close_date || '') + '"></div>';
   }
   html += '</div>';
 
   // Start/End dates
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'
-    + '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">Start Date (optional)</label>'
-    + '<input type="date" id="cb-start" value="' + (d.start_date || '') + '" style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:inherit;font-size:0.9rem;outline:none;"></div>'
-    + '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">End Date (optional)</label>'
-    + '<input type="date" id="cb-end" value="' + (d.end_date || '') + '" style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:inherit;font-size:0.9rem;outline:none;">'
-    + '<div style="font-size:0.72rem;color:#8a8a9a;margin-top:4px;">Leave blank for self-paced or ongoing.</div></div>'
+  html += '<div class="cb-row">'
+    + '<div class="cb-field"><label class="cb-label">Start Date (optional)</label>'
+    + '<input type="date" id="cb-start" class="cb-input" value="' + (d.start_date || '') + '"></div>'
+    + '<div class="cb-field"><label class="cb-label">End Date (optional)</label>'
+    + '<input type="date" id="cb-end" class="cb-input" value="' + (d.end_date || '') + '">'
+    + '<div class="cb-hint">Leave blank for self-paced or ongoing.</div></div>'
     + '</div>';
 
   // Delivery
-  html += '<div class="field" style="margin-top:16px;"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:10px;display:block;">Delivery Method</label>'
-    + '<div style="padding:14px 16px;background:#f7f4ee;border-radius:8px;font-size:0.85rem;color:#1a3a52;margin-bottom:12px;">Virtual Classroom is always available for all course types.</div>';
+  html += '<div class="cb-field" style="margin-top:16px;"><label class="cb-label">Delivery Method</label>'
+    + '<div class="cb-info-box">Virtual Classroom is always available for all course types.</div>';
 
   var hasZoom = (d.zoom_link || d.session_schedule) ? true : false;
   var hasInPerson = (d.in_person_address || d.in_person_schedule) ? true : false;
@@ -2385,14 +2449,14 @@ function renderStep2() {
   html += '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;font-weight:600;color:#1a3a52;margin-bottom:8px;">'
     + '<input type="checkbox" id="cb-has-zoom" ' + (hasZoom ? 'checked' : '') + ' onchange="cbToggleDelivery()" style="width:auto;margin:0;"> Add Zoom/video sessions</label>';
   html += '<div id="cb-zoom-fields" style="display:' + (hasZoom ? 'block' : 'none') + ';margin-left:26px;margin-bottom:12px;">'
-    + '<div class="field"><input type="text" id="cb-zoom-link" value="' + escapeHtml(d.zoom_link || '') + '" placeholder="Zoom meeting link" style="width:100%;padding:10px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:inherit;font-size:0.88rem;outline:none;"></div>'
-    + '<div class="field"><input type="text" id="cb-zoom-schedule" value="' + escapeHtml(d.session_schedule || '') + '" placeholder="e.g. Tuesdays at 6pm EST starting May 6" style="width:100%;padding:10px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:inherit;font-size:0.88rem;outline:none;"></div></div>';
+    + '<div class="cb-field"><input type="text" id="cb-zoom-link" class="cb-input" value="' + escapeHtml(d.zoom_link || '') + '" placeholder="Zoom meeting link"></div>'
+    + '<div class="cb-field"><input type="text" id="cb-zoom-schedule" class="cb-input" value="' + escapeHtml(d.session_schedule || '') + '" placeholder="e.g. Tuesdays at 6pm EST starting May 6"></div></div>';
 
   html += '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;font-weight:600;color:#1a3a52;margin-bottom:8px;">'
     + '<input type="checkbox" id="cb-has-inperson" ' + (hasInPerson ? 'checked' : '') + ' onchange="cbToggleDelivery()" style="width:auto;margin:0;"> Add in-person sessions</label>';
   html += '<div id="cb-inperson-fields" style="display:' + (hasInPerson ? 'block' : 'none') + ';margin-left:26px;">'
-    + '<div class="field"><textarea id="cb-ip-address" placeholder="Venue address" style="width:100%;padding:10px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:inherit;font-size:0.88rem;outline:none;min-height:60px;resize:vertical;">' + escapeHtml(d.in_person_address || '') + '</textarea></div>'
-    + '<div class="field"><input type="text" id="cb-ip-schedule" value="' + escapeHtml(d.in_person_schedule || '') + '" placeholder="e.g. Saturdays 10am-12pm at Studio B" style="width:100%;padding:10px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:inherit;font-size:0.88rem;outline:none;"></div></div>';
+    + '<div class="cb-field"><textarea id="cb-ip-address" class="cb-textarea" style="min-height:60px;" placeholder="Venue address">' + escapeHtml(d.in_person_address || '') + '</textarea></div>'
+    + '<div class="cb-field"><input type="text" id="cb-ip-schedule" class="cb-input" value="' + escapeHtml(d.in_person_schedule || '') + '" placeholder="e.g. Saturdays 10am-12pm at Studio B"></div></div>';
 
   html += '</div></div>';
   return html;
@@ -2400,14 +2464,14 @@ function renderStep2() {
 
 /* ── STEP 3: SYLLABUS ── */
 function renderStep3() {
-  var html = '<div class="form-section" style="border-left:3px solid #c49a3c;padding-left:16px;margin:0 0 24px;">'
-    + '<div style="font-family:Playfair Display,serif;font-size:0.95rem;font-weight:700;color:#1a3a52;margin-bottom:16px;">Syllabus</div>';
+  var html = '<div class="cb-section">'
+    + '<div class="cb-section-title">Syllabus</div>';
 
   if (!currentCourseId) {
-    html += '<div style="padding:24px;background:#faf3e0;border-radius:8px;font-size:0.9rem;color:#1a3a52;">Save your course basics first (click Save Draft), then build your syllabus here.</div>';
+    html += '<div class="cb-info-box">Save your course basics first (click Save Draft), then build your syllabus here.</div>';
   } else {
-    html += '<div id="cb-modules-list"><div style="font-size:0.85rem;color:var(--muted);">Loading modules...</div></div>';
-    html += '<button onclick="cbAddModule()" style="margin-top:16px;width:100%;padding:14px;background:transparent;color:#c49a3c;border:2px dashed #c49a3c;border-radius:10px;font-family:inherit;font-size:0.88rem;font-weight:700;cursor:pointer;">+ Add Module</button>';
+    html += '<div id="cb-modules-list"><div style="font-size:0.85rem;color:#8a8a9a;">Loading modules...</div></div>';
+    html += '<button onclick="cbAddModule()" class="cb-module-add">+ Add Module</button>';
   }
 
   html += '</div>';
@@ -2422,8 +2486,8 @@ function renderStep4() {
   var net = price * 0.97;
   var hasStripe = coachProfile.stripe_account_id;
 
-  var html = '<div class="form-section" style="border-left:3px solid #c49a3c;padding-left:16px;margin:0 0 24px;">'
-    + '<div style="font-family:Playfair Display,serif;font-size:0.95rem;font-weight:700;color:#1a3a52;margin-bottom:16px;">Enrollment &amp; Payment</div>';
+  var html = '<div class="cb-section">'
+    + '<div class="cb-section-title">Enrollment &amp; Payment</div>';
 
   // Stripe
   if (hasStripe) {
@@ -2434,24 +2498,24 @@ function renderStep4() {
 
   // Fee breakdown
   if (price > 0) {
-    html += '<div style="background:#f7f4ee;border-radius:10px;padding:20px;margin-bottom:20px;">'
-      + '<div style="display:flex;justify-content:space-between;font-size:0.88rem;color:#1a3a52;margin-bottom:8px;"><span>Your course price</span><span style="font-weight:700;">$' + price.toLocaleString() + '</span></div>'
-      + '<div style="display:flex;justify-content:space-between;font-size:0.88rem;color:#8a8a9a;margin-bottom:8px;"><span>Platform fee (3%)</span><span>-$' + fee.toFixed(2) + '</span></div>'
-      + '<div style="display:flex;justify-content:space-between;font-size:0.95rem;color:#c49a3c;font-weight:700;padding-top:8px;border-top:1px solid #e0ddd5;"><span>You receive per enrollment</span><span>$' + net.toFixed(2) + '</span></div>'
-      + '<div style="font-size:0.72rem;color:#8a8a9a;margin-top:8px;">Payments are processed automatically. You never need to manually transfer funds.</div>'
+    html += '<div class="cb-fee-box">'
+      + '<div class="cb-fee-row"><span>Your course price</span><span style="font-weight:700;">$' + price.toLocaleString() + '</span></div>'
+      + '<div class="cb-fee-row" style="color:#8a8a9a;"><span>Platform fee (3%)</span><span>-$' + fee.toFixed(2) + '</span></div>'
+      + '<div class="cb-fee-total"><span>You receive per enrollment</span><span>$' + net.toFixed(2) + '</span></div>'
+      + '<div class="cb-hint" style="margin-top:8px;">Payments are processed automatically. You never need to manually transfer funds.</div>'
       + '</div>';
   }
 
   // Welcome message
-  html += '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">Your Welcome Message to New Students</label>'
-    + '<textarea id="cb-welcome" placeholder="This appears at the top of the enrollment confirmation email..." style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:Cabinet Grotesk,sans-serif;font-size:0.9rem;color:#1a3a52;outline:none;min-height:100px;resize:vertical;">' + escapeHtml(d.welcome_message || '') + '</textarea></div>';
+  html += '<div class="cb-field"><label class="cb-label">Your Welcome Message to New Students</label>'
+    + '<textarea id="cb-welcome" class="cb-textarea" placeholder="This appears at the top of the enrollment confirmation email...">' + escapeHtml(d.welcome_message || '') + '</textarea></div>';
 
   // Email preview
-  html += '<div style="border-radius:10px;overflow:hidden;margin-bottom:20px;border:1px solid #e0ddd5;">'
-    + '<div style="background:#1a3a52;padding:12px 20px;font-size:0.65rem;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:#c49a3c;">Preview — What Your Student Receives</div>'
-    + '<div style="padding:20px;background:#faf3e0;font-size:0.85rem;color:#1a3a52;line-height:1.7;">'
+  html += '<div class="cb-email-preview">'
+    + '<div class="cb-email-header">Preview — What Your Student Receives</div>'
+    + '<div class="cb-email-body">'
     + (d.welcome_message ? '<div style="margin-bottom:12px;">' + escapeHtml(d.welcome_message) + '</div>' : '')
-    + '<div style="background:#fff;border:1px solid #e0ddd5;border-radius:8px;padding:14px;font-size:0.82rem;">'
+    + '<div class="cb-email-detail">'
     + '<div>Your classroom: <span style="color:#c49a3c;font-weight:600;">ineedcoaching.org/courses/' + escapeHtml(d.slug || '...') + '</span></div>'
     + (d.course_password ? '<div>Course password: <strong>' + escapeHtml(d.course_password) + '</strong></div>' : '')
     + (d.session_schedule ? '<div>Sessions: ' + escapeHtml(d.session_schedule) + '</div>' : '')
@@ -2461,9 +2525,9 @@ function renderStep4() {
 
   // Action buttons
   html += '<div style="display:flex;flex-direction:column;gap:10px;">';
-  html += '<button onclick="cbPublish()" style="width:100%;padding:16px;background:#c49a3c;color:#1a3a52;border:none;border-radius:8px;font-family:inherit;font-size:1rem;font-weight:800;cursor:pointer;letter-spacing:0.03em;">Publish My Course</button>';
+  html += '<button onclick="cbPublish()" class="cb-btn-publish">Publish My Course</button>';
   if (currentCourseId) {
-    html += '<button onclick="window.open(\'/course-view.html?id=' + currentCourseId + '\',\'_blank\')" style="width:100%;padding:14px;background:#fff;color:#1a3a52;border:1.5px solid #1a3a52;border-radius:8px;font-family:inherit;font-size:0.9rem;font-weight:700;cursor:pointer;">Preview My Course</button>';
+    html += '<button onclick="window.open(\'/course-view.html?id=' + currentCourseId + '\',\'_blank\')" class="cb-btn-preview">Preview My Course</button>';
   }
   html += '</div>';
 
