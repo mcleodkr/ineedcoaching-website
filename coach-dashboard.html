@@ -2149,9 +2149,10 @@ function renderDashCourses() {
   html += '<div id="create-course-form" class="create-course-form">';
   html += '<h3>Create a New Course</h3>';
   html += '<div class="form-row">';
-  html += '<div class="form-group"><label>Title</label><input type="text" id="cc-title" placeholder="Course title"></div>';
-  html += '<div class="form-group"><label>Slug</label><input type="text" id="cc-slug" placeholder="my-course-slug"></div>';
+  html += '<div class="form-group"><label>Title</label><input type="text" id="cc-title" placeholder="Course title" oninput="autoGenerateSlug()"></div>';
+  html += '<div class="form-group"><label>Course Web Address</label><input type="text" id="cc-slug" placeholder="my-course-slug" oninput="updateSlugPreview()"></div>';
   html += '</div>';
+  html += '<div style="margin:-8px 0 16px;"><span style="font-size:0.78rem;color:var(--muted);">This is the link you\'ll share with clients to enroll.</span><div id="slug-preview" style="font-size:0.78rem;color:var(--muted);margin-top:4px;">Your course will be available at: <span style="color:var(--gold);font-weight:600;">ineedcoaching.org/coach/' + escapeHtml(coachProfile.slug || '') + '/courses/<span id="slug-preview-val">...</span></span></div></div>';
   html += '<div class="form-group"><label>Description</label><textarea id="cc-desc" placeholder="What is this course about?"></textarea></div>';
   html += '<div class="form-row">';
   html += '<div class="form-group"><label>Price ($)</label><input type="number" id="cc-price" placeholder="0" min="0" step="1"></div>';
@@ -2280,6 +2281,19 @@ function renderSyllabusModules() {
     html += '</div>';
   });
   list.innerHTML = html;
+}
+
+function autoGenerateSlug() {
+  var title = $('cc-title').value;
+  var slug = title.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  $('cc-slug').value = slug;
+  updateSlugPreview();
+}
+
+function updateSlugPreview() {
+  var val = $('cc-slug').value.trim() || '...';
+  var el = $('slug-preview-val');
+  if (el) el.textContent = val;
 }
 
 async function submitCreateCourse() {
