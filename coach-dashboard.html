@@ -2889,24 +2889,22 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
   document.querySelectorAll('.session-notes-save').forEach(function(btn) {
     btn.addEventListener('click', async function() {
       var bid = this.dataset.bookingId;
-      var noteId = this.dataset.noteId;
       var clientEmail = this.dataset.clientEmail;
       var text = $('notes-input-' + bid).value.trim();
       this.disabled = true;
       this.textContent = 'Saving...';
       try {
-        if (noteId) {
-          await supabasePatch('coach_session_notes', { id: 'eq.' + noteId }, { notes: text, updated_at: new Date().toISOString() });
-        } else {
-          await fetch(SUPABASE_URL + '/rest/v1/coach_session_notes', {
-            method: 'POST',
-            headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
-            body: JSON.stringify({ booking_id: bid, coach_id: coachProfile.id, client_email: clientEmail, notes: text })
-          });
-        }
+        var saveRes = await fetch('/api/save-session-notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookingId: bid, coachId: coachProfile.id, clientEmail: clientEmail, notes: text })
+        });
+        var saveData = await saveRes.json();
+        if (!saveRes.ok) throw new Error(saveData.error || 'Save failed');
         openClientDetail(clientEmail);
       } catch(e) {
-        alert('Error saving notes.');
+        console.error('[SaveNotes] Error:', e);
+        alert('Error saving notes: ' + (e.message || e));
         this.disabled = false;
         this.textContent = 'Save Notes';
       }
@@ -3014,24 +3012,19 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
                 var plainNotes = Object.entries(structuredNotes).map(function(e) { return e[0] + ':\n' + e[1]; }).join('\n\n');
 
                 try {
-                  var noteId = (notesByBooking[bid] && notesByBooking[bid].id) || '';
-                  if (noteId) {
-                    await supabasePatch('coach_session_notes', { id: 'eq.' + noteId }, {
-                      notes: plainNotes, format: format, structured_notes: structuredNotes, share_with_client: shareWithClient, updated_at: new Date().toISOString()
-                    });
-                  } else {
-                    await fetch(SUPABASE_URL + '/rest/v1/coach_session_notes', {
-                      method: 'POST',
-                      headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
-                      body: JSON.stringify({
-                        booking_id: bid, coach_id: coachProfile.id, client_email: clientEmail,
-                        notes: plainNotes, format: format, structured_notes: structuredNotes, share_with_client: shareWithClient
-                      })
-                    });
-                  }
-                  this.textContent = 'Saved!';
+                  var saveRes = await fetch('/api/save-session-notes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      bookingId: bid, coachId: coachProfile.id, clientEmail: clientEmail,
+                      notes: plainNotes, format: format, structuredNotes: structuredNotes, shareWithClient: shareWithClient
+                    })
+                  });
+                  var saveData = await saveRes.json();
+                  if (!saveRes.ok) throw new Error(saveData.error || 'Save failed');
+                  this.textContent = '\u2713 Notes saved';
                   this.style.background = '#2d6a4f';
-                  setTimeout(function() { openClientDetail(clientEmail); }, 1200);
+                  setTimeout(function() { openClientDetail(clientEmail); }, 1500);
                 } catch(saveErr) {
                   console.error('[ProcessSession] Save error:', saveErr);
                   alert('Error saving notes.');
