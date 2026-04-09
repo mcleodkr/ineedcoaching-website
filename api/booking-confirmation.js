@@ -51,21 +51,56 @@ export default async function handler(req, res) {
 
     // Client email
     const clientSubject = `Your session with ${coachName} is confirmed`;
-    const clientBody = `Hi ${clientName},\n\nYour coaching session is confirmed.\n\nCoach: ${coachName}\nService: ${serviceName}\nDate and Time: ${sessionDate}\nZoom Link: ${zoomLink}\n\nIf you need to reschedule, reply to this email.\n\nWe're glad you're here.\n\nThe ineedcoaching.org team`;
-
-    console.log('=== CLIENT EMAIL ===');
-    console.log('To:', booking.client_email);
-    console.log('Subject:', clientSubject);
-    console.log('Body:', clientBody);
+    const clientHtml = `
+      <div style="font-family:'DM Sans',sans-serif;max-width:560px;margin:0 auto;padding:32px;color:#1a3a52;">
+        <h1 style="font-family:'Cormorant Garamond',Georgia,serif;font-size:1.6rem;color:#1a3a52;margin-bottom:16px;">Your session is confirmed</h1>
+        <p style="font-size:0.95rem;line-height:1.6;color:#6b6b60;">Hi ${clientName},</p>
+        <p style="font-size:0.95rem;line-height:1.6;color:#6b6b60;">Your coaching session has been confirmed.</p>
+        <div style="background:#f7f4ee;border-radius:8px;padding:20px;margin:20px 0;">
+          <p style="margin:4px 0;font-size:0.9rem;"><strong>Coach:</strong> ${coachName}</p>
+          <p style="margin:4px 0;font-size:0.9rem;"><strong>Service:</strong> ${serviceName}</p>
+          <p style="margin:4px 0;font-size:0.9rem;"><strong>Date & Time:</strong> ${sessionDate}</p>
+          <p style="margin:4px 0;font-size:0.9rem;"><strong>Meeting Link:</strong> ${zoomLink.startsWith('http') ? `<a href="${zoomLink}" style="color:#c49a3c;">${zoomLink}</a>` : zoomLink}</p>
+        </div>
+        <p style="font-size:0.85rem;color:#6b6b60;">If you need to reschedule, reply to this email.</p>
+        <p style="font-size:0.82rem;color:#6b6b60;margin-top:24px;">— The <a href="https://www.ineedcoaching.org" style="color:#c49a3c;text-decoration:none;font-weight:600;">ineedcoaching.org</a> team</p>
+      </div>`;
 
     // Coach email
-    const coachSubject = `New booking request from ${clientName}`;
-    const coachBody = `Hi ${coachName},\n\nYou have a new booking request.\n\nClient: ${clientName}\nService: ${serviceName}\nRequested Date: ${sessionDate}\nNotes: ${notes}\n\nLog in to your dashboard to confirm or decline.\nhttps://www.ineedcoaching.org/coach-dashboard.html\n\nThe ineedcoaching.org team`;
+    const coachSubject = `Booking confirmed: ${clientName}`;
+    const coachHtml = `
+      <div style="font-family:'DM Sans',sans-serif;max-width:560px;margin:0 auto;padding:32px;color:#1a3a52;">
+        <h1 style="font-family:'Cormorant Garamond',Georgia,serif;font-size:1.6rem;color:#1a3a52;margin-bottom:16px;">Booking confirmed</h1>
+        <p style="font-size:0.95rem;line-height:1.6;color:#6b6b60;">Hi ${coachName},</p>
+        <p style="font-size:0.95rem;line-height:1.6;color:#6b6b60;">A session has been confirmed with your client.</p>
+        <div style="background:#f7f4ee;border-radius:8px;padding:20px;margin:20px 0;">
+          <p style="margin:4px 0;font-size:0.9rem;"><strong>Client:</strong> ${clientName}</p>
+          <p style="margin:4px 0;font-size:0.9rem;"><strong>Service:</strong> ${serviceName}</p>
+          <p style="margin:4px 0;font-size:0.9rem;"><strong>Date & Time:</strong> ${sessionDate}</p>
+          <p style="margin:4px 0;font-size:0.9rem;"><strong>Notes:</strong> ${notes}</p>
+        </div>
+        <p style="font-size:0.85rem;color:#6b6b60;"><a href="https://www.ineedcoaching.org/coach-dashboard.html" style="color:#c49a3c;text-decoration:none;font-weight:600;">Go to Dashboard &rarr;</a></p>
+      </div>`;
 
-    console.log('=== COACH EMAIL ===');
-    console.log('To:', coach.user_email);
-    console.log('Subject:', coachSubject);
-    console.log('Body:', coachBody);
+    // Send both emails via Mailtrap
+    const origin = req.headers.host ? `https://${req.headers.host}` : 'https://www.ineedcoaching.org';
+    const emailResults = await Promise.allSettled([
+      fetch(`${origin}/api/send-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: booking.client_email, subject: clientSubject, html: clientHtml })
+      }),
+      coach.user_email ? fetch(`${origin}/api/send-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: coach.user_email, subject: coachSubject, html: coachHtml })
+      }) : Promise.resolve({ ok: true })
+    ]);
+
+    const clientResult = emailResults[0];
+    if (clientResult.status === 'rejected') console.error('Client email failed:', clientResult.reason);
+    const coachResult = emailResults[1];
+    if (coachResult.status === 'rejected') console.error('Coach email failed:', coachResult.reason);
 
     return res.status(200).json({ sent: true, to: booking.client_email, subject: clientSubject });
   } catch (e) {
