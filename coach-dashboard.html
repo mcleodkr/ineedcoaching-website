@@ -2858,11 +2858,21 @@ function renderModulesList(container, skipSubLoads) {
       html += '<div class="cb-section">'
         + '<div class="cb-section-title">Resources</div>'
         + '<div id="mod-resources-' + mod.id + '"><div style="font-size:0.82rem;color:#8a8a9a;">Loading...</div></div>'
-        + '<div style="display:grid;grid-template-columns:auto 1fr 1fr auto;gap:8px;margin-top:8px;align-items:end;">'
+        + '<div style="margin-top:10px;">'
+        + '<div style="display:flex;gap:6px;margin-bottom:8px;">'
+        + '<button id="mod-res-mode-link-' + mod.id + '" onclick="cbResMode(\'' + mod.id + '\',\'link\')" style="padding:6px 14px;background:#1a3a52;color:#fff;border:none;border-radius:6px;font-family:inherit;font-size:0.75rem;font-weight:700;cursor:pointer;">Link</button>'
+        + '<button id="mod-res-mode-upload-' + mod.id + '" onclick="cbResMode(\'' + mod.id + '\',\'upload\')" style="padding:6px 14px;background:#fff;color:#1a3a52;border:1.5px solid #e0ddd5;border-radius:6px;font-family:inherit;font-size:0.75rem;font-weight:700;cursor:pointer;">Upload File</button>'
+        + '</div>'
+        + '<div style="display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:end;">'
         + '<div class="cb-field" style="margin:0;"><select id="mod-res-type-' + mod.id + '" class="cb-input" style="padding:9px 10px;font-size:0.82rem;"><option>Link</option><option>PDF</option><option>Video</option><option>Audio</option><option>Image</option><option>File</option></select></div>'
         + '<div class="cb-field" style="margin:0;"><input type="text" class="cb-input" id="mod-res-title-' + mod.id + '" placeholder="Resource title" style="font-size:0.82rem;padding:9px 10px;"></div>'
-        + '<div class="cb-field" style="margin:0;"><input type="text" class="cb-input" id="mod-res-url-' + mod.id + '" placeholder="URL" style="font-size:0.82rem;padding:9px 10px;"></div>'
         + '<button onclick="cbAddResource(\'' + mod.id + '\')" style="padding:9px 14px;background:#1a3a52;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:0.82rem;font-weight:700;cursor:pointer;">+ Add</button>'
+        + '</div>'
+        + '<div id="mod-res-link-row-' + mod.id + '" class="cb-field" style="margin:8px 0 0;"><input type="text" class="cb-input" id="mod-res-url-' + mod.id + '" placeholder="Resource URL" style="font-size:0.82rem;padding:9px 10px;"></div>'
+        + '<div id="mod-res-upload-row-' + mod.id + '" style="display:none;margin:8px 0 0;">'
+        + '<input type="file" id="mod-res-file-' + mod.id + '" accept=".pdf,.mp4,.mp3,.jpg,.jpeg,.png,.doc,.docx,.ppt,.pptx" style="font-size:0.82rem;" onchange="cbUploadResource(\'' + mod.id + '\')">'
+        + '<div id="mod-res-upload-status-' + mod.id + '" style="font-size:0.78rem;margin-top:4px;"></div>'
+        + '</div>'
         + '</div></div>';
 
       html += '</div>'; // cb-mod-body
@@ -2986,9 +2996,10 @@ async function cbRemoveListItem(modId, field, idx) {
 async function cbLoadModuleLessons(modId) {
   var container = $('mod-lessons-' + modId);
   if (!container) return;
+  if (!modId) { container.innerHTML = '<div style="font-size:0.78rem;color:#8a8a9a;font-style:italic;">Save this module first to add lessons.</div>'; return; }
 
   try {
-    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?module_id=eq.' + modId + '&order=sort_order.asc&select=*', { headers: apiHeaders() });
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?module_id=eq.' + modId + '&select=*&order=sort_order.asc', { headers: apiHeaders() });
     var lessons = await res.json();
     if (!Array.isArray(lessons) || lessons.length === 0) { container.innerHTML = '<div style="font-size:0.78rem;color:#8a8a9a;font-style:italic;">No lessons yet. Add your first lesson below.</div>'; return; }
 
@@ -3011,6 +3022,7 @@ async function cbAddLesson(modId) {
 
   try {
     var countRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?module_id=eq.' + modId + '&select=sort_order&order=sort_order.desc&limit=1', { headers: apiHeaders() });
+    if (!countRes.ok) { console.error('Lesson count query failed:', countRes.status); return; }
     var existing = await countRes.json();
     var nextOrder = (Array.isArray(existing) && existing.length > 0) ? (existing[0].sort_order + 1) : 0;
 
@@ -3035,6 +3047,7 @@ async function cbDeleteLesson(modId, lessonId) {
 async function cbLoadModuleResources(modId) {
   var container = $('mod-resources-' + modId);
   if (!container) return;
+  if (!modId) { container.innerHTML = '<div style="font-size:0.78rem;color:#8a8a9a;font-style:italic;">Save this module first to add resources.</div>'; return; }
 
   try {
     var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_resources?module_id=eq.' + modId + '&select=*', { headers: apiHeaders() });
@@ -3053,6 +3066,75 @@ async function cbLoadModuleResources(modId) {
   } catch (e) { container.innerHTML = ''; }
 }
 
+function cbResMode(modId, mode) {
+  var linkRow = $('mod-res-link-row-' + modId);
+  var uploadRow = $('mod-res-upload-row-' + modId);
+  var linkBtn = $('mod-res-mode-link-' + modId);
+  var uploadBtn = $('mod-res-mode-upload-' + modId);
+  if (mode === 'link') {
+    if (linkRow) linkRow.style.display = 'block';
+    if (uploadRow) uploadRow.style.display = 'none';
+    if (linkBtn) { linkBtn.style.background = '#1a3a52'; linkBtn.style.color = '#fff'; linkBtn.style.border = 'none'; }
+    if (uploadBtn) { uploadBtn.style.background = '#fff'; uploadBtn.style.color = '#1a3a52'; uploadBtn.style.border = '1.5px solid #e0ddd5'; }
+  } else {
+    if (linkRow) linkRow.style.display = 'none';
+    if (uploadRow) uploadRow.style.display = 'block';
+    if (uploadBtn) { uploadBtn.style.background = '#1a3a52'; uploadBtn.style.color = '#fff'; uploadBtn.style.border = 'none'; }
+    if (linkBtn) { linkBtn.style.background = '#fff'; linkBtn.style.color = '#1a3a52'; linkBtn.style.border = '1.5px solid #e0ddd5'; }
+  }
+}
+
+async function cbUploadResource(modId) {
+  var fileInput = $('mod-res-file-' + modId);
+  var statusEl = $('mod-res-upload-status-' + modId);
+  var titleEl = $('mod-res-title-' + modId);
+  var typeEl = $('mod-res-type-' + modId);
+  if (!fileInput || !fileInput.files[0]) return;
+
+  var file = fileInput.files[0];
+  var title = titleEl ? titleEl.value.trim() : file.name;
+  var type = typeEl ? typeEl.value : 'File';
+  if (!title) title = file.name;
+
+  var filePath = modId + '/' + Date.now() + '-' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  if (statusEl) { statusEl.textContent = 'Uploading...'; statusEl.style.color = '#8a8a9a'; }
+
+  try {
+    var uploadRes = await fetch(SUPABASE_URL + '/storage/v1/object/course-resources/' + filePath, {
+      method: 'PUT',
+      headers: {
+        'apikey': ANON_KEY,
+        'Authorization': 'Bearer ' + currentToken,
+        'Content-Type': file.type,
+        'x-upsert': 'true'
+      },
+      body: file
+    });
+
+    if (!uploadRes.ok) {
+      var errBody = await uploadRes.json().catch(function() { return {}; });
+      console.error('Upload failed:', uploadRes.status, errBody);
+      if (statusEl) { statusEl.textContent = 'Upload failed: ' + (errBody.message || errBody.error || uploadRes.status); statusEl.style.color = '#c44'; }
+      return;
+    }
+
+    var publicUrl = SUPABASE_URL + '/storage/v1/object/public/course-resources/' + filePath;
+
+    await fetch(SUPABASE_URL + '/rest/v1/coach_course_resources', {
+      method: 'POST', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ module_id: modId, title: title, file_url: publicUrl, resource_type: type })
+    });
+
+    if (statusEl) { statusEl.innerHTML = '<span style="color:#4a7c59;">&#10003; ' + escapeHtml(file.name) + ' uploaded</span>'; }
+    if (titleEl) titleEl.value = '';
+    fileInput.value = '';
+    cbLoadModuleResources(modId);
+  } catch (e) {
+    console.error('Upload error:', e);
+    if (statusEl) { statusEl.textContent = 'Upload error: ' + e.message; statusEl.style.color = '#c44'; }
+  }
+}
+
 async function cbAddResource(modId) {
   var typeEl = $('mod-res-type-' + modId);
   var titleEl = $('mod-res-title-' + modId);
@@ -3067,8 +3149,8 @@ async function cbAddResource(modId) {
       method: 'POST', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
       body: JSON.stringify({ module_id: modId, title: title, file_url: url, resource_type: type })
     });
-    titleEl.value = '';
-    urlEl.value = '';
+    if (titleEl) titleEl.value = '';
+    if (urlEl) urlEl.value = '';
     cbLoadModuleResources(modId);
   } catch (e) { /* ignore */ }
 }
