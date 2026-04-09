@@ -157,6 +157,19 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .booking-zoom-link { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; color: var(--gold); text-decoration: none; font-weight: 600; margin-top: 6px; cursor: pointer; }
 .booking-zoom-link:hover { text-decoration: underline; }
 
+/* PREVIEW MODAL */
+.preview-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 500; align-items: center; justify-content: center; }
+.preview-overlay.open { display: flex; }
+.preview-modal { background: var(--white); border-radius: var(--r); padding: 40px; max-width: 560px; width: 90%; max-height: 85vh; overflow-y: auto; position: relative; }
+.preview-modal h2 { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--ink); margin-bottom: 6px; }
+.preview-modal .preview-subtitle { font-size: 0.85rem; color: var(--muted); margin-bottom: 28px; }
+.preview-modal .preview-close { position: absolute; top: 14px; right: 18px; background: none; border: none; font-size: 1.4rem; color: var(--muted); cursor: pointer; }
+.preview-modal .form-group { margin-bottom: 20px; }
+.preview-modal .form-group label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--ink); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+.preview-modal input[type="text"], .preview-modal textarea { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; color: var(--ink); background: var(--cream); }
+.preview-modal textarea { min-height: 80px; resize: vertical; }
+.preview-modal input:focus, .preview-modal textarea:focus { outline: none; border-color: var(--gold); }
+
 /* STATUS PILLS */
 .status-pill { display: inline-block; padding: 6px 16px; border-radius: 50px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
 .status-pending { background: #c49a3c; color: #fff; }
@@ -815,6 +828,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 
         <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
           <button class="save-btn" id="save-intake-form-btn">Save Intake Form</button>
+          <button class="save-btn" id="preview-intake-btn" style="background:var(--ink);">Preview Form</button>
           <span class="save-msg" id="save-intake-msg">Saved</span>
           <button class="action-btn action-decline" id="deactivate-intake-btn" style="display:none;padding:12px 20px;">Deactivate Form</button>
         </div>
@@ -1949,6 +1963,7 @@ async function loadIntakeForms() {
   // Wire up handlers
   $('add-intake-question-btn').onclick = addIntakeQuestion;
   $('save-intake-form-btn').onclick = saveIntakeForm;
+  $('preview-intake-btn').onclick = openIntakePreview;
   $('deactivate-intake-btn').onclick = deactivateIntakeForm;
   $('iq-type').onchange = function() {
     $('iq-options-group').classList.toggle('hidden', this.value !== 'multiple_choice');
@@ -4309,6 +4324,73 @@ async function loadDashProposals() {
    INIT
    ================================================ */
 init();
+</script>
+
+<!-- INTAKE PREVIEW MODAL -->
+<div class="preview-overlay" id="intake-preview-overlay">
+  <div class="preview-modal">
+    <button class="preview-close" id="preview-close">&times;</button>
+    <h2>Intake Form Preview</h2>
+    <p class="preview-subtitle">This is how your intake form will appear to clients.</p>
+    <div id="intake-preview-body"></div>
+  </div>
+</div>
+
+<script>
+// Preview modal handlers
+document.getElementById('preview-close').addEventListener('click', function() {
+  document.getElementById('intake-preview-overlay').classList.remove('open');
+});
+document.getElementById('intake-preview-overlay').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+
+function openIntakePreview() {
+  if (!intakeQuestions || !intakeQuestions.length) {
+    alert('Add at least one question to preview.');
+    return;
+  }
+  var typeLabels = { short_text: 'Short text', long_text: 'Long text', multiple_choice: 'Multiple choice', yes_no: 'Yes/No', scale: 'Scale 1-10' };
+  var html = '';
+  intakeQuestions.forEach(function(q, idx) {
+    var reqMark = q.required ? ' <span style="color:#c44;">*</span>' : '';
+    html += '<div class="form-group">';
+    html += '<label>' + escapeHtml(q.text) + reqMark + '</label>';
+
+    switch(q.type) {
+      case 'short_text':
+        html += '<input type="text" disabled placeholder="Client enters text...">';
+        break;
+      case 'long_text':
+        html += '<textarea disabled placeholder="Client enters detailed response..."></textarea>';
+        break;
+      case 'multiple_choice':
+        (q.options || []).forEach(function(opt, oi) {
+          html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+            + '<input type="radio" name="prev-q-' + idx + '" disabled style="accent-color:var(--gold);width:18px;height:18px;">'
+            + '<span style="font-size:0.92rem;color:var(--ink);">' + escapeHtml(opt) + '</span></div>';
+        });
+        break;
+      case 'yes_no':
+        html += '<div style="display:flex;gap:16px;">'
+          + '<label style="display:flex;align-items:center;gap:6px;font-size:0.92rem;color:var(--ink);text-transform:none;letter-spacing:0;font-weight:400;"><input type="radio" name="prev-q-' + idx + '" disabled style="accent-color:var(--gold);width:18px;height:18px;"> Yes</label>'
+          + '<label style="display:flex;align-items:center;gap:6px;font-size:0.92rem;color:var(--ink);text-transform:none;letter-spacing:0;font-weight:400;"><input type="radio" name="prev-q-' + idx + '" disabled style="accent-color:var(--gold);width:18px;height:18px;"> No</label>'
+          + '</div>';
+        break;
+      case 'scale':
+        html += '<div style="display:flex;align-items:center;gap:12px;">'
+          + '<span style="font-size:0.82rem;color:var(--muted);">1</span>'
+          + '<input type="range" min="1" max="10" value="5" disabled style="flex:1;accent-color:var(--gold);">'
+          + '<span style="font-size:0.82rem;color:var(--muted);">10</span>'
+          + '<span style="font-weight:700;font-size:1rem;color:var(--gold);min-width:24px;text-align:center;">5</span>'
+          + '</div>';
+        break;
+    }
+    html += '</div>';
+  });
+  document.getElementById('intake-preview-body').innerHTML = html;
+  document.getElementById('intake-preview-overlay').classList.add('open');
+}
 </script>
 </body>
 </html>
