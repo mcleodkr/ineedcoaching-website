@@ -2849,9 +2849,10 @@ function renderModulesList(container, skipSubLoads) {
       // Lessons
       html += '<div class="cb-section" style="margin-bottom:20px;">'
         + '<div class="cb-section-title">Lessons</div>'
+        + '<div class="cb-hint" style="margin-bottom:10px;">Add the individual lessons or sessions that make up this module. Each lesson is what students work through in their classroom.</div>'
         + '<div id="mod-lessons-' + mod.id + '"><div style="font-size:0.82rem;color:#8a8a9a;">Loading...</div></div>'
         + '<div class="cb-add-row" style="margin-top:8px;"><input type="text" class="cb-input" id="mod-lesson-title-' + mod.id + '" placeholder="Lesson title" onkeydown="if(event.key===\'Enter\'){event.preventDefault();cbAddLesson(\'' + mod.id + '\');}">'
-        + '<button onclick="cbAddLesson(\'' + mod.id + '\')" style="padding:10px 18px;background:#c49a3c;color:#1a3a52;border:none;border-radius:8px;font-family:inherit;font-size:0.85rem;font-weight:700;cursor:pointer;">+ Lesson</button></div>'
+        + '<button onclick="cbAddLesson(\'' + mod.id + '\')" style="padding:10px 18px;background:#c49a3c;color:#1a3a52;border:none;border-radius:8px;font-family:inherit;font-size:0.85rem;font-weight:700;cursor:pointer;">Add Lesson &rarr;</button></div>'
         + '</div>';
 
       // Resources
@@ -2999,20 +3000,31 @@ async function cbLoadModuleLessons(modId) {
   if (!modId) { container.innerHTML = '<div style="font-size:0.78rem;color:#8a8a9a;font-style:italic;">Save this module first to add lessons.</div>'; return; }
 
   try {
-    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?module_id=eq.' + modId + '&select=*&order=sort_order.asc', { headers: apiHeaders() });
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?module_id=eq.' + modId + '&select=*&order=order_index.asc', { headers: apiHeaders() });
     var lessons = await res.json();
     if (!Array.isArray(lessons) || lessons.length === 0) { container.innerHTML = '<div style="font-size:0.78rem;color:#8a8a9a;font-style:italic;">No lessons yet. Add your first lesson below.</div>'; return; }
 
     var html = '';
     lessons.forEach(function(l, idx) {
-      html += '<div class="cb-bullet-item">'
+      html += '<div class="cb-bullet-item" style="flex-direction:column;align-items:stretch;gap:4px;">'
+        + '<div style="display:flex;align-items:center;gap:10px;">'
         + '<span class="cb-bullet-dot" style="background:#1a3a52;"></span>'
-        + '<span style="flex:1;">' + escapeHtml(l.title) + (l.description ? '<br><span style="font-size:0.75rem;color:#8a8a9a;">' + escapeHtml(l.description) + '</span>' : '') + '</span>'
+        + '<span style="flex:1;font-weight:600;">' + escapeHtml(l.title) + '</span>'
         + '<button onclick="cbDeleteLesson(\'' + modId + '\',\'' + l.id + '\')" style="background:none;border:none;color:#c44;cursor:pointer;font-size:0.9rem;">&times;</button>'
         + '</div>';
+      if (l.description) {
+        html += '<div style="font-size:0.78rem;color:#8a8a9a;padding-left:16px;">' + escapeHtml(l.description) + '</div>';
+      } else {
+        html += '<div style="padding-left:16px;"><a href="#" onclick="event.preventDefault();cbShowLessonDesc(\'' + modId + '\',\'' + l.id + '\')" style="font-size:0.72rem;color:#c49a3c;text-decoration:none;">+ Add description</a></div>';
+      }
+      html += '<div id="lesson-desc-form-' + l.id + '" style="display:none;padding-left:16px;margin-top:4px;">'
+        + '<textarea class="cb-input" id="lesson-desc-' + l.id + '" placeholder="Lesson description..." style="font-size:0.82rem;min-height:60px;resize:vertical;"></textarea>'
+        + '<button onclick="cbSaveLessonDesc(\'' + modId + '\',\'' + l.id + '\')" style="margin-top:4px;padding:6px 14px;background:#1a3a52;color:#fff;border:none;border-radius:6px;font-family:inherit;font-size:0.78rem;font-weight:700;cursor:pointer;">Save</button>'
+        + '</div>';
+      html += '</div>';
     });
     container.innerHTML = html;
-  } catch (e) { container.innerHTML = ''; }
+  } catch (e) { console.error('Load lessons error:', e); container.innerHTML = ''; }
 }
 
 async function cbAddLesson(modId) {
@@ -3027,7 +3039,7 @@ async function cbAddLesson(modId) {
   if (!modId) { console.error('Cannot add lesson: moduleId is undefined'); return; }
 
   try {
-    // Get next sort order
+    // Get next order index
     var countRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?module_id=eq.' + modId + '&select=id', { headers: apiHeaders() });
     var existing = [];
     if (countRes.ok) { existing = await countRes.json(); }
@@ -3035,7 +3047,7 @@ async function cbAddLesson(modId) {
 
     var postRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons', {
       method: 'POST', headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
-      body: JSON.stringify({ module_id: modId, title: title, description: '', sort_order: nextOrder })
+      body: JSON.stringify({ module_id: modId, title: title, description: '', order_index: nextOrder })
     });
 
     if (!postRes.ok) {
@@ -3055,6 +3067,23 @@ async function cbDeleteLesson(modId, lessonId) {
     await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?id=eq.' + lessonId, { method: 'DELETE', headers: apiHeaders() });
     cbLoadModuleLessons(modId);
   } catch (e) { /* ignore */ }
+}
+
+function cbShowLessonDesc(modId, lessonId) {
+  var form = $('lesson-desc-form-' + lessonId);
+  if (form) form.style.display = 'block';
+}
+
+async function cbSaveLessonDesc(modId, lessonId) {
+  var textarea = $('lesson-desc-' + lessonId);
+  var desc = textarea ? textarea.value.trim() : '';
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?id=eq.' + lessonId, {
+      method: 'PATCH', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ description: desc })
+    });
+    cbLoadModuleLessons(modId);
+  } catch (e) { console.error('Save lesson desc error:', e); }
 }
 
 /* Resources */
