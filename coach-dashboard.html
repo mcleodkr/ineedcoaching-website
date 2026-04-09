@@ -3336,7 +3336,6 @@ function wireSendCheckinButtons() {
           });
           var data = await res.json();
           if (!res.ok) throw new Error(data.error || data.details || 'Failed to send check-in');
-          checkinByBooking[bookingId] = { token: data.token, formName: data.formName, submitted: false };
           this.parentElement.innerHTML = '<span style="font-size:0.72rem;color:var(--gold);font-weight:600;">' + escapeHtml(data.formName) + '</span> '
             + '<a href="' + escapeHtml(data.checkinUrl) + '" target="_blank" style="font-size:0.72rem;color:var(--gold);font-weight:700;text-decoration:none;">View form &rarr;</a> '
             + '<button onclick="navigator.clipboard.writeText(\'' + escapeHtml(data.checkinUrl) + '\');this.textContent=\'Copied!\';setTimeout(()=>this.textContent=\'Copy link\',1500)" style="font-size:0.68rem;color:var(--muted);background:none;border:1px solid var(--border);padding:2px 8px;border-radius:50px;cursor:pointer;">Copy link</button> '
