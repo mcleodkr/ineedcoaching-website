@@ -2624,33 +2624,50 @@ async function loadDashProposals() {
 
     var html = '<div style="margin-bottom:16px;"><a href="/proposal-builder.html" class="action-btn action-confirm" style="text-decoration:none;display:inline-flex;padding:10px 20px;">+ New Proposal</a></div>';
     html += '<div class="bookings-table-wrap"><table class="bookings-table"><thead><tr>'
-      + '<th>Company</th><th>Contact</th><th>Service</th><th>Investment</th><th>Status</th><th>Date</th>'
+      + '<th>Company</th><th>Service</th><th>Investment</th><th>Status</th><th>Date</th><th>Actions</th>'
       + '</tr></thead><tbody>';
 
     data.forEach(function(p) {
-      var statusMap = {
-        draft: 'status-pending',
-        sent: 'status-confirmed',
-        accepted: 'status-confirmed',
-        declined: 'status-rejected'
-      };
-      var statusClass = statusMap[p.status] || 'status-pending';
+      var statusColor = { draft: 'background:#e8e8ee;color:#666;', sent: 'background:#faf3e0;color:#c49a3c;', accepted: 'background:#e8f5e9;color:#4a7c59;' };
+      var statusStyle = statusColor[p.status] || statusColor.draft;
       var statusLabel = (p.status || 'draft').charAt(0).toUpperCase() + (p.status || 'draft').slice(1);
       var date = p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
       var inv = p.investment ? '$' + Number(p.investment).toLocaleString() : '';
 
       html += '<tr>'
         + '<td style="font-weight:700;">' + escapeHtml(p.client_company || '') + '</td>'
-        + '<td>' + escapeHtml(p.client_name || '') + '<br><span style="font-size:0.75rem;color:var(--muted);">' + escapeHtml(p.client_email || '') + '</span></td>'
         + '<td>' + escapeHtml(p.service_type || '') + '</td>'
         + '<td style="font-weight:700;">' + inv + '</td>'
-        + '<td><span class="status-pill ' + statusClass + '">' + escapeHtml(statusLabel) + '</span></td>'
+        + '<td><span class="status-pill" style="' + statusStyle + '">' + escapeHtml(statusLabel) + '</span></td>'
         + '<td style="font-size:0.78rem;color:var(--muted);">' + date + '</td>'
+        + '<td>'
+        + '<a href="/proposal-view.html?id=' + p.id + '" target="_blank" class="action-btn action-confirm" style="text-decoration:none;font-size:0.75rem;padding:5px 12px;margin-right:4px;">View</a>'
+        + '<button class="action-btn action-remove" data-proposal-id="' + p.id + '" style="font-size:0.75rem;padding:5px 12px;">Delete</button>'
+        + '</td>'
         + '</tr>';
     });
 
     html += '</tbody></table></div>';
     $('proposals-content').innerHTML = html;
+
+    // Attach delete handlers
+    document.querySelectorAll('#proposals-content .action-remove').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        if (!confirm('Delete this proposal?')) return;
+        var pid = btn.dataset.proposalId;
+        var delRes = await fetch(SUPABASE_URL + '/rest/v1/coach_proposals?id=eq.' + pid, {
+          method: 'DELETE',
+          headers: apiHeaders()
+        });
+        if (delRes.ok) {
+          btn.closest('tr').remove();
+          var rows = document.querySelectorAll('#proposals-content .bookings-table tbody tr');
+          if (rows.length === 0) {
+            $('proposals-content').innerHTML = '<div class="empty-state"><p>No proposals yet.</p><a href="/proposal-builder.html" style="display:inline-block;margin-top:16px;padding:12px 24px;background:var(--gold);color:var(--ink);border-radius:8px;font-weight:700;text-decoration:none;">Create Your First Proposal</a></div>';
+          }
+        }
+      });
+    });
   } catch (err) {
     $('proposals-loading').style.display = 'none';
     $('proposals-content').classList.remove('hidden');
