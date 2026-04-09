@@ -2510,8 +2510,31 @@ async function sendCoachReply(key, thread) {
 /* ================================================
    DASHBOARD GOALS
    ================================================ */
+var goalClients = []; // {name, email} pairs from confirmed bookings
+
+async function loadGoalClients() {
+  try {
+    var bookings = await supabaseGet(
+      'coach_bookings?coach_id=eq.' + coachProfile.id + '&status=eq.confirmed&select=client_email,notes'
+    );
+    var seen = {};
+    goalClients = [];
+    if (bookings && bookings.length) {
+      bookings.forEach(function(b) {
+        if (!b.client_email || seen[b.client_email]) return;
+        seen[b.client_email] = true;
+        var nameMatch = (b.notes || '').match(/^Name:\s*(.+)/m);
+        var name = nameMatch ? nameMatch[1].trim() : '';
+        goalClients.push({ name: name, email: b.client_email });
+      });
+    }
+    goalClients.sort(function(a, b) { return (a.name || a.email).localeCompare(b.name || b.email); });
+  } catch(e) { goalClients = []; }
+}
+
 async function loadDashGoals() {
   try {
+    await loadGoalClients();
     var data = await supabaseGet(
       'coach_goals?coach_id=eq.' + coachProfile.id + '&order=created_at.desc&select=*'
     );
@@ -2520,6 +2543,11 @@ async function loadDashGoals() {
 
     var statusLabels = { not_started: 'Not Started', in_progress: 'In Progress', completed: 'Completed' };
     var statusColors = { not_started: 'background:rgba(107,107,96,0.15);color:var(--muted)', in_progress: 'background:#c49a3c;color:#fff', completed: 'background:#2d6a4f;color:#fff' };
+
+    // Build name lookup from goals + bookings
+    var nameMap = {};
+    goalClients.forEach(function(c) { if (c.name) nameMap[c.email] = c.name; });
+    if (data) data.forEach(function(g) { if (g.client_name && g.client_email) nameMap[g.client_email] = g.client_name; });
 
     // Group goals by client
     var clients = {};
@@ -2540,11 +2568,13 @@ async function loadDashGoals() {
     } else {
       clientOrder.forEach(function(email) {
         var goals = clients[email];
+        var displayName = nameMap[email] || email;
         var completedCount = goals.filter(function(g) { return g.status === 'completed'; }).length;
         html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);margin-bottom:12px;overflow:hidden;">'
           + '<div class="goal-client-header" data-toggle-client="' + escapeHtml(email) + '" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;transition:background 0.2s;">'
           + '<div style="display:flex;align-items:center;gap:10px;">'
-          + '<span style="font-weight:700;font-size:0.92rem;color:var(--ink);">' + escapeHtml(email) + '</span>'
+          + '<span style="font-weight:700;font-size:0.92rem;color:var(--ink);">' + escapeHtml(displayName) + '</span>'
+          + (displayName !== email ? '<span style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(email) + '</span>' : '')
           + '<span style="font-size:0.75rem;background:var(--cream);padding:3px 10px;border-radius:50px;color:var(--muted);font-weight:600;">' + goals.length + ' goal' + (goals.length !== 1 ? 's' : '') + '</span>'
           + (completedCount > 0 ? '<span style="font-size:0.75rem;background:#2d6a4f;color:#fff;padding:3px 10px;border-radius:50px;font-weight:600;">' + completedCount + ' done</span>' : '')
           + '</div>'
@@ -2583,8 +2613,13 @@ async function loadDashGoals() {
       + '<h2 class="form-section-title">Add a Goal</h2>'
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:700px;">'
       + '<div class="form-group" style="grid-column:1/-1;">'
-      + '<label for="goal-client-email">Client Email</label>'
-      + '<input type="email" id="goal-client-email" placeholder="client@example.com">'
+      + '<label for="goal-client-select">Client</label>'
+      + '<select id="goal-client-select"><option value="">Select a client...</option>'
+      + goalClients.map(function(c) {
+          var label = c.name ? c.name + ' (' + c.email + ')' : c.email;
+          return '<option value="' + escapeHtml(c.email) + '" data-name="' + escapeHtml(c.name) + '">' + escapeHtml(label) + '</option>';
+        }).join('')
+      + '</select>'
       + '</div>'
       + '<div class="form-group">'
       + '<label for="goal-title">Goal Title</label>'
@@ -2653,7 +2688,9 @@ async function loadDashGoals() {
 }
 
 async function addGoal() {
-  var email = $('goal-client-email').value.trim();
+  var sel = $('goal-client-select');
+  var email = sel.value;
+  var clientName = sel.selectedOptions[0] ? sel.selectedOptions[0].dataset.name || '' : '';
   var title = $('goal-title').value.trim();
   var desc = $('goal-desc').value.trim();
   var date = $('goal-date').value;
@@ -2661,7 +2698,7 @@ async function addGoal() {
   var msg = $('add-goal-msg');
 
   if (!email || !title) {
-    msg.textContent = 'Client email and title are required.';
+    msg.textContent = 'Please select a client and enter a goal title.';
     msg.style.color = '#c44';
     msg.classList.add('show');
     return;
@@ -2679,13 +2716,14 @@ async function addGoal() {
       body: JSON.stringify({
         coach_id: coachProfile.id,
         client_email: email,
+        client_name: clientName || null,
         title: title,
         description: desc || null,
         target_date: date || null,
         status: status
       })
     });
-    $('goal-client-email').value = '';
+    sel.value = '';
     $('goal-title').value = '';
     $('goal-desc').value = '';
     $('goal-date').value = '';
