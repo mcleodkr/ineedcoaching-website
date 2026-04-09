@@ -131,7 +131,19 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
 .rec-company { font-size: 0.8rem; color: rgba(247,244,238,0.5); }
 
 /* BOOKING */
+.booking-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 900px; margin: 0 auto; }
+.booking-card { background: white; border: 1px solid var(--border); border-radius: var(--r); padding: 36px; position: relative; overflow: hidden; }
+.booking-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; }
+.booking-card.card-gold::before { background: var(--gold); }
+.booking-card.card-navy::before { background: var(--ink); }
+.booking-card h3 { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: var(--ink); margin-bottom: 6px; }
+.booking-card > p { font-size: 0.85rem; color: var(--muted); line-height: 1.6; margin-bottom: 24px; }
 .booking-form { max-width: 600px; margin: 0 auto; background: white; border: 1px solid var(--border); border-radius: var(--r); padding: 40px; }
+.btn-navy { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--ink); color: white; padding: 14px 30px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.92rem; font-weight: 700; text-decoration: none; border: none; cursor: pointer; transition: all 0.2s; width: 100%; }
+.btn-navy:hover { background: #153045; transform: translateY(-2px); }
+.message-success { display: none; text-align: center; padding: 40px 20px; }
+.message-success h3 { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: var(--forest); margin-bottom: 8px; }
+.message-success p { color: var(--muted); font-size: 0.9rem; }
 .form-group { margin-bottom: 20px; }
 .form-group label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--ink); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
 .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; color: var(--ink); background: var(--cream); transition: border-color 0.2s; }
@@ -179,6 +191,8 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
   .services-grid { grid-template-columns: 1fr; }
   .courses-grid { grid-template-columns: 1fr; }
   .testimonials-grid { grid-template-columns: 1fr; }
+  .booking-cards { grid-template-columns: 1fr; }
+  .booking-card { padding: 28px 20px; }
   .booking-form { padding: 28px 20px; }
   .coach-footer { padding: 40px 24px; }
   .hero::after { font-size: 6rem; }
@@ -282,65 +296,97 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
     <div class="coach-articles-grid" id="coach-articles-grid"></div>
   </section>
 
-  <!-- BOOKING -->
+  <!-- BOOKING & MESSAGE -->
   <section class="section section-warm" id="booking">
-    <h2 class="section-title" style="text-align:center;">Request a Booking</h2>
-    <div class="booking-form" id="booking-form-container">
-      <form id="booking-form">
-        <div class="form-group">
-          <label for="booking-service">Service</label>
-          <select id="booking-service" required>
-            <option value="">Select a service...</option>
-          </select>
+    <h2 class="section-title" style="text-align:center;">Get in Touch</h2>
+    <div class="booking-cards">
+
+      <!-- CARD 1: Book a Session -->
+      <div class="booking-card card-gold" id="booking-form-container">
+        <h3>Book a Session</h3>
+        <p>Ready to get started? Request a session and I'll confirm within 24 hours.</p>
+        <form id="booking-form">
+          <div class="form-group">
+            <label for="booking-service">Service</label>
+            <select id="booking-service" required>
+              <option value="">Select a service...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="booking-name">Your Name</label>
+            <input type="text" id="booking-name" required placeholder="Full name">
+          </div>
+          <div class="form-group">
+            <label for="booking-email">Your Email</label>
+            <input type="email" id="booking-email" required placeholder="email@example.com">
+          </div>
+          <div class="form-group">
+            <label for="booking-phone">Phone Number (for reminders)</label>
+            <input type="tel" id="booking-phone" placeholder="Phone number (for reminders)">
+          </div>
+          <div class="form-group">
+            <label for="booking-date">Preferred Date</label>
+            <input type="date" id="booking-date" required>
+          </div>
+          <div class="form-group">
+            <label for="booking-time">Preferred Time</label>
+            <select id="booking-time" required>
+              <option value="">Select a time</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="booking-notes">Notes (optional)</label>
+            <textarea id="booking-notes" placeholder="Tell the coach what you're looking for..."></textarea>
+          </div>
+          <button type="submit" class="btn-gold booking-submit">Request Booking</button>
+        </form>
+        <div id="intake-step" class="hidden" style="padding:32px 0;">
+          <h3 style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--ink);margin-bottom:6px;">Step 2: Intake Form</h3>
+          <p style="font-size:0.88rem;color:var(--muted);margin-bottom:24px;">Please complete this form so the coach can prepare for your session.</p>
+          <div id="intake-questions-render"></div>
+          <div style="display:flex;gap:12px;margin-top:20px;">
+            <button class="btn-outline" id="intake-back-btn" style="flex:0 0 auto;color:var(--ink);border-color:var(--border);padding:14px 24px;">Back</button>
+            <button class="btn-gold booking-submit" id="submit-intake-btn" style="flex:1;">Submit Request</button>
+          </div>
         </div>
-        <div class="form-group">
-          <label for="booking-name">Your Name</label>
-          <input type="text" id="booking-name" required placeholder="Full name">
-        </div>
-        <div class="form-group">
-          <label for="booking-email">Your Email</label>
-          <input type="email" id="booking-email" required placeholder="email@example.com">
-        </div>
-        <div class="form-group">
-          <label for="booking-phone">Phone Number (for reminders)</label>
-          <input type="tel" id="booking-phone" placeholder="Phone number (for reminders)">
-        </div>
-        <div class="form-group">
-          <label for="booking-date">Preferred Date</label>
-          <input type="date" id="booking-date" required>
-        </div>
-        <div class="form-group">
-          <label for="booking-time">Preferred Time</label>
-          <select id="booking-time" required>
-            <option value="">Select a time</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="booking-notes">Notes (optional)</label>
-          <textarea id="booking-notes" placeholder="Tell the coach what you're looking for..."></textarea>
-        </div>
-        <button type="submit" class="btn-gold booking-submit">Request Booking</button>
-      </form>
-      <div id="intake-step" class="hidden" style="padding:32px 0;">
-        <h3 style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--ink);margin-bottom:6px;">Step 2: Intake Form</h3>
-        <p style="font-size:0.88rem;color:var(--muted);margin-bottom:24px;">Please complete this form so the coach can prepare for your session.</p>
-        <div id="intake-questions-render"></div>
-        <div style="display:flex;gap:12px;margin-top:20px;">
-          <button class="btn-outline" id="intake-back-btn" style="flex:0 0 auto;color:var(--ink);border-color:var(--border);padding:14px 24px;">Back</button>
-          <button class="btn-gold booking-submit" id="submit-intake-btn" style="flex:1;">Submit Request</button>
-        </div>
-      </div>
-      <div class="booking-success" id="booking-success">
-        <h3>Booking Request Sent!</h3>
-        <p>Your request has been submitted. The coach will be in touch soon.</p>
-        <div id="zoom-link-display" class="hidden" style="margin-top:20px;padding:16px;background:var(--cream);border:1px solid var(--border);border-radius:var(--r-sm);text-align:left;">
-          <div style="font-weight:700;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink);margin-bottom:8px;">Your Session Link</div>
-          <div style="display:flex;align-items:center;gap:10px;">
-            <a id="zoom-link-url" href="#" target="_blank" style="flex:1;color:var(--gold);font-weight:600;font-size:0.92rem;word-break:break-all;"></a>
-            <button id="copy-zoom-btn" style="padding:8px 16px;background:var(--ink);color:var(--cream);border:none;border-radius:var(--r-sm);font-family:'Cabinet Grotesk',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;">Copy</button>
+        <div class="booking-success" id="booking-success">
+          <h3>Booking Request Sent!</h3>
+          <p>Your request has been submitted. The coach will be in touch soon.</p>
+          <div id="zoom-link-display" class="hidden" style="margin-top:20px;padding:16px;background:var(--cream);border:1px solid var(--border);border-radius:var(--r-sm);text-align:left;">
+            <div style="font-weight:700;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink);margin-bottom:8px;">Your Session Link</div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <a id="zoom-link-url" href="#" target="_blank" style="flex:1;color:var(--gold);font-weight:600;font-size:0.92rem;word-break:break-all;"></a>
+              <button id="copy-zoom-btn" style="padding:8px 16px;background:var(--ink);color:var(--cream);border:none;border-radius:var(--r-sm);font-family:'Cabinet Grotesk',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;">Copy</button>
+            </div>
           </div>
         </div>
       </div>
+
+      <!-- CARD 2: Send a Message -->
+      <div class="booking-card card-navy">
+        <h3>Send Me a Message</h3>
+        <p>Not sure where to start? Send me a message and let's talk first.</p>
+        <form id="message-form">
+          <div class="form-group">
+            <label for="msg-name">Your Name</label>
+            <input type="text" id="msg-name" required placeholder="Full name">
+          </div>
+          <div class="form-group">
+            <label for="msg-email">Your Email</label>
+            <input type="email" id="msg-email" required placeholder="email@example.com">
+          </div>
+          <div class="form-group">
+            <label for="msg-text">Your Message</label>
+            <textarea id="msg-text" required placeholder="What's on your mind? What are you hoping coaching could help with?"></textarea>
+          </div>
+          <button type="submit" class="btn-navy">Send Message</button>
+        </form>
+        <div class="message-success" id="message-success">
+          <h3>Message Sent!</h3>
+          <p>I'll be in touch soon.</p>
+        </div>
+      </div>
+
     </div>
   </section>
 
@@ -952,6 +998,43 @@ function renderIntakeForm(form, clientEmail, bookingId) {
     showBookingSuccess();
   });
 }
+
+// Message form submission
+document.getElementById('message-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn = this.querySelector('.btn-navy');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+
+  const senderEmail = document.getElementById('msg-email').value.trim();
+  const payload = {
+    coach_id: coachData.id,
+    sender_name: document.getElementById('msg-name').value.trim(),
+    sender_email: senderEmail,
+    client_email: senderEmail,
+    sender: 'client',
+    message: document.getElementById('msg-text').value.trim(),
+    is_read: false
+  };
+
+  try {
+    const res = await fetch(`${API}/coach_messages`, {
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify(payload)
+    });
+    if (res.ok || res.status === 201) {
+      document.getElementById('message-form').style.display = 'none';
+      document.getElementById('message-success').style.display = 'block';
+    } else {
+      throw new Error('Failed');
+    }
+  } catch(err) {
+    alert('Something went wrong. Please try again.');
+    btn.disabled = false;
+    btn.textContent = 'Send Message';
+  }
+});
 
 // Init
 loadProfile();
