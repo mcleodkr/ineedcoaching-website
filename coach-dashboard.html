@@ -491,6 +491,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
   <div class="tab-bar">
     <button class="tab-btn active" data-tab="profile">Profile</button>
     <button class="tab-btn" data-tab="bookings">Bookings</button>
+    <button class="tab-btn" data-tab="clients">Clients</button>
     <button class="tab-btn" data-tab="testimonials">Testimonials</button>
     <button class="tab-btn" data-tab="recommendations">Recommendations</button>
     <button class="tab-btn" data-tab="scheduling">Scheduling</button>
@@ -754,6 +755,15 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
           <span class="save-msg" id="save-availability-msg">Saved</span>
         </div>
       </div>
+    </div>
+
+    <!-- CLIENTS TAB -->
+    <div id="tab-clients" class="tab-panel">
+      <div id="clients-loading" class="loading-state" style="min-height:30vh;">
+        <div class="loading-spinner"></div>
+      </div>
+      <div id="clients-list-view" class="hidden"></div>
+      <div id="clients-detail-view" class="hidden"></div>
     </div>
 
     <!-- FORMS TAB -->
@@ -1193,6 +1203,10 @@ function setupTabs() {
       if (btn.dataset.tab === 'bookings' && !btn._loaded) {
         btn._loaded = true;
         loadBookings();
+      }
+      if (btn.dataset.tab === 'clients' && !btn._loaded) {
+        btn._loaded = true;
+        loadClientsTab();
       }
       if (btn.dataset.tab === 'testimonials' && !btn._loaded) {
         btn._loaded = true;
@@ -2436,6 +2450,463 @@ async function loadIntakeResponses() {
     container.innerHTML = html;
   } catch (e) {
     $('intake-responses-list').innerHTML = '<div class="empty-state"><p>Error loading responses.</p></div>';
+  }
+}
+
+/* ================================================
+   CLIENTS TAB
+   ================================================ */
+var clientsData = [];
+
+async function loadClientsTab() {
+  try {
+    var bookings = await supabaseGet(
+      'coach_bookings?coach_id=eq.' + coachProfile.id + '&status=eq.confirmed&order=scheduled_at.desc&select=id,client_email,client_phone,scheduled_at,notes,zoom_link,service_id,status'
+    );
+    if (!Array.isArray(bookings)) bookings = [];
+
+    // Build unique clients
+    var clientMap = {};
+    var clientOrder = [];
+    bookings.forEach(function(b) {
+      var email = b.client_email;
+      if (!email) return;
+      if (!clientMap[email]) {
+        var nameMatch = (b.notes || '').match(/^Name:\s*(.+)/m);
+        clientMap[email] = {
+          email: email,
+          name: nameMatch ? nameMatch[1].trim() : '',
+          phone: b.client_phone || '',
+          sessions: [],
+          firstSession: null,
+          lastSession: null
+        };
+        clientOrder.push(email);
+      }
+      clientMap[email].sessions.push(b);
+      if (!clientMap[email].phone && b.client_phone) clientMap[email].phone = b.client_phone;
+      var nameMatch2 = (b.notes || '').match(/^Name:\s*(.+)/m);
+      if (!clientMap[email].name && nameMatch2) clientMap[email].name = nameMatch2[1].trim();
+    });
+
+    // Compute first/last session dates
+    clientOrder.forEach(function(email) {
+      var c = clientMap[email];
+      var dates = c.sessions.map(function(s) { return s.scheduled_at; }).filter(Boolean).sort();
+      c.firstSession = dates[0] || null;
+      c.lastSession = dates[dates.length - 1] || null;
+    });
+
+    clientsData = clientOrder.map(function(e) { return clientMap[e]; });
+
+    $('clients-loading').style.display = 'none';
+    $('clients-list-view').classList.remove('hidden');
+    renderClientsList();
+  } catch(e) {
+    $('clients-loading').style.display = 'none';
+    $('clients-list-view').classList.remove('hidden');
+    $('clients-list-view').innerHTML = '<div class="empty-state"><p>Error loading clients.</p></div>';
+  }
+}
+
+function renderClientsList(filter) {
+  filter = (filter || '').toLowerCase();
+  var filtered = clientsData;
+  if (filter) {
+    filtered = clientsData.filter(function(c) {
+      return (c.name + ' ' + c.email).toLowerCase().indexOf(filter) !== -1;
+    });
+  }
+
+  var html = '<div class="form-section">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">'
+    + '<div><h2 class="form-section-title" style="margin-bottom:4px;font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;">My Clients</h2>'
+    + '<span style="font-size:0.82rem;color:var(--muted);">' + clientsData.length + ' client' + (clientsData.length !== 1 ? 's' : '') + '</span></div>'
+    + '<input type="text" id="clients-search" placeholder="Search by name or email..." value="' + escapeHtml(filter) + '" style="padding:10px 16px;border:1px solid var(--border);border-radius:50px;font-family:\'DM Sans\',\'Cabinet Grotesk\',sans-serif;font-size:0.85rem;color:var(--ink);background:var(--cream);min-width:240px;transition:border-color 0.2s;" onfocus="this.style.borderColor=\'var(--gold)\'" onblur="this.style.borderColor=\'var(--border)\'">'
+    + '</div>';
+
+  if (filtered.length === 0) {
+    html += '<div class="empty-state" style="padding:40px;"><p>' + (filter ? 'No clients matching "' + escapeHtml(filter) + '"' : 'No clients yet. Clients appear here after their first confirmed booking.') + '</p></div>';
+  } else {
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;">';
+    filtered.forEach(function(c) {
+      var lastStr = c.lastSession ? new Date(c.lastSession).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      var sixtyDaysAgo = new Date(); sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+      var isActive = c.lastSession && new Date(c.lastSession) > sixtyDaysAgo;
+
+      html += '<div style="background:var(--white);border:1px solid var(--border);border-left:4px solid var(--gold);border-radius:var(--r);padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.04);transition:transform 0.2s,box-shadow 0.2s;cursor:default;" onmouseenter="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 6px 20px rgba(0,0,0,0.08)\'" onmouseleave="this.style.transform=\'\';this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.04)\'">'
+        + '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;">'
+        + '<div>'
+        + '<div style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-weight:700;font-size:1.1rem;color:var(--ink);margin-bottom:2px;">' + escapeHtml(c.name || c.email) + '</div>'
+        + '<div style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(c.email) + '</div>'
+        + (c.phone ? '<div style="font-size:0.75rem;color:var(--muted);">' + escapeHtml(c.phone) + '</div>' : '')
+        + '</div>'
+        + '<div style="width:10px;height:10px;border-radius:50%;background:' + (isActive ? '#2d6a4f' : 'var(--border)') + ';flex-shrink:0;margin-top:6px;" title="' + (isActive ? 'Active' : 'Inactive') + '"></div>'
+        + '</div>'
+        + '<div style="display:flex;gap:16px;align-items:center;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border);">'
+        + '<div style="font-size:0.78rem;color:var(--muted);"><span style="font-weight:700;color:var(--ink);">' + c.sessions.length + '</span> session' + (c.sessions.length !== 1 ? 's' : '') + '</div>'
+        + (lastStr ? '<div style="font-size:0.78rem;color:var(--muted);">Last: <span style="font-weight:600;color:var(--ink);">' + escapeHtml(lastStr) + '</span></div>' : '')
+        + '</div>'
+        + '<button class="save-btn" data-view-client="' + escapeHtml(c.email) + '" style="width:100%;background:var(--ink);font-size:0.82rem;padding:10px 20px;">View Client</button>'
+        + '</div>';
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+
+  $('clients-list-view').innerHTML = html;
+
+  // Wire search
+  var searchInput = $('clients-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      renderClientsList(this.value);
+    });
+  }
+
+  // Wire view client
+  document.querySelectorAll('[data-view-client]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      openClientDetail(this.dataset.viewClient);
+    });
+  });
+}
+
+async function openClientDetail(email) {
+  var client = clientsData.find(function(c) { return c.email === email; });
+  if (!client) return;
+
+  $('clients-list-view').classList.add('hidden');
+  $('clients-detail-view').classList.remove('hidden');
+  $('clients-detail-view').innerHTML = '<div class="loading-state" style="min-height:20vh;"><div class="loading-spinner"></div></div>';
+
+  // Fetch all related data in parallel
+  var cid = coachProfile.id;
+  try {
+    var results = await Promise.all([
+      supabaseGet('coach_goals?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&order=created_at.desc&select=*'),
+      supabaseGet('coach_intake_responses?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&order=created_at.desc&select=*'),
+      supabaseGet('coach_checkin_responses?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&submitted_at=not.is.null&order=created_at.desc&select=*'),
+      supabaseGet('coach_messages?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&order=created_at.asc&select=*'),
+      supabaseGet('coach_session_notes?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&select=*'),
+      supabaseGet('coach_intake_forms?coach_id=eq.' + cid + '&form_type=eq.checkin&select=id,name')
+    ]);
+    var goals = results[0] || [];
+    var intakeResponses = results[1] || [];
+    var checkinResponses = results[2] || [];
+    var messages = results[3] || [];
+    var sessionNotes = results[4] || [];
+    var checkinForms = results[5] || [];
+
+    var notesByBooking = {};
+    sessionNotes.forEach(function(n) { notesByBooking[n.booking_id] = n; });
+
+    renderClientDetail(client, goals, intakeResponses, checkinResponses, messages, notesByBooking, checkinForms);
+  } catch(e) {
+    $('clients-detail-view').innerHTML = '<div class="empty-state"><p>Error loading client details.</p></div>';
+  }
+}
+
+function renderClientDetail(client, goals, intakeResponses, checkinResponses, messages, notesByBooking, checkinForms) {
+  var statusLabels = { not_started: 'Not Started', in_progress: 'In Progress', completed: 'Completed' };
+  var statusColors = { not_started: 'background:rgba(107,107,96,0.15);color:var(--muted)', in_progress: 'background:#c49a3c;color:#fff', completed: 'background:#2d6a4f;color:#fff' };
+  var firstStr = client.firstSession ? new Date(client.firstSession).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A';
+
+  var html = '';
+
+  // Back button + Header
+  html += '<div style="margin-bottom:24px;">'
+    + '<button id="back-to-clients" style="background:none;border:none;cursor:pointer;font-size:0.85rem;font-weight:700;color:var(--gold);margin-bottom:16px;display:flex;align-items:center;gap:6px;">&larr; Back to Clients</button>'
+    + '<div style="background:var(--ink);border-radius:var(--r);padding:28px 32px;">'
+    + '<div style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.5rem;font-weight:700;color:var(--cream);margin-bottom:4px;">' + escapeHtml(client.name || client.email) + '</div>'
+    + '<div style="font-size:0.85rem;color:rgba(247,244,238,0.6);">' + escapeHtml(client.email) + (client.phone ? ' &bull; ' + escapeHtml(client.phone) : '') + '</div>'
+    + '<div style="font-size:0.8rem;color:rgba(247,244,238,0.5);margin-top:6px;">Client since ' + escapeHtml(firstStr) + ' &bull; ' + client.sessions.length + ' session' + (client.sessions.length !== 1 ? 's' : '') + '</div>'
+    + '</div></div>';
+
+  // Section 1: Sessions
+  html += '<div class="form-section" style="margin-bottom:24px;">'
+    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.15rem;">Sessions</h2>';
+  if (!client.sessions.length) {
+    html += '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;">No sessions yet</p>';
+  } else {
+    client.sessions.forEach(function(s) {
+      var dt = s.scheduled_at ? new Date(s.scheduled_at) : null;
+      var dateStr = dt ? dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      var timeStr = dt ? dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+      var svcMatch = (s.notes || '').match(/^Service:\s*(.+)/m);
+      var svcName = svcMatch ? svcMatch[1].trim() : '';
+      var note = notesByBooking[s.id];
+
+      html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px 20px;margin-bottom:8px;">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">'
+        + '<div><span style="font-weight:700;font-size:0.9rem;color:var(--ink);">' + escapeHtml(dateStr) + '</span>'
+        + (timeStr ? '<span style="font-size:0.82rem;color:var(--muted);margin-left:8px;">' + escapeHtml(timeStr) + '</span>' : '')
+        + (svcName ? '<span style="font-size:0.82rem;color:var(--muted);margin-left:12px;">' + escapeHtml(svcName) + '</span>' : '')
+        + '</div>'
+        + '<div style="display:flex;gap:8px;align-items:center;">'
+        + (s.zoom_link ? '<a href="' + escapeHtml(s.zoom_link) + '" target="_blank" rel="noopener noreferrer" style="font-size:0.78rem;color:var(--gold);text-decoration:none;font-weight:600;">&#127909; Link</a>' : '')
+        + '<button class="session-notes-toggle" data-booking-id="' + s.id + '" data-client-email="' + escapeHtml(client.email) + '" style="font-size:0.75rem;color:var(--gold);background:none;border:1px solid var(--gold);padding:4px 10px;border-radius:50px;cursor:pointer;font-weight:600;">' + (note ? 'View Notes' : 'Add Notes') + '</button>'
+        + '</div></div>';
+
+      // Notes area (hidden by default)
+      html += '<div class="session-notes-area" id="notes-area-' + s.id + '" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">';
+      if (note) {
+        html += '<div style="font-size:0.88rem;color:var(--muted);line-height:1.6;white-space:pre-line;" id="notes-display-' + s.id + '">' + escapeHtml(note.notes) + '</div>'
+          + '<button class="session-notes-edit" data-booking-id="' + s.id + '" style="font-size:0.75rem;color:var(--gold);background:none;border:none;cursor:pointer;font-weight:600;margin-top:8px;">Edit</button>';
+      }
+      html += '<div id="notes-editor-' + s.id + '" style="' + (note ? 'display:none;' : '') + '">'
+        + '<textarea id="notes-input-' + s.id + '" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:\'DM Sans\',\'Cabinet Grotesk\',sans-serif;font-size:0.88rem;color:var(--ink);background:var(--cream);min-height:80px;resize:vertical;">' + escapeHtml(note ? note.notes : '') + '</textarea>'
+        + '<button class="session-notes-save pill-add-btn" data-booking-id="' + s.id + '" data-note-id="' + (note ? note.id : '') + '" data-client-email="' + escapeHtml(client.email) + '" style="margin-top:8px;padding:8px 16px;">Save Notes</button>'
+        + '</div></div></div>';
+    });
+  }
+  html += '</div>';
+
+  // Section 2: Intake Responses
+  html += '<div class="form-section" style="margin-bottom:24px;">'
+    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.15rem;">Intake Responses</h2>';
+  if (!intakeResponses.length) {
+    html += '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;">No intake form submitted yet</p>';
+  } else {
+    intakeResponses.forEach(function(r) {
+      var resps = Array.isArray(r.responses) ? r.responses : [];
+      var dateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      html += '<details style="background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px 20px;margin-bottom:8px;">'
+        + '<summary style="font-size:0.88rem;font-weight:700;color:var(--ink);cursor:pointer;">Intake — ' + escapeHtml(dateStr) + ' <span style="font-size:0.78rem;color:var(--muted);font-weight:400;">(' + resps.length + ' answers)</span></summary>'
+        + '<div style="margin-top:12px;">';
+      resps.forEach(function(resp) {
+        html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">'
+          + '<div style="font-weight:600;font-size:0.82rem;color:var(--ink);margin-bottom:2px;">' + escapeHtml(resp.question || '') + '</div>'
+          + '<div style="font-size:0.88rem;color:var(--muted);">' + escapeHtml(String(resp.answer || '')) + '</div></div>';
+      });
+      html += '</div></details>';
+    });
+  }
+  html += '</div>';
+
+  // Section 3: Check-in History
+  html += '<div class="form-section" style="margin-bottom:24px;">'
+    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.15rem;">Pre-Session Check-ins</h2>';
+  if (!checkinResponses.length) {
+    html += '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;">No check-ins yet</p>';
+  } else {
+    checkinResponses.forEach(function(r) {
+      var resps = Array.isArray(r.responses) ? r.responses : [];
+      var dateStr = (r.submitted_at || r.created_at) ? new Date(r.submitted_at || r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      html += '<details style="background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px 20px;margin-bottom:8px;">'
+        + '<summary style="font-size:0.88rem;font-weight:700;color:var(--ink);cursor:pointer;">Check-in — ' + escapeHtml(dateStr) + ' <span style="font-size:0.78rem;color:var(--muted);font-weight:400;">(' + resps.length + ' answers)</span></summary>'
+        + '<div style="margin-top:12px;">';
+      resps.forEach(function(resp) {
+        html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">'
+          + '<div style="font-weight:600;font-size:0.82rem;color:var(--ink);margin-bottom:2px;">' + escapeHtml(resp.question || '') + '</div>'
+          + '<div style="font-size:0.88rem;color:var(--muted);">' + escapeHtml(String(resp.answer || '')) + '</div></div>';
+      });
+      html += '</div></details>';
+    });
+  }
+  html += '</div>';
+
+  // Section 4: Goals
+  html += '<div class="form-section" style="margin-bottom:24px;">'
+    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.15rem;">Goals</h2>';
+  if (!goals.length) {
+    html += '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;">No goals set yet</p>';
+  } else {
+    goals.forEach(function(g) {
+      var targetStr = g.target_date ? new Date(g.target_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      var pillStyle = statusColors[g.status] || statusColors.not_started;
+      html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px 20px;margin-bottom:8px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
+        + '<div style="flex:1;min-width:180px;">'
+        + '<div style="font-weight:700;font-size:0.9rem;color:var(--ink);margin-bottom:4px;">' + escapeHtml(g.title) + '</div>'
+        + (g.description ? '<div style="font-size:0.82rem;color:var(--muted);line-height:1.5;margin-bottom:6px;">' + escapeHtml(g.description) + '</div>' : '')
+        + '<div style="display:flex;gap:8px;align-items:center;">'
+        + '<span class="status-pill" style="font-size:0.68rem;padding:3px 10px;' + pillStyle + '">' + escapeHtml(statusLabels[g.status] || g.status) + '</span>'
+        + (targetStr ? '<span style="font-size:0.78rem;color:var(--muted);">Due: ' + escapeHtml(targetStr) + '</span>' : '')
+        + '</div></div>'
+        + (g.status !== 'completed' ? '<button class="action-btn action-confirm" data-client-goal-complete="' + g.id + '" style="padding:6px 12px;font-size:0.75rem;">Complete</button>' : '')
+        + '</div>';
+    });
+  }
+  // Inline add goal
+  html += '<div style="margin-top:12px;padding:16px 20px;background:var(--cream);border:1px solid var(--border);border-radius:var(--r-sm);">'
+    + '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">'
+    + '<div class="form-group" style="flex:1;min-width:180px;margin-bottom:0;"><label for="client-goal-title">Goal Title</label><input type="text" id="client-goal-title" placeholder="e.g. Complete leadership assessment"></div>'
+    + '<div class="form-group" style="flex:0 0 140px;margin-bottom:0;"><label for="client-goal-date">Target Date</label><input type="date" id="client-goal-date"></div>'
+    + '<button class="save-btn" id="client-add-goal-btn" style="padding:10px 20px;font-size:0.82rem;">Add Goal</button>'
+    + '</div></div>';
+  html += '</div>';
+
+  // Section 5: Messages
+  html += '<div class="form-section" style="margin-bottom:24px;">'
+    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.15rem;">Messages</h2>';
+  if (!messages.length) {
+    html += '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;">No messages yet</p>';
+  } else {
+    html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px 20px;max-height:320px;overflow-y:auto;">';
+    messages.forEach(function(m) {
+      var isCoach = m.sender === 'coach';
+      var timeStr = m.created_at ? new Date(m.created_at).toLocaleTimeString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+      html += '<div style="margin-bottom:12px;display:flex;flex-direction:column;align-items:' + (isCoach ? 'flex-end' : 'flex-start') + ';">'
+        + '<div style="background:' + (isCoach ? 'var(--ink)' : 'var(--cream)') + ';color:' + (isCoach ? 'var(--cream)' : 'var(--ink)') + ';padding:10px 14px;border-radius:var(--r-sm);max-width:80%;font-size:0.88rem;line-height:1.5;">' + escapeHtml(m.message || '') + '</div>'
+        + '<div style="font-size:0.72rem;color:var(--muted);margin-top:4px;">' + escapeHtml(timeStr) + '</div>'
+        + '</div>';
+    });
+    html += '</div>';
+  }
+  // Reply input
+  html += '<div style="display:flex;gap:8px;margin-top:12px;">'
+    + '<textarea id="client-reply-input" placeholder="Type a message..." style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:\'DM Sans\',\'Cabinet Grotesk\',sans-serif;font-size:0.88rem;color:var(--ink);background:var(--cream);min-height:44px;resize:none;"></textarea>'
+    + '<button class="save-btn" id="client-send-msg-btn" data-client-email="' + escapeHtml(client.email) + '" style="padding:10px 20px;font-size:0.82rem;align-self:flex-end;">Send</button>'
+    + '</div></div>';
+
+  // Section 6: Send Check-in
+  if (checkinForms.length) {
+    html += '<div class="form-section">'
+      + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.15rem;">Send Check-in</h2>'
+      + '<div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">'
+      + '<div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;"><label for="client-checkin-form">Check-in Form</label>'
+      + '<select id="client-checkin-form"><option value="">Select a form...</option>';
+    checkinForms.forEach(function(f) {
+      html += '<option value="' + f.id + '">' + escapeHtml(f.name || 'Untitled') + '</option>';
+    });
+    html += '</select></div>'
+      + '<button class="save-btn" id="client-send-checkin-btn" data-client-email="' + escapeHtml(client.email) + '" data-client-name="' + escapeHtml(client.name) + '" style="padding:10px 20px;font-size:0.82rem;background:var(--gold);">Send Check-in</button>'
+      + '</div>'
+      + '<div id="client-checkin-msg" style="margin-top:8px;font-size:0.82rem;"></div>'
+      + '</div>';
+  }
+
+  $('clients-detail-view').innerHTML = html;
+
+  // Wire back button
+  $('back-to-clients').addEventListener('click', function() {
+    $('clients-detail-view').classList.add('hidden');
+    $('clients-list-view').classList.remove('hidden');
+  });
+
+  // Wire session notes toggle
+  document.querySelectorAll('.session-notes-toggle').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var area = $('notes-area-' + this.dataset.bookingId);
+      area.style.display = area.style.display === 'none' ? '' : 'none';
+    });
+  });
+
+  // Wire session notes edit
+  document.querySelectorAll('.session-notes-edit').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var bid = this.dataset.bookingId;
+      $('notes-display-' + bid).style.display = 'none';
+      this.style.display = 'none';
+      $('notes-editor-' + bid).style.display = '';
+    });
+  });
+
+  // Wire session notes save
+  document.querySelectorAll('.session-notes-save').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      var bid = this.dataset.bookingId;
+      var noteId = this.dataset.noteId;
+      var clientEmail = this.dataset.clientEmail;
+      var text = $('notes-input-' + bid).value.trim();
+      this.disabled = true;
+      this.textContent = 'Saving...';
+      try {
+        if (noteId) {
+          await supabasePatch('coach_session_notes', { id: 'eq.' + noteId }, { notes: text, updated_at: new Date().toISOString() });
+        } else {
+          await fetch(SUPABASE_URL + '/rest/v1/coach_session_notes', {
+            method: 'POST',
+            headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+            body: JSON.stringify({ booking_id: bid, coach_id: coachProfile.id, client_email: clientEmail, notes: text })
+          });
+        }
+        openClientDetail(clientEmail);
+      } catch(e) {
+        alert('Error saving notes.');
+        this.disabled = false;
+        this.textContent = 'Save Notes';
+      }
+    });
+  });
+
+  // Wire complete goal
+  document.querySelectorAll('[data-client-goal-complete]').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      await supabasePatch('coach_goals', { id: 'eq.' + this.dataset.clientGoalComplete }, { status: 'completed' });
+      openClientDetail(client.email);
+    });
+  });
+
+  // Wire add goal
+  $('client-add-goal-btn').addEventListener('click', async function() {
+    var title = $('client-goal-title').value.trim();
+    if (!title) { alert('Enter a goal title.'); return; }
+    this.disabled = true;
+    this.textContent = 'Adding...';
+    await fetch(SUPABASE_URL + '/rest/v1/coach_goals', {
+      method: 'POST',
+      headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        coach_id: coachProfile.id,
+        client_email: client.email,
+        client_name: client.name || null,
+        title: title,
+        target_date: $('client-goal-date').value || null,
+        status: 'not_started'
+      })
+    });
+    openClientDetail(client.email);
+  });
+
+  // Wire send message
+  $('client-send-msg-btn').addEventListener('click', async function() {
+    var text = $('client-reply-input').value.trim();
+    if (!text) return;
+    this.disabled = true;
+    await fetch(SUPABASE_URL + '/rest/v1/coach_messages', {
+      method: 'POST',
+      headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        coach_id: coachProfile.id,
+        client_email: client.email,
+        sender: 'coach',
+        message: text,
+        is_read: true
+      })
+    });
+    openClientDetail(client.email);
+  });
+
+  // Wire send check-in
+  var checkinBtn = $('client-send-checkin-btn');
+  if (checkinBtn) {
+    checkinBtn.addEventListener('click', async function() {
+      var formId = $('client-checkin-form').value;
+      if (!formId) { alert('Select a form first.'); return; }
+      this.disabled = true;
+      this.textContent = 'Sending...';
+      var token = generateToken();
+      try {
+        await fetch(SUPABASE_URL + '/rest/v1/coach_checkin_responses', {
+          method: 'POST',
+          headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+          body: JSON.stringify({
+            coach_id: coachProfile.id,
+            client_email: client.email,
+            client_name: client.name || null,
+            form_id: formId,
+            token: token
+          })
+        });
+        var url = window.location.origin + '/checkin.html?token=' + token;
+        $('client-checkin-msg').innerHTML = '<span style="color:var(--forest);font-weight:600;">Sent!</span> Link: <a href="' + url + '" target="_blank" style="color:var(--gold);word-break:break-all;">' + url + '</a>';
+      } catch(e) {
+        alert('Error sending check-in.');
+      }
+      this.disabled = false;
+      this.textContent = 'Send Check-in';
+    });
   }
 }
 
