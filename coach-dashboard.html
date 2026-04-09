@@ -2563,8 +2563,13 @@ function cbUpdateSlugPreview() {
 }
 
 function cbSelectType(val) {
+  cbCollectStepData();
   courseData.course_type = val;
-  renderCourseBuilder();
+  // Update card visuals without re-rendering the entire form
+  document.querySelectorAll('.cb-type-card').forEach(function(card) {
+    var isMatch = card.onclick.toString().indexOf("'" + val + "'") !== -1;
+    card.classList.toggle('selected', isMatch);
+  });
 }
 
 function cbSelectEnrollOpt(val) {
@@ -2757,7 +2762,7 @@ async function loadCourseModules() {
   renderModulesList(container);
 }
 
-function renderModulesList(container) {
+function renderModulesList(container, skipSubLoads) {
   if (!container) container = $('cb-modules-list');
   if (!container) return;
 
@@ -2867,14 +2872,21 @@ function renderModulesList(container) {
   });
   container.innerHTML = html;
 
-  // Load lessons and resources for expanded modules
-  courseModules.forEach(function(mod) {
-    if (expandedModules[mod.id]) {
-      cbLoadModuleLessons(mod.id);
-      cbLoadModuleResources(mod.id);
-      cbAttachModuleAutosave(mod.id);
-    }
-  });
+  // Load lessons and resources for expanded modules (only if requested)
+  if (!skipSubLoads) {
+    courseModules.forEach(function(mod) {
+      if (expandedModules[mod.id]) {
+        cbLoadModuleLessons(mod.id);
+        cbLoadModuleResources(mod.id);
+        cbAttachModuleAutosave(mod.id);
+      }
+    });
+  } else {
+    // Still need autosave listeners
+    courseModules.forEach(function(mod) {
+      if (expandedModules[mod.id]) { cbAttachModuleAutosave(mod.id); }
+    });
+  }
 }
 
 function cbToggleModule(modId) {
@@ -2950,7 +2962,7 @@ async function cbAddListItem(modId, field, inputId) {
     body: JSON.stringify(payload)
   }).catch(function() {});
 
-  renderModulesList();
+  renderModulesList(null, true);
 }
 
 async function cbRemoveListItem(modId, field, idx) {
@@ -2967,7 +2979,7 @@ async function cbRemoveListItem(modId, field, idx) {
     body: JSON.stringify(payload)
   }).catch(function() {});
 
-  renderModulesList();
+  renderModulesList(null, true);
 }
 
 /* Lessons */
