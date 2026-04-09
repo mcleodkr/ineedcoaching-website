@@ -354,6 +354,20 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .cb-email-detail { background: #fff; border: 1px solid #e0ddd5; border-radius: 8px; padding: 14px; font-size: 0.82rem; }
 .cb-module-add { margin-top: 16px; width: 100%; padding: 14px; background: transparent; color: #c49a3c; border: 2px dashed #c49a3c; border-radius: 10px; font-family: inherit; font-size: 0.88rem; font-weight: 700; cursor: pointer; }
 .cb-module-add:hover { background: #faf3e0; }
+.cb-mod-card { background: #fff; border: 1px solid #e0ddd5; border-radius: 12px; margin-bottom: 12px; overflow: hidden; transition: box-shadow 0.2s; }
+.cb-mod-card:hover { box-shadow: 0 4px 16px rgba(26,58,82,0.06); }
+.cb-mod-header { display: flex; align-items: center; gap: 14px; padding: 16px 20px; cursor: pointer; transition: background 0.15s; }
+.cb-mod-header:hover { background: #faf3e0; }
+.cb-mod-num { width: 36px; height: 36px; border-radius: 50%; background: #1a3a52; display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-size: 0.9rem; font-weight: 900; color: #c49a3c; flex-shrink: 0; }
+.cb-mod-title-row { flex: 1; min-width: 0; }
+.cb-mod-title { font-weight: 700; font-size: 0.95rem; color: #1a3a52; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cb-mod-meta { font-size: 0.72rem; color: #8a8a9a; margin-top: 2px; }
+.cb-mod-arrow { font-size: 0.7rem; color: #8a8a9a; }
+.cb-mod-body { padding: 0 20px 20px; border-top: 1px solid #f0ede6; }
+.cb-bullet-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.cb-bullet-item { display: flex; align-items: center; gap: 10px; background: #faf3e0; border: 1px solid #e8dfc0; border-radius: 8px; padding: 9px 14px; font-size: 0.85rem; color: #1a3a52; }
+.cb-bullet-item button { background: none; border: none; color: #c44; cursor: pointer; font-size: 1rem; padding: 0 0 0 6px; margin-left: auto; }
+.cb-bullet-dot { width: 6px; height: 6px; border-radius: 50%; background: #c49a3c; flex-shrink: 0; }
 .course-mgmt-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 24px; margin-bottom: 14px; }
 .course-mgmt-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
 .course-mgmt-header h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--ink); }
@@ -2721,10 +2735,18 @@ async function cbPublish() {
 }
 
 /* ── MODULES (Step 3) ── */
+/*
+  SQL MIGRATION — run in Supabase SQL Editor:
+  ALTER TABLE coach_course_modules ADD COLUMN IF NOT EXISTS topics_covered jsonb DEFAULT '[]'::jsonb;
+  ALTER TABLE coach_course_modules ADD COLUMN IF NOT EXISTS learning_outcomes jsonb DEFAULT '[]'::jsonb;
+  ALTER TABLE coach_course_modules ADD COLUMN IF NOT EXISTS suggested_activities jsonb DEFAULT '[]'::jsonb;
+*/
+var expandedModules = {};
+
 async function loadCourseModules() {
   var container = $('cb-modules-list');
   if (!container || !currentCourseId) return;
-  container.innerHTML = '<div style="font-size:0.85rem;color:var(--muted);">Loading...</div>';
+  container.innerHTML = '<div style="font-size:0.85rem;color:#8a8a9a;">Loading...</div>';
 
   try {
     var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_modules?course_id=eq.' + currentCourseId + '&order=sort_order.asc&select=*', { headers: apiHeaders() });
@@ -2740,58 +2762,215 @@ function renderModulesList(container) {
   if (!container) return;
 
   if (courseModules.length === 0) {
-    container.innerHTML = '<div style="padding:20px;background:#faf3e0;border-radius:8px;font-size:0.88rem;color:#1a3a52;text-align:center;">No modules yet. Click "+ Add Module" to start building your syllabus.</div>';
+    container.innerHTML = '<div class="cb-info-box" style="text-align:center;">No modules yet. Click "+ Add Module" to start building your syllabus.</div>';
     return;
   }
 
   var html = '';
   courseModules.forEach(function(mod, idx) {
-    html += '<div class="prop-card" style="grid-template-columns:auto 1fr auto;margin-bottom:8px;padding:16px 20px;cursor:default;">'
-      + '<div style="width:36px;height:36px;border-radius:50%;background:#1a3a52;display:flex;align-items:center;justify-content:center;font-family:Playfair Display,serif;font-size:0.9rem;font-weight:900;color:#c49a3c;flex-shrink:0;">' + (idx + 1) + '</div>'
-      + '<div>'
-      + '<div style="font-weight:700;font-size:0.92rem;color:#1a3a52;">' + escapeHtml(mod.title || 'Untitled Module') + '</div>'
-      + (mod.description ? '<div style="font-size:0.78rem;color:#8a8a9a;margin-top:2px;">' + escapeHtml(mod.description) + '</div>' : '')
-      + '<div id="mod-lessons-' + mod.id + '" style="margin-top:8px;"></div>'
-      + '<div style="margin-top:8px;display:flex;gap:8px;">'
-      + '<button onclick="cbAddLesson(\'' + mod.id + '\')" class="prop-btn prop-btn-edit" style="font-size:0.7rem;padding:4px 10px;">+ Lesson</button>'
-      + '<button onclick="cbAddResource(\'' + mod.id + '\')" class="prop-btn prop-btn-view" style="font-size:0.7rem;padding:4px 10px;">+ Resource</button>'
+    var isOpen = expandedModules[mod.id];
+    var topics = Array.isArray(mod.topics_covered) ? mod.topics_covered : [];
+    var outcomes = Array.isArray(mod.learning_outcomes) ? mod.learning_outcomes : [];
+    var activities = Array.isArray(mod.suggested_activities) ? mod.suggested_activities : [];
+
+    // Module card
+    html += '<div class="cb-mod-card" id="mod-card-' + mod.id + '">';
+
+    // Header
+    html += '<div class="cb-mod-header" onclick="cbToggleModule(\'' + mod.id + '\')">'
+      + '<div class="cb-mod-num">' + (idx + 1) + '</div>'
+      + '<div class="cb-mod-title-row">'
+      + '<div class="cb-mod-title">' + escapeHtml(mod.title || 'New Module') + '</div>'
+      + '<div class="cb-mod-meta">' + topics.length + ' topics, ' + outcomes.length + ' outcomes</div>'
       + '</div>'
-      + '</div>'
-      + '<div style="display:flex;flex-direction:column;gap:4px;">'
-      + '<button onclick="cbDeleteModule(\'' + mod.id + '\')" class="prop-btn prop-btn-delete" style="font-size:0.7rem;padding:4px 10px;">Delete</button>'
+      + '<div style="display:flex;align-items:center;gap:8px;">'
+      + '<button onclick="event.stopPropagation();cbDeleteModule(\'' + mod.id + '\')" class="prop-btn prop-btn-delete" style="font-size:0.7rem;padding:4px 10px;">Delete</button>'
+      + '<span class="cb-mod-arrow">' + (isOpen ? '&#9650;' : '&#9660;') + '</span>'
       + '</div>'
       + '</div>';
+
+    // Expanded body
+    if (isOpen) {
+      html += '<div class="cb-mod-body">';
+
+      // Title + Description
+      html += '<div class="cb-section" style="margin-bottom:20px;">'
+        + '<div class="cb-section-title">Module Details</div>'
+        + '<div class="cb-field"><label class="cb-label">Module Title</label>'
+        + '<input type="text" class="cb-input cb-mod-autosave" data-mod-id="' + mod.id + '" data-field="title" value="' + escapeHtml(mod.title || '') + '" placeholder="Module title"></div>'
+        + '<div class="cb-field"><label class="cb-label">Description</label>'
+        + '<textarea class="cb-textarea cb-mod-autosave" data-mod-id="' + mod.id + '" data-field="description" placeholder="What will students learn in this module?" style="min-height:80px;">' + escapeHtml(mod.description || '') + '</textarea></div>'
+        + '</div>';
+
+      // Topics covered
+      html += '<div class="cb-section" style="margin-bottom:20px;">'
+        + '<div class="cb-section-title">Topics Covered</div>'
+        + '<div id="mod-topics-' + mod.id + '" class="cb-bullet-list">';
+      topics.forEach(function(t, ti) {
+        html += '<div class="cb-bullet-item"><span class="cb-bullet-dot"></span><span>' + escapeHtml(t) + '</span>'
+          + '<button onclick="cbRemoveListItem(\'' + mod.id + '\',\'topics_covered\',' + ti + ')">&times;</button></div>';
+      });
+      html += '</div>'
+        + '<div class="cb-add-row"><input type="text" class="cb-input" id="mod-topic-input-' + mod.id + '" placeholder="Add a topic..." onkeydown="if(event.key===\'Enter\'){event.preventDefault();cbAddListItem(\'' + mod.id + '\',\'topics_covered\',\'mod-topic-input-' + mod.id + '\');}">'
+        + '<button onclick="cbAddListItem(\'' + mod.id + '\',\'topics_covered\',\'mod-topic-input-' + mod.id + '\')" style="padding:10px 18px;background:#1a3a52;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:0.85rem;font-weight:700;cursor:pointer;">Add</button></div>'
+        + '</div>';
+
+      // Learning outcomes
+      html += '<div class="cb-section" style="margin-bottom:20px;">'
+        + '<div class="cb-section-title">Learning Outcomes</div>'
+        + '<div id="mod-outcomes-' + mod.id + '" class="cb-bullet-list">';
+      outcomes.forEach(function(o, oi) {
+        html += '<div class="cb-bullet-item"><span class="cb-bullet-dot"></span><span>' + escapeHtml(o) + '</span>'
+          + '<button onclick="cbRemoveListItem(\'' + mod.id + '\',\'learning_outcomes\',' + oi + ')">&times;</button></div>';
+      });
+      html += '</div>'
+        + '<div class="cb-add-row"><input type="text" class="cb-input" id="mod-outcome-input-' + mod.id + '" placeholder="Add a learning outcome..." onkeydown="if(event.key===\'Enter\'){event.preventDefault();cbAddListItem(\'' + mod.id + '\',\'learning_outcomes\',\'mod-outcome-input-' + mod.id + '\');}">'
+        + '<button onclick="cbAddListItem(\'' + mod.id + '\',\'learning_outcomes\',\'mod-outcome-input-' + mod.id + '\')" style="padding:10px 18px;background:#1a3a52;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:0.85rem;font-weight:700;cursor:pointer;">Add</button></div>'
+        + '</div>';
+
+      // Suggested activities
+      html += '<div class="cb-section" style="margin-bottom:20px;">'
+        + '<div class="cb-section-title">Suggested Activities</div>'
+        + '<div id="mod-activities-' + mod.id + '" class="cb-bullet-list">';
+      activities.forEach(function(a, ai) {
+        html += '<div class="cb-bullet-item"><span class="cb-bullet-dot"></span><span>' + escapeHtml(a) + '</span>'
+          + '<button onclick="cbRemoveListItem(\'' + mod.id + '\',\'suggested_activities\',' + ai + ')">&times;</button></div>';
+      });
+      html += '</div>'
+        + '<div class="cb-add-row"><input type="text" class="cb-input" id="mod-activity-input-' + mod.id + '" placeholder="Add an activity..." onkeydown="if(event.key===\'Enter\'){event.preventDefault();cbAddListItem(\'' + mod.id + '\',\'suggested_activities\',\'mod-activity-input-' + mod.id + '\');}">'
+        + '<button onclick="cbAddListItem(\'' + mod.id + '\',\'suggested_activities\',\'mod-activity-input-' + mod.id + '\')" style="padding:10px 18px;background:#1a3a52;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:0.85rem;font-weight:700;cursor:pointer;">Add</button></div>'
+        + '</div>';
+
+      // Lessons
+      html += '<div class="cb-section" style="margin-bottom:20px;">'
+        + '<div class="cb-section-title">Lessons</div>'
+        + '<div id="mod-lessons-' + mod.id + '"><div style="font-size:0.82rem;color:#8a8a9a;">Loading...</div></div>'
+        + '<div class="cb-add-row" style="margin-top:8px;"><input type="text" class="cb-input" id="mod-lesson-title-' + mod.id + '" placeholder="Lesson title" onkeydown="if(event.key===\'Enter\'){event.preventDefault();cbAddLesson(\'' + mod.id + '\');}">'
+        + '<button onclick="cbAddLesson(\'' + mod.id + '\')" style="padding:10px 18px;background:#c49a3c;color:#1a3a52;border:none;border-radius:8px;font-family:inherit;font-size:0.85rem;font-weight:700;cursor:pointer;">+ Lesson</button></div>'
+        + '</div>';
+
+      // Resources
+      html += '<div class="cb-section">'
+        + '<div class="cb-section-title">Resources</div>'
+        + '<div id="mod-resources-' + mod.id + '"><div style="font-size:0.82rem;color:#8a8a9a;">Loading...</div></div>'
+        + '<div style="display:grid;grid-template-columns:auto 1fr 1fr auto;gap:8px;margin-top:8px;align-items:end;">'
+        + '<div class="cb-field" style="margin:0;"><select id="mod-res-type-' + mod.id + '" class="cb-input" style="padding:9px 10px;font-size:0.82rem;"><option>Link</option><option>PDF</option><option>Video</option><option>Audio</option><option>Image</option><option>File</option></select></div>'
+        + '<div class="cb-field" style="margin:0;"><input type="text" class="cb-input" id="mod-res-title-' + mod.id + '" placeholder="Resource title" style="font-size:0.82rem;padding:9px 10px;"></div>'
+        + '<div class="cb-field" style="margin:0;"><input type="text" class="cb-input" id="mod-res-url-' + mod.id + '" placeholder="URL" style="font-size:0.82rem;padding:9px 10px;"></div>'
+        + '<button onclick="cbAddResource(\'' + mod.id + '\')" style="padding:9px 14px;background:#1a3a52;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:0.82rem;font-weight:700;cursor:pointer;">+ Add</button>'
+        + '</div></div>';
+
+      html += '</div>'; // cb-mod-body
+    }
+
+    html += '</div>'; // cb-mod-card
   });
   container.innerHTML = html;
 
-  // Load lessons for each module
-  courseModules.forEach(function(mod) { cbLoadModuleLessons(mod.id); });
+  // Load lessons and resources for expanded modules
+  courseModules.forEach(function(mod) {
+    if (expandedModules[mod.id]) {
+      cbLoadModuleLessons(mod.id);
+      cbLoadModuleResources(mod.id);
+      cbAttachModuleAutosave(mod.id);
+    }
+  });
+}
+
+function cbToggleModule(modId) {
+  expandedModules[modId] = !expandedModules[modId];
+  renderModulesList();
+}
+
+function cbAttachModuleAutosave(modId) {
+  setTimeout(function() {
+    document.querySelectorAll('.cb-mod-autosave[data-mod-id="' + modId + '"]').forEach(function(el) {
+      el.addEventListener('blur', function() {
+        var field = el.dataset.field;
+        var payload = {};
+        payload[field] = el.value.trim();
+        fetch(SUPABASE_URL + '/rest/v1/coach_course_modules?id=eq.' + modId, {
+          method: 'PATCH', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+          body: JSON.stringify(payload)
+        }).catch(function() {});
+        // Update local data
+        var mod = courseModules.find(function(m) { return m.id === modId; });
+        if (mod) mod[field] = payload[field];
+      });
+    });
+  }, 50);
 }
 
 async function cbAddModule() {
   if (!currentCourseId) { alert('Save your course first.'); return; }
-  var title = prompt('Module title:');
-  if (!title) return;
   var nextOrder = courseModules.length;
 
   try {
     var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_modules', {
       method: 'POST', headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
-      body: JSON.stringify({ course_id: currentCourseId, title: title, sort_order: nextOrder })
+      body: JSON.stringify({ course_id: currentCourseId, title: '', sort_order: nextOrder, topics_covered: [], learning_outcomes: [], suggested_activities: [] })
     });
-    if (res.ok) { loadCourseModules(); }
+    if (res.ok) {
+      var rows = await res.json();
+      if (Array.isArray(rows) && rows.length) {
+        expandedModules[rows[0].id] = true;
+      }
+      loadCourseModules();
+    }
   } catch (e) { /* ignore */ }
 }
 
 async function cbDeleteModule(modId) {
   if (!confirm('Delete this module and all its lessons?')) return;
   try {
+    await fetch(SUPABASE_URL + '/rest/v1/coach_course_resources?module_id=eq.' + modId, { method: 'DELETE', headers: apiHeaders() });
     await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?module_id=eq.' + modId, { method: 'DELETE', headers: apiHeaders() });
     await fetch(SUPABASE_URL + '/rest/v1/coach_course_modules?id=eq.' + modId, { method: 'DELETE', headers: apiHeaders() });
+    delete expandedModules[modId];
     loadCourseModules();
   } catch (e) { /* ignore */ }
 }
 
+/* List items (topics, outcomes, activities) */
+async function cbAddListItem(modId, field, inputId) {
+  var input = $(inputId);
+  var val = input.value.trim();
+  if (!val) return;
+  var mod = courseModules.find(function(m) { return m.id === modId; });
+  if (!mod) return;
+  var arr = Array.isArray(mod[field]) ? mod[field].slice() : [];
+  arr.push(val);
+  mod[field] = arr;
+  input.value = '';
+
+  var payload = {};
+  payload[field] = arr;
+  fetch(SUPABASE_URL + '/rest/v1/coach_course_modules?id=eq.' + modId, {
+    method: 'PATCH', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+    body: JSON.stringify(payload)
+  }).catch(function() {});
+
+  renderModulesList();
+}
+
+async function cbRemoveListItem(modId, field, idx) {
+  var mod = courseModules.find(function(m) { return m.id === modId; });
+  if (!mod) return;
+  var arr = Array.isArray(mod[field]) ? mod[field].slice() : [];
+  arr.splice(idx, 1);
+  mod[field] = arr;
+
+  var payload = {};
+  payload[field] = arr;
+  fetch(SUPABASE_URL + '/rest/v1/coach_course_modules?id=eq.' + modId, {
+    method: 'PATCH', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+    body: JSON.stringify(payload)
+  }).catch(function() {});
+
+  renderModulesList();
+}
+
+/* Lessons */
 async function cbLoadModuleLessons(modId) {
   var container = $('mod-lessons-' + modId);
   if (!container) return;
@@ -2799,14 +2978,14 @@ async function cbLoadModuleLessons(modId) {
   try {
     var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?module_id=eq.' + modId + '&order=sort_order.asc&select=*', { headers: apiHeaders() });
     var lessons = await res.json();
-    if (!Array.isArray(lessons) || lessons.length === 0) { container.innerHTML = '<div style="font-size:0.75rem;color:#8a8a9a;font-style:italic;">No lessons yet</div>'; return; }
+    if (!Array.isArray(lessons) || lessons.length === 0) { container.innerHTML = '<div style="font-size:0.78rem;color:#8a8a9a;font-style:italic;">No lessons yet. Add your first lesson below.</div>'; return; }
 
     var html = '';
     lessons.forEach(function(l, idx) {
-      html += '<div style="display:flex;align-items:center;gap:8px;font-size:0.82rem;color:#1a3a52;padding:4px 0;">'
-        + '<span style="font-size:0.7rem;color:#8a8a9a;font-weight:700;min-width:18px;">' + (idx + 1) + '.</span>'
-        + '<span>' + escapeHtml(l.title) + '</span>'
-        + '<button onclick="cbDeleteLesson(\'' + modId + '\',\'' + l.id + '\')" style="background:none;border:none;color:#c44;cursor:pointer;font-size:0.8rem;margin-left:auto;">&times;</button>'
+      html += '<div class="cb-bullet-item">'
+        + '<span class="cb-bullet-dot" style="background:#1a3a52;"></span>'
+        + '<span style="flex:1;">' + escapeHtml(l.title) + (l.description ? '<br><span style="font-size:0.75rem;color:#8a8a9a;">' + escapeHtml(l.description) + '</span>' : '') + '</span>'
+        + '<button onclick="cbDeleteLesson(\'' + modId + '\',\'' + l.id + '\')" style="background:none;border:none;color:#c44;cursor:pointer;font-size:0.9rem;">&times;</button>'
         + '</div>';
     });
     container.innerHTML = html;
@@ -2814,7 +2993,8 @@ async function cbLoadModuleLessons(modId) {
 }
 
 async function cbAddLesson(modId) {
-  var title = prompt('Lesson title:');
+  var titleInput = $('mod-lesson-title-' + modId);
+  var title = titleInput ? titleInput.value.trim() : '';
   if (!title) return;
 
   try {
@@ -2826,6 +3006,7 @@ async function cbAddLesson(modId) {
       method: 'POST', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
       body: JSON.stringify({ module_id: modId, course_id: currentCourseId, title: title, sort_order: nextOrder })
     });
+    titleInput.value = '';
     cbLoadModuleLessons(modId);
   } catch (e) { /* ignore */ }
 }
@@ -2838,19 +3019,53 @@ async function cbDeleteLesson(modId, lessonId) {
   } catch (e) { /* ignore */ }
 }
 
+/* Resources */
+async function cbLoadModuleResources(modId) {
+  var container = $('mod-resources-' + modId);
+  if (!container) return;
+
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_resources?module_id=eq.' + modId + '&select=*', { headers: apiHeaders() });
+    var resources = await res.json();
+    if (!Array.isArray(resources) || resources.length === 0) { container.innerHTML = '<div style="font-size:0.78rem;color:#8a8a9a;font-style:italic;">No resources yet.</div>'; return; }
+
+    var html = '';
+    resources.forEach(function(r) {
+      html += '<div class="cb-bullet-item">'
+        + '<span style="font-size:0.7rem;font-weight:700;color:#c49a3c;background:#faf3e0;padding:2px 8px;border-radius:4px;min-width:40px;text-align:center;">' + escapeHtml(r.resource_type || 'Link') + '</span>'
+        + '<span style="flex:1;">' + escapeHtml(r.title || '') + '</span>'
+        + '<button onclick="cbDeleteResource(\'' + modId + '\',\'' + r.id + '\')" style="background:none;border:none;color:#c44;cursor:pointer;font-size:0.9rem;">&times;</button>'
+        + '</div>';
+    });
+    container.innerHTML = html;
+  } catch (e) { container.innerHTML = ''; }
+}
+
 async function cbAddResource(modId) {
-  var title = prompt('Resource title:');
-  if (!title) return;
-  var url = prompt('Resource URL:');
-  if (!url) return;
-  var type = prompt('Type (PDF, Video, Link, Audio, Image, File):', 'Link') || 'Link';
+  var typeEl = $('mod-res-type-' + modId);
+  var titleEl = $('mod-res-title-' + modId);
+  var urlEl = $('mod-res-url-' + modId);
+  var title = titleEl ? titleEl.value.trim() : '';
+  var url = urlEl ? urlEl.value.trim() : '';
+  var type = typeEl ? typeEl.value : 'Link';
+  if (!title || !url) return;
 
   try {
     await fetch(SUPABASE_URL + '/rest/v1/coach_course_resources', {
       method: 'POST', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
       body: JSON.stringify({ module_id: modId, title: title, file_url: url, resource_type: type })
     });
-    cbLoadModuleLessons(modId);
+    titleEl.value = '';
+    urlEl.value = '';
+    cbLoadModuleResources(modId);
+  } catch (e) { /* ignore */ }
+}
+
+async function cbDeleteResource(modId, resId) {
+  if (!confirm('Delete this resource?')) return;
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/coach_course_resources?id=eq.' + resId, { method: 'DELETE', headers: apiHeaders() });
+    cbLoadModuleResources(modId);
   } catch (e) { /* ignore */ }
 }
 
