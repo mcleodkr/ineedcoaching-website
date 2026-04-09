@@ -3275,7 +3275,7 @@ function cbRenderQuizSummary(lessonId, expanded) {
 
   var html = '<div style="background:#faf3e0;border-radius:10px;overflow:hidden;">'
     + '<div onclick="cbToggleQuizSummary(\'' + lessonId + '\')" style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;cursor:pointer;">'
-    + '<div style="font-weight:700;font-size:0.92rem;color:#1a3a52;">' + escapeHtml(q.title || 'Quiz') + '</div>'
+    + '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:0.6rem;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;background:#1a3a52;color:#c49a3c;padding:3px 8px;border-radius:4px;">Quiz</span><span style="font-weight:700;font-size:0.92rem;color:#1a3a52;">' + escapeHtml(q.title || 'Quiz') + '</span></div>'
     + '<span style="font-size:0.7rem;color:#8a8a9a;">' + (isOpen ? '&#9650;' : '&#9660;') + '</span>'
     + '</div>';
 
@@ -3610,10 +3610,12 @@ async function cbLoadModuleResources(modId) {
 
     var html = '';
     resources.forEach(function(r) {
-      html += '<div class="cb-bullet-item">'
-        + '<span style="font-size:0.7rem;font-weight:700;color:#c49a3c;background:#faf3e0;padding:2px 8px;border-radius:4px;min-width:40px;text-align:center;">' + escapeHtml(r.resource_type || 'Link') + '</span>'
-        + '<span style="flex:1;">' + escapeHtml(r.title || '') + '</span>'
-        + '<button onclick="cbDeleteResource(\'' + modId + '\',\'' + r.id + '\')" style="background:none;border:none;color:#c44;cursor:pointer;font-size:0.9rem;">&times;</button>'
+      var resUrl = r.file_url || r.url || '';
+      html += '<div class="cb-bullet-item" style="gap:8px;">'
+        + '<span style="font-size:0.65rem;font-weight:700;color:#c49a3c;border:1.5px solid #c49a3c;padding:2px 8px;border-radius:4px;min-width:36px;text-align:center;text-transform:uppercase;letter-spacing:0.04em;">' + escapeHtml(r.resource_type || 'Link') + '</span>'
+        + '<span style="flex:1;font-weight:600;">' + escapeHtml(r.title || cbCleanFilename(resUrl)) + '</span>'
+        + (resUrl ? '<a href="' + escapeHtml(resUrl) + '" target="_blank" style="font-size:0.72rem;color:#c49a3c;text-decoration:none;font-weight:700;white-space:nowrap;">View</a>' : '')
+        + '<button onclick="cbDeleteResource(\'' + modId + '\',\'' + r.id + '\')" style="font-size:0.72rem;color:#c44;background:none;border:none;cursor:pointer;font-weight:700;white-space:nowrap;">Remove</button>'
         + '</div>';
     });
     container.innerHTML = html;
@@ -3717,7 +3719,7 @@ async function cbAddResource(modId) {
 }
 
 async function cbDeleteResource(modId, resId) {
-  if (!confirm('Delete this resource?')) return;
+  if (!confirm('Remove this resource?')) return;
   try {
     await fetch(SUPABASE_URL + '/rest/v1/coach_course_resources?id=eq.' + resId, { method: 'DELETE', headers: apiHeaders() });
     cbLoadModuleResources(modId);
