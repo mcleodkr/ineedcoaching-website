@@ -64,8 +64,8 @@ h1 { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; font-weight: 7
   </div>
 
   <div id="success" class="success" style="display:none;">
-    <h2>Check-in submitted!</h2>
-    <p>Your coach will review your responses before your session. See you soon.</p>
+    <h2>Thank you!</h2>
+    <p>Your check-in has been submitted. Your coach will review it before your session.</p>
   </div>
 
   <div class="branding">
@@ -74,11 +74,6 @@ h1 { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; font-weight: 7
 </div>
 
 <script>
-var SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
-var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
-var API = SUPABASE_URL + '/rest/v1';
-var HEADERS = { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY, 'Content-Type': 'application/json' };
-
 function escapeHtml(str) {
   if (!str) return '';
   var d = document.createElement('div');
@@ -86,39 +81,39 @@ function escapeHtml(str) {
   return d.innerHTML;
 }
 
-var checkinData = null;
+var checkinId = null;
 var formQuestions = [];
 
 async function loadCheckin() {
   var params = new URLSearchParams(window.location.search);
   var token = params.get('token');
+  console.log('[Checkin] Token from URL:', token);
   if (!token) { showError(); return; }
 
   try {
-    var res = await fetch(API + '/coach_checkin_responses?token=eq.' + encodeURIComponent(token) + '&select=*', { headers: HEADERS });
+    console.log('[Checkin] Fetching via /api/get-checkin?token=' + token);
+    var res = await fetch('/api/get-checkin?token=' + encodeURIComponent(token));
     var data = await res.json();
-    if (!data || !data.length) { showError(); return; }
-    checkinData = data[0];
+    console.log('[Checkin] Server response:', res.status, data);
 
-    if (checkinData.submitted_at) { showError(); return; }
+    if (!res.ok || !data.questions || !data.questions.length) {
+      showError();
+      return;
+    }
 
-    var formRes = await fetch(API + '/coach_intake_forms?id=eq.' + checkinData.form_id + '&select=name,questions', { headers: HEADERS });
-    var forms = await formRes.json();
-    if (!forms || !forms.length) { showError(); return; }
+    checkinId = data.id;
+    formQuestions = data.questions;
 
-    var form = forms[0];
-    formQuestions = Array.isArray(form.questions) ? form.questions : [];
-    if (!formQuestions.length) { showError(); return; }
-
-    document.getElementById('form-title').textContent = form.name || 'Pre-Session Check-in';
-    if (checkinData.client_name) {
-      document.getElementById('form-subtitle').textContent = 'Hi ' + checkinData.client_name + ', take a few minutes to reflect before your session.';
+    document.getElementById('form-title').textContent = data.formName || 'Pre-Session Check-in';
+    if (data.clientName) {
+      document.getElementById('form-subtitle').textContent = 'Hi ' + data.clientName + ', take a few minutes to reflect before your session.';
     }
 
     renderQuestions();
     document.getElementById('loading').style.display = 'none';
     document.getElementById('form-view').style.display = '';
   } catch(e) {
+    console.error('[Checkin] Load error:', e);
     showError();
   }
 }
@@ -196,14 +191,17 @@ document.getElementById('submit-btn').addEventListener('click', async function()
   btn.textContent = 'Submitting...';
 
   try {
-    await fetch(API + '/coach_checkin_responses?id=eq.' + checkinData.id, {
-      method: 'PATCH',
-      headers: { ...HEADERS, 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ responses: responses, submitted_at: new Date().toISOString() })
+    var submitRes = await fetch('/api/submit-checkin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ checkinId: checkinId, responses: responses })
     });
+    var submitData = await submitRes.json();
+    if (!submitRes.ok) throw new Error(submitData.error || 'Failed to submit');
     document.getElementById('form-view').style.display = 'none';
     document.getElementById('success').style.display = '';
   } catch(e) {
+    console.error('[Checkin] Submit error:', e);
     alert('Something went wrong. Please try again.');
     btn.disabled = false;
     btn.textContent = 'Submit Check-in';
