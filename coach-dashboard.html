@@ -2726,6 +2726,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
         + '<div style="display:flex;gap:8px;align-items:center;">'
         + (s.zoom_link ? '<a href="' + escapeHtml(s.zoom_link) + '" target="_blank" rel="noopener noreferrer" style="font-size:0.78rem;color:var(--gold);text-decoration:none;font-weight:600;">&#127909; Link</a>' : '')
         + '<button class="session-notes-toggle" data-booking-id="' + s.id + '" data-client-email="' + escapeHtml(client.email) + '" style="font-size:0.75rem;color:var(--gold);background:none;border:1px solid var(--gold);padding:4px 10px;border-radius:50px;cursor:pointer;font-weight:600;">' + (note ? 'View Notes' : 'Add Notes') + '</button>'
+        + '<button class="session-process-btn" data-booking-id="' + s.id + '" data-client-email="' + escapeHtml(client.email) + '" data-client-name="' + escapeHtml(client.name) + '" data-session-date="' + escapeHtml(dateStr) + '" style="font-size:0.75rem;color:var(--ink);background:none;border:1px solid var(--ink);padding:4px 10px;border-radius:50px;cursor:pointer;font-weight:600;">Process Session</button>'
         + '</div></div>';
 
       // Notes area (hidden by default)
@@ -2737,7 +2738,9 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
       html += '<div id="notes-editor-' + s.id + '" style="' + (note ? 'display:none;' : '') + '">'
         + '<textarea id="notes-input-' + s.id + '" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:\'DM Sans\',\'Cabinet Grotesk\',sans-serif;font-size:0.88rem;color:var(--ink);background:var(--cream);min-height:80px;resize:vertical;">' + escapeHtml(note ? note.notes : '') + '</textarea>'
         + '<button class="session-notes-save pill-add-btn" data-booking-id="' + s.id + '" data-note-id="' + (note ? note.id : '') + '" data-client-email="' + escapeHtml(client.email) + '" style="margin-top:8px;padding:8px 16px;">Save Notes</button>'
-        + '</div></div></div>';
+        + '</div>'
+        + '<div class="session-processor" id="processor-' + s.id + '" style="display:none;margin-top:12px;padding-top:16px;border-top:1px solid var(--border);"></div>'
+        + '</div>';
     });
   }
   html += '</div>';
@@ -2907,6 +2910,145 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
         this.disabled = false;
         this.textContent = 'Save Notes';
       }
+    });
+  });
+
+  // Wire Process Session buttons
+  document.querySelectorAll('.session-process-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var bid = this.dataset.bookingId;
+      var clientEmail = this.dataset.clientEmail;
+      var clientName = this.dataset.clientName;
+      var sessionDate = this.dataset.sessionDate;
+      var panel = $('processor-' + bid);
+      if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+
+      // Step 1: Choose format
+      panel.innerHTML = '<div style="margin-bottom:16px;">'
+        + '<div style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.1rem;font-weight:700;color:var(--ink);margin-bottom:4px;">Process Session Notes</div>'
+        + '<div style="font-size:0.82rem;color:var(--muted);margin-bottom:16px;">Choose a coaching framework to structure your notes.</div>'
+        + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">'
+        // GROW
+        + '<div class="proc-format-card" data-format="grow" style="background:var(--white);border:2px solid var(--border);border-radius:8px;padding:20px;cursor:pointer;transition:border-color 0.2s;">'
+        + '<div style="font-family:\'Cormorant Garamond\',serif;font-weight:700;font-size:1rem;color:var(--ink);margin-bottom:6px;">GROW</div>'
+        + '<div style="font-size:0.75rem;color:var(--muted);line-height:1.5;">Goal &bull; Reality &bull; Options &bull; Way Forward</div></div>'
+        // CLEAR
+        + '<div class="proc-format-card" data-format="clear" style="background:var(--white);border:2px solid var(--border);border-radius:8px;padding:20px;cursor:pointer;transition:border-color 0.2s;">'
+        + '<div style="font-family:\'Cormorant Garamond\',serif;font-weight:700;font-size:1rem;color:var(--ink);margin-bottom:6px;">CLEAR</div>'
+        + '<div style="font-size:0.75rem;color:var(--muted);line-height:1.5;">Contract &bull; Listen &bull; Explore &bull; Action &bull; Review</div></div>'
+        // OSKAR
+        + '<div class="proc-format-card" data-format="oskar" style="background:var(--white);border:2px solid var(--border);border-radius:8px;padding:20px;cursor:pointer;transition:border-color 0.2s;">'
+        + '<div style="font-family:\'Cormorant Garamond\',serif;font-weight:700;font-size:1rem;color:var(--ink);margin-bottom:6px;">OSKAR</div>'
+        + '<div style="font-size:0.75rem;color:var(--muted);line-height:1.5;">Outcome &bull; Scaling &bull; Know-how &bull; Affirm & Action &bull; Review</div></div>'
+        + '</div></div>';
+      panel.style.display = '';
+
+      panel.querySelectorAll('.proc-format-card').forEach(function(card) {
+        card.addEventListener('click', function() {
+          var format = this.dataset.format;
+          // Highlight selected
+          panel.querySelectorAll('.proc-format-card').forEach(function(c) { c.style.borderColor = 'var(--border)'; });
+          this.style.borderColor = 'var(--gold)';
+
+          // Step 2: Paste transcript
+          var step2 = panel.querySelector('.proc-step2');
+          if (step2) step2.remove();
+          var step2Html = '<div class="proc-step2" style="margin-top:20px;">'
+            + '<div style="font-size:0.85rem;font-weight:700;color:var(--ink);margin-bottom:8px;">Paste your transcript or notes</div>'
+            + '<textarea id="proc-transcript-' + bid + '" style="width:100%;padding:16px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:var(--ink);background:var(--cream);min-height:140px;resize:vertical;" placeholder="Paste your session transcript, recording summary, or notes here..."></textarea>'
+            + '<button id="proc-generate-' + bid + '" style="margin-top:12px;padding:12px 28px;background:var(--gold);color:#fff;border:none;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.88rem;font-weight:700;cursor:pointer;transition:background 0.2s;">Generate Notes</button>'
+            + '<div id="proc-status-' + bid + '" style="margin-top:8px;font-size:0.82rem;color:var(--muted);"></div>'
+            + '</div>';
+          panel.insertAdjacentHTML('beforeend', step2Html);
+
+          $('proc-generate-' + bid).addEventListener('click', async function() {
+            var transcript = $('proc-transcript-' + bid).value.trim();
+            if (!transcript) { alert('Please paste your session transcript or notes.'); return; }
+            this.disabled = true;
+            this.textContent = 'Processing...';
+            $('proc-status-' + bid).textContent = 'Claude is analyzing your session...';
+
+            try {
+              var apiRes = await fetch('/api/process-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ transcript: transcript, format: format, clientName: clientName, sessionDate: sessionDate, coachId: coachProfile.id })
+              });
+              var result = await apiRes.json();
+              if (!apiRes.ok) throw new Error(result.error || 'Processing failed');
+
+              // Step 3: Review and save
+              var step3Html = '<div style="margin-top:20px;">'
+                + '<div style="font-family:\'Cormorant Garamond\',serif;font-weight:700;font-size:1rem;color:var(--ink);margin-bottom:16px;">' + escapeHtml(result.frameworkName) + ' Notes</div>';
+
+              (result.sections || []).forEach(function(section) {
+                var val = result.notes[section] || '';
+                step3Html += '<div style="margin-bottom:16px;">'
+                  + '<label style="display:block;font-size:0.78rem;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">' + escapeHtml(section) + '</label>'
+                  + '<textarea class="proc-section-input" data-section="' + escapeHtml(section) + '" style="width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:var(--ink);background:var(--white);min-height:70px;resize:vertical;line-height:1.6;">' + escapeHtml(val) + '</textarea>'
+                  + '</div>';
+              });
+
+              step3Html += '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:8px;">'
+                + '<button class="proc-save-btn" style="padding:12px 28px;background:var(--ink);color:#fff;border:none;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.88rem;font-weight:700;cursor:pointer;">Save Notes</button>'
+                + '<label style="display:flex;align-items:center;gap:8px;font-size:0.82rem;color:var(--muted);cursor:pointer;">'
+                + '<input type="checkbox" class="proc-share-toggle" style="width:16px;height:16px;accent-color:var(--gold);">'
+                + 'Share summary with client</label>'
+                + '</div></div>';
+
+              // Replace step 2 with step 3
+              var s2el = panel.querySelector('.proc-step2');
+              if (s2el) s2el.remove();
+              panel.insertAdjacentHTML('beforeend', step3Html);
+              $('proc-status-' + bid).textContent = '';
+
+              // Wire save
+              panel.querySelector('.proc-save-btn').addEventListener('click', async function() {
+                this.disabled = true;
+                this.textContent = 'Saving...';
+                var structuredNotes = {};
+                panel.querySelectorAll('.proc-section-input').forEach(function(input) {
+                  structuredNotes[input.dataset.section] = input.value;
+                });
+                var shareWithClient = panel.querySelector('.proc-share-toggle').checked;
+                var plainNotes = Object.entries(structuredNotes).map(function(e) { return e[0] + ':\n' + e[1]; }).join('\n\n');
+
+                try {
+                  var noteId = (notesByBooking[bid] && notesByBooking[bid].id) || '';
+                  if (noteId) {
+                    await supabasePatch('coach_session_notes', { id: 'eq.' + noteId }, {
+                      notes: plainNotes, format: format, structured_notes: structuredNotes, share_with_client: shareWithClient, updated_at: new Date().toISOString()
+                    });
+                  } else {
+                    await fetch(SUPABASE_URL + '/rest/v1/coach_session_notes', {
+                      method: 'POST',
+                      headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+                      body: JSON.stringify({
+                        booking_id: bid, coach_id: coachProfile.id, client_email: clientEmail,
+                        notes: plainNotes, format: format, structured_notes: structuredNotes, share_with_client: shareWithClient
+                      })
+                    });
+                  }
+                  this.textContent = 'Saved!';
+                  this.style.background = '#2d6a4f';
+                  setTimeout(function() { openClientDetail(clientEmail); }, 1200);
+                } catch(saveErr) {
+                  console.error('[ProcessSession] Save error:', saveErr);
+                  alert('Error saving notes.');
+                  this.disabled = false;
+                  this.textContent = 'Save Notes';
+                }
+              });
+
+            } catch(e) {
+              console.error('[ProcessSession] Error:', e);
+              $('proc-status-' + bid).innerHTML = '<span style="color:#c44;">Error: ' + escapeHtml(e.message) + '</span>';
+              this.disabled = false;
+              this.textContent = 'Generate Notes';
+            }
+          });
+        });
+      });
     });
   });
 
