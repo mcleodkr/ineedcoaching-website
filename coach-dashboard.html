@@ -3008,12 +3008,28 @@ async function cbLoadModuleLessons(modId) {
     var lessons = await res.json();
     if (!Array.isArray(lessons) || lessons.length === 0) { container.innerHTML = '<div style="font-size:0.78rem;color:#8a8a9a;font-style:italic;">No lessons yet. Add your first lesson below.</div>'; return; }
 
+    /*
+      SQL MIGRATION — run in Supabase SQL Editor:
+      CREATE TABLE IF NOT EXISTS coach_course_quizzes (
+        id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+        lesson_id uuid REFERENCES coach_course_lessons(id) ON DELETE CASCADE,
+        title text,
+        pass_score integer DEFAULT 80,
+        questions jsonb DEFAULT '[]',
+        pass_feedback text DEFAULT 'You have got this — your understanding of this material is strong. Keep moving forward.',
+        needs_review_feedback text DEFAULT 'You are building something real here. Take a moment to review the material and try again when you feel ready — there is no rush and no judgment.',
+        created_at timestamptz DEFAULT now()
+      );
+      ALTER TABLE coach_course_lessons ADD COLUMN IF NOT EXISTS drip_day integer;
+    */
+
     var html = '';
     lessons.forEach(function(l, idx) {
       var activeTab = l.content ? 'write' : (l.video_url ? 'video' : 'write');
+      var hasDrip = l.drip_day !== null && l.drip_day !== undefined && l.drip_day > 0;
 
       html += '<div class="cb-lesson-card">'
-        // Header: title + delete
+        // Header
         + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
         + '<span style="font-size:0.72rem;font-weight:800;color:#c49a3c;min-width:20px;">' + (idx + 1) + '</span>'
         + '<span style="flex:1;font-weight:700;font-size:0.92rem;color:#1a3a52;">' + escapeHtml(l.title) + '</span>'
@@ -3026,32 +3042,43 @@ async function cbLoadModuleLessons(modId) {
         + '</div>'
 
         // Content tabs
-        + '<div style="margin-bottom:8px;">'
+        + '<div style="margin-bottom:10px;">'
         + '<div style="display:flex;gap:4px;margin-bottom:8px;">'
         + '<button onclick="cbLessonTab(\'' + l.id + '\',\'write\')" class="cb-lesson-tab' + (activeTab === 'write' ? ' active' : '') + '" id="lt-write-' + l.id + '">Write</button>'
         + '<button onclick="cbLessonTab(\'' + l.id + '\',\'video\')" class="cb-lesson-tab' + (activeTab === 'video' ? ' active' : '') + '" id="lt-video-' + l.id + '">Video</button>'
         + '<button onclick="cbLessonTab(\'' + l.id + '\',\'upload\')" class="cb-lesson-tab" id="lt-upload-' + l.id + '">Upload File</button>'
         + '</div>'
-
-        // Write panel
-        + '<div id="lp-write-' + l.id + '" style="display:' + (activeTab === 'write' ? 'block' : 'none') + ';">'
-        + '<textarea class="cb-input cb-lesson-autosave" data-lesson-id="' + l.id + '" data-lesson-field="content" data-mod-id="' + modId + '" placeholder="Write your lesson content here..." style="font-size:0.82rem;min-height:100px;resize:vertical;">' + escapeHtml(l.content || '') + '</textarea>'
-        + '</div>'
-
-        // Video panel
-        + '<div id="lp-video-' + l.id + '" style="display:' + (activeTab === 'video' ? 'block' : 'none') + ';">'
-        + '<input type="text" class="cb-input cb-lesson-autosave" data-lesson-id="' + l.id + '" data-lesson-field="video_url" data-mod-id="' + modId + '" value="' + escapeHtml(l.video_url || '') + '" placeholder="Paste video URL (YouTube, Vimeo, Zoom recording...)" style="font-size:0.82rem;">'
-        + '</div>'
-
-        // Upload panel
-        + '<div id="lp-upload-' + l.id + '" style="display:none;">'
-        + '<input type="file" id="lesson-file-' + l.id + '" accept=".pdf,.mp4,.mp3,.jpg,.jpeg,.png,.doc,.docx,.ppt,.pptx" style="font-size:0.82rem;" onchange="cbUploadLessonFile(\'' + modId + '\',\'' + l.id + '\')">'
-        + '<div id="lesson-upload-status-' + l.id + '" style="font-size:0.78rem;margin-top:4px;"></div>'
+        + '<div id="lp-write-' + l.id + '" style="display:' + (activeTab === 'write' ? 'block' : 'none') + ';"><textarea class="cb-input cb-lesson-autosave" data-lesson-id="' + l.id + '" data-lesson-field="content" data-mod-id="' + modId + '" placeholder="Write your lesson content here..." style="font-size:0.82rem;min-height:100px;resize:vertical;">' + escapeHtml(l.content || '') + '</textarea></div>'
+        + '<div id="lp-video-' + l.id + '" style="display:' + (activeTab === 'video' ? 'block' : 'none') + ';"><input type="text" class="cb-input cb-lesson-autosave" data-lesson-id="' + l.id + '" data-lesson-field="video_url" data-mod-id="' + modId + '" value="' + escapeHtml(l.video_url || '') + '" placeholder="Paste video URL (YouTube, Vimeo, Zoom recording...)" style="font-size:0.82rem;"></div>'
+        + '<div id="lp-upload-' + l.id + '" style="display:none;"><input type="file" id="lesson-file-' + l.id + '" accept=".pdf,.mp4,.mp3,.jpg,.jpeg,.png,.doc,.docx,.ppt,.pptx" style="font-size:0.82rem;" onchange="cbUploadLessonFile(\'' + modId + '\',\'' + l.id + '\')"><div id="lesson-upload-status-' + l.id + '" style="font-size:0.78rem;margin-top:4px;"></div>'
         + (l.video_url && l.video_url.includes('/storage/') ? '<div style="font-size:0.75rem;color:#4a7c59;margin-top:4px;">File attached: ' + escapeHtml(l.video_url.split('/').pop()) + '</div>' : '')
+        + '</div></div>'
+
+        // Drip scheduling
+        + '<div style="padding:10px 0;border-top:1px solid #f0ede6;">'
+        + '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.82rem;font-weight:600;color:#1a3a52;">'
+        + '<input type="checkbox" id="drip-toggle-' + l.id + '" ' + (hasDrip ? 'checked' : '') + ' onchange="cbToggleDrip(\'' + l.id + '\')" style="width:auto;margin:0;accent-color:#c49a3c;">'
+        + ' Release on a specific day</label>'
+        + '<div id="drip-fields-' + l.id + '" style="display:' + (hasDrip ? 'flex' : 'none') + ';align-items:center;gap:8px;margin-top:8px;padding-left:26px;">'
+        + '<span style="font-size:0.82rem;color:#1a3a52;">Release on day</span>'
+        + '<input type="number" id="drip-day-' + l.id + '" value="' + (l.drip_day || '') + '" min="1" style="width:60px;padding:6px 10px;border:1.5px solid #e0ddd5;border-radius:6px;font-family:inherit;font-size:0.82rem;text-align:center;outline:none;" onblur="cbSaveDrip(\'' + l.id + '\')">'
+        + '<span style="font-size:0.82rem;color:#1a3a52;">of enrollment</span>'
+        + '</div>'
+        + '<div style="font-size:0.68rem;color:#8a8a9a;margin-top:4px;padding-left:26px;">Students enrolled on Day 1 will see this lesson on the day you choose. Leave unchecked to make available immediately.</div>'
         + '</div>'
 
+        // Quiz section
+        + '<div style="padding:10px 0;border-top:1px solid #f0ede6;">'
+        + '<div id="quiz-area-' + l.id + '"><div style="font-size:0.82rem;color:#8a8a9a;">Loading quiz...</div></div>'
+        + '<div id="quiz-buttons-' + l.id + '" style="display:flex;gap:8px;margin-top:8px;">'
+        + '<button onclick="cbShowQuizBuilder(\'' + l.id + '\')" style="padding:7px 16px;background:#fff;color:#c49a3c;border:1.5px solid #c49a3c;border-radius:6px;font-family:inherit;font-size:0.78rem;font-weight:700;cursor:pointer;">Add Quiz</button>'
+        + '<button onclick="cbShowAIQuiz(\'' + l.id + '\')" style="padding:7px 16px;background:#fff;color:#1a3a52;border:1.5px solid #1a3a52;border-radius:6px;font-family:inherit;font-size:0.78rem;font-weight:700;cursor:pointer;">&#10022; AI Build Quiz</button>'
         + '</div>'
-        + '</div>';
+        + '<div id="quiz-builder-' + l.id + '" style="display:none;margin-top:12px;"></div>'
+        + '<div id="ai-quiz-' + l.id + '" style="display:none;margin-top:12px;"></div>'
+        + '</div>'
+
+        + '</div>'; // lesson card
     });
     container.innerHTML = html;
 
@@ -3068,6 +3095,9 @@ async function cbLoadModuleLessons(modId) {
         }).catch(function(e) { console.error('Lesson autosave error:', e); });
       });
     });
+
+    // Load quizzes for each lesson
+    lessons.forEach(function(l) { cbLoadQuiz(l.id); });
   } catch (e) { console.error('Load lessons error:', e); container.innerHTML = ''; }
 }
 
@@ -3156,6 +3186,298 @@ async function cbUploadLessonFile(modId, lessonId) {
   } catch (e) {
     console.error('Lesson upload error:', e);
     if (statusEl) { statusEl.textContent = 'Upload error: ' + e.message; statusEl.style.color = '#c44'; }
+  }
+}
+
+/* Drip Scheduling */
+function cbToggleDrip(lessonId) {
+  var toggle = $('drip-toggle-' + lessonId);
+  var fields = $('drip-fields-' + lessonId);
+  if (fields) fields.style.display = toggle && toggle.checked ? 'flex' : 'none';
+  if (toggle && !toggle.checked) {
+    fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?id=eq.' + lessonId, {
+      method: 'PATCH', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ drip_day: null })
+    }).catch(function() {});
+  }
+}
+
+function cbSaveDrip(lessonId) {
+  var input = $('drip-day-' + lessonId);
+  var val = input ? parseInt(input.value) || null : null;
+  fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?id=eq.' + lessonId, {
+    method: 'PATCH', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ drip_day: val })
+  }).catch(function(e) { console.error('Save drip error:', e); });
+}
+
+/* Quiz */
+var quizData = {};
+
+async function cbLoadQuiz(lessonId) {
+  var area = $('quiz-area-' + lessonId);
+  if (!area) return;
+
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_quizzes?lesson_id=eq.' + lessonId + '&select=*&limit=1', { headers: apiHeaders() });
+    var quizzes = await res.json();
+    if (!Array.isArray(quizzes) || quizzes.length === 0) {
+      area.innerHTML = '<div style="font-size:0.78rem;color:#8a8a9a;font-style:italic;">No quiz yet.</div>';
+      return;
+    }
+    var q = quizzes[0];
+    quizData[lessonId] = q;
+    var questions = Array.isArray(q.questions) ? q.questions : [];
+    area.innerHTML = '<div style="background:#faf3e0;border-radius:8px;padding:12px 14px;">'
+      + '<div style="font-weight:700;font-size:0.85rem;color:#1a3a52;">' + escapeHtml(q.title || 'Quiz') + '</div>'
+      + '<div style="font-size:0.75rem;color:#8a8a9a;">' + questions.length + ' question' + (questions.length !== 1 ? 's' : '') + ' &middot; Pass: ' + (q.pass_score || 80) + '%</div>'
+      + '</div>';
+    var btns = $('quiz-buttons-' + lessonId);
+    if (btns) btns.innerHTML = '<button onclick="cbShowQuizBuilder(\'' + lessonId + '\')" style="padding:7px 16px;background:#fff;color:#c49a3c;border:1.5px solid #c49a3c;border-radius:6px;font-family:inherit;font-size:0.78rem;font-weight:700;cursor:pointer;">Edit Quiz</button>';
+  } catch (e) {
+    area.innerHTML = '';
+  }
+}
+
+function cbShowQuizBuilder(lessonId) {
+  var container = $('quiz-builder-' + lessonId);
+  if (!container) return;
+  container.style.display = 'block';
+  var ai = $('ai-quiz-' + lessonId);
+  if (ai) ai.style.display = 'none';
+
+  var q = quizData[lessonId] || { title: '', pass_score: 80, questions: [], pass_feedback: "You've got this \u2014 your understanding of this material is strong. Keep moving forward.", needs_review_feedback: "You're building something real here. Take a moment to review the material and try again when you feel ready \u2014 there is no rush and no judgment." };
+
+  var questions = Array.isArray(q.questions) ? q.questions : [];
+
+  var html = '<div class="cb-section" style="margin-bottom:0;">'
+    + '<div class="cb-section-title">Quiz Builder</div>'
+    + '<div class="cb-field"><label class="cb-label">Quiz Title</label><input type="text" class="cb-input" id="qb-title-' + lessonId + '" value="' + escapeHtml(q.title || '') + '" placeholder="e.g. Module Check-In"></div>'
+    + '<div class="cb-field"><label class="cb-label">Pass Score (%)</label><input type="number" class="cb-input" id="qb-pass-' + lessonId + '" value="' + (q.pass_score || 80) + '" min="1" max="100" style="width:100px;"></div>'
+    + '<div id="qb-questions-' + lessonId + '"></div>'
+    + '<button onclick="cbAddQuestion(\'' + lessonId + '\')" style="margin:10px 0;padding:8px 16px;background:#fff;color:#c49a3c;border:1.5px dashed #c49a3c;border-radius:6px;font-family:inherit;font-size:0.78rem;font-weight:700;cursor:pointer;width:100%;">+ Add Question</button>'
+    + '<div class="cb-field"><label class="cb-label">Pass Feedback</label><textarea class="cb-input" id="qb-pass-fb-' + lessonId + '" style="min-height:60px;font-size:0.82rem;resize:vertical;">' + escapeHtml(q.pass_feedback || '') + '</textarea></div>'
+    + '<div class="cb-field"><label class="cb-label">Needs Review Feedback</label><textarea class="cb-input" id="qb-review-fb-' + lessonId + '" style="min-height:60px;font-size:0.82rem;resize:vertical;">' + escapeHtml(q.needs_review_feedback || '') + '</textarea></div>'
+    + '<button onclick="cbSaveQuiz(\'' + lessonId + '\')" class="cb-btn-next" style="width:100%;margin-top:8px;">Save Quiz</button>'
+    + '<div id="qb-msg-' + lessonId + '" style="font-size:0.82rem;margin-top:6px;"></div>'
+    + '</div>';
+
+  container.innerHTML = html;
+
+  // Render existing questions
+  if (!quizData[lessonId]) quizData[lessonId] = q;
+  if (!quizData[lessonId]._questions) quizData[lessonId]._questions = questions.slice();
+  cbRenderQuestions(lessonId);
+}
+
+function cbRenderQuestions(lessonId) {
+  var container = $('qb-questions-' + lessonId);
+  if (!container) return;
+  var questions = quizData[lessonId]._questions || [];
+
+  var html = '';
+  questions.forEach(function(q, qi) {
+    html += '<div style="background:#f7f4ee;border-radius:8px;padding:14px;margin-bottom:8px;border-left:3px solid #c49a3c;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+      + '<span style="font-size:0.72rem;font-weight:800;color:#c49a3c;">Question ' + (qi + 1) + '</span>'
+      + '<div style="display:flex;gap:6px;align-items:center;">'
+      + '<select onchange="cbChangeQType(\'' + lessonId + '\',' + qi + ',this.value)" style="padding:4px 8px;border:1px solid #e0ddd5;border-radius:4px;font-family:inherit;font-size:0.72rem;">'
+      + '<option value="multiple_choice"' + (q.type === 'multiple_choice' ? ' selected' : '') + '>Multiple Choice</option>'
+      + '<option value="true_false"' + (q.type === 'true_false' ? ' selected' : '') + '>True/False</option>'
+      + '<option value="short_answer"' + (q.type === 'short_answer' ? ' selected' : '') + '>Short Answer</option>'
+      + '</select>'
+      + '<button onclick="cbRemoveQuestion(\'' + lessonId + '\',' + qi + ')" style="background:none;border:none;color:#c44;cursor:pointer;font-size:0.85rem;">&times;</button>'
+      + '</div></div>'
+      + '<input type="text" class="cb-input" value="' + escapeHtml(q.question || '') + '" placeholder="Question text" onblur="cbUpdateQ(\'' + lessonId + '\',' + qi + ',\'question\',this.value)" style="font-size:0.82rem;margin-bottom:8px;">';
+
+    if (q.type === 'multiple_choice') {
+      var opts = Array.isArray(q.options) ? q.options : ['', '', '', ''];
+      for (var oi = 0; oi < 4; oi++) {
+        html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
+          + '<input type="radio" name="qcorrect-' + lessonId + '-' + qi + '" ' + (q.correct_answer === (opts[oi] || '') ? 'checked' : '') + ' onchange="cbUpdateQ(\'' + lessonId + '\',' + qi + ',\'correct_answer\',document.getElementById(\'qopt-' + lessonId + '-' + qi + '-' + oi + '\').value)" style="width:auto;margin:0;accent-color:#c49a3c;">'
+          + '<input type="text" class="cb-input" id="qopt-' + lessonId + '-' + qi + '-' + oi + '" value="' + escapeHtml(opts[oi] || '') + '" placeholder="Option ' + String.fromCharCode(65 + oi) + '" onblur="cbUpdateQOpt(\'' + lessonId + '\',' + qi + ',' + oi + ',this.value)" style="font-size:0.78rem;padding:7px 10px;">'
+          + '</div>';
+      }
+    } else if (q.type === 'true_false') {
+      html += '<div style="display:flex;gap:12px;margin-bottom:4px;">'
+        + '<label style="display:flex;align-items:center;gap:4px;font-size:0.82rem;cursor:pointer;"><input type="radio" name="qcorrect-' + lessonId + '-' + qi + '" ' + (q.correct_answer === 'True' ? 'checked' : '') + ' onchange="cbUpdateQ(\'' + lessonId + '\',' + qi + ',\'correct_answer\',\'True\')" style="width:auto;margin:0;accent-color:#c49a3c;"> True</label>'
+        + '<label style="display:flex;align-items:center;gap:4px;font-size:0.82rem;cursor:pointer;"><input type="radio" name="qcorrect-' + lessonId + '-' + qi + '" ' + (q.correct_answer === 'False' ? 'checked' : '') + ' onchange="cbUpdateQ(\'' + lessonId + '\',' + qi + ',\'correct_answer\',\'False\')" style="width:auto;margin:0;accent-color:#c49a3c;"> False</label>'
+        + '</div>';
+    } else {
+      html += '<input type="text" class="cb-input" value="' + escapeHtml(q.correct_answer || '') + '" placeholder="Correct answer" onblur="cbUpdateQ(\'' + lessonId + '\',' + qi + ',\'correct_answer\',this.value)" style="font-size:0.78rem;padding:7px 10px;">';
+    }
+
+    html += '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function cbAddQuestion(lessonId) {
+  if (!quizData[lessonId]) quizData[lessonId] = { _questions: [] };
+  if (!quizData[lessonId]._questions) quizData[lessonId]._questions = [];
+  quizData[lessonId]._questions.push({ type: 'multiple_choice', question: '', options: ['', '', '', ''], correct_answer: '' });
+  cbRenderQuestions(lessonId);
+}
+
+function cbRemoveQuestion(lessonId, idx) {
+  quizData[lessonId]._questions.splice(idx, 1);
+  cbRenderQuestions(lessonId);
+}
+
+function cbChangeQType(lessonId, idx, type) {
+  var q = quizData[lessonId]._questions[idx];
+  q.type = type;
+  if (type === 'true_false') { q.options = ['True', 'False']; q.correct_answer = 'True'; }
+  else if (type === 'multiple_choice') { q.options = ['', '', '', '']; q.correct_answer = ''; }
+  else { q.options = []; q.correct_answer = ''; }
+  cbRenderQuestions(lessonId);
+}
+
+function cbUpdateQ(lessonId, idx, field, value) {
+  quizData[lessonId]._questions[idx][field] = value;
+}
+
+function cbUpdateQOpt(lessonId, qi, oi, value) {
+  quizData[lessonId]._questions[qi].options[oi] = value;
+}
+
+async function cbSaveQuiz(lessonId) {
+  var msg = $('qb-msg-' + lessonId);
+  var title = $('qb-title-' + lessonId);
+  var passScore = $('qb-pass-' + lessonId);
+  var passFb = $('qb-pass-fb-' + lessonId);
+  var reviewFb = $('qb-review-fb-' + lessonId);
+
+  var payload = {
+    lesson_id: lessonId,
+    title: title ? title.value.trim() : 'Quiz',
+    pass_score: passScore ? parseInt(passScore.value) || 80 : 80,
+    questions: quizData[lessonId]._questions || [],
+    pass_feedback: passFb ? passFb.value.trim() : '',
+    needs_review_feedback: reviewFb ? reviewFb.value.trim() : ''
+  };
+
+  var existing = quizData[lessonId] && quizData[lessonId].id;
+  var url = existing
+    ? SUPABASE_URL + '/rest/v1/coach_course_quizzes?id=eq.' + existing
+    : SUPABASE_URL + '/rest/v1/coach_course_quizzes';
+  var method = existing ? 'PATCH' : 'POST';
+
+  try {
+    var res = await fetch(url, { method: method, headers: { ...apiHeaders(), 'Prefer': 'return=representation' }, body: JSON.stringify(payload) });
+    if (res.ok) {
+      var saved = await res.json();
+      if (Array.isArray(saved) && saved.length) quizData[lessonId] = saved[0];
+      quizData[lessonId]._questions = payload.questions;
+      if (msg) { msg.textContent = 'Quiz saved.'; msg.style.color = '#4a7c59'; }
+      cbLoadQuiz(lessonId);
+    } else {
+      var err = await res.json().catch(function() { return {}; });
+      console.error('Quiz save failed:', res.status, err);
+      if (msg) { msg.textContent = 'Error saving quiz.'; msg.style.color = '#c44'; }
+    }
+  } catch (e) {
+    console.error('Quiz save error:', e);
+    if (msg) { msg.textContent = 'Network error.'; msg.style.color = '#c44'; }
+  }
+}
+
+/* AI Quiz */
+function cbShowAIQuiz(lessonId) {
+  var container = $('ai-quiz-' + lessonId);
+  if (!container) return;
+  container.style.display = 'block';
+  var builder = $('quiz-builder-' + lessonId);
+  if (builder) builder.style.display = 'none';
+
+  container.innerHTML = '<div class="cb-section" style="margin-bottom:0;">'
+    + '<div class="cb-section-title">&#10022; AI Quiz Generator</div>'
+    + '<div style="font-size:0.82rem;color:#8a8a9a;margin-bottom:12px;">Paste your lesson content, objectives, or upload a PDF and we will generate quiz questions for you.</div>'
+    + '<textarea class="cb-input" id="ai-quiz-content-' + lessonId + '" placeholder="Paste lesson content here..." style="min-height:120px;font-size:0.82rem;resize:vertical;margin-bottom:8px;"></textarea>'
+    + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">'
+    + '<span style="font-size:0.78rem;color:#8a8a9a;">Or upload a PDF:</span>'
+    + '<input type="file" id="ai-quiz-file-' + lessonId + '" accept=".pdf,.txt,.doc,.docx" style="font-size:0.78rem;">'
+    + '</div>'
+    + '<button onclick="cbGenerateAIQuiz(\'' + lessonId + '\')" class="cb-btn-next" style="width:100%;">Generate Quiz</button>'
+    + '<div id="ai-quiz-status-' + lessonId + '" style="font-size:0.82rem;margin-top:8px;"></div>'
+    + '</div>';
+}
+
+async function cbGenerateAIQuiz(lessonId) {
+  var statusEl = $('ai-quiz-status-' + lessonId);
+  var contentEl = $('ai-quiz-content-' + lessonId);
+  var fileEl = $('ai-quiz-file-' + lessonId);
+  var content = contentEl ? contentEl.value.trim() : '';
+
+  // Try reading file
+  if (!content && fileEl && fileEl.files[0]) {
+    try {
+      content = await new Promise(function(resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function() { resolve(reader.result); };
+        reader.onerror = reject;
+        reader.readAsText(fileEl.files[0]);
+      });
+    } catch (e) { content = ''; }
+  }
+
+  if (!content) {
+    if (statusEl) { statusEl.textContent = 'Please paste content or upload a file.'; statusEl.style.color = '#c44'; }
+    return;
+  }
+
+  if (statusEl) { statusEl.textContent = 'Reviewing your content and building quiz questions...'; statusEl.style.color = '#8a8a9a'; }
+
+  try {
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': '', 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: 'You are a coaching education expert. Generate quiz questions from the provided content. Return ONLY valid JSON with this structure: { "title": "string", "questions": [ { "type": "multiple_choice" or "true_false", "question": "string", "options": ["string"] (for mc, 4 options), "correct_answer": "string", "explanation": "string" } ] }. Generate 5-8 questions. Make them thoughtful and practical, not just factual recall.',
+        messages: [{ role: 'user', content: 'Generate quiz questions from this content:\n\n' + content.substring(0, 4000) }]
+      })
+    });
+
+    if (!res.ok) {
+      var errText = await res.text();
+      console.error('AI quiz generation failed:', res.status, errText);
+      if (statusEl) { statusEl.textContent = 'AI generation failed. Try the manual quiz builder instead.'; statusEl.style.color = '#c44'; }
+      return;
+    }
+
+    var data = await res.json();
+    var text = data.content && data.content[0] ? data.content[0].text : '';
+
+    // Extract JSON from response
+    var jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      if (statusEl) { statusEl.textContent = 'Could not parse AI response. Try the manual builder.'; statusEl.style.color = '#c44'; }
+      return;
+    }
+
+    var quizJson = JSON.parse(jsonMatch[0]);
+    var questions = Array.isArray(quizJson.questions) ? quizJson.questions : [];
+
+    // Populate quiz data and show builder
+    quizData[lessonId] = {
+      title: quizJson.title || 'Quiz',
+      pass_score: 80,
+      questions: questions,
+      pass_feedback: "You've got this \u2014 your understanding of this material is strong. Keep moving forward.",
+      needs_review_feedback: "You're building something real here. Take a moment to review the material and try again when you feel ready \u2014 there is no rush and no judgment.",
+      _questions: questions
+    };
+
+    if (statusEl) { statusEl.innerHTML = '<span style="color:#4a7c59;">&#10003; Generated ' + questions.length + ' questions. Review and edit below, then save.</span>'; }
+
+    // Show the manual builder with populated data
+    setTimeout(function() { cbShowQuizBuilder(lessonId); }, 300);
+
+  } catch (e) {
+    console.error('AI quiz error:', e);
+    if (statusEl) { statusEl.textContent = 'Error: ' + e.message + '. Try the manual builder.'; statusEl.style.color = '#c44'; }
   }
 }
 
