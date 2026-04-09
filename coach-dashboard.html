@@ -2098,425 +2098,695 @@ async function addGoal() {
 }
 
 /* ================================================
-   COURSES TAB
+   COURSES TAB — 4-Step Builder
    ================================================ */
 var dashCourses = [];
-var managingCourseId = null;
-var createCourseLearnItems = [];
-var createCourseSyllabusModules = [];
+var currentCourseId = null;
+var courseStep = 1;
+var courseData = {};
+var courseObjectives = [];
+var courseModules = [];
 
 async function loadDashCourses() {
   var loading = $('courses-loading');
   var content = $('courses-content');
   loading.style.display = 'flex';
   content.classList.add('hidden');
+  currentCourseId = null;
+  courseStep = 1;
+  courseData = {};
+  courseObjectives = [];
 
   try {
-    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_courses?coach_id=eq.' + coachProfile.id + '&select=*&order=created_at.desc', {
-      headers: apiHeaders()
-    });
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_courses?coach_id=eq.' + coachProfile.id + '&select=*&order=created_at.desc', { headers: apiHeaders() });
     dashCourses = await res.json();
     if (!Array.isArray(dashCourses)) dashCourses = [];
-  } catch (e) {
-    dashCourses = [];
-  }
+  } catch (e) { dashCourses = []; }
 
-  // Fetch enrollment counts
   for (var i = 0; i < dashCourses.length; i++) {
     try {
-      var cRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_enrollments?course_id=eq.' + dashCourses[i].id + '&select=id', {
-        headers: apiHeaders()
-      });
+      var cRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_enrollments?course_id=eq.' + dashCourses[i].id + '&select=id', { headers: apiHeaders() });
       var enrolls = await cRes.json();
       dashCourses[i]._enrollCount = Array.isArray(enrolls) ? enrolls.length : 0;
-    } catch (e) {
-      dashCourses[i]._enrollCount = 0;
-    }
+    } catch (e) { dashCourses[i]._enrollCount = 0; }
   }
 
   loading.style.display = 'none';
   content.classList.remove('hidden');
-  renderDashCourses();
+  renderCourseList();
 }
 
-function renderDashCourses() {
+/* ── COURSE LIST VIEW ── */
+function renderCourseList() {
   var content = $('courses-content');
-  var html = '';
+  var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">'
+    + '<div style="font-family:Playfair Display,serif;font-size:1.2rem;font-weight:700;color:var(--ink);">Your Courses</div>'
+    + '<a href="#" onclick="event.preventDefault();openCourseBuilder(null)" class="prop-new">+ Create New Course</a>'
+    + '</div>';
 
-  html += '<button class="add-service-btn" onclick="toggleCreateCourseForm()" style="margin-bottom:18px;">+ Create Course</button>';
-
-  // Create Course Form
-  html += '<div id="create-course-form" class="create-course-form">';
-  html += '<h3>Create a New Course</h3>';
-  html += '<div class="form-row">';
-  html += '<div class="form-group"><label>Title</label><input type="text" id="cc-title" placeholder="Course title" oninput="autoGenerateSlug()"></div>';
-  html += '<div class="form-group"><label>Course Web Address</label><input type="text" id="cc-slug" placeholder="my-course-slug" oninput="updateSlugPreview()"></div>';
-  html += '</div>';
-  html += '<div style="margin:-8px 0 16px;"><span style="font-size:0.78rem;color:var(--muted);">This is the link you\'ll share with clients to enroll.</span><div id="slug-preview" style="font-size:0.78rem;color:var(--muted);margin-top:4px;">Your course will be available at: <span style="color:var(--gold);font-weight:600;">ineedcoaching.org/coach/' + escapeHtml(coachProfile.slug || '') + '/courses/<span id="slug-preview-val">...</span></span></div></div>';
-  html += '<div class="form-group"><label>Description</label><textarea id="cc-desc" placeholder="What is this course about?"></textarea></div>';
-  html += '<div class="form-row">';
-  html += '<div class="form-group"><label>Price ($)</label><input type="number" id="cc-price" placeholder="0" min="0" step="1"></div>';
-  html += '<div class="form-group"><label>Format</label><select id="cc-format"><option value="self-paced">Self-paced</option><option value="cohort">Cohort</option><option value="masterclass">Masterclass</option></select></div>';
-  html += '</div>';
-  html += '<div class="form-group"><label>Who It\'s For</label><textarea id="cc-who" placeholder="Describe the ideal student..." style="min-height:80px;"></textarea></div>';
-
-  // What you'll learn
-  html += '<div class="form-group"><label>What You\'ll Learn</label>';
-  html += '<div id="cc-learn-list" class="learn-items-list"></div>';
-  html += '<div class="pill-add-row"><input type="text" id="cc-learn-input" placeholder="Add a learning outcome..."><button class="pill-add-btn" onclick="addLearnItem()">Add</button></div>';
-  html += '</div>';
-
-  // Syllabus
-  html += '<div class="form-group"><label>Syllabus Modules</label>';
-  html += '<div id="cc-syll-list" class="syllabus-modules-list"></div>';
-  html += '<div style="display:flex;gap:8px;margin-bottom:8px;"><input type="text" id="cc-syll-title" placeholder="Module title" style="flex:1;padding:8px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:\'Cabinet Grotesk\',sans-serif;font-size:0.85rem;"><input type="text" id="cc-syll-desc" placeholder="Module description" style="flex:2;padding:8px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:\'Cabinet Grotesk\',sans-serif;font-size:0.85rem;"><button class="pill-add-btn" onclick="addSyllabusModule()">Add</button></div>';
-  html += '</div>';
-
-  html += '<button class="save-btn" onclick="submitCreateCourse()">Create Course</button>';
-  html += '<span class="save-msg" id="cc-msg"></span>';
-  html += '</div>';
-
-  // Course list
   if (dashCourses.length === 0) {
-    html += '<div class="empty-state"><p>No courses yet. Create your first course above.</p></div>';
+    html += '<div class="empty-state" style="padding:48px 24px;text-align:center;">'
+      + '<p style="font-size:0.95rem;color:var(--muted);margin-bottom:16px;">You have not created any courses yet.<br>Create your first course to start enrolling students.</p>'
+      + '<a href="#" onclick="event.preventDefault();openCourseBuilder(null)" class="prop-new">Create Your First Course</a>'
+      + '</div>';
   } else {
+    html += '<div class="prop-grid">';
     dashCourses.forEach(function(c) {
-      var formatMap = { 'self-paced': 'Self-paced', 'cohort': 'Cohort', 'masterclass': 'Masterclass' };
-      html += '<div class="course-mgmt-card" id="course-card-' + c.id + '">';
-      html += '<div class="course-mgmt-header">';
-      html += '<h3>' + escapeHtml(c.title || 'Untitled') + '</h3>';
-      html += '<div class="course-badges">';
-      html += '<span class="course-badge ' + (c.status === 'active' ? 'badge-active' : 'badge-draft') + '">' + escapeHtml(c.status || 'draft') + '</span>';
-      html += '<span class="course-badge badge-format">' + escapeHtml(formatMap[c.format] || c.format || 'Course') + '</span>';
-      html += '</div></div>';
-      html += '<div class="course-mgmt-meta">' + (c._enrollCount || 0) + ' enrollment' + (c._enrollCount !== 1 ? 's' : '') + '</div>';
-      html += '<button class="manage-btn" onclick="toggleManageCourse(\'' + c.id + '\')">Manage Lessons</button>';
+      var typeMap = { 'self-paced': 'Self-Paced', 'live-virtual': 'Live Virtual', 'in-person': 'In-Person', 'hybrid': 'Hybrid', 'cohort': 'Cohort', 'masterclass': 'Masterclass' };
+      var typeLabel = typeMap[c.course_type] || typeMap[c.format] || c.course_type || c.format || 'Course';
+      var statusBadge = c.status === 'published' || c.status === 'active'
+        ? 'prop-badge-accepted' : 'prop-badge-draft';
+      var statusLabel = c.status === 'published' || c.status === 'active' ? 'Published' : 'Draft';
+      var initial = (c.title || 'C').charAt(0).toUpperCase();
 
-      // Lesson builder (hidden by default)
-      html += '<div class="lesson-builder" id="lb-' + c.id + '">';
-      html += '<div id="lb-lessons-' + c.id + '">Loading lessons...</div>';
-
-      // Add lesson form
-      html += '<div class="add-lesson-form">';
-      html += '<div class="form-group"><label>Lesson Title</label><input type="text" id="lb-title-' + c.id + '" placeholder="Lesson title"></div>';
-      html += '<div class="form-group"><label>Content (HTML)</label><textarea id="lb-content-' + c.id + '" placeholder="Lesson content..."></textarea></div>';
-      html += '<div class="form-group"><label>Video URL</label><input type="text" id="lb-video-' + c.id + '" placeholder="https://youtube.com/embed/..."></div>';
-      html += '<button class="save-btn" style="padding:10px 22px;font-size:0.85rem;" onclick="addLesson(\'' + c.id + '\')">Add Lesson</button>';
-      html += '<span class="save-msg" id="lb-msg-' + c.id + '"></span>';
-      html += '</div>';
-
-      // Certificate template
-      html += '<div class="cert-template-row">';
-      html += '<label>Certificate Template</label>';
-      html += '<select onchange="updateCertTemplate(\'' + c.id + '\', this.value)">';
-      var templates = ['elegant', 'minimal', 'bold', 'warm'];
-      templates.forEach(function(t) {
-        html += '<option value="' + t + '"' + (c.certificate_template === t ? ' selected' : '') + '>' + t.charAt(0).toUpperCase() + t.slice(1) + '</option>';
-      });
-      html += '</select></div>';
-
-      html += '</div>'; // lesson-builder
-      html += '</div>'; // course-mgmt-card
+      html += '<div class="prop-card" onclick="openCourseBuilder(\'' + c.id + '\')" style="grid-template-columns:auto 1fr auto auto;">'
+        + '<div style="width:48px;height:48px;border-radius:50%;background:#1a3a52;display:flex;align-items:center;justify-content:center;font-family:Playfair Display,serif;font-size:1.2rem;font-weight:900;color:#c49a3c;flex-shrink:0;">' + escapeHtml(initial) + '</div>'
+        + '<div class="prop-left">'
+        + '<div class="prop-company">' + escapeHtml(c.title || 'Untitled') + '</div>'
+        + '<div class="prop-contact">' + escapeHtml(typeLabel) + '</div>'
+        + '<div style="font-size:0.78rem;color:var(--muted);margin-top:4px;">' + (c._enrollCount || 0) + ' enrollment' + (c._enrollCount !== 1 ? 's' : '') + '</div>'
+        + '</div>'
+        + '<div class="prop-center">'
+        + (c.price ? '<div class="prop-amount">$' + Number(c.price).toLocaleString() + '</div>' : '')
+        + '</div>'
+        + '<div class="prop-right">'
+        + '<span class="prop-badge ' + statusBadge + '">' + escapeHtml(statusLabel) + '</span>'
+        + '<div class="prop-actions">'
+        + '<a href="#" onclick="event.preventDefault();event.stopPropagation();openCourseBuilder(\'' + c.id + '\')" class="prop-btn prop-btn-edit">Edit</a>'
+        + '<button class="prop-btn prop-btn-delete" onclick="event.stopPropagation();deleteCourse(\'' + c.id + '\')">Delete</button>'
+        + '</div>'
+        + '</div>'
+        + '</div>';
     });
+    html += '</div>';
   }
-
   content.innerHTML = html;
 }
 
-function toggleCreateCourseForm() {
-  var form = $('create-course-form');
-  if (form) form.classList.toggle('open');
-  createCourseLearnItems = [];
-  createCourseSyllabusModules = [];
+async function deleteCourse(id) {
+  if (!confirm('Delete this course and all its modules?')) return;
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/coach_courses?id=eq.' + id, { method: 'DELETE', headers: apiHeaders() });
+    dashCourses = dashCourses.filter(function(c) { return c.id !== id; });
+    renderCourseList();
+  } catch (e) { /* ignore */ }
 }
 
-function addLearnItem() {
-  var input = $('cc-learn-input');
+/* ── COURSE BUILDER ── */
+async function openCourseBuilder(courseId) {
+  courseStep = 1;
+  courseObjectives = [];
+  courseModules = [];
+  courseData = { course_type: 'self-paced', enrollment_date_option: 'always' };
+
+  if (courseId) {
+    currentCourseId = courseId;
+    try {
+      var res = await fetch(SUPABASE_URL + '/rest/v1/coach_courses?id=eq.' + courseId + '&select=*', { headers: apiHeaders() });
+      var rows = await res.json();
+      if (rows && rows.length) {
+        courseData = rows[0];
+        courseObjectives = Array.isArray(courseData.objectives) ? courseData.objectives : (Array.isArray(courseData.what_youll_learn) ? courseData.what_youll_learn : []);
+        if (!courseData.course_type && courseData.format) courseData.course_type = courseData.format;
+        if (!courseData.enrollment_date_option) courseData.enrollment_date_option = 'always';
+      }
+    } catch (e) { /* use defaults */ }
+  } else {
+    currentCourseId = null;
+    courseData = { course_type: 'self-paced', enrollment_date_option: 'always' };
+  }
+
+  renderCourseBuilder();
+}
+
+function renderCourseBuilder() {
+  var content = $('courses-content');
+  var title = courseData.title || 'New Course';
+  var steps = ['Basics', 'Schedule', 'Syllabus', 'Enrollment'];
+
+  var html = '<div style="margin-bottom:24px;">'
+    + '<a href="#" onclick="event.preventDefault();renderCourseList()" style="font-size:0.78rem;color:var(--muted);text-decoration:none;">&larr; Back to Courses</a>'
+    + '</div>';
+
+  // Header
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">'
+    + '<div><div style="font-family:Playfair Display,serif;font-size:1.3rem;font-weight:900;color:#1a3a52;">' + escapeHtml(title) + '</div>'
+    + '<div style="font-size:0.82rem;color:var(--muted);">Step ' + courseStep + ': ' + steps[courseStep - 1] + '</div></div>'
+    + '<div id="cb-save-status" style="font-size:0.78rem;color:var(--muted);"></div>'
+    + '</div>';
+
+  // Step indicator
+  html += '<div style="display:flex;gap:4px;margin-bottom:28px;">';
+  for (var s = 1; s <= 4; s++) {
+    var stepColor = s < courseStep ? '#4a7c59' : (s === courseStep ? '#c49a3c' : '#e0ddd5');
+    html += '<div style="flex:1;height:4px;border-radius:2px;background:' + stepColor + ';"></div>';
+  }
+  html += '</div>';
+
+  // Step content
+  if (courseStep === 1) html += renderStep1();
+  else if (courseStep === 2) html += renderStep2();
+  else if (courseStep === 3) html += renderStep3();
+  else if (courseStep === 4) html += renderStep4();
+
+  // Navigation
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:28px;padding-top:20px;border-top:1px solid #e0ddd5;">';
+  if (courseStep > 1) {
+    html += '<button onclick="cbPrev()" style="padding:12px 24px;background:#fff;color:#1a3a52;border:1.5px solid #1a3a52;border-radius:8px;font-family:inherit;font-size:0.88rem;font-weight:700;cursor:pointer;">Back</button>';
+  } else {
+    html += '<div></div>';
+  }
+  html += '<div style="display:flex;gap:10px;">';
+  html += '<button onclick="cbSaveDraft()" style="padding:12px 24px;background:#fff;color:#c49a3c;border:2px solid #c49a3c;border-radius:8px;font-family:inherit;font-size:0.88rem;font-weight:700;cursor:pointer;">Save Draft</button>';
+  if (courseStep < 4) {
+    html += '<button onclick="cbNext()" style="padding:12px 24px;background:#1a3a52;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:0.88rem;font-weight:700;cursor:pointer;">Next</button>';
+  }
+  html += '</div></div>';
+  html += '<div id="cb-msg" style="font-size:0.85rem;margin-top:10px;min-height:20px;"></div>';
+
+  content.innerHTML = html;
+
+  // Post-render: load modules for step 3
+  if (courseStep === 3 && currentCourseId) { loadCourseModules(); }
+}
+
+/* ── STEP 1: BASICS ── */
+function renderStep1() {
+  var d = courseData;
+  var types = [
+    { val: 'self-paced', label: 'Self-Paced', desc: 'Students learn at their own pace through your virtual classroom' },
+    { val: 'live-virtual', label: 'Live Virtual', desc: 'Synchronous sessions via Zoom or video conferencing' },
+    { val: 'in-person', label: 'In-Person', desc: 'Physical location-based sessions' },
+    { val: 'hybrid', label: 'Hybrid', desc: 'Combination of virtual and in-person delivery' }
+  ];
+
+  var html = '<div class="form-section" style="border-left:3px solid #c49a3c;padding-left:16px;margin:0 0 24px;">'
+    + '<div style="font-family:Playfair Display,serif;font-size:0.95rem;font-weight:700;color:#1a3a52;margin-bottom:16px;">Course Basics</div>';
+
+  html += '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">Course Title</label>'
+    + '<input type="text" id="cb-title" value="' + escapeHtml(d.title || '') + '" placeholder="e.g. Mindful Leadership Masterclass" oninput="cbAutoSlug()" style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:Cabinet Grotesk,sans-serif;font-size:0.9rem;color:#1a3a52;outline:none;"></div>';
+
+  html += '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">Description</label>'
+    + '<textarea id="cb-desc" placeholder="What is this course about?" style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:Cabinet Grotesk,sans-serif;font-size:0.9rem;color:#1a3a52;outline:none;min-height:100px;resize:vertical;">' + escapeHtml(d.description || '') + '</textarea></div>';
+
+  // Course type radio cards
+  html += '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:10px;display:block;">Course Type</label>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
+  types.forEach(function(t) {
+    var sel = (d.course_type || 'self-paced') === t.val;
+    html += '<div onclick="cbSelectType(\'' + t.val + '\')" style="padding:14px 16px;border:2px solid ' + (sel ? '#c49a3c' : '#e0ddd5') + ';border-radius:10px;cursor:pointer;background:' + (sel ? '#faf3e0' : '#fff') + ';">'
+      + '<div style="font-weight:700;font-size:0.88rem;color:#1a3a52;">' + t.label + '</div>'
+      + '<div style="font-size:0.75rem;color:#8a8a9a;margin-top:2px;">' + t.desc + '</div>'
+      + '</div>';
+  });
+  html += '</div></div>';
+
+  // Slug
+  html += '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">Course Web Address</label>'
+    + '<input type="text" id="cb-slug" value="' + escapeHtml(d.slug || '') + '" placeholder="my-course-slug" oninput="cbUpdateSlugPreview()" style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:Cabinet Grotesk,sans-serif;font-size:0.9rem;color:#1a3a52;outline:none;">'
+    + '<div style="font-size:0.78rem;color:#8a8a9a;margin-top:6px;">This is the link you\'ll share with clients to enroll.</div>'
+    + '<div style="font-size:0.78rem;color:#8a8a9a;margin-top:2px;">Your course link: <span style="color:#c49a3c;font-weight:600;">ineedcoaching.org/coach/' + escapeHtml(coachProfile.slug || '') + '/courses/<span id="cb-slug-val">' + escapeHtml(d.slug || '...') + '</span></span></div>'
+    + '</div>';
+
+  // Password
+  html += '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">Course Password (optional)</label>'
+    + '<input type="text" id="cb-password" value="' + escapeHtml(d.course_password || '') + '" placeholder="Students receive this in their enrollment email" style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:Cabinet Grotesk,sans-serif;font-size:0.9rem;color:#1a3a52;outline:none;"></div>';
+
+  // Objectives
+  html += '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">What Participants Will Learn</label>'
+    + '<div id="cb-objectives-list"></div>'
+    + '<div style="display:flex;gap:8px;"><input type="text" id="cb-obj-input" placeholder="Add a learning outcome..." style="flex:1;padding:10px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:inherit;font-size:0.88rem;outline:none;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();cbAddObjective();}"><button onclick="cbAddObjective()" style="padding:10px 18px;background:#1a3a52;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:0.88rem;font-weight:700;cursor:pointer;">Add</button></div>'
+    + '</div>';
+
+  // Price + Enrollment limit
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'
+    + '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">Price ($)</label>'
+    + '<input type="number" id="cb-price" value="' + (d.price || '') + '" placeholder="0" min="0" step="1" style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:Cabinet Grotesk,sans-serif;font-size:0.9rem;color:#1a3a52;outline:none;"></div>'
+    + '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">Enrollment Limit</label>'
+    + '<input type="number" id="cb-limit" value="' + (d.enrollment_limit || '') + '" placeholder="Leave blank for unlimited" min="1" style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:Cabinet Grotesk,sans-serif;font-size:0.9rem;color:#1a3a52;outline:none;"></div>'
+    + '</div>';
+
+  // Who it's for
+  html += '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">Who This Course Is For</label>'
+    + '<textarea id="cb-who" placeholder="Describe the ideal student..." style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:Cabinet Grotesk,sans-serif;font-size:0.9rem;color:#1a3a52;outline:none;min-height:80px;resize:vertical;">' + escapeHtml(d.who_its_for || '') + '</textarea></div>';
+
+  html += '</div>';
+  return html;
+}
+
+/* ── STEP 2: SCHEDULE ── */
+function renderStep2() {
+  var d = courseData;
+  var opt = d.enrollment_date_option || 'always';
+
+  var html = '<div class="form-section" style="border-left:3px solid #c49a3c;padding-left:16px;margin:0 0 24px;">'
+    + '<div style="font-family:Playfair Display,serif;font-size:0.95rem;font-weight:700;color:#1a3a52;margin-bottom:16px;">Schedule &amp; Access</div>';
+
+  // Enrollment availability
+  html += '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:10px;display:block;">Enrollment Availability</label>';
+  var opts = [
+    { val: 'always', label: 'Always open', desc: 'Students can enroll anytime' },
+    { val: 'opens', label: 'Opens on a specific date', desc: 'Enrollment starts on a set date' },
+    { val: 'window', label: 'Open enrollment window', desc: 'Enrollment opens and closes on set dates' }
+  ];
+  opts.forEach(function(o) {
+    var sel = opt === o.val;
+    html += '<div onclick="cbSelectEnrollOpt(\'' + o.val + '\')" style="padding:12px 16px;border:2px solid ' + (sel ? '#c49a3c' : '#e0ddd5') + ';border-radius:8px;cursor:pointer;background:' + (sel ? '#faf3e0' : '#fff') + ';margin-bottom:8px;">'
+      + '<div style="font-weight:700;font-size:0.85rem;color:#1a3a52;">' + o.label + '</div>'
+      + '<div style="font-size:0.75rem;color:#8a8a9a;">' + o.desc + '</div></div>';
+  });
+
+  if (opt === 'opens' || opt === 'window') {
+    html += '<div class="field" style="margin-top:12px;"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">Enrollment Opens</label>'
+      + '<input type="date" id="cb-enroll-open" value="' + (d.enrollment_open_date || '') + '" style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:inherit;font-size:0.9rem;outline:none;"></div>';
+  }
+  if (opt === 'window') {
+    html += '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">Enrollment Closes</label>'
+      + '<input type="date" id="cb-enroll-close" value="' + (d.enrollment_close_date || '') + '" style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:inherit;font-size:0.9rem;outline:none;"></div>';
+  }
+  html += '</div>';
+
+  // Start/End dates
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'
+    + '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">Start Date (optional)</label>'
+    + '<input type="date" id="cb-start" value="' + (d.start_date || '') + '" style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:inherit;font-size:0.9rem;outline:none;"></div>'
+    + '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">End Date (optional)</label>'
+    + '<input type="date" id="cb-end" value="' + (d.end_date || '') + '" style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:inherit;font-size:0.9rem;outline:none;">'
+    + '<div style="font-size:0.72rem;color:#8a8a9a;margin-top:4px;">Leave blank for self-paced or ongoing.</div></div>'
+    + '</div>';
+
+  // Delivery
+  html += '<div class="field" style="margin-top:16px;"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:10px;display:block;">Delivery Method</label>'
+    + '<div style="padding:14px 16px;background:#f7f4ee;border-radius:8px;font-size:0.85rem;color:#1a3a52;margin-bottom:12px;">Virtual Classroom is always available for all course types.</div>';
+
+  var hasZoom = (d.zoom_link || d.session_schedule) ? true : false;
+  var hasInPerson = (d.in_person_address || d.in_person_schedule) ? true : false;
+
+  html += '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;font-weight:600;color:#1a3a52;margin-bottom:8px;">'
+    + '<input type="checkbox" id="cb-has-zoom" ' + (hasZoom ? 'checked' : '') + ' onchange="cbToggleDelivery()" style="width:auto;margin:0;"> Add Zoom/video sessions</label>';
+  html += '<div id="cb-zoom-fields" style="display:' + (hasZoom ? 'block' : 'none') + ';margin-left:26px;margin-bottom:12px;">'
+    + '<div class="field"><input type="text" id="cb-zoom-link" value="' + escapeHtml(d.zoom_link || '') + '" placeholder="Zoom meeting link" style="width:100%;padding:10px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:inherit;font-size:0.88rem;outline:none;"></div>'
+    + '<div class="field"><input type="text" id="cb-zoom-schedule" value="' + escapeHtml(d.session_schedule || '') + '" placeholder="e.g. Tuesdays at 6pm EST starting May 6" style="width:100%;padding:10px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:inherit;font-size:0.88rem;outline:none;"></div></div>';
+
+  html += '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;font-weight:600;color:#1a3a52;margin-bottom:8px;">'
+    + '<input type="checkbox" id="cb-has-inperson" ' + (hasInPerson ? 'checked' : '') + ' onchange="cbToggleDelivery()" style="width:auto;margin:0;"> Add in-person sessions</label>';
+  html += '<div id="cb-inperson-fields" style="display:' + (hasInPerson ? 'block' : 'none') + ';margin-left:26px;">'
+    + '<div class="field"><textarea id="cb-ip-address" placeholder="Venue address" style="width:100%;padding:10px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:inherit;font-size:0.88rem;outline:none;min-height:60px;resize:vertical;">' + escapeHtml(d.in_person_address || '') + '</textarea></div>'
+    + '<div class="field"><input type="text" id="cb-ip-schedule" value="' + escapeHtml(d.in_person_schedule || '') + '" placeholder="e.g. Saturdays 10am-12pm at Studio B" style="width:100%;padding:10px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:inherit;font-size:0.88rem;outline:none;"></div></div>';
+
+  html += '</div></div>';
+  return html;
+}
+
+/* ── STEP 3: SYLLABUS ── */
+function renderStep3() {
+  var html = '<div class="form-section" style="border-left:3px solid #c49a3c;padding-left:16px;margin:0 0 24px;">'
+    + '<div style="font-family:Playfair Display,serif;font-size:0.95rem;font-weight:700;color:#1a3a52;margin-bottom:16px;">Syllabus</div>';
+
+  if (!currentCourseId) {
+    html += '<div style="padding:24px;background:#faf3e0;border-radius:8px;font-size:0.9rem;color:#1a3a52;">Save your course basics first (click Save Draft), then build your syllabus here.</div>';
+  } else {
+    html += '<div id="cb-modules-list"><div style="font-size:0.85rem;color:var(--muted);">Loading modules...</div></div>';
+    html += '<button onclick="cbAddModule()" style="margin-top:16px;width:100%;padding:14px;background:transparent;color:#c49a3c;border:2px dashed #c49a3c;border-radius:10px;font-family:inherit;font-size:0.88rem;font-weight:700;cursor:pointer;">+ Add Module</button>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+/* ── STEP 4: ENROLLMENT ── */
+function renderStep4() {
+  var d = courseData;
+  var price = parseFloat(d.price) || 0;
+  var fee = price * 0.03;
+  var net = price * 0.97;
+  var hasStripe = coachProfile.stripe_account_id;
+
+  var html = '<div class="form-section" style="border-left:3px solid #c49a3c;padding-left:16px;margin:0 0 24px;">'
+    + '<div style="font-family:Playfair Display,serif;font-size:0.95rem;font-weight:700;color:#1a3a52;margin-bottom:16px;">Enrollment &amp; Payment</div>';
+
+  // Stripe
+  if (hasStripe) {
+    html += '<div style="padding:16px;background:#e8f5e9;border-radius:8px;margin-bottom:20px;font-size:0.88rem;color:#4a7c59;font-weight:600;">Stripe connected — payments go directly to your account</div>';
+  } else {
+    html += '<div style="padding:16px;background:#fff8e1;border-radius:8px;margin-bottom:20px;font-size:0.88rem;color:#e67e22;font-weight:600;">Connect Stripe to accept payments <a href="/coach-signup.html#stripe" style="color:#1a3a52;font-weight:700;margin-left:8px;">Connect Stripe Account</a></div>';
+  }
+
+  // Fee breakdown
+  if (price > 0) {
+    html += '<div style="background:#f7f4ee;border-radius:10px;padding:20px;margin-bottom:20px;">'
+      + '<div style="display:flex;justify-content:space-between;font-size:0.88rem;color:#1a3a52;margin-bottom:8px;"><span>Your course price</span><span style="font-weight:700;">$' + price.toLocaleString() + '</span></div>'
+      + '<div style="display:flex;justify-content:space-between;font-size:0.88rem;color:#8a8a9a;margin-bottom:8px;"><span>Platform fee (3%)</span><span>-$' + fee.toFixed(2) + '</span></div>'
+      + '<div style="display:flex;justify-content:space-between;font-size:0.95rem;color:#c49a3c;font-weight:700;padding-top:8px;border-top:1px solid #e0ddd5;"><span>You receive per enrollment</span><span>$' + net.toFixed(2) + '</span></div>'
+      + '<div style="font-size:0.72rem;color:#8a8a9a;margin-top:8px;">Payments are processed automatically. You never need to manually transfer funds.</div>'
+      + '</div>';
+  }
+
+  // Welcome message
+  html += '<div class="field"><label style="font-size:0.68rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;display:block;">Your Welcome Message to New Students</label>'
+    + '<textarea id="cb-welcome" placeholder="This appears at the top of the enrollment confirmation email..." style="width:100%;padding:11px 14px;border:1.5px solid #e0ddd5;border-radius:8px;font-family:Cabinet Grotesk,sans-serif;font-size:0.9rem;color:#1a3a52;outline:none;min-height:100px;resize:vertical;">' + escapeHtml(d.welcome_message || '') + '</textarea></div>';
+
+  // Email preview
+  html += '<div style="border-radius:10px;overflow:hidden;margin-bottom:20px;border:1px solid #e0ddd5;">'
+    + '<div style="background:#1a3a52;padding:12px 20px;font-size:0.65rem;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:#c49a3c;">Preview — What Your Student Receives</div>'
+    + '<div style="padding:20px;background:#faf3e0;font-size:0.85rem;color:#1a3a52;line-height:1.7;">'
+    + (d.welcome_message ? '<div style="margin-bottom:12px;">' + escapeHtml(d.welcome_message) + '</div>' : '')
+    + '<div style="background:#fff;border:1px solid #e0ddd5;border-radius:8px;padding:14px;font-size:0.82rem;">'
+    + '<div>Your classroom: <span style="color:#c49a3c;font-weight:600;">ineedcoaching.org/courses/' + escapeHtml(d.slug || '...') + '</span></div>'
+    + (d.course_password ? '<div>Course password: <strong>' + escapeHtml(d.course_password) + '</strong></div>' : '')
+    + (d.session_schedule ? '<div>Sessions: ' + escapeHtml(d.session_schedule) + '</div>' : '')
+    + (d.zoom_link ? '<div>Zoom: ' + escapeHtml(d.zoom_link) + '</div>' : '')
+    + (d.start_date ? '<div>Starts: ' + escapeHtml(d.start_date) + '</div>' : '')
+    + '</div></div></div>';
+
+  // Action buttons
+  html += '<div style="display:flex;flex-direction:column;gap:10px;">';
+  html += '<button onclick="cbPublish()" style="width:100%;padding:16px;background:#c49a3c;color:#1a3a52;border:none;border-radius:8px;font-family:inherit;font-size:1rem;font-weight:800;cursor:pointer;letter-spacing:0.03em;">Publish My Course</button>';
+  if (currentCourseId) {
+    html += '<button onclick="window.open(\'/course-view.html?id=' + currentCourseId + '\',\'_blank\')" style="width:100%;padding:14px;background:#fff;color:#1a3a52;border:1.5px solid #1a3a52;border-radius:8px;font-family:inherit;font-size:0.9rem;font-weight:700;cursor:pointer;">Preview My Course</button>';
+  }
+  html += '</div>';
+
+  html += '</div>';
+  return html;
+}
+
+/* ── BUILDER HELPERS ── */
+function cbAutoSlug() {
+  var title = $('cb-title').value;
+  var slug = title.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  $('cb-slug').value = slug;
+  cbUpdateSlugPreview();
+}
+
+function cbUpdateSlugPreview() {
+  var el = $('cb-slug-val');
+  if (el) el.textContent = $('cb-slug').value.trim() || '...';
+}
+
+function cbSelectType(val) {
+  courseData.course_type = val;
+  renderCourseBuilder();
+}
+
+function cbSelectEnrollOpt(val) {
+  courseData.enrollment_date_option = val;
+  renderCourseBuilder();
+}
+
+function cbToggleDelivery() {
+  var zf = $('cb-zoom-fields'); var ipf = $('cb-inperson-fields');
+  if (zf) zf.style.display = $('cb-has-zoom').checked ? 'block' : 'none';
+  if (ipf) ipf.style.display = $('cb-has-inperson').checked ? 'block' : 'none';
+}
+
+function cbAddObjective() {
+  var input = $('cb-obj-input');
   var val = input.value.trim();
   if (!val) return;
-  createCourseLearnItems.push(val);
+  courseObjectives.push(val);
   input.value = '';
-  renderLearnItems();
+  cbRenderObjectives();
 }
 
-function removeLearnItem(idx) {
-  createCourseLearnItems.splice(idx, 1);
-  renderLearnItems();
+function cbRemoveObjective(idx) {
+  courseObjectives.splice(idx, 1);
+  cbRenderObjectives();
 }
 
-function renderLearnItems() {
-  var list = $('cc-learn-list');
+function cbRenderObjectives() {
+  var list = $('cb-objectives-list');
   if (!list) return;
   var html = '';
-  createCourseLearnItems.forEach(function(item, i) {
-    html += '<div class="learn-item"><span>' + escapeHtml(item) + '</span><button onclick="removeLearnItem(' + i + ')">&times;</button></div>';
+  courseObjectives.forEach(function(item, i) {
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;background:#faf3e0;border:1px solid #e8dfc0;border-radius:8px;padding:9px 14px;margin-bottom:6px;font-size:0.88rem;color:#1a3a52;">'
+      + '<span>' + escapeHtml(item) + '</span>'
+      + '<button onclick="cbRemoveObjective(' + i + ')" style="background:none;border:none;color:#c44;cursor:pointer;font-size:1rem;padding:0 0 0 8px;">&times;</button></div>';
   });
   list.innerHTML = html;
 }
 
-function addSyllabusModule() {
-  var titleInput = $('cc-syll-title');
-  var descInput = $('cc-syll-desc');
-  var title = titleInput.value.trim();
-  var desc = descInput.value.trim();
-  if (!title) return;
-  createCourseSyllabusModules.push({ title: title, description: desc });
-  titleInput.value = '';
-  descInput.value = '';
-  renderSyllabusModules();
-}
-
-function removeSyllabusModule(idx) {
-  createCourseSyllabusModules.splice(idx, 1);
-  renderSyllabusModules();
-}
-
-function renderSyllabusModules() {
-  var list = $('cc-syll-list');
-  if (!list) return;
-  var html = '';
-  createCourseSyllabusModules.forEach(function(mod, i) {
-    html += '<div class="syl-module"><div class="syl-module-header"><strong>' + escapeHtml(mod.title) + '</strong><button onclick="removeSyllabusModule(' + i + ')">&times;</button></div>';
-    if (mod.description) html += '<p>' + escapeHtml(mod.description) + '</p>';
-    html += '</div>';
-  });
-  list.innerHTML = html;
-}
-
-function autoGenerateSlug() {
-  var title = $('cc-title').value;
-  var slug = title.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-  $('cc-slug').value = slug;
-  updateSlugPreview();
-}
-
-function updateSlugPreview() {
-  var val = $('cc-slug').value.trim() || '...';
-  var el = $('slug-preview-val');
-  if (el) el.textContent = val;
-}
-
-async function submitCreateCourse() {
-  var title = $('cc-title').value.trim();
-  var slug = $('cc-slug').value.trim();
-  var desc = $('cc-desc').value.trim();
-  var price = parseFloat($('cc-price').value) || 0;
-  var format = $('cc-format').value;
-  var who = $('cc-who').value.trim();
-  var msg = $('cc-msg');
-
-  if (!title || !slug) {
-    msg.textContent = 'Title and slug are required.';
-    msg.style.color = '#c44';
-    msg.classList.add('show');
-    return;
+function cbCollectStepData() {
+  if (courseStep === 1) {
+    var t = $('cb-title'); if (t) courseData.title = t.value.trim();
+    var s = $('cb-slug'); if (s) courseData.slug = s.value.trim();
+    var d = $('cb-desc'); if (d) courseData.description = d.value.trim();
+    var pw = $('cb-password'); if (pw) courseData.course_password = pw.value.trim();
+    var pr = $('cb-price'); if (pr) courseData.price = parseFloat(pr.value) || 0;
+    var lm = $('cb-limit'); if (lm) courseData.enrollment_limit = parseInt(lm.value) || null;
+    var wh = $('cb-who'); if (wh) courseData.who_its_for = wh.value.trim();
+    courseData.objectives = courseObjectives;
+  } else if (courseStep === 2) {
+    var eo = $('cb-enroll-open'); if (eo) courseData.enrollment_open_date = eo.value || null;
+    var ec = $('cb-enroll-close'); if (ec) courseData.enrollment_close_date = ec.value || null;
+    var sd = $('cb-start'); if (sd) courseData.start_date = sd.value || null;
+    var ed = $('cb-end'); if (ed) courseData.end_date = ed.value || null;
+    var hz = $('cb-has-zoom');
+    if (hz && hz.checked) {
+      var zl = $('cb-zoom-link'); if (zl) courseData.zoom_link = zl.value.trim();
+      var zs = $('cb-zoom-schedule'); if (zs) courseData.session_schedule = zs.value.trim();
+    } else { courseData.zoom_link = null; courseData.session_schedule = null; }
+    var hip = $('cb-has-inperson');
+    if (hip && hip.checked) {
+      var ipa = $('cb-ip-address'); if (ipa) courseData.in_person_address = ipa.value.trim();
+      var ips = $('cb-ip-schedule'); if (ips) courseData.in_person_schedule = ips.value.trim();
+    } else { courseData.in_person_address = null; courseData.in_person_schedule = null; }
+    // Build location_type
+    var locs = ['classroom'];
+    if (hz && hz.checked) locs.push('zoom');
+    if (hip && hip.checked) locs.push('inperson');
+    courseData.location_type = locs.join(',');
+  } else if (courseStep === 4) {
+    var wm = $('cb-welcome'); if (wm) courseData.welcome_message = wm.value.trim();
   }
+}
+
+async function cbSaveDraft() {
+  cbCollectStepData();
+  var status = $('cb-save-status');
+  if (status) status.textContent = 'Saving...';
+
+  var payload = {
+    coach_id: coachProfile.id,
+    title: courseData.title || 'Untitled',
+    slug: courseData.slug || null,
+    description: courseData.description || null,
+    course_type: courseData.course_type || 'self-paced',
+    format: courseData.course_type || 'self-paced',
+    price: courseData.price || 0,
+    enrollment_limit: courseData.enrollment_limit || null,
+    who_its_for: courseData.who_its_for || null,
+    objectives: courseData.objectives || [],
+    what_youll_learn: courseData.objectives || [],
+    course_password: courseData.course_password || null,
+    enrollment_date_option: courseData.enrollment_date_option || 'always',
+    enrollment_open_date: courseData.enrollment_open_date || null,
+    enrollment_close_date: courseData.enrollment_close_date || null,
+    start_date: courseData.start_date || null,
+    end_date: courseData.end_date || null,
+    zoom_link: courseData.zoom_link || null,
+    session_schedule: courseData.session_schedule || null,
+    in_person_address: courseData.in_person_address || null,
+    in_person_schedule: courseData.in_person_schedule || null,
+    location_type: courseData.location_type || 'classroom',
+    welcome_message: courseData.welcome_message || null,
+    status: 'draft'
+  };
 
   try {
-    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_courses', {
-      method: 'POST',
+    var url = currentCourseId
+      ? SUPABASE_URL + '/rest/v1/coach_courses?id=eq.' + currentCourseId
+      : SUPABASE_URL + '/rest/v1/coach_courses';
+    var method = currentCourseId ? 'PATCH' : 'POST';
+
+    var res = await fetch(url, {
+      method: method,
       headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
-      body: JSON.stringify({
-        coach_id: coachProfile.id,
-        title: title,
-        slug: slug,
-        description: desc || null,
-        price: price,
-        format: format,
-        who_its_for: who || null,
-        what_youll_learn: createCourseLearnItems,
-        syllabus: createCourseSyllabusModules,
-        status: 'draft',
-        certificate_template: 'elegant'
-      })
+      body: JSON.stringify(payload)
     });
 
-    if (res.ok || res.status === 201) {
-      msg.textContent = 'Course created!';
-      msg.style.color = 'var(--forest)';
-      msg.classList.add('show');
-      createCourseLearnItems = [];
-      createCourseSyllabusModules = [];
-      setTimeout(function() { loadDashCourses(); }, 600);
+    if (res.ok) {
+      if (!currentCourseId) {
+        var saved = await res.json();
+        if (Array.isArray(saved) && saved.length) currentCourseId = saved[0].id;
+      }
+      if (status) { status.textContent = 'Saved'; status.style.color = '#4a7c59'; setTimeout(function() { if (status) status.textContent = ''; }, 2000); }
+      var msg = $('cb-msg');
+      if (msg) { msg.textContent = 'Draft saved.'; msg.style.color = '#4a7c59'; }
     } else {
-      var err = await res.json();
-      msg.textContent = err.message || 'Error creating course.';
-      msg.style.color = '#c44';
-      msg.classList.add('show');
+      if (status) { status.textContent = 'Error'; status.style.color = '#c44'; }
     }
   } catch (e) {
-    msg.textContent = 'Network error.';
-    msg.style.color = '#c44';
-    msg.classList.add('show');
+    if (status) { status.textContent = 'Error'; status.style.color = '#c44'; }
   }
 }
 
-async function toggleManageCourse(courseId) {
-  var builder = $('lb-' + courseId);
-  if (!builder) return;
+async function cbNext() {
+  cbCollectStepData();
+  if (courseStep === 1 && !currentCourseId) {
+    await cbSaveDraft();
+  }
+  if (courseStep < 4) { courseStep++; renderCourseBuilder(); }
+  // Re-render objectives after step 1
+  if (courseStep === 1) setTimeout(cbRenderObjectives, 0);
+}
 
-  if (builder.classList.contains('open')) {
-    builder.classList.remove('open');
-    managingCourseId = null;
+function cbPrev() {
+  cbCollectStepData();
+  if (courseStep > 1) { courseStep--; renderCourseBuilder(); }
+  if (courseStep === 1) setTimeout(cbRenderObjectives, 0);
+}
+
+async function cbPublish() {
+  cbCollectStepData();
+  if (!currentCourseId) { await cbSaveDraft(); }
+  if (!currentCourseId) return;
+
+  try {
+    var payload = { status: 'published', welcome_message: courseData.welcome_message || null };
+    await fetch(SUPABASE_URL + '/rest/v1/coach_courses?id=eq.' + currentCourseId, {
+      method: 'PATCH', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify(payload)
+    });
+    var msg = $('cb-msg');
+    if (msg) { msg.innerHTML = '<span style="color:#4a7c59;font-weight:700;">Your course is live! Students can now find and enroll.</span>'; }
+  } catch (e) {
+    var msg = $('cb-msg');
+    if (msg) { msg.textContent = 'Error publishing.'; msg.style.color = '#c44'; }
+  }
+}
+
+/* ── MODULES (Step 3) ── */
+async function loadCourseModules() {
+  var container = $('cb-modules-list');
+  if (!container || !currentCourseId) return;
+  container.innerHTML = '<div style="font-size:0.85rem;color:var(--muted);">Loading...</div>';
+
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_modules?course_id=eq.' + currentCourseId + '&order=sort_order.asc&select=*', { headers: apiHeaders() });
+    courseModules = await res.json();
+    if (!Array.isArray(courseModules)) courseModules = [];
+  } catch (e) { courseModules = []; }
+
+  renderModulesList(container);
+}
+
+function renderModulesList(container) {
+  if (!container) container = $('cb-modules-list');
+  if (!container) return;
+
+  if (courseModules.length === 0) {
+    container.innerHTML = '<div style="padding:20px;background:#faf3e0;border-radius:8px;font-size:0.88rem;color:#1a3a52;text-align:center;">No modules yet. Click "+ Add Module" to start building your syllabus.</div>';
     return;
   }
 
-  // Close others
-  document.querySelectorAll('.lesson-builder.open').forEach(function(el) { el.classList.remove('open'); });
+  var html = '';
+  courseModules.forEach(function(mod, idx) {
+    html += '<div class="prop-card" style="grid-template-columns:auto 1fr auto;margin-bottom:8px;padding:16px 20px;cursor:default;">'
+      + '<div style="width:36px;height:36px;border-radius:50%;background:#1a3a52;display:flex;align-items:center;justify-content:center;font-family:Playfair Display,serif;font-size:0.9rem;font-weight:900;color:#c49a3c;flex-shrink:0;">' + (idx + 1) + '</div>'
+      + '<div>'
+      + '<div style="font-weight:700;font-size:0.92rem;color:#1a3a52;">' + escapeHtml(mod.title || 'Untitled Module') + '</div>'
+      + (mod.description ? '<div style="font-size:0.78rem;color:#8a8a9a;margin-top:2px;">' + escapeHtml(mod.description) + '</div>' : '')
+      + '<div id="mod-lessons-' + mod.id + '" style="margin-top:8px;"></div>'
+      + '<div style="margin-top:8px;display:flex;gap:8px;">'
+      + '<button onclick="cbAddLesson(\'' + mod.id + '\')" class="prop-btn prop-btn-edit" style="font-size:0.7rem;padding:4px 10px;">+ Lesson</button>'
+      + '<button onclick="cbAddResource(\'' + mod.id + '\')" class="prop-btn prop-btn-view" style="font-size:0.7rem;padding:4px 10px;">+ Resource</button>'
+      + '</div>'
+      + '</div>'
+      + '<div style="display:flex;flex-direction:column;gap:4px;">'
+      + '<button onclick="cbDeleteModule(\'' + mod.id + '\')" class="prop-btn prop-btn-delete" style="font-size:0.7rem;padding:4px 10px;">Delete</button>'
+      + '</div>'
+      + '</div>';
+  });
+  container.innerHTML = html;
 
-  builder.classList.add('open');
-  managingCourseId = courseId;
-  await loadCourseLessons(courseId);
+  // Load lessons for each module
+  courseModules.forEach(function(mod) { cbLoadModuleLessons(mod.id); });
 }
 
-async function loadCourseLessons(courseId) {
-  var container = $('lb-lessons-' + courseId);
-  if (!container) return;
-  container.innerHTML = '<div class="loading-state" style="min-height:60px;padding:12px;"><div class="loading-spinner" style="width:24px;height:24px;border-width:2px;"></div></div>';
+async function cbAddModule() {
+  if (!currentCourseId) { alert('Save your course first.'); return; }
+  var title = prompt('Module title:');
+  if (!title) return;
+  var nextOrder = courseModules.length;
 
   try {
-    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?course_id=eq.' + courseId + '&order=sort_order.asc&select=*', {
-      headers: apiHeaders()
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_modules', {
+      method: 'POST', headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
+      body: JSON.stringify({ course_id: currentCourseId, title: title, sort_order: nextOrder })
     });
-    var lessons = await res.json();
-    if (!Array.isArray(lessons)) lessons = [];
+    if (res.ok) { loadCourseModules(); }
+  } catch (e) { /* ignore */ }
+}
 
-    if (lessons.length === 0) {
-      container.innerHTML = '<p style="font-size:0.85rem;color:var(--muted);font-style:italic;padding:8px 0;">No lessons yet. Add your first lesson below.</p>';
-      return;
-    }
+async function cbDeleteModule(modId) {
+  if (!confirm('Delete this module and all its lessons?')) return;
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?module_id=eq.' + modId, { method: 'DELETE', headers: apiHeaders() });
+    await fetch(SUPABASE_URL + '/rest/v1/coach_course_modules?id=eq.' + modId, { method: 'DELETE', headers: apiHeaders() });
+    loadCourseModules();
+  } catch (e) { /* ignore */ }
+}
+
+async function cbLoadModuleLessons(modId) {
+  var container = $('mod-lessons-' + modId);
+  if (!container) return;
+
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?module_id=eq.' + modId + '&order=sort_order.asc&select=*', { headers: apiHeaders() });
+    var lessons = await res.json();
+    if (!Array.isArray(lessons) || lessons.length === 0) { container.innerHTML = '<div style="font-size:0.75rem;color:#8a8a9a;font-style:italic;">No lessons yet</div>'; return; }
 
     var html = '';
     lessons.forEach(function(l, idx) {
-      html += '<div class="lesson-builder-item">';
-      html += '<span style="font-size:0.75rem;color:var(--muted);font-weight:700;min-width:24px;">' + (idx + 1) + '</span>';
-      html += '<span class="lb-title">' + escapeHtml(l.title) + '</span>';
-      if (l.video_url) html += '<span class="lb-video-icon">&#9654;</span>';
-      // Move up/down
-      if (idx > 0) {
-        html += '<button class="lb-btn" onclick="moveLessonUp(\'' + courseId + '\',\'' + l.id + '\',' + l.sort_order + ',' + (idx > 0 ? lessons[idx-1].sort_order : 0) + ',\'' + (idx > 0 ? lessons[idx-1].id : '') + '\')" title="Move up">&uarr;</button>';
-      }
-      if (idx < lessons.length - 1) {
-        html += '<button class="lb-btn" onclick="moveLessonDown(\'' + courseId + '\',\'' + l.id + '\',' + l.sort_order + ',' + lessons[idx+1].sort_order + ',\'' + lessons[idx+1].id + '\')" title="Move down">&darr;</button>';
-      }
-      html += '<button class="lb-btn lb-btn-danger" onclick="deleteLesson(\'' + courseId + '\',\'' + l.id + '\')" title="Delete">&#10005;</button>';
-      html += '</div>';
+      html += '<div style="display:flex;align-items:center;gap:8px;font-size:0.82rem;color:#1a3a52;padding:4px 0;">'
+        + '<span style="font-size:0.7rem;color:#8a8a9a;font-weight:700;min-width:18px;">' + (idx + 1) + '.</span>'
+        + '<span>' + escapeHtml(l.title) + '</span>'
+        + '<button onclick="cbDeleteLesson(\'' + modId + '\',\'' + l.id + '\')" style="background:none;border:none;color:#c44;cursor:pointer;font-size:0.8rem;margin-left:auto;">&times;</button>'
+        + '</div>';
     });
     container.innerHTML = html;
-  } catch (e) {
-    container.innerHTML = '<p style="font-size:0.85rem;color:#c44;">Error loading lessons.</p>';
-  }
+  } catch (e) { container.innerHTML = ''; }
 }
 
-async function addLesson(courseId) {
-  var title = $('lb-title-' + courseId).value.trim();
-  var content = $('lb-content-' + courseId).value.trim();
-  var video = $('lb-video-' + courseId).value.trim();
-  var msg = $('lb-msg-' + courseId);
-
-  if (!title) {
-    msg.textContent = 'Title is required.';
-    msg.style.color = '#c44';
-    msg.classList.add('show');
-    return;
-  }
+async function cbAddLesson(modId) {
+  var title = prompt('Lesson title:');
+  if (!title) return;
 
   try {
-    // Get max sort order
-    var countRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?course_id=eq.' + courseId + '&select=sort_order&order=sort_order.desc&limit=1', {
-      headers: apiHeaders()
-    });
+    var countRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?module_id=eq.' + modId + '&select=sort_order&order=sort_order.desc&limit=1', { headers: apiHeaders() });
     var existing = await countRes.json();
     var nextOrder = (Array.isArray(existing) && existing.length > 0) ? (existing[0].sort_order + 1) : 0;
 
-    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons', {
-      method: 'POST',
-      headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
-      body: JSON.stringify({
-        course_id: courseId,
-        title: title,
-        content: content || null,
-        video_url: video || null,
-        sort_order: nextOrder
-      })
+    await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons', {
+      method: 'POST', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ module_id: modId, course_id: currentCourseId, title: title, sort_order: nextOrder })
     });
-
-    if (res.ok || res.status === 201) {
-      $('lb-title-' + courseId).value = '';
-      $('lb-content-' + courseId).value = '';
-      $('lb-video-' + courseId).value = '';
-      msg.textContent = 'Lesson added!';
-      msg.style.color = 'var(--forest)';
-      msg.classList.add('show');
-      setTimeout(function() { msg.classList.remove('show'); }, 2000);
-      loadCourseLessons(courseId);
-    } else {
-      var err = await res.json();
-      msg.textContent = err.message || 'Error adding lesson.';
-      msg.style.color = '#c44';
-      msg.classList.add('show');
-    }
-  } catch (e) {
-    msg.textContent = 'Network error.';
-    msg.style.color = '#c44';
-    msg.classList.add('show');
-  }
+    cbLoadModuleLessons(modId);
+  } catch (e) { /* ignore */ }
 }
 
-async function deleteLesson(courseId, lessonId) {
+async function cbDeleteLesson(modId, lessonId) {
   if (!confirm('Delete this lesson?')) return;
   try {
-    await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?id=eq.' + lessonId, {
-      method: 'DELETE',
-      headers: { ...apiHeaders(), 'Prefer': 'return=representation' }
+    await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?id=eq.' + lessonId, { method: 'DELETE', headers: apiHeaders() });
+    cbLoadModuleLessons(modId);
+  } catch (e) { /* ignore */ }
+}
+
+async function cbAddResource(modId) {
+  var title = prompt('Resource title:');
+  if (!title) return;
+  var url = prompt('Resource URL:');
+  if (!url) return;
+  var type = prompt('Type (PDF, Video, Link, Audio, Image, File):', 'Link') || 'Link';
+
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/coach_course_resources', {
+      method: 'POST', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ module_id: modId, title: title, file_url: url, resource_type: type })
     });
-    loadCourseLessons(courseId);
-  } catch (e) { /* ignore */ }
-}
-
-async function moveLessonUp(courseId, lessonId, currentOrder, prevOrder, prevId) {
-  try {
-    await Promise.all([
-      fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?id=eq.' + lessonId, {
-        method: 'PATCH',
-        headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ sort_order: prevOrder })
-      }),
-      fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?id=eq.' + prevId, {
-        method: 'PATCH',
-        headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ sort_order: currentOrder })
-      })
-    ]);
-    loadCourseLessons(courseId);
-  } catch (e) { /* ignore */ }
-}
-
-async function moveLessonDown(courseId, lessonId, currentOrder, nextOrder, nextId) {
-  try {
-    await Promise.all([
-      fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?id=eq.' + lessonId, {
-        method: 'PATCH',
-        headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ sort_order: nextOrder })
-      }),
-      fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?id=eq.' + nextId, {
-        method: 'PATCH',
-        headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ sort_order: currentOrder })
-      })
-    ]);
-    loadCourseLessons(courseId);
-  } catch (e) { /* ignore */ }
-}
-
-async function updateCertTemplate(courseId, template) {
-  try {
-    await fetch(SUPABASE_URL + '/rest/v1/coach_courses?id=eq.' + courseId, {
-      method: 'PATCH',
-      headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ certificate_template: template })
-    });
+    cbLoadModuleLessons(modId);
   } catch (e) { /* ignore */ }
 }
 
