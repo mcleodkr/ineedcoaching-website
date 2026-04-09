@@ -52,9 +52,17 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: #f7f4ee; color: #
 .pv-accept-btn { display: inline-block; padding: 16px 48px; background: #1a3a52; color: #c49a3c; border: none; border-radius: 8px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 1rem; font-weight: 800; cursor: pointer; letter-spacing: 0.03em; transition: background 0.2s; }
 .pv-accept-btn:hover { background: #24506e; }
 .pv-accept-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.pv-changes-btn { display: inline-block; padding: 16px 36px; background: transparent; color: #c49a3c; border: 2px solid #c49a3c; border-radius: 8px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.pv-changes-btn:hover { background: #faf3e0; }
+.pv-btn-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.pv-changes-form { margin-top: 20px; display: none; }
+.pv-changes-form textarea { width: 100%; padding: 14px; border: 1.5px solid #e0ddd5; border-radius: 8px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem; min-height: 100px; resize: vertical; outline: none; }
+.pv-changes-form textarea:focus { border-color: #c49a3c; }
+.pv-changes-form button { margin-top: 10px; padding: 12px 32px; background: #c49a3c; color: #1a3a52; border: none; border-radius: 8px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
 .pv-accept-msg { font-size: 0.9rem; margin-top: 12px; min-height: 20px; }
 
 .pv-status { text-align: center; padding: 20px 40px; }
+.pv-status-changes { background: #fff3e0; color: #e67e22; }
 .pv-status-badge { display: inline-block; padding: 8px 24px; border-radius: 50px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 .pv-status-sent { background: #faf3e0; color: #c49a3c; }
 .pv-status-accepted { background: #e8f5e9; color: #4a7c59; }
@@ -158,6 +166,8 @@ function renderProposal(p, coach) {
   // Status badge
   if (p.status === 'accepted') {
     html += '<div class="pv-status"><span class="pv-status-badge pv-status-accepted">Accepted</span></div>';
+  } else if (p.status === 'changes_requested') {
+    html += '<div class="pv-status"><span class="pv-status-badge pv-status-changes">Changes Requested</span></div>';
   }
 
   // Detail grid
@@ -217,15 +227,26 @@ function renderProposal(p, coach) {
 
   html += '</div>';
 
-  // Accept button (only if not already accepted)
-  if (p.status !== 'accepted') {
+  // Action buttons
+  if (p.status === 'accepted') {
     html += '<div class="pv-accept">'
-      + '<button class="pv-accept-btn" id="accept-btn" onclick="acceptProposal(\'' + escHtml(p.id) + '\')">Accept Proposal</button>'
-      + '<div class="pv-accept-msg" id="accept-msg"></div>'
+      + '<div class="pv-accept-msg" style="color:#4a7c59;font-weight:600;">Thank you — your coach will be in touch shortly.</div>'
+      + '</div>';
+  } else if (p.status === 'changes_requested') {
+    html += '<div class="pv-accept">'
+      + '<div class="pv-accept-msg" style="color:#e67e22;font-weight:600;">Your change request has been sent. Your coach will be in touch shortly.</div>'
       + '</div>';
   } else {
     html += '<div class="pv-accept">'
-      + '<div class="pv-accept-msg" style="color:#4a7c59;font-weight:600;">Thank you — your coach will be in touch shortly.</div>'
+      + '<div class="pv-btn-row" id="action-btns">'
+      + '<button class="pv-accept-btn" id="accept-btn" onclick="acceptProposal(\'' + escHtml(p.id) + '\')">Accept Proposal</button>'
+      + '<button class="pv-changes-btn" id="changes-btn" onclick="showChangesForm()">Request Changes</button>'
+      + '</div>'
+      + '<div class="pv-changes-form" id="changes-form">'
+      + '<textarea id="changes-text" placeholder="Describe what you\'d like changed..."></textarea>'
+      + '<button onclick="submitChanges(\'' + escHtml(p.id) + '\', \'' + escHtml(coachEmail) + '\', \'' + escHtml(p.client_name || '') + '\', \'' + escHtml(p.client_company || '') + '\')">Send Request</button>'
+      + '</div>'
+      + '<div class="pv-accept-msg" id="accept-msg"></div>'
       + '</div>';
   }
 
@@ -265,6 +286,60 @@ async function acceptProposal(id) {
     msg.style.color = '#c44';
     btn.disabled = false;
     btn.textContent = 'Accept Proposal';
+  }
+}
+
+function showChangesForm() {
+  document.getElementById('changes-form').style.display = 'block';
+  document.getElementById('changes-btn').style.display = 'none';
+}
+
+async function submitChanges(id, coachEmail, clientName, company) {
+  var text = document.getElementById('changes-text').value.trim();
+  if (!text) { document.getElementById('accept-msg').textContent = 'Please describe the changes you need.'; document.getElementById('accept-msg').style.color = '#c44'; return; }
+
+  var msg = document.getElementById('accept-msg');
+  msg.textContent = 'Sending...';
+  msg.style.color = '#8a8a9a';
+
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_proposals?id=eq.' + id, {
+      method: 'PATCH',
+      headers: {
+        'apikey': ANON_KEY,
+        'Authorization': 'Bearer ' + ANON_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({ status: 'changes_requested', client_notes: text })
+    });
+
+    if (res.ok) {
+      var proposalUrl = window.location.href;
+      fetch('/api/send-proposal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isChangeRequest: true,
+          to: coachEmail,
+          clientName: clientName || company,
+          company: company,
+          clientMessage: text,
+          proposalUrl: proposalUrl
+        })
+      }).catch(function() {});
+
+      document.getElementById('action-btns').style.display = 'none';
+      document.getElementById('changes-form').style.display = 'none';
+      msg.textContent = 'Your request has been sent. Your coach will be in touch shortly.';
+      msg.style.color = '#e67e22';
+    } else {
+      msg.textContent = 'Something went wrong. Please try again.';
+      msg.style.color = '#c44';
+    }
+  } catch (err) {
+    msg.textContent = 'Connection error. Please try again.';
+    msg.style.color = '#c44';
   }
 }
 </script>
