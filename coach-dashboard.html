@@ -2380,7 +2380,7 @@ function renderStep1() {
     + '<div class="cb-type-grid">';
   types.forEach(function(t) {
     var sel = (d.course_type || 'self-paced') === t.val;
-    html += '<div onclick="cbSelectType(\'' + t.val + '\')" class="cb-type-card' + (sel ? ' selected' : '') + '">'
+    html += '<div onclick="cbSelectType(\'' + t.val + '\')" data-type="' + t.val + '" class="cb-type-card' + (sel ? ' selected' : '') + '">'
       + '<div class="cb-type-card-title">' + t.label + '</div>'
       + '<div class="cb-type-card-desc">' + t.desc + '</div></div>';
   });
@@ -2570,10 +2570,8 @@ function cbUpdateSlugPreview() {
 function cbSelectType(val) {
   cbCollectStepData();
   courseData.course_type = val;
-  // Update card visuals without re-rendering the entire form
   document.querySelectorAll('.cb-type-card').forEach(function(card) {
-    var isMatch = card.onclick.toString().indexOf("'" + val + "'") !== -1;
-    card.classList.toggle('selected', isMatch);
+    card.classList.toggle('selected', card.dataset.type === val);
   });
 }
 
@@ -3055,7 +3053,7 @@ async function cbLoadModuleLessons(modId) {
         + '<div id="lp-write-' + l.id + '" style="display:' + (activeTab === 'write' ? 'block' : 'none') + ';"><textarea class="cb-input cb-lesson-autosave" data-lesson-id="' + l.id + '" data-lesson-field="content" data-mod-id="' + modId + '" placeholder="Write your lesson content here..." style="font-size:0.82rem;min-height:100px;resize:vertical;">' + escapeHtml(l.content || '') + '</textarea></div>'
         + '<div id="lp-video-' + l.id + '" style="display:' + (activeTab === 'video' ? 'block' : 'none') + ';"><input type="text" class="cb-input cb-lesson-autosave" data-lesson-id="' + l.id + '" data-lesson-field="video_url" data-mod-id="' + modId + '" value="' + escapeHtml(realVideoUrl) + '" placeholder="Paste video URL (YouTube, Vimeo, Zoom recording...)" style="font-size:0.82rem;"></div>'
         + '<div id="lp-upload-' + l.id + '" style="display:none;"><input type="file" id="lesson-file-' + l.id + '" accept=".pdf,.mp4,.mp3,.jpg,.jpeg,.png,.doc,.docx,.ppt,.pptx" style="font-size:0.82rem;" onchange="cbUploadLessonFile(\'' + modId + '\',\'' + l.id + '\')"><div id="lesson-upload-status-' + l.id + '" style="font-size:0.78rem;margin-top:4px;"></div>'
-        + (fileUrl ? '<div style="font-size:0.78rem;margin-top:6px;display:flex;align-items:center;gap:8px;color:#1a3a52;">&#128196; <span style="font-weight:600;">' + escapeHtml(decodeURIComponent(fileUrl.split('/').pop().replace(/^\d+-/, ''))) + '</span> <a href="' + escapeHtml(fileUrl) + '" target="_blank" style="font-size:0.72rem;color:#c49a3c;text-decoration:none;font-weight:700;">View</a> <button onclick="cbRemoveLessonFile(\'' + modId + '\',\'' + l.id + '\')" style="font-size:0.72rem;color:#c44;background:none;border:none;cursor:pointer;font-weight:700;">Remove</button></div>' : '')
+        + (fileUrl ? '<div style="font-size:0.78rem;margin-top:6px;display:flex;align-items:center;gap:8px;color:#1a3a52;">&#128196; <span style="font-weight:600;">' + escapeHtml(cbCleanFilename(fileUrl)) + '</span> <a href="' + escapeHtml(fileUrl) + '" target="_blank" style="font-size:0.72rem;color:#c49a3c;text-decoration:none;font-weight:700;">View</a> <button onclick="cbRemoveLessonFile(\'' + modId + '\',\'' + l.id + '\')" style="font-size:0.72rem;color:#c44;background:none;border:none;cursor:pointer;font-weight:700;">Remove</button></div>' : '')
         + '</div></div>';
 
       // Drip scheduling
@@ -3153,6 +3151,11 @@ async function cbDeleteLesson(modId, lessonId) {
     await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?id=eq.' + lessonId, { method: 'DELETE', headers: apiHeaders() });
     cbLoadModuleLessons(modId);
   } catch (e) { /* ignore */ }
+}
+
+function cbCleanFilename(url) {
+  var name = decodeURIComponent((url || '').split('/').pop());
+  return name.replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/, '').replace(/^\d+-/, '').replace(/_/g, ' ');
 }
 
 function cbLessonTab(lessonId, tab) {
