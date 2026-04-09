@@ -42,7 +42,8 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
 .error-state p { color: var(--muted); font-size: 1.05rem; }
 
 /* HERO */
-.hero { background-color: #1a3a52; background-size: 35%; background-position: right 5% center; background-repeat: no-repeat; padding: 140px 80px 80px; position: relative; overflow: hidden; height: 320px; }
+.hero { background: #1a3a52; padding: 140px 80px 80px; position: relative; overflow: hidden; height: 320px; }
+.hero::after { content: 'COACH'; font-family: 'Playfair Display', serif; font-size: 14rem; font-weight: 900; color: rgba(255,255,255,0.06); position: absolute; right: -30px; top: 50%; transform: translateY(-50%); pointer-events: none; user-select: none; line-height: 1; }
 .hero-inner { max-width: 900px; position: relative; z-index: 2; }
 .hero-name { font-family: 'Playfair Display', serif; font-size: clamp(2.6rem, 5vw, 4.2rem); font-weight: 900; color: var(--gold); line-height: 1.08; margin-bottom: 16px; }
 .hero-headline { font-size: 1.15rem; line-height: 1.7; color: #f7f4ee; max-width: 640px; margin-bottom: 28px; opacity: 0.85; }
@@ -180,7 +181,7 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
   .testimonials-grid { grid-template-columns: 1fr; }
   .booking-form { padding: 28px 20px; }
   .coach-footer { padding: 40px 24px; }
-  .hero { background-size: 45%; background-position: right center; }
+  .hero::after { font-size: 6rem; }
 }
 
 /* HIDDEN */
@@ -513,11 +514,6 @@ function showError() {
 function renderProfile(coach, services, testimonials, recommendations, courses, articles) {
   // Update page title
   document.title = `${coach.display_name || coach.full_name} — Coach Profile | ineedcoaching.org`;
-
-  // Hero background photo as right-side watermark
-  if (coach.photo_url) {
-    document.getElementById('hero-section').style.backgroundImage = `url('${coach.photo_url}')`;
-  }
 
   document.getElementById('hero-name').textContent = coach.display_name || coach.full_name || 'Coach';
   document.getElementById('hero-headline').textContent = coach.headline || '';
