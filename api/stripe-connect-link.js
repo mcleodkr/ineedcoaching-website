@@ -1,6 +1,11 @@
 import Stripe from 'stripe';
 
 export default async function handler(req, res) {
+  console.log('ENV CHECK:', {
+    hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
+    stripeKeyPrefix: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 10) : 'MISSING',
+    nodeEnv: process.env.NODE_ENV
+  });
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
