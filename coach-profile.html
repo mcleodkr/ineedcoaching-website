@@ -42,7 +42,7 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
 .error-state p { color: var(--muted); font-size: 1.05rem; }
 
 /* HERO */
-.hero { background: var(--ink); padding: 140px 80px 80px; position: relative; overflow: hidden; }
+.hero { background: var(--ink); padding: 140px 80px 80px; position: relative; overflow: hidden; max-height: 420px; }
 .hero::after { content: 'COACH'; font-family: 'Playfair Display', serif; font-size: 14rem; font-weight: 900; color: rgba(255,255,255,0.04); position: absolute; right: -30px; top: 50%; transform: translateY(-50%); pointer-events: none; user-select: none; line-height: 1; }
 .hero-inner { max-width: 900px; position: relative; z-index: 2; }
 .hero-name { font-family: 'Playfair Display', serif; font-size: clamp(2.6rem, 5vw, 4.2rem); font-weight: 900; color: var(--gold); line-height: 1.08; margin-bottom: 16px; }
@@ -310,6 +310,12 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
           <input type="date" id="booking-date" required>
         </div>
         <div class="form-group">
+          <label for="booking-time">Preferred Time</label>
+          <select id="booking-time" required>
+            <option value="">Select a time</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label for="booking-notes">Notes (optional)</label>
           <textarea id="booking-notes" placeholder="Tell the coach what you're looking for..."></textarea>
         </div>
@@ -374,6 +380,35 @@ const GET_HEADERS = {
 };
 
 let coachData = null;
+
+function populateTimeSlots(availability) {
+  const select = document.getElementById('booking-time');
+  const dateInput = document.getElementById('booking-date');
+  select.innerHTML = '<option value="">Select a time</option>';
+
+  let startHour = 9, endHour = 17;
+
+  if (availability && dateInput.value) {
+    const dayOfWeek = new Date(dateInput.value + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    const dayAvail = Array.isArray(availability)
+      ? availability.find(function(d) { return (d.day || '').toLowerCase() === dayOfWeek; })
+      : null;
+    if (dayAvail && dayAvail.start_time && dayAvail.end_time) {
+      startHour = parseInt(dayAvail.start_time.split(':')[0], 10);
+      endHour = parseInt(dayAvail.end_time.split(':')[0], 10);
+    }
+  }
+
+  for (let h = startHour; h < endHour; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      const hour12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const label = hour12 + ':' + (m === 0 ? '00' : '30') + ' ' + ampm;
+      const val = (h < 10 ? '0' : '') + h + ':' + (m === 0 ? '00' : '30');
+      select.innerHTML += '<option value="' + val + '">' + label + '</option>';
+    }
+  }
+}
 
 function getSlug() {
   const params = new URLSearchParams(window.location.search);
@@ -448,6 +483,12 @@ async function loadProfile() {
 
     renderProfile(coachData, services, testimonials, recommendations, courses, articles);
 
+    // Populate time slots and re-populate on date change
+    populateTimeSlots(coachData.weekly_availability);
+    document.getElementById('booking-date').addEventListener('change', function() {
+      populateTimeSlots(coachData.weekly_availability);
+    });
+
     // Update hero book button for calendly
     if (coachData.calendly_url && coachData.calendly_url.trim()) {
       const heroBtn = document.getElementById('hero-book-btn');
@@ -473,9 +514,9 @@ function renderProfile(coach, services, testimonials, recommendations, courses, 
 
   // Hero
   if (coach.photo_url) {
-    document.getElementById('hero-section').style.backgroundImage = `linear-gradient(rgba(26,58,82,0.55), rgba(26,58,82,0.75)), url('${coach.photo_url}')`;
+    document.getElementById('hero-section').style.backgroundImage = `linear-gradient(rgba(26,58,82,0.5), rgba(26,58,82,0.7)), url('${coach.photo_url}')`;
     document.getElementById('hero-section').style.backgroundSize = 'cover';
-    document.getElementById('hero-section').style.backgroundPosition = 'center top';
+    document.getElementById('hero-section').style.backgroundPosition = 'center 15%';
   }
 
   document.getElementById('hero-name').textContent = coach.display_name || coach.full_name || 'Coach';
@@ -732,7 +773,7 @@ document.getElementById('booking-form').addEventListener('submit', async functio
     coach_id: coachData.id,
     client_email: clientEmail,
     client_phone: clientPhone || null,
-    scheduled_at: new Date(document.getElementById('booking-date').value).toISOString(),
+    scheduled_at: new Date(document.getElementById('booking-date').value + 'T' + (document.getElementById('booking-time').value || '09:00') + ':00').toISOString(),
     notes: `Name: ${document.getElementById('booking-name').value}\nService: ${document.getElementById('booking-service').selectedOptions[0].textContent}\n${document.getElementById('booking-notes').value}`,
     status: 'pending'
   };

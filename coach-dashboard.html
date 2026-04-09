@@ -138,9 +138,19 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .bookings-table th { padding: 14px 16px; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); text-align: left; background: var(--cream); border-bottom: 1px solid var(--border); }
 .bookings-table td { padding: 14px 16px; font-size: 0.88rem; color: var(--ink); border-bottom: 1px solid var(--border); vertical-align: top; }
 .bookings-table tr:last-child td { border-bottom: none; }
+.bookings-table tbody tr:nth-child(even) { background: var(--cream); }
+.bookings-filter-bar { display: flex; gap: 8px; margin-bottom: 16px; }
+.bookings-filter-btn { padding: 8px 18px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 700; border: 1px solid var(--border); background: var(--white); color: var(--muted); cursor: pointer; transition: all 0.2s; }
+.bookings-filter-btn.active { background: var(--ink); color: var(--white); border-color: var(--ink); }
+.bookings-filter-btn:hover:not(.active) { border-color: var(--ink); color: var(--ink); }
+.booking-details-toggle { font-size: 0.78rem; color: var(--gold); cursor: pointer; border: none; background: none; font-weight: 600; padding: 0; }
+.booking-details-toggle:hover { text-decoration: underline; }
+.booking-details-row { display: none; }
+.booking-details-row.open { display: table-row; }
+.booking-details-row td { padding: 12px 16px; background: rgba(196,154,60,0.04); font-size: 0.82rem; color: var(--muted); white-space: pre-line; line-height: 1.6; }
 
 /* STATUS PILLS */
-.status-pill { display: inline-block; padding: 4px 12px; border-radius: 50px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+.status-pill { display: inline-block; padding: 6px 16px; border-radius: 50px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
 .status-pending { background: #c49a3c; color: #fff; }
 .status-confirmed { background: #2d6a4f; color: #fff; }
 .status-rejected { background: #c0392b; color: #fff; }
@@ -1356,61 +1366,111 @@ async function loadBookings() {
       return;
     }
 
-    var html = '<div class="bookings-table-wrap"><table class="bookings-table"><thead><tr>'
-      + '<th>Client</th><th>Service</th><th>Date</th><th>Notes</th><th>Status</th><th>Actions</th>'
-      + '</tr></thead><tbody>';
+    // Store data for filtering
+    var allBookings = data;
 
-    data.forEach(function(b) {
-      var statusClass = 'status-' + (b.status || 'pending');
-      var statusText = (b.status || 'pending').charAt(0).toUpperCase() + (b.status || 'pending').slice(1);
-      var dt = b.scheduled_at ? new Date(b.scheduled_at) : null;
-      var dateStr = dt ? dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-      var timeStr = dt ? dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
-      var clientName = extractClientName(b.notes);
-      var serviceName = extractServiceName(b.notes);
-      var actions = '';
-      if (b.status === 'pending') {
-        actions = '<button class="action-btn action-confirm" data-booking-id="' + b.id + '" data-action="confirmed">Confirm</button>'
-          + '<button class="action-btn action-decline" data-booking-id="' + b.id + '" data-action="rejected">Decline</button>';
+    function renderBookingsTable(filter) {
+      var filtered = filter === 'all' ? allBookings : allBookings.filter(function(b) { return (b.status || 'pending') === filter; });
+
+      var html = '<div class="bookings-filter-bar">';
+      ['all', 'pending', 'confirmed', 'rejected'].forEach(function(f) {
+        var label = f === 'all' ? 'All (' + allBookings.length + ')' : f.charAt(0).toUpperCase() + f.slice(1) + ' (' + allBookings.filter(function(b) { return f === 'all' || (b.status || 'pending') === f; }).length + ')';
+        html += '<button class="bookings-filter-btn' + (f === filter ? ' active' : '') + '" data-filter="' + f + '">' + label + '</button>';
+      });
+      html += '</div>';
+
+      if (filtered.length === 0) {
+        html += '<div class="empty-state"><p>No ' + (filter === 'all' ? '' : filter + ' ') + 'bookings.</p></div>';
+        $('bookings-content').innerHTML = html;
+        bindFilterButtons(filter);
+        return;
       }
 
-      html += '<tr data-booking-id="' + b.id + '">'
-        + '<td><div style="font-weight:600;">' + escapeHtml(clientName) + '</div><div style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(b.client_email || '') + '</div>' + (b.client_phone ? '<div style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(b.client_phone) + '</div>' : '') + '</td>'
-        + '<td>' + escapeHtml(serviceName) + '</td>'
-        + '<td><div>' + escapeHtml(dateStr) + '</div>' + (timeStr ? '<div style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(timeStr) + '</div>' : '') + '</td>'
-        + '<td style="max-width:200px;white-space:pre-line;font-size:0.82rem;">' + escapeHtml(b.notes || '') + '</td>'
-        + '<td class="booking-status-cell"><span class="status-pill ' + statusClass + '">' + escapeHtml(statusText) + '</span></td>'
-        + '<td class="booking-actions-cell">' + actions + '</td>'
-        + '</tr>';
-    });
+      html += '<div class="bookings-table-wrap"><table class="bookings-table"><thead><tr>'
+        + '<th>Client</th><th>Service</th><th>Date</th><th>Status</th><th>Actions</th>'
+        + '</tr></thead><tbody>';
 
-    html += '</tbody></table></div>';
-    $('bookings-content').innerHTML = html;
-
-    // Action handlers
-    $('bookings-content').querySelectorAll('.action-btn').forEach(function(btn) {
-      btn.addEventListener('click', async function() {
-        var id = this.dataset.bookingId;
-        var action = this.dataset.action;
-        var row = this.closest('tr');
-        this.disabled = true;
-        await supabasePatch('coach_bookings', { id: 'eq.' + id }, { status: action });
-        // Send confirmation email if confirmed
-        if (action === 'confirmed') {
-          try {
-            await fetch('/api/booking-confirmation', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ booking_id: id })
-            });
-          } catch(e) { console.warn('Confirmation email failed:', e); }
+      filtered.forEach(function(b, i) {
+        var status = b.status || 'pending';
+        var statusClass = 'status-' + status;
+        var statusText = status.charAt(0).toUpperCase() + status.slice(1);
+        var dt = b.scheduled_at ? new Date(b.scheduled_at) : null;
+        var dateStr = dt ? dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+        var timeStr = dt ? dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+        var clientName = extractClientName(b.notes);
+        var serviceName = extractServiceName(b.notes);
+        var actions = '';
+        if (status === 'pending') {
+          actions = '<button class="action-btn action-confirm" data-booking-id="' + b.id + '" data-action="confirmed">Confirm</button>'
+            + '<button class="action-btn action-decline" data-booking-id="' + b.id + '" data-action="rejected">Decline</button>';
         }
-        // Update DOM directly instead of reloading
-        var label = action.charAt(0).toUpperCase() + action.slice(1);
-        row.querySelector('.booking-status-cell').innerHTML = '<span class="status-pill status-' + action + '">' + escapeHtml(label) + '</span>';
-        row.querySelector('.booking-actions-cell').innerHTML = '';
+        var hasNotes = b.notes && b.notes.trim();
+
+        html += '<tr data-booking-id="' + b.id + '">'
+          + '<td><div style="font-weight:600;">' + escapeHtml(clientName) + '</div><div style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(b.client_email || '') + '</div>' + (b.client_phone ? '<div style="font-size:0.72rem;color:var(--muted);">' + escapeHtml(b.client_phone) + '</div>' : '') + '</td>'
+          + '<td>' + escapeHtml(serviceName) + '</td>'
+          + '<td><div style="font-weight:500;">' + escapeHtml(dateStr) + '</div>' + (timeStr ? '<div style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(timeStr) + '</div>' : '') + '</td>'
+          + '<td class="booking-status-cell"><span class="status-pill ' + statusClass + '">' + escapeHtml(statusText) + '</span>'
+          + (hasNotes ? '<br><button class="booking-details-toggle" data-details-id="details-' + i + '">View details</button>' : '') + '</td>'
+          + '<td class="booking-actions-cell">' + actions + '</td>'
+          + '</tr>';
+
+        if (hasNotes) {
+          html += '<tr class="booking-details-row" id="details-' + i + '"><td colspan="5">' + escapeHtml(b.notes) + '</td></tr>';
+        }
       });
-    });
+
+      html += '</tbody></table></div>';
+      $('bookings-content').innerHTML = html;
+
+      // Details toggle handlers
+      $('bookings-content').querySelectorAll('.booking-details-toggle').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var row = document.getElementById(this.dataset.detailsId);
+          var isOpen = row.classList.toggle('open');
+          this.textContent = isOpen ? 'Hide details' : 'View details';
+        });
+      });
+
+      // Action handlers
+      $('bookings-content').querySelectorAll('.action-btn').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+          var id = this.dataset.bookingId;
+          var action = this.dataset.action;
+          var row = this.closest('tr');
+          this.disabled = true;
+          await supabasePatch('coach_bookings', { id: 'eq.' + id }, { status: action });
+          if (action === 'confirmed') {
+            try {
+              await fetch('/api/booking-confirmation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ booking_id: id })
+              });
+            } catch(e) { console.warn('Confirmation email failed:', e); }
+          }
+          // Update in-memory data
+          var booking = allBookings.find(function(b) { return b.id === id; });
+          if (booking) booking.status = action;
+          // Update DOM directly
+          var label = action.charAt(0).toUpperCase() + action.slice(1);
+          row.querySelector('.booking-status-cell').innerHTML = '<span class="status-pill status-' + action + '">' + escapeHtml(label) + '</span>';
+          row.querySelector('.booking-actions-cell').innerHTML = '';
+        });
+      });
+
+      bindFilterButtons(filter);
+    }
+
+    function bindFilterButtons(currentFilter) {
+      $('bookings-content').querySelectorAll('.bookings-filter-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          renderBookingsTable(this.dataset.filter);
+        });
+      });
+    }
+
+    renderBookingsTable('all');
 
   } catch (err) {
     $('bookings-loading').style.display = 'none';
