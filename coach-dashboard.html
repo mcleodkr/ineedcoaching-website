@@ -3051,7 +3051,7 @@ async function cbLoadModuleLessons(modId) {
         + '<div id="lp-write-' + l.id + '" style="display:' + (activeTab === 'write' ? 'block' : 'none') + ';"><textarea class="cb-input cb-lesson-autosave" data-lesson-id="' + l.id + '" data-lesson-field="content" data-mod-id="' + modId + '" placeholder="Write your lesson content here..." style="font-size:0.82rem;min-height:100px;resize:vertical;">' + escapeHtml(l.content || '') + '</textarea></div>'
         + '<div id="lp-video-' + l.id + '" style="display:' + (activeTab === 'video' ? 'block' : 'none') + ';"><input type="text" class="cb-input cb-lesson-autosave" data-lesson-id="' + l.id + '" data-lesson-field="video_url" data-mod-id="' + modId + '" value="' + escapeHtml(l.video_url || '') + '" placeholder="Paste video URL (YouTube, Vimeo, Zoom recording...)" style="font-size:0.82rem;"></div>'
         + '<div id="lp-upload-' + l.id + '" style="display:none;"><input type="file" id="lesson-file-' + l.id + '" accept=".pdf,.mp4,.mp3,.jpg,.jpeg,.png,.doc,.docx,.ppt,.pptx" style="font-size:0.82rem;" onchange="cbUploadLessonFile(\'' + modId + '\',\'' + l.id + '\')"><div id="lesson-upload-status-' + l.id + '" style="font-size:0.78rem;margin-top:4px;"></div>'
-        + (l.lesson_file_url ? '<div style="font-size:0.75rem;color:#4a7c59;margin-top:4px;">File attached: ' + escapeHtml(l.lesson_file_url.split('/').pop()) + '</div>' : '')
+        + (l.lesson_file_url ? '<div style="font-size:0.78rem;margin-top:6px;display:flex;align-items:center;gap:8px;color:#1a3a52;">&#128196; <span style="font-weight:600;">' + escapeHtml(decodeURIComponent(l.lesson_file_url.split('/').pop().replace(/^\d+-/, ''))) + '</span> <a href="' + escapeHtml(l.lesson_file_url) + '" target="_blank" style="font-size:0.72rem;color:#c49a3c;text-decoration:none;font-weight:700;">View</a> <button onclick="cbRemoveLessonFile(\'' + modId + '\',\'' + l.id + '\')" style="font-size:0.72rem;color:#c44;background:none;border:none;cursor:pointer;font-weight:700;">Remove</button></div>' : '')
         + '</div></div>';
 
       // Drip scheduling
@@ -3199,6 +3199,16 @@ async function cbUploadLessonFile(modId, lessonId) {
     console.error('Lesson upload error:', e);
     if (statusEl) { statusEl.textContent = 'Upload error: ' + e.message; statusEl.style.color = '#c44'; }
   }
+}
+
+async function cbRemoveLessonFile(modId, lessonId) {
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?id=eq.' + lessonId, {
+      method: 'PATCH', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ lesson_file_url: null })
+    });
+    cbLoadModuleLessons(modId);
+  } catch (e) { console.error('Remove file error:', e); }
 }
 
 /* Drip Scheduling */
@@ -3431,9 +3441,31 @@ function cbShowAIQuiz(lessonId) {
     + '<span style="font-size:0.78rem;color:#8a8a9a;">Or upload files:</span>'
     + '<input type="file" id="ai-quiz-file-' + lessonId + '" accept=".pdf,.txt,.doc,.docx" multiple style="font-size:0.78rem;">'
     + '</div>'
+    + '<div style="margin-bottom:12px;"><label class="cb-label">How many questions?</label>'
+    + '<div style="display:flex;gap:4px;flex-wrap:wrap;" id="ai-quiz-count-' + lessonId + '">'
+    + '<button onclick="cbSetQuizCount(\'' + lessonId + '\',5)" class="cb-lesson-tab">5</button>'
+    + '<button onclick="cbSetQuizCount(\'' + lessonId + '\',8)" class="cb-lesson-tab active">8</button>'
+    + '<button onclick="cbSetQuizCount(\'' + lessonId + '\',10)" class="cb-lesson-tab">10</button>'
+    + '<button onclick="cbSetQuizCount(\'' + lessonId + '\',15)" class="cb-lesson-tab">15</button>'
+    + '<button onclick="cbSetQuizCount(\'' + lessonId + '\',0)" class="cb-lesson-tab">Custom</button>'
+    + '</div>'
+    + '<input type="number" id="ai-quiz-custom-count-' + lessonId + '" class="cb-input" min="1" max="30" value="8" placeholder="Number" style="display:none;width:80px;margin-top:6px;font-size:0.82rem;">'
+    + '</div>'
     + '<button onclick="cbGenerateAIQuiz(\'' + lessonId + '\')" class="cb-btn-next" style="width:100%;">Generate Quiz</button>'
     + '<div id="ai-quiz-status-' + lessonId + '" style="font-size:0.82rem;margin-top:8px;"></div>'
     + '</div>';
+}
+
+var _quizCounts = {};
+function cbSetQuizCount(lessonId, count) {
+  _quizCounts[lessonId] = count;
+  var container = $('ai-quiz-count-' + lessonId);
+  if (container) {
+    container.querySelectorAll('.cb-lesson-tab').forEach(function(btn) { btn.classList.remove('active'); });
+    event.target.classList.add('active');
+  }
+  var custom = $('ai-quiz-custom-count-' + lessonId);
+  if (custom) custom.style.display = count === 0 ? 'block' : 'none';
 }
 
 async function cbGenerateAIQuiz(lessonId) {
@@ -3470,7 +3502,7 @@ async function cbGenerateAIQuiz(lessonId) {
     var res = await fetch('/api/generate-quiz', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: content.substring(0, 6000) })
+      body: JSON.stringify({ content: content.substring(0, 6000), num_questions: _quizCounts[lessonId] === 0 ? (parseInt(($('ai-quiz-custom-count-' + lessonId) || {}).value) || 8) : (_quizCounts[lessonId] || 8) })
     });
 
     if (!res.ok) {

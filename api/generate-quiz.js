@@ -8,8 +8,10 @@ export default async function handler(req, res) {
   if (!ANTHROPIC_KEY) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
 
   try {
-    const { content } = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const { content, num_questions } = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     if (!content) return res.status(400).json({ error: 'Missing content' });
+
+    const questionCount = parseInt(num_questions) || 8;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -20,8 +22,8 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 1500,
-        system: "You are a coaching education expert. Generate quiz questions from the provided content. Return ONLY valid JSON with no markdown, no backticks, just raw JSON: { \"title\": \"string\", \"questions\": [ { \"type\": \"multiple_choice\" or \"true_false\", \"question\": \"string\", \"options\": [\"string\"] (4 options for mc, [\"True\",\"False\"] for tf), \"correct_answer\": \"string\", \"explanation\": \"string\" } ] }. Generate 5-8 thoughtful practical questions.",
+        max_tokens: 2000,
+        system: `You are a coaching education expert. Generate quiz questions from the provided content. Return ONLY valid JSON with no markdown, no backticks, just raw JSON: { "title": "string", "questions": [ { "type": "multiple_choice" or "true_false", "question": "string", "options": ["string"] (4 options for mc, ["True","False"] for tf), "correct_answer": "string", "explanation": "string" } ] }. Generate exactly ${questionCount} thoughtful practical questions.`,
         messages: [{ role: 'user', content: 'Generate quiz questions from this content:\n\n' + content.substring(0, 6000) }],
       }),
     });
