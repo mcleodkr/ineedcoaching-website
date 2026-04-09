@@ -1064,8 +1064,10 @@ function $(id) { return document.getElementById(id); }
   if (hash && hash.includes('access_token')) {
     const params = new URLSearchParams(hash.substring(1));
     const token = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
     if (token) {
       localStorage.setItem(TOKEN_KEY, token);
+      if (refreshToken) localStorage.setItem('sb_refresh_token', refreshToken);
       window.location.hash = '';
       window.location.reload();
       return;
@@ -1124,20 +1126,60 @@ async function init() {
   $('login-screen').style.display = 'none';
   $('dashboard').style.display = 'block';
 
-  // Verify token
+  // Verify token, refresh if expired
   try {
     var res = await fetch(SUPABASE_URL + '/auth/v1/user', {
       headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + token }
     });
     if (!res.ok) {
-      localStorage.removeItem(TOKEN_KEY);
-      window.location.reload();
-      return;
+      // Token expired — try refreshing
+      var refreshToken = localStorage.getItem('sb_refresh_token');
+      if (refreshToken) {
+        console.log('[Auth] Token expired, attempting refresh...');
+        var refreshRes = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
+          method: 'POST',
+          headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh_token: refreshToken })
+        });
+        if (refreshRes.ok) {
+          var refreshData = await refreshRes.json();
+          token = refreshData.access_token;
+          localStorage.setItem(TOKEN_KEY, token);
+          if (refreshData.refresh_token) localStorage.setItem('sb_refresh_token', refreshData.refresh_token);
+          console.log('[Auth] Token refreshed successfully');
+          // Re-verify with new token
+          var verifyRes = await fetch(SUPABASE_URL + '/auth/v1/user', {
+            headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + token }
+          });
+          if (!verifyRes.ok) {
+            console.error('[Auth] Refresh token also invalid');
+            localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem('sb_refresh_token');
+            window.location.reload();
+            return;
+          }
+          currentUser = await verifyRes.json();
+          currentToken = token;
+        } else {
+          console.error('[Auth] Refresh failed:', refreshRes.status);
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem('sb_refresh_token');
+          window.location.reload();
+          return;
+        }
+      } else {
+        localStorage.removeItem(TOKEN_KEY);
+        window.location.reload();
+        return;
+      }
+    } else {
+      currentUser = await res.json();
+      currentToken = token;
     }
-    currentUser = await res.json();
-    currentToken = token;
   } catch (err) {
+    console.error('[Auth] Error:', err);
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('sb_refresh_token');
     window.location.reload();
     return;
   }
