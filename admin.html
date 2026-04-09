@@ -617,7 +617,7 @@ function renderCourses(){
   var tbody='';
   list.forEach(function(c,i){
     var fmtPill=c.format==='self-paced'?'pill-navy':c.format==='cohort'?'pill-gold':'pill-green';
-    var statusPill=c.status==='published'?'pill-green':'pill-muted';
+    var statusPill=c.status==='active'?'pill-green':c.status==='coming_soon'?'pill-gold':'pill-muted';
     var star=c.is_featured?'<span style="color:var(--gold);font-size:1.1rem;cursor:pointer" onclick="event.stopPropagation();toggleFeatured(\''+c.id+'\',false)">&#9733;</span>':'<span style="color:#ccc;font-size:1.1rem;cursor:pointer" onclick="event.stopPropagation();toggleFeatured(\''+c.id+'\',true)">&#9734;</span>';
     var coachName=(c.coach_profiles&&c.coach_profiles.display_name)||'-';
     tbody+='<tr style="cursor:pointer" onclick="toggleCourseRow('+i+')">'+

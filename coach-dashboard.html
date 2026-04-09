@@ -2240,9 +2240,9 @@ function renderCourseList() {
     dashCourses.forEach(function(c) {
       var typeMap = { 'self-paced': 'Self-Paced', 'live-virtual': 'Live Virtual', 'in-person': 'In-Person', 'hybrid': 'Hybrid', 'cohort': 'Cohort', 'masterclass': 'Masterclass' };
       var typeLabel = typeMap[c.course_type] || typeMap[c.format] || c.course_type || c.format || 'Course';
-      var statusBadge = c.status === 'published' || c.status === 'active'
+      var statusBadge = c.status === 'active'
         ? 'prop-badge-accepted' : 'prop-badge-draft';
-      var statusLabel = c.status === 'published' || c.status === 'active' ? 'Published' : 'Draft';
+      var statusLabel = c.status === 'active' ? 'Active' : c.status === 'coming_soon' ? 'Coming Soon' : c.status === 'completed' ? 'Completed' : 'Draft';
       var initial = (c.title || 'C').charAt(0).toUpperCase();
 
       html += '<div class="prop-card" onclick="openCourseBuilder(\'' + c.id + '\')" style="grid-template-columns:auto 1fr auto auto;">'
@@ -2737,7 +2737,7 @@ async function cbPublish() {
   if (!currentCourseId) return;
 
   try {
-    var payload = { status: 'published', welcome_message: courseData.welcome_message || null };
+    var payload = { status: 'active', welcome_message: courseData.welcome_message || null };
     await fetch(SUPABASE_URL + '/rest/v1/coach_courses?id=eq.' + currentCourseId, {
       method: 'PATCH', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
       body: JSON.stringify(payload)
