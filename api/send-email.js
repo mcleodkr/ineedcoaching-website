@@ -1,5 +1,4 @@
-// Requires MAILTRAP_TOKEN env var in Vercel project settings
-// Mailtrap Send API: https://api-docs.mailtrap.io/docs/mailtrap-api-docs/send-email
+// Requires RESEND_API_KEY env var in Vercel project settings
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -8,10 +7,10 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const MAILTRAP_TOKEN = process.env.MAILTRAP_TOKEN;
-  if (!MAILTRAP_TOKEN) {
-    console.error('MAILTRAP_TOKEN env var is not set. Add it in Vercel project settings.');
-    return res.status(500).json({ error: 'Email service not configured. MAILTRAP_TOKEN missing.' });
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  if (!RESEND_API_KEY) {
+    console.error('RESEND_API_KEY env var is not set. Add it in Vercel project settings.');
+    return res.status(500).json({ error: 'Email not configured. RESEND_API_KEY missing.' });
   }
 
   try {
@@ -21,29 +20,28 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing required fields: to, subject, html or text' });
     }
 
-    const mailRes = await fetch('https://send.api.mailtrap.io/api/send', {
+    const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${MAILTRAP_TOKEN}`,
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: { email: 'noreply@ineedcoaching.org', name: 'ineedcoaching.org' },
-        to: [{ email: to }],
+        from: 'ineedcoaching.org <noreply@ineedcoaching.org>',
+        to: to,
         subject: subject,
         html: html || undefined,
         text: text || undefined
       })
     });
 
-    if (!mailRes.ok) {
-      const errBody = await mailRes.text();
-      console.error('Mailtrap error:', mailRes.status, errBody);
-      return res.status(502).json({ error: 'Email delivery failed', details: errBody });
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('Resend error:', response.status, JSON.stringify(data));
+      return res.status(500).json({ error: data });
     }
 
-    const result = await mailRes.json();
-    return res.status(200).json({ sent: true, message_id: result.message_ids?.[0] });
+    return res.status(200).json({ success: true, id: data.id });
   } catch (e) {
     console.error('send-email error:', e);
     return res.status(500).json({ error: e.message });

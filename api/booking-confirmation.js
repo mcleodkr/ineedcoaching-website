@@ -82,7 +82,7 @@ export default async function handler(req, res) {
         <p style="font-size:0.85rem;color:#6b6b60;"><a href="https://www.ineedcoaching.org/coach-dashboard.html" style="color:#c49a3c;text-decoration:none;font-weight:600;">Go to Dashboard &rarr;</a></p>
       </div>`;
 
-    // Send both emails via Mailtrap
+    // Send both emails via Resend
     const origin = req.headers.host ? `https://${req.headers.host}` : 'https://www.ineedcoaching.org';
     const emailResults = await Promise.allSettled([
       fetch(`${origin}/api/send-email`, {

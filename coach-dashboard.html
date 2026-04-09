@@ -3521,6 +3521,24 @@ async function sendCoachReply(key, thread) {
       })
     });
     input.value = '';
+    // Email the client about the reply
+    var coachName = coachProfile.display_name || coachProfile.full_name || 'Your Coach';
+    try {
+      await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: thread.clientEmail,
+          subject: 'New message from ' + coachName,
+          html: '<div style="font-family:DM Sans,sans-serif;max-width:560px;margin:0 auto;padding:32px;color:#1a3a52;">'
+            + '<h1 style="font-family:Cormorant Garamond,Georgia,serif;font-size:1.5rem;color:#1a3a52;margin-bottom:16px;">New message from ' + coachName + '</h1>'
+            + '<div style="background:#f7f4ee;border-radius:8px;padding:20px;margin:20px 0;font-size:0.95rem;line-height:1.6;color:#1a3a52;white-space:pre-line;">' + text.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>'
+            + '<p style="font-size:0.85rem;color:#6b6b60;">Reply to this message on your coach\'s profile page.</p>'
+            + '<p style="font-size:0.82rem;color:#6b6b60;margin-top:24px;">&mdash; <a href="https://www.ineedcoaching.org" style="color:#c49a3c;text-decoration:none;font-weight:600;">ineedcoaching.org</a></p>'
+            + '</div>'
+        })
+      });
+    } catch(emailErr) { console.warn('Message notification email failed:', emailErr); }
     // Reload messages to refresh thread
     await loadDashMessages();
     // Re-expand the same thread
