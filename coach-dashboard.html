@@ -3285,11 +3285,20 @@ function wireSendCheckinButtons() {
       var clientEmail = this.dataset.clientEmail;
       var clientName = this.dataset.clientName;
       var cell = this.closest('.booking-actions-cell');
+      console.log('[SendCheckin] Button clicked. bookingId:', bookingId, 'clientEmail:', clientEmail);
 
       // Fetch coach's checkin forms
-      var forms = await supabaseGet(
-        'coach_intake_forms?coach_id=eq.' + coachProfile.id + '&form_type=eq.checkin&select=id,name'
-      );
+      var forms;
+      try {
+        forms = await supabaseGet(
+          'coach_intake_forms?coach_id=eq.' + coachProfile.id + '&form_type=eq.checkin&select=id,name'
+        );
+        console.log('[SendCheckin] Fetched forms:', forms);
+      } catch(fetchErr) {
+        console.error('[SendCheckin] Error fetching forms:', fetchErr);
+        alert('Error loading check-in forms. Check console.');
+        return;
+      }
       if (!forms || !forms.length) {
         alert('No check-in forms created yet. Go to the Forms tab to create one.');
         return;
@@ -3308,14 +3317,17 @@ function wireSendCheckinButtons() {
         + '</div>';
 
       cell.querySelector('.checkin-send-final').addEventListener('click', async function() {
-        var formId = $('checkin-select-' + bookingId).value;
-        var formName = $('checkin-select-' + bookingId).selectedOptions[0] ? $('checkin-select-' + bookingId).selectedOptions[0].textContent : 'Check-in';
+        var selectEl = $('checkin-select-' + bookingId);
+        var formId = selectEl ? selectEl.value : '';
+        var formName = (selectEl && selectEl.selectedOptions[0]) ? selectEl.selectedOptions[0].textContent : 'Check-in';
+        console.log('[SendCheckin] bookingId:', bookingId, 'clientEmail:', clientEmail, 'formId:', formId, 'formName:', formName);
         if (!formId) { alert('Select a form first.'); return; }
         this.disabled = true;
         this.textContent = 'Sending...';
         var token = generateToken();
         try {
-          await fetch(SUPABASE_URL + '/rest/v1/coach_checkin_responses', {
+          console.log('[SendCheckin] Inserting checkin response with token:', token);
+          var insertRes = await fetch(SUPABASE_URL + '/rest/v1/coach_checkin_responses', {
             method: 'POST',
             headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
             body: JSON.stringify({
@@ -3327,6 +3339,12 @@ function wireSendCheckinButtons() {
               token: token
             })
           });
+          if (!insertRes.ok) {
+            var errBody = await insertRes.text();
+            console.error('[SendCheckin] Supabase INSERT failed:', insertRes.status, errBody);
+            throw new Error('Supabase INSERT failed: ' + insertRes.status + ' ' + errBody);
+          }
+          console.log('[SendCheckin] Insert successful');
           // Update in-memory checkin lookup
           checkinByBooking[bookingId] = { token: token, formName: formName, submitted: false };
           var ciUrl = window.location.origin + '/checkin.html?token=' + token;
@@ -3356,7 +3374,8 @@ function wireSendCheckinButtons() {
             + '<button onclick="navigator.clipboard.writeText(\'' + escapeHtml(ciUrl) + '\');this.textContent=\'Copied!\';setTimeout(()=>this.textContent=\'Copy link\',1500)" style="font-size:0.68rem;color:var(--muted);background:none;border:1px solid var(--border);padding:2px 8px;border-radius:50px;cursor:pointer;">Copy</button> '
             + '<span class="status-pill status-pending" style="font-size:0.62rem;padding:2px 8px;">Pending</span>';
         } catch(e) {
-          alert('Error sending check-in.');
+          console.error('[SendCheckin] Error:', e);
+          alert('Error sending check-in: ' + (e.message || e));
           this.disabled = false;
           this.textContent = 'Send';
         }
