@@ -2518,65 +2518,120 @@ async function loadDashGoals() {
     $('goals-loading').style.display = 'none';
     $('goals-content').classList.remove('hidden');
 
-    var statusLabels = { not_started: 'Not started', in_progress: 'In progress', completed: 'Completed' };
+    var statusLabels = { not_started: 'Not Started', in_progress: 'In Progress', completed: 'Completed' };
+    var statusColors = { not_started: 'background:rgba(107,107,96,0.15);color:var(--muted)', in_progress: 'background:#c49a3c;color:#fff', completed: 'background:#2d6a4f;color:#fff' };
 
-    // Add goal form
-    var html = '<div class="add-goal-form">'
-      + '<h3>Add Goal</h3>'
-      + '<div class="form-group">'
+    // Group goals by client
+    var clients = {};
+    var clientOrder = [];
+    if (data && data.length > 0) {
+      data.forEach(function(g) {
+        var key = g.client_email || 'unknown';
+        if (!clients[key]) { clients[key] = []; clientOrder.push(key); }
+        clients[key].push(g);
+      });
+    }
+
+    // My Clients' Goals section
+    var html = '<div class="form-section"><h2 class="form-section-title">My Clients\' Goals</h2>';
+
+    if (clientOrder.length === 0) {
+      html += '<div class="empty-state" style="padding:24px;"><p>No goals created yet. Add a goal below to get started.</p></div>';
+    } else {
+      clientOrder.forEach(function(email) {
+        var goals = clients[email];
+        var completedCount = goals.filter(function(g) { return g.status === 'completed'; }).length;
+        html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);margin-bottom:12px;overflow:hidden;">'
+          + '<div class="goal-client-header" data-toggle-client="' + escapeHtml(email) + '" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;transition:background 0.2s;">'
+          + '<div style="display:flex;align-items:center;gap:10px;">'
+          + '<span style="font-weight:700;font-size:0.92rem;color:var(--ink);">' + escapeHtml(email) + '</span>'
+          + '<span style="font-size:0.75rem;background:var(--cream);padding:3px 10px;border-radius:50px;color:var(--muted);font-weight:600;">' + goals.length + ' goal' + (goals.length !== 1 ? 's' : '') + '</span>'
+          + (completedCount > 0 ? '<span style="font-size:0.75rem;background:#2d6a4f;color:#fff;padding:3px 10px;border-radius:50px;font-weight:600;">' + completedCount + ' done</span>' : '')
+          + '</div>'
+          + '<span style="font-size:1.1rem;color:var(--muted);transition:transform 0.2s;" class="goal-toggle-arrow">&#9662;</span>'
+          + '</div>'
+          + '<div class="goal-client-body" id="goals-client-' + escapeHtml(email) + '" style="display:none;padding:0 20px 20px;">';
+
+        goals.forEach(function(g) {
+          var targetStr = g.target_date ? new Date(g.target_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+          var pillStyle = statusColors[g.status] || statusColors.not_started;
+          html += '<div style="background:var(--cream);border-radius:var(--r-sm);padding:16px 18px;margin-bottom:8px;">'
+            + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
+            + '<div style="flex:1;min-width:180px;">'
+            + '<div style="font-weight:700;font-size:0.92rem;color:var(--ink);margin-bottom:4px;">' + escapeHtml(g.title) + '</div>'
+            + (g.description ? '<div style="font-size:0.85rem;color:var(--muted);line-height:1.5;margin-bottom:8px;">' + escapeHtml(g.description) + '</div>' : '')
+            + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+            + '<span class="status-pill" style="font-size:0.68rem;padding:3px 10px;' + pillStyle + '">' + escapeHtml(statusLabels[g.status] || g.status) + '</span>'
+            + (targetStr ? '<span style="font-size:0.78rem;color:var(--muted);">Due: ' + escapeHtml(targetStr) + '</span>' : '')
+            + '</div></div>'
+            + '<div style="display:flex;gap:6px;flex-shrink:0;">';
+
+          if (g.status !== 'completed') {
+            html += '<button class="action-btn action-confirm" data-goal-complete="' + g.id + '" style="padding:6px 12px;font-size:0.75rem;">Complete</button>';
+          }
+          html += '<button class="action-btn action-decline" data-goal-delete="' + g.id + '" style="padding:6px 12px;font-size:0.75rem;color:#c44;">Delete</button>'
+            + '</div></div></div>';
+        });
+
+        html += '</div></div>';
+      });
+    }
+    html += '</div>';
+
+    // Add a Goal section
+    html += '<div class="form-section" style="margin-top:24px;">'
+      + '<h2 class="form-section-title">Add a Goal</h2>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:700px;">'
+      + '<div class="form-group" style="grid-column:1/-1;">'
       + '<label for="goal-client-email">Client Email</label>'
       + '<input type="email" id="goal-client-email" placeholder="client@example.com">'
       + '</div>'
       + '<div class="form-group">'
-      + '<label for="goal-title">Title</label>'
-      + '<input type="text" id="goal-title" placeholder="Goal title">'
-      + '</div>'
-      + '<div class="form-group">'
-      + '<label for="goal-desc">Description</label>'
-      + '<textarea id="goal-desc" placeholder="Describe the goal..." style="min-height:80px;"></textarea>'
+      + '<label for="goal-title">Goal Title</label>'
+      + '<input type="text" id="goal-title" placeholder="e.g. Complete leadership assessment">'
       + '</div>'
       + '<div class="form-group">'
       + '<label for="goal-date">Target Date</label>'
       + '<input type="date" id="goal-date">'
       + '</div>'
+      + '<div class="form-group" style="grid-column:1/-1;">'
+      + '<label for="goal-desc">Description (optional)</label>'
+      + '<textarea id="goal-desc" placeholder="What does success look like for this goal?" style="min-height:80px;"></textarea>'
+      + '</div>'
+      + '<div class="form-group">'
+      + '<label for="goal-status">Status</label>'
+      + '<select id="goal-status">'
+      + '<option value="not_started">Not Started</option>'
+      + '<option value="in_progress">In Progress</option>'
+      + '<option value="completed">Completed</option>'
+      + '</select></div>'
+      + '</div>'
+      + '<div style="margin-top:8px;">'
       + '<button class="save-btn" id="add-goal-btn">Add Goal</button>'
       + '<span class="save-msg" id="add-goal-msg"></span>'
-      + '</div>';
-
-    if (!data || data.length === 0) {
-      html += '<div class="empty-state"><p>No goals created yet. Use the form above to set goals for your clients.</p></div>';
-    } else {
-      data.forEach(function(g) {
-        var statusClass = 'status-' + g.status;
-        var targetStr = g.target_date ? new Date(g.target_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-
-        html += '<div class="goal-card">'
-          + '<h3>' + escapeHtml(g.title) + '</h3>'
-          + (g.description ? '<p>' + escapeHtml(g.description) + '</p>' : '')
-          + '<p style="font-size:0.82rem;"><strong>Client:</strong> ' + escapeHtml(g.client_email) + '</p>'
-          + (targetStr ? '<p style="font-size:0.82rem;"><strong>Target:</strong> ' + escapeHtml(targetStr) + '</p>' : '')
-          + '<div class="goal-card-meta">'
-          + '<span class="status-pill ' + statusClass + '">' + escapeHtml(statusLabels[g.status] || g.status) + '</span>'
-          + '<select class="goal-status-select" data-goal-id="' + g.id + '">'
-          + '<option value="not_started"' + (g.status === 'not_started' ? ' selected' : '') + '>Not started</option>'
-          + '<option value="in_progress"' + (g.status === 'in_progress' ? ' selected' : '') + '>In progress</option>'
-          + '<option value="completed"' + (g.status === 'completed' ? ' selected' : '') + '>Completed</option>'
-          + '</select>'
-          + '<button class="goal-delete-btn" data-goal-delete="' + g.id + '">Delete</button>'
-          + '</div></div>';
-      });
-    }
+      + '</div></div>';
 
     $('goals-content').innerHTML = html;
+
+    // Wire client toggle
+    document.querySelectorAll('.goal-client-header').forEach(function(el) {
+      el.addEventListener('click', function() {
+        var email = this.dataset.toggleClient;
+        var body = $('goals-client-' + email);
+        var arrow = this.querySelector('.goal-toggle-arrow');
+        var isOpen = body.style.display !== 'none';
+        body.style.display = isOpen ? 'none' : '';
+        arrow.style.transform = isOpen ? '' : 'rotate(180deg)';
+      });
+    });
 
     // Wire add goal
     $('add-goal-btn').addEventListener('click', addGoal);
 
-    // Wire status changes
-    document.querySelectorAll('.goal-status-select').forEach(function(sel) {
-      sel.addEventListener('change', async function() {
-        var goalId = this.dataset.goalId;
-        await supabasePatch('coach_goals', { id: 'eq.' + goalId }, { status: this.value });
+    // Wire complete buttons
+    document.querySelectorAll('[data-goal-complete]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        await supabasePatch('coach_goals', { id: 'eq.' + this.dataset.goalComplete }, { status: 'completed' });
         loadDashGoals();
       });
     });
@@ -2602,6 +2657,7 @@ async function addGoal() {
   var title = $('goal-title').value.trim();
   var desc = $('goal-desc').value.trim();
   var date = $('goal-date').value;
+  var status = $('goal-status').value;
   var msg = $('add-goal-msg');
 
   if (!email || !title) {
@@ -2625,13 +2681,15 @@ async function addGoal() {
         client_email: email,
         title: title,
         description: desc || null,
-        target_date: date || null
+        target_date: date || null,
+        status: status
       })
     });
     $('goal-client-email').value = '';
     $('goal-title').value = '';
     $('goal-desc').value = '';
     $('goal-date').value = '';
+    $('goal-status').value = 'not_started';
     loadDashGoals();
   } catch (e) {
     msg.textContent = 'Error adding goal.';

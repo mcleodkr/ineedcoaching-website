@@ -341,8 +341,11 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
           <button type="submit" class="btn-gold booking-submit">Request Booking</button>
         </form>
         <div id="intake-step" class="hidden" style="padding:32px 0;">
-          <h3 style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--ink);margin-bottom:6px;">Step 2: Intake Form</h3>
-          <p style="font-size:0.88rem;color:var(--muted);margin-bottom:24px;">Please complete this form so the coach can prepare for your session.</p>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+            <span style="background:var(--gold);color:#fff;font-size:0.7rem;font-weight:700;padding:4px 10px;border-radius:50px;letter-spacing:0.04em;">STEP 2 OF 2</span>
+          </div>
+          <h3 style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--ink);margin-bottom:6px;" id="intake-step-title">A few questions before your session</h3>
+          <p style="font-size:0.88rem;color:var(--muted);margin-bottom:24px;">Your answers help the coach prepare for a focused, productive first session.</p>
           <div id="intake-questions-render"></div>
           <div style="display:flex;gap:12px;margin-top:20px;">
             <button class="btn-outline" id="intake-back-btn" style="flex:0 0 auto;color:var(--ink);border-color:var(--border);padding:14px 24px;">Back</button>
@@ -350,8 +353,8 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
           </div>
         </div>
         <div class="booking-success" id="booking-success">
-          <h3>Booking Request Sent!</h3>
-          <p>Your request has been submitted. The coach will be in touch soon.</p>
+          <h3>Your request has been sent!</h3>
+          <p id="booking-success-msg">The coach will confirm within 24 hours.</p>
           <div id="zoom-link-display" class="hidden" style="margin-top:20px;padding:16px;background:var(--cream);border:1px solid var(--border);border-radius:var(--r-sm);text-align:left;">
             <div style="font-weight:700;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink);margin-bottom:8px;">Your Session Link</div>
             <div style="display:flex;align-items:center;gap:10px;">
@@ -868,6 +871,8 @@ document.getElementById('booking-form').addEventListener('submit', async functio
 
 function showBookingSuccess() {
   document.getElementById('intake-step').classList.add('hidden');
+  var coachName = coachData.display_name || coachData.full_name || 'The coach';
+  document.getElementById('booking-success-msg').textContent = coachName + ' will confirm within 24 hours.';
   document.getElementById('booking-success').style.display = 'block';
 
   // Show zoom link if available
@@ -931,6 +936,8 @@ function renderIntakeForm(form, clientEmail, bookingId) {
   });
 
   container.innerHTML = html;
+  var coachName = coachData.display_name || coachData.full_name || 'your coach';
+  document.getElementById('intake-step-title').textContent = 'A few questions for ' + coachName;
   document.getElementById('intake-step').classList.remove('hidden');
 
   // Wire back button
