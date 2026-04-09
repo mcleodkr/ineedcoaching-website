@@ -1609,7 +1609,7 @@ async function loadBookings() {
           } else {
             actions = '<button class="booking-zoom-btn" data-booking-id="' + b.id + '">Add meeting link</button>';
           }
-          actions += ' <button class="booking-zoom-btn" data-send-checkin="' + b.id + '" data-client-email="' + escapeHtml(b.client_email || '') + '" data-client-name="' + escapeHtml(clientName) + '" style="margin-left:4px;">Send check-in</button>';
+          actions += ' <button class="booking-checkin-btn" data-send-checkin="' + b.id + '" data-client-email="' + escapeHtml(b.client_email || '') + '" data-client-name="' + escapeHtml(clientName) + '" style="font-size:0.75rem;color:var(--ink);cursor:pointer;border:1px solid var(--ink);background:none;font-weight:700;padding:4px 10px;border-radius:50px;margin-left:4px;">Send check-in</button>';
         }
         var hasNotes = b.notes && b.notes.trim();
 
@@ -1666,16 +1666,17 @@ async function loadBookings() {
         });
       });
 
-      // Zoom link handlers for confirmed bookings
-      $('bookings-content').querySelectorAll('.booking-zoom-btn').forEach(function(btn) {
+      // Zoom link handlers — only for "Add meeting link" buttons (not send-checkin)
+      $('bookings-content').querySelectorAll('.booking-zoom-btn[data-booking-id]').forEach(function(btn) {
+        if (btn.dataset.sendCheckin) return; // skip check-in buttons
         btn.addEventListener('click', function() {
           var id = this.dataset.bookingId;
-          var cell = this.closest('.booking-actions-cell');
-          cell.innerHTML = '<div class="booking-zoom-input-wrap">'
-            + '<input type="url" placeholder="Paste meeting link" id="zoom-input-' + id + '">'
-            + '<button data-booking-id="' + id + '" class="booking-zoom-save-btn">Save</button>'
-            + '</div>';
-          cell.querySelector('.booking-zoom-save-btn').addEventListener('click', async function() {
+          var wrapper = document.createElement('div');
+          wrapper.className = 'booking-zoom-input-wrap';
+          wrapper.innerHTML = '<input type="url" placeholder="Paste meeting link" id="zoom-input-' + id + '">'
+            + '<button data-booking-id="' + id + '" class="booking-zoom-save-btn">Save</button>';
+          this.replaceWith(wrapper);
+          wrapper.querySelector('.booking-zoom-save-btn').addEventListener('click', async function() {
             var input = $('zoom-input-' + id);
             var url = input.value.trim();
             if (!url) return;
@@ -1684,9 +1685,9 @@ async function loadBookings() {
             await supabasePatch('coach_bookings', { id: 'eq.' + id }, { zoom_link: url });
             var booking = allBookings.find(function(b) { return b.id === id; });
             if (booking) booking.zoom_link = url;
-            cell.innerHTML = '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer" class="booking-zoom-link" title="Click to open meeting link">&#127909; Meeting link</a>';
+            wrapper.outerHTML = '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer" class="booking-zoom-link" title="Click to open meeting link">&#127909; Meeting link</a>';
           });
-          cell.querySelector('input').focus();
+          wrapper.querySelector('input').focus();
         });
       });
 
@@ -1956,14 +1957,20 @@ async function saveZoomLink() {
   msg.classList.remove('show');
   try {
     var val = $('f-zoom-link').value.trim();
-    await supabasePatch('coach_profiles', { id: 'eq.' + coachProfile.id }, { zoom_meeting_link: val || null });
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles?id=eq.' + coachProfile.id, {
+      method: 'PATCH',
+      headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
+      body: JSON.stringify({ zoom_meeting_link: val || null })
+    });
+    if (!res.ok) throw new Error('PATCH failed: ' + res.status);
     coachProfile.zoom_meeting_link = val || null;
     msg.textContent = 'Saved';
     msg.style.color = 'var(--forest)';
     msg.classList.add('show');
     setTimeout(function() { msg.classList.remove('show'); }, 3000);
   } catch (e) {
-    msg.textContent = 'Error saving.';
+    console.error('Zoom save error:', e);
+    msg.textContent = 'Error saving. Check console.';
     msg.style.color = '#c44';
     msg.classList.add('show');
   }
