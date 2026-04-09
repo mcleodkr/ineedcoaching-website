@@ -3319,59 +3319,27 @@ function wireSendCheckinButtons() {
       cell.querySelector('.checkin-send-final').addEventListener('click', async function() {
         var selectEl = $('checkin-select-' + bookingId);
         var formId = selectEl ? selectEl.value : '';
-        var formName = (selectEl && selectEl.selectedOptions[0]) ? selectEl.selectedOptions[0].textContent : 'Check-in';
-        console.log('[SendCheckin] bookingId:', bookingId, 'clientEmail:', clientEmail, 'formId:', formId, 'formName:', formName);
         if (!formId) { alert('Select a form first.'); return; }
         this.disabled = true;
         this.textContent = 'Sending...';
-        var token = generateToken();
         try {
-          console.log('[SendCheckin] Inserting checkin response with token:', token);
-          var insertRes = await fetch(SUPABASE_URL + '/rest/v1/coach_checkin_responses', {
+          var res = await fetch('/api/send-checkin', {
             method: 'POST',
-            headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              booking_id: bookingId,
-              coach_id: coachProfile.id,
-              client_email: clientEmail,
-              client_name: clientName,
-              form_id: formId,
-              token: token
+              bookingId: bookingId,
+              formId: formId,
+              clientEmail: clientEmail,
+              clientName: clientName,
+              coachId: coachProfile.id
             })
           });
-          if (!insertRes.ok) {
-            var errBody = await insertRes.text();
-            console.error('[SendCheckin] Supabase INSERT failed:', insertRes.status, errBody);
-            throw new Error('Supabase INSERT failed: ' + insertRes.status + ' ' + errBody);
-          }
-          console.log('[SendCheckin] Insert successful');
-          // Update in-memory checkin lookup
-          checkinByBooking[bookingId] = { token: token, formName: formName, submitted: false };
-          var ciUrl = window.location.origin + '/checkin.html?token=' + token;
-
-          // Email the client the check-in link
-          var coachName = coachProfile.display_name || coachProfile.full_name || 'Your Coach';
-          try {
-            await fetch('/api/send-email', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                to: clientEmail,
-                subject: 'Pre-session check-in from ' + coachName,
-                html: '<div style="font-family:DM Sans,sans-serif;max-width:560px;margin:0 auto;padding:32px;color:#1a3a52;">'
-                  + '<h1 style="font-family:Cormorant Garamond,Georgia,serif;font-size:1.6rem;color:#1a3a52;margin-bottom:16px;">' + formName + '</h1>'
-                  + '<p style="font-size:0.95rem;line-height:1.6;color:#6b6b60;">Hi ' + (clientName || 'there') + ',</p>'
-                  + '<p style="font-size:0.95rem;line-height:1.6;color:#6b6b60;">' + coachName + ' has sent you a pre-session check-in. Please take a few minutes to fill it out before your session.</p>'
-                  + '<div style="margin:24px 0;"><a href="' + ciUrl + '" style="display:inline-block;background:#c49a3c;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:0.95rem;">Complete Check-in</a></div>'
-                  + '<p style="font-size:0.82rem;color:#6b6b60;">Or copy this link: <a href="' + ciUrl + '" style="color:#c49a3c;">' + ciUrl + '</a></p>'
-                  + '<p style="font-size:0.82rem;color:#6b6b60;margin-top:24px;">— <a href="https://www.ineedcoaching.org" style="color:#c49a3c;text-decoration:none;font-weight:600;">ineedcoaching.org</a></p>'
-                  + '</div>'
-              })
-            });
-          } catch(emailErr) { console.warn('Check-in email failed:', emailErr); }
-          this.parentElement.innerHTML = '<span style="font-size:0.72rem;color:var(--gold);font-weight:600;">' + escapeHtml(formName) + '</span> '
-            + '<a href="' + escapeHtml(ciUrl) + '" target="_blank" style="font-size:0.72rem;color:var(--gold);font-weight:700;text-decoration:none;">View form &rarr;</a> '
-            + '<button onclick="navigator.clipboard.writeText(\'' + escapeHtml(ciUrl) + '\');this.textContent=\'Copied!\';setTimeout(()=>this.textContent=\'Copy link\',1500)" style="font-size:0.68rem;color:var(--muted);background:none;border:1px solid var(--border);padding:2px 8px;border-radius:50px;cursor:pointer;">Copy</button> '
+          var data = await res.json();
+          if (!res.ok) throw new Error(data.error || data.details || 'Failed to send check-in');
+          checkinByBooking[bookingId] = { token: data.token, formName: data.formName, submitted: false };
+          this.parentElement.innerHTML = '<span style="font-size:0.72rem;color:var(--gold);font-weight:600;">' + escapeHtml(data.formName) + '</span> '
+            + '<a href="' + escapeHtml(data.checkinUrl) + '" target="_blank" style="font-size:0.72rem;color:var(--gold);font-weight:700;text-decoration:none;">View form &rarr;</a> '
+            + '<button onclick="navigator.clipboard.writeText(\'' + escapeHtml(data.checkinUrl) + '\');this.textContent=\'Copied!\';setTimeout(()=>this.textContent=\'Copy link\',1500)" style="font-size:0.68rem;color:var(--muted);background:none;border:1px solid var(--border);padding:2px 8px;border-radius:50px;cursor:pointer;">Copy link</button> '
             + '<span class="status-pill status-pending" style="font-size:0.62rem;padding:2px 8px;">Pending</span>';
         } catch(e) {
           console.error('[SendCheckin] Error:', e);
