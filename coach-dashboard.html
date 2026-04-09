@@ -494,7 +494,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
     <button class="tab-btn" data-tab="testimonials">Testimonials</button>
     <button class="tab-btn" data-tab="recommendations">Recommendations</button>
     <button class="tab-btn" data-tab="scheduling">Scheduling</button>
-    <button class="tab-btn" data-tab="intake">Intake Forms</button>
+    <button class="tab-btn" data-tab="intake">Forms</button>
     <button class="tab-btn" data-tab="messages" id="tab-btn-messages">Messages</button>
     <button class="tab-btn" data-tab="goals">Goals</button>
     <button class="tab-btn" data-tab="courses">Courses</button>
@@ -756,8 +756,16 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
       </div>
     </div>
 
-    <!-- INTAKE FORMS TAB -->
+    <!-- FORMS TAB -->
     <div id="tab-intake" class="tab-panel">
+      <!-- SUB-TABS -->
+      <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:24px;">
+        <button class="forms-subtab active" data-forms-subtab="intake" style="padding:12px 24px;font-family:'Cabinet Grotesk',sans-serif;font-size:0.85rem;font-weight:700;color:var(--ink);background:none;border:none;border-bottom:2.5px solid var(--gold);cursor:pointer;margin-bottom:-2px;">Intake Forms</button>
+        <button class="forms-subtab" data-forms-subtab="checkin" style="padding:12px 24px;font-family:'Cabinet Grotesk',sans-serif;font-size:0.85rem;font-weight:700;color:var(--muted);background:none;border:none;border-bottom:2.5px solid transparent;cursor:pointer;margin-bottom:-2px;">Pre-Session Check-ins</button>
+      </div>
+
+      <!-- INTAKE SUB-TAB -->
+      <div id="forms-subtab-intake">
       <!-- MY FORMS LIBRARY -->
       <div class="form-section" id="intake-library-section">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
@@ -846,6 +854,95 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
         <h2 class="form-section-title">Intake Responses</h2>
         <div id="intake-responses-list"></div>
       </div>
+      </div><!-- end forms-subtab-intake -->
+
+      <!-- PRE-SESSION CHECK-INS SUB-TAB -->
+      <div id="forms-subtab-checkin" style="display:none;">
+        <div class="form-section" id="checkin-library-section">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+            <h2 class="form-section-title" style="margin-bottom:0;">My Check-in Forms</h2>
+            <button class="save-btn" id="create-new-checkin-btn">+ Create New Form</button>
+          </div>
+          <div id="checkin-forms-list"></div>
+        </div>
+
+        <div class="form-section" id="checkin-template-section" style="display:none;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <h2 class="form-section-title" style="margin-bottom:0;">Choose a Template</h2>
+            <button class="action-btn action-decline" id="checkin-back-to-library-btn" style="padding:10px 20px;">Back to My Forms</button>
+          </div>
+          <p style="font-size:0.88rem;color:var(--muted);margin-bottom:20px;">Pre-session forms help clients reflect before each session.</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;" id="checkin-templates-grid"></div>
+        </div>
+
+        <div class="form-section" id="checkin-name-section" style="display:none;">
+          <h2 class="form-section-title">Name This Form</h2>
+          <div class="form-group" style="max-width:400px;">
+            <label for="checkin-form-name">Form Name</label>
+            <input type="text" id="checkin-form-name" placeholder="e.g. GROW Pre-Session Brief">
+          </div>
+          <div style="display:flex;gap:12px;">
+            <button class="action-btn action-decline" id="checkin-name-back-btn" style="padding:12px 20px;">Back</button>
+            <button class="save-btn" id="checkin-name-continue-btn">Continue to Builder</button>
+          </div>
+        </div>
+
+        <div class="form-section" id="checkin-builder-section" style="display:none;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:12px;">
+            <h2 class="form-section-title" style="margin-bottom:0;">
+              <span id="checkin-builder-title">Editing Form</span>
+              <span id="checkin-form-status" style="margin-left:12px;"></span>
+            </h2>
+            <button class="action-btn action-decline" id="checkin-builder-back-btn" style="padding:10px 20px;">Back to My Forms</button>
+          </div>
+
+          <div id="checkin-questions-list" style="margin-bottom:20px;"></div>
+
+          <div id="checkin-add-form" style="background:var(--cream);border:1px solid var(--border);border-radius:var(--r);padding:24px;margin-bottom:16px;">
+            <h3 style="font-family:'Playfair Display',serif;font-size:1rem;color:var(--ink);margin-bottom:14px;">Add Question</h3>
+            <div class="form-group">
+              <label for="cq-text">Question Text</label>
+              <input type="text" id="cq-text" placeholder="What is your goal for today's session?">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="cq-type">Question Type</label>
+                <select id="cq-type">
+                  <option value="short_text">Short text</option>
+                  <option value="long_text">Long text</option>
+                  <option value="multiple_choice">Multiple choice</option>
+                  <option value="yes_no">Yes/No</option>
+                  <option value="scale">Scale 1-10</option>
+                </select>
+              </div>
+              <div class="form-group" style="display:flex;align-items:flex-end;">
+                <div class="checkbox-row" style="margin-bottom:0;">
+                  <input type="checkbox" id="cq-required" checked>
+                  <label for="cq-required">Required</label>
+                </div>
+              </div>
+            </div>
+            <div class="form-group hidden" id="cq-options-group">
+              <label for="cq-options">Options (comma-separated)</label>
+              <input type="text" id="cq-options" placeholder="Option A, Option B, Option C">
+            </div>
+            <button class="pill-add-btn" id="add-checkin-question-btn">Add Question</button>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+            <button class="save-btn" id="save-checkin-form-btn">Save Form</button>
+            <button class="save-btn" id="preview-checkin-btn" style="background:var(--ink);">Preview Form</button>
+            <span class="save-msg" id="save-checkin-msg">Saved</span>
+            <button class="action-btn action-decline" id="deactivate-checkin-btn" style="display:none;padding:12px 20px;">Deactivate</button>
+          </div>
+        </div>
+
+        <div class="form-section" style="margin-top:24px;">
+          <h2 class="form-section-title">Check-in Responses</h2>
+          <div id="checkin-responses-list"></div>
+        </div>
+      </div><!-- end forms-subtab-checkin -->
+
     </div>
 
     <!-- MESSAGES TAB -->
@@ -1498,6 +1595,7 @@ async function loadBookings() {
           } else {
             actions = '<button class="booking-zoom-btn" data-booking-id="' + b.id + '">Add meeting link</button>';
           }
+          actions += ' <button class="booking-zoom-btn" data-send-checkin="' + b.id + '" data-client-email="' + escapeHtml(b.client_email || '') + '" data-client-name="' + escapeHtml(clientName) + '" style="margin-left:4px;">Send check-in</button>';
         }
         var hasNotes = b.notes && b.notes.trim();
 
@@ -1578,6 +1676,7 @@ async function loadBookings() {
         });
       });
 
+      wireSendCheckinButtons();
       bindFilterButtons(filter);
     }
 
@@ -2338,6 +2437,396 @@ async function loadIntakeResponses() {
   } catch (e) {
     $('intake-responses-list').innerHTML = '<div class="empty-state"><p>Error loading responses.</p></div>';
   }
+}
+
+/* ================================================
+   FORMS SUB-TAB TOGGLE
+   ================================================ */
+document.querySelectorAll('.forms-subtab').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.forms-subtab').forEach(function(b) {
+      b.classList.remove('active');
+      b.style.color = 'var(--muted)';
+      b.style.borderBottomColor = 'transparent';
+    });
+    this.classList.add('active');
+    this.style.color = 'var(--ink)';
+    this.style.borderBottomColor = 'var(--gold)';
+    var tab = this.dataset.formsSubtab;
+    $('forms-subtab-intake').style.display = tab === 'intake' ? '' : 'none';
+    $('forms-subtab-checkin').style.display = tab === 'checkin' ? '' : 'none';
+    if (tab === 'checkin' && !checkinFormsLoaded) { loadCheckinForms(); checkinFormsLoaded = true; }
+  });
+});
+
+/* ================================================
+   PRE-SESSION CHECK-INS
+   ================================================ */
+var checkinFormsLoaded = false;
+var checkinFormId = null;
+var checkinFormName = '';
+var checkinQuestions = [];
+var allCheckinForms = [];
+
+var CHECKIN_TEMPLATES = {
+  grow: {
+    name: 'GROW Pre-Session Brief',
+    desc: 'ICF-aligned goal, reality, progress, and readiness check.',
+    questions: [
+      { text: 'What is your goal for today\'s session?', type: 'long_text', required: true },
+      { text: 'What has your reality been like since we last spoke?', type: 'long_text', required: true },
+      { text: 'What progress did you make on your commitments from last session?', type: 'long_text', required: true },
+      { text: 'What did you not complete, and what got in the way?', type: 'long_text', required: false },
+      { text: 'What is your energy and readiness level today?', type: 'scale', required: true }
+    ]
+  },
+  emotional: {
+    name: 'Emotional Check-in',
+    desc: 'How the client is feeling, what\'s on their mind, and what they need.',
+    questions: [
+      { text: 'How are you feeling right now?', type: 'scale', required: true },
+      { text: 'What is taking up the most mental space this week?', type: 'long_text', required: true },
+      { text: 'What do you most need from today\'s session?', type: 'long_text', required: true },
+      { text: 'Is there anything your coach should know before we begin?', type: 'long_text', required: false }
+    ]
+  },
+  accountability: {
+    name: 'Accountability Check-in',
+    desc: 'Commitments, completions, obstacles, and weekly wins.',
+    questions: [
+      { text: 'What did you commit to in your last session?', type: 'long_text', required: true },
+      { text: 'What did you complete?', type: 'long_text', required: true },
+      { text: 'What did you skip or not finish?', type: 'long_text', required: false },
+      { text: 'What got in the way?', type: 'long_text', required: false },
+      { text: 'What is one win from this week, no matter how small?', type: 'long_text', required: true }
+    ]
+  }
+};
+
+function showCheckinSection(section) {
+  ['checkin-library-section', 'checkin-template-section', 'checkin-name-section', 'checkin-builder-section'].forEach(function(id) {
+    $(id).style.display = 'none';
+  });
+  $(section).style.display = '';
+}
+
+function renderCheckinLibrary() {
+  var container = $('checkin-forms-list');
+  if (!allCheckinForms.length) {
+    container.innerHTML = '<div class="empty-state" style="padding:24px;"><p>No check-in forms yet. Create one to send pre-session questionnaires to clients.</p></div>';
+    return;
+  }
+  var html = '';
+  allCheckinForms.forEach(function(f) {
+    var qCount = Array.isArray(f.questions) ? f.questions.length : 0;
+    var isActive = f.is_active;
+    html += '<div style="background:var(--white);border:1px solid ' + (isActive ? 'var(--gold)' : 'var(--border)') + ';border-radius:var(--r);padding:20px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">'
+      + '<div style="flex:1;min-width:200px;">'
+      + '<div style="font-weight:700;font-size:0.95rem;color:var(--ink);margin-bottom:4px;">' + escapeHtml(f.name || 'Untitled Form') + '</div>'
+      + '<div style="display:flex;gap:8px;align-items:center;">'
+      + '<span style="font-size:0.8rem;color:var(--muted);">' + qCount + ' question' + (qCount !== 1 ? 's' : '') + '</span>'
+      + '</div></div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+      + '<button class="action-btn action-confirm" data-checkin-edit="' + f.id + '" style="padding:8px 16px;">Edit</button>'
+      + '<button class="action-btn" data-checkin-preview="' + f.id + '" style="padding:8px 16px;background:var(--ink);color:#fff;">Preview</button>'
+      + '<button class="action-btn action-decline" data-checkin-delete="' + f.id + '" style="padding:8px 16px;color:#c44;">Delete</button>'
+      + '</div></div>';
+  });
+  container.innerHTML = html;
+
+  container.querySelectorAll('[data-checkin-edit]').forEach(function(btn) {
+    btn.addEventListener('click', function() { openCheckinEditor(this.dataset.checkinEdit); });
+  });
+  container.querySelectorAll('[data-checkin-preview]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var f = allCheckinForms.find(function(x) { return x.id === btn.dataset.checkinPreview; });
+      if (f) { intakeQuestions = Array.isArray(f.questions) ? f.questions : []; openIntakePreview(); }
+    });
+  });
+  container.querySelectorAll('[data-checkin-delete]').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      if (!confirm('Delete this check-in form?')) return;
+      await supabaseDelete('coach_intake_forms', { id: 'eq.' + this.dataset.checkinDelete });
+      allCheckinForms = allCheckinForms.filter(function(f) { return f.id !== btn.dataset.checkinDelete; });
+      renderCheckinLibrary();
+    });
+  });
+}
+
+function openCheckinEditor(formId) {
+  var f = allCheckinForms.find(function(x) { return x.id === formId; });
+  if (!f) return;
+  checkinFormId = f.id;
+  checkinFormName = f.name || 'Untitled Form';
+  checkinQuestions = Array.isArray(f.questions) ? JSON.parse(JSON.stringify(f.questions)) : [];
+  $('checkin-builder-title').textContent = 'Editing: ' + escapeHtml(checkinFormName);
+  renderCheckinQuestions();
+  showCheckinSection('checkin-builder-section');
+}
+
+function renderCheckinQuestions() {
+  var container = $('checkin-questions-list');
+  if (!checkinQuestions.length) {
+    container.innerHTML = '<div class="empty-state" style="padding:24px;"><p>No questions yet.</p></div>';
+    return;
+  }
+  var typeLabels = { short_text: 'Short text', long_text: 'Long text', multiple_choice: 'Multiple choice', yes_no: 'Yes/No', scale: 'Scale 1-10' };
+  var html = '';
+  checkinQuestions.forEach(function(q, idx) {
+    html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">'
+      + '<div style="flex:1;min-width:200px;">'
+      + '<div style="font-weight:600;font-size:0.92rem;color:var(--ink);margin-bottom:6px;">' + escapeHtml(q.text) + '</div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+      + '<span class="status-pill status-pending" style="font-size:0.7rem;">' + escapeHtml(typeLabels[q.type] || q.type) + '</span>'
+      + '<span class="status-pill ' + (q.required ? 'status-confirmed' : 'status-completed') + '" style="font-size:0.7rem;">' + (q.required ? 'Required' : 'Optional') + '</span>'
+      + '</div></div>'
+      + '<div style="display:flex;gap:6px;">'
+      + '<button class="action-btn action-decline" data-cq-edit="' + idx + '">Edit</button>'
+      + '<button class="action-btn action-decline" data-cq-remove="' + idx + '" style="color:#c44;">Delete</button>'
+      + '</div></div>';
+  });
+  container.innerHTML = html;
+  container.querySelectorAll('[data-cq-remove]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      checkinQuestions.splice(parseInt(this.dataset.cqRemove), 1);
+      renderCheckinQuestions();
+    });
+  });
+  container.querySelectorAll('[data-cq-edit]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var idx = parseInt(this.dataset.cqEdit);
+      var q = checkinQuestions[idx];
+      $('cq-text').value = q.text;
+      $('cq-type').value = q.type;
+      $('cq-required').checked = q.required;
+      $('cq-options-group').classList.toggle('hidden', q.type !== 'multiple_choice');
+      if (q.options) $('cq-options').value = q.options.join(', ');
+      checkinQuestions.splice(idx, 1);
+      renderCheckinQuestions();
+      $('cq-text').focus();
+    });
+  });
+}
+
+function renderCheckinTemplateCards() {
+  var keys = Object.keys(CHECKIN_TEMPLATES);
+  var html = '';
+  keys.forEach(function(key) {
+    var t = CHECKIN_TEMPLATES[key];
+    html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:20px;">'
+      + '<div style="font-weight:700;font-size:0.92rem;color:var(--ink);margin-bottom:4px;">' + escapeHtml(t.name) + '</div>'
+      + '<div style="font-size:0.8rem;color:var(--muted);margin-bottom:4px;line-height:1.5;">' + escapeHtml(t.desc) + '</div>'
+      + '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:14px;">' + t.questions.length + ' questions</div>'
+      + '<button class="pill-add-btn" data-checkin-tpl="' + key + '" style="width:100%;">Use This Template</button>'
+      + '</div>';
+  });
+  html += '<div style="background:var(--cream);border:1px dashed var(--border);border-radius:var(--r);padding:20px;">'
+    + '<div style="font-weight:700;font-size:0.92rem;color:var(--ink);margin-bottom:4px;">Build from Scratch</div>'
+    + '<div style="font-size:0.8rem;color:var(--muted);margin-bottom:4px;line-height:1.5;">Create a custom pre-session check-in form.</div>'
+    + '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:14px;">0 questions</div>'
+    + '<button class="pill-add-btn" data-checkin-tpl="scratch" style="width:100%;">Start Blank</button>'
+    + '</div>';
+  $('checkin-templates-grid').innerHTML = html;
+
+  document.querySelectorAll('[data-checkin-tpl]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var key = this.dataset.checkinTpl;
+      if (key === 'scratch') {
+        checkinQuestions = [];
+        $('checkin-form-name').value = '';
+      } else {
+        checkinQuestions = JSON.parse(JSON.stringify(CHECKIN_TEMPLATES[key].questions));
+        $('checkin-form-name').value = CHECKIN_TEMPLATES[key].name;
+      }
+      showCheckinSection('checkin-name-section');
+    });
+  });
+}
+
+async function loadCheckinForms() {
+  try {
+    allCheckinForms = await supabaseGet(
+      'coach_intake_forms?coach_id=eq.' + coachProfile.id + '&form_type=eq.checkin&order=created_at.desc&select=*'
+    );
+    if (!Array.isArray(allCheckinForms)) allCheckinForms = [];
+    renderCheckinLibrary();
+  } catch(e) {
+    $('checkin-forms-list').innerHTML = '<div class="empty-state"><p>Error loading forms.</p></div>';
+  }
+
+  $('create-new-checkin-btn').onclick = function() {
+    renderCheckinTemplateCards();
+    showCheckinSection('checkin-template-section');
+  };
+  $('checkin-back-to-library-btn').onclick = function() { showCheckinSection('checkin-library-section'); };
+  $('checkin-name-back-btn').onclick = function() { showCheckinSection('checkin-template-section'); };
+  $('checkin-name-continue-btn').onclick = function() {
+    var name = $('checkin-form-name').value.trim();
+    if (!name) { alert('Please enter a form name.'); return; }
+    checkinFormId = null;
+    checkinFormName = name;
+    $('checkin-builder-title').textContent = 'New Form: ' + escapeHtml(name);
+    renderCheckinQuestions();
+    showCheckinSection('checkin-builder-section');
+  };
+  $('checkin-builder-back-btn').onclick = function() {
+    loadCheckinForms();
+    showCheckinSection('checkin-library-section');
+  };
+  $('add-checkin-question-btn').onclick = function() {
+    var text = $('cq-text').value.trim();
+    if (!text) { alert('Question text is required.'); return; }
+    var q = { text: text, type: $('cq-type').value, required: $('cq-required').checked };
+    if (q.type === 'multiple_choice') {
+      var opts = $('cq-options').value.split(',').map(function(o) { return o.trim(); }).filter(Boolean);
+      if (!opts.length) { alert('Enter at least one option.'); return; }
+      q.options = opts;
+    }
+    checkinQuestions.push(q);
+    renderCheckinQuestions();
+    $('cq-text').value = '';
+    $('cq-options').value = '';
+    $('cq-required').checked = true;
+    $('cq-type').value = 'long_text';
+    $('cq-options-group').classList.add('hidden');
+  };
+  $('cq-type').onchange = function() {
+    $('cq-options-group').classList.toggle('hidden', this.value !== 'multiple_choice');
+  };
+  $('save-checkin-form-btn').onclick = async function() {
+    var btn = this;
+    var msg = $('save-checkin-msg');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    msg.classList.remove('show');
+    try {
+      if (checkinFormId) {
+        await supabasePatch('coach_intake_forms', { id: 'eq.' + checkinFormId }, { name: checkinFormName, questions: checkinQuestions });
+        var existing = allCheckinForms.find(function(f) { return f.id === checkinFormId; });
+        if (existing) { existing.questions = checkinQuestions; existing.name = checkinFormName; }
+      } else {
+        var res = await fetch(SUPABASE_URL + '/rest/v1/coach_intake_forms', {
+          method: 'POST',
+          headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
+          body: JSON.stringify({ coach_id: coachProfile.id, name: checkinFormName, questions: checkinQuestions, is_active: false, form_type: 'checkin' })
+        });
+        var data = await res.json();
+        if (data && data.length > 0) { checkinFormId = data[0].id; allCheckinForms.unshift(data[0]); }
+      }
+      msg.textContent = 'Saved';
+      msg.style.color = 'var(--forest)';
+      msg.classList.add('show');
+      setTimeout(function() { msg.classList.remove('show'); }, 3000);
+    } catch(e) {
+      msg.textContent = 'Error saving.';
+      msg.style.color = '#c44';
+      msg.classList.add('show');
+    }
+    btn.disabled = false;
+    btn.textContent = 'Save Form';
+  };
+  $('preview-checkin-btn').onclick = function() {
+    intakeQuestions = checkinQuestions;
+    openIntakePreview();
+  };
+
+  // Load check-in responses
+  try {
+    var responses = await supabaseGet(
+      'coach_checkin_responses?coach_id=eq.' + coachProfile.id + '&order=created_at.desc&select=*'
+    );
+    var container = $('checkin-responses-list');
+    if (!responses || !responses.length) {
+      container.innerHTML = '<div class="empty-state"><p>No check-in responses yet.</p></div>';
+    } else {
+      var rhtml = '';
+      responses.forEach(function(r) {
+        var dateStr = (r.submitted_at || r.created_at) ? new Date(r.submitted_at || r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+        var resps = typeof r.responses === 'object' && !Array.isArray(r.responses) ? Object.entries(r.responses) : (Array.isArray(r.responses) ? r.responses : []);
+        var detailsHtml = '';
+        if (Array.isArray(resps) && resps.length && typeof resps[0] === 'object' && resps[0].question) {
+          resps.forEach(function(resp) {
+            detailsHtml += '<div style="padding:8px 0;border-bottom:1px solid var(--border);"><div style="font-weight:600;font-size:0.82rem;color:var(--ink);margin-bottom:2px;">' + escapeHtml(resp.question || '') + '</div><div style="font-size:0.88rem;color:var(--muted);">' + escapeHtml(String(resp.answer || '')) + '</div></div>';
+          });
+        }
+        rhtml += '<div class="review-card" style="margin-bottom:12px;">'
+          + '<div class="review-card-header"><div><div class="review-card-author">' + escapeHtml(r.client_name || r.client_email || 'Unknown') + '</div>'
+          + '<div class="review-card-title">' + escapeHtml(dateStr) + '</div></div></div>'
+          + (detailsHtml ? '<details style="margin-top:10px;"><summary style="font-size:0.85rem;font-weight:600;color:var(--gold);cursor:pointer;">View responses</summary><div style="margin-top:10px;">' + detailsHtml + '</div></details>' : '')
+          + '</div>';
+      });
+      container.innerHTML = rhtml;
+    }
+  } catch(e) {
+    $('checkin-responses-list').innerHTML = '<div class="empty-state"><p>Error loading responses.</p></div>';
+  }
+}
+
+/* ================================================
+   SEND CHECK-IN FROM BOOKINGS
+   ================================================ */
+function generateToken() {
+  return 'ci_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 12);
+}
+
+function wireSendCheckinButtons() {
+  document.querySelectorAll('[data-send-checkin]').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      var bookingId = this.dataset.sendCheckin;
+      var clientEmail = this.dataset.clientEmail;
+      var clientName = this.dataset.clientName;
+      var cell = this.closest('.booking-actions-cell');
+
+      // Fetch coach's checkin forms
+      var forms = await supabaseGet(
+        'coach_intake_forms?coach_id=eq.' + coachProfile.id + '&form_type=eq.checkin&select=id,name'
+      );
+      if (!forms || !forms.length) {
+        alert('No check-in forms created yet. Go to the Forms tab to create one.');
+        return;
+      }
+
+      var selectHtml = '<select id="checkin-select-' + bookingId + '" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:0.78rem;min-width:140px;">'
+        + '<option value="">Select form...</option>';
+      forms.forEach(function(f) {
+        selectHtml += '<option value="' + f.id + '">' + escapeHtml(f.name || 'Untitled') + '</option>';
+      });
+      selectHtml += '</select>';
+
+      this.outerHTML = '<div style="display:flex;gap:6px;align-items:center;margin-top:6px;">'
+        + selectHtml
+        + '<button class="pill-add-btn checkin-send-final" data-booking-id="' + bookingId + '" data-client-email="' + escapeHtml(clientEmail) + '" data-client-name="' + escapeHtml(clientName) + '" style="padding:6px 12px;font-size:0.75rem;">Send</button>'
+        + '</div>';
+
+      cell.querySelector('.checkin-send-final').addEventListener('click', async function() {
+        var formId = $('checkin-select-' + bookingId).value;
+        if (!formId) { alert('Select a form first.'); return; }
+        this.disabled = true;
+        this.textContent = 'Sending...';
+        var token = generateToken();
+        try {
+          await fetch(SUPABASE_URL + '/rest/v1/coach_checkin_responses', {
+            method: 'POST',
+            headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+            body: JSON.stringify({
+              booking_id: bookingId,
+              coach_id: coachProfile.id,
+              client_email: clientEmail,
+              client_name: clientName,
+              form_id: formId,
+              token: token
+            })
+          });
+          var checkinUrl = window.location.origin + '/checkin.html?token=' + token;
+          this.parentElement.innerHTML = '<span style="font-size:0.75rem;color:var(--forest);font-weight:600;">Sent! Link: </span><a href="' + checkinUrl + '" target="_blank" style="font-size:0.75rem;color:var(--gold);word-break:break-all;">' + checkinUrl + '</a>';
+        } catch(e) {
+          alert('Error sending check-in.');
+          this.disabled = false;
+          this.textContent = 'Send';
+        }
+      });
+    });
+  });
 }
 
 /* ================================================

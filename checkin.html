@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pre-Session Check-in — ineedcoaching.org</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root { --ink: #1a3a52; --gold: #c49a3c; --gold-hover: #a87d1f; --cream: #f7f4ee; --white: #ffffff; --muted: #6b6b60; --border: #e0ddd5; --r: 14px; --r-sm: 8px; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; font-size: 18px; background: var(--cream); color: var(--ink); min-height: 100vh; }
+.container { max-width: 600px; margin: 0 auto; padding: 60px 24px 80px; }
+h1 { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+.subtitle { font-size: 0.9rem; color: var(--muted); margin-bottom: 32px; line-height: 1.6; }
+.form-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 36px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+.form-group { margin-bottom: 24px; }
+.form-group label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+.form-group label .req { color: #c44; }
+.form-group input[type="text"], .form-group textarea { width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--ink); background: var(--cream); transition: border-color 0.2s; }
+.form-group input:focus, .form-group textarea:focus { outline: none; border-color: var(--gold); }
+.form-group textarea { min-height: 100px; resize: vertical; }
+.scale-wrap { display: flex; align-items: center; gap: 12px; }
+.scale-wrap span { font-size: 0.82rem; color: var(--muted); }
+.scale-wrap input[type="range"] { flex: 1; accent-color: var(--gold); }
+.scale-val { font-weight: 700; font-size: 1.1rem; color: var(--gold); min-width: 28px; text-align: center; }
+.radio-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.radio-row label { display: flex; align-items: center; gap: 6px; font-size: 0.92rem; color: var(--ink); cursor: pointer; }
+.radio-row input[type="radio"] { accent-color: var(--gold); width: 18px; height: 18px; }
+.submit-btn { width: 100%; padding: 16px 24px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.2s; margin-top: 8px; }
+.submit-btn:hover { background: var(--gold-hover); }
+.submit-btn:disabled { opacity: 0.55; cursor: default; }
+.success { text-align: center; padding: 60px 24px; }
+.success h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; color: var(--ink); margin-bottom: 8px; }
+.success p { color: var(--muted); font-size: 0.95rem; }
+.error { text-align: center; padding: 80px 24px; }
+.error h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; color: var(--ink); margin-bottom: 8px; }
+.error p { color: var(--muted); font-size: 0.95rem; }
+.loading { text-align: center; padding: 80px 24px; }
+.spinner { width: 44px; height: 44px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.branding { text-align: center; margin-top: 40px; font-size: 0.78rem; color: var(--muted); }
+.branding a { color: var(--gold); text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div id="loading" class="loading">
+    <div class="spinner"></div>
+    <p style="color:var(--muted);font-size:0.88rem;">Loading your check-in...</p>
+  </div>
+
+  <div id="error" class="error" style="display:none;">
+    <h2>Check-in not found</h2>
+    <p>This link may have expired or already been submitted.</p>
+  </div>
+
+  <div id="form-view" style="display:none;">
+    <h1 id="form-title">Pre-Session Check-in</h1>
+    <p class="subtitle" id="form-subtitle">Take a few minutes to reflect before your session.</p>
+    <div class="form-card">
+      <div id="questions-container"></div>
+      <button class="submit-btn" id="submit-btn">Submit Check-in</button>
+    </div>
+  </div>
+
+  <div id="success" class="success" style="display:none;">
+    <h2>Check-in submitted!</h2>
+    <p>Your coach will review your responses before your session. See you soon.</p>
+  </div>
+
+  <div class="branding">
+    <a href="/">ineedcoaching.org</a>
+  </div>
+</div>
+
+<script>
+var SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+var API = SUPABASE_URL + '/rest/v1';
+var HEADERS = { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY, 'Content-Type': 'application/json' };
+
+function escapeHtml(str) {
+  if (!str) return '';
+  var d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+var checkinData = null;
+var formQuestions = [];
+
+async function loadCheckin() {
+  var params = new URLSearchParams(window.location.search);
+  var token = params.get('token');
+  if (!token) { showError(); return; }
+
+  try {
+    var res = await fetch(API + '/coach_checkin_responses?token=eq.' + encodeURIComponent(token) + '&select=*', { headers: HEADERS });
+    var data = await res.json();
+    if (!data || !data.length) { showError(); return; }
+    checkinData = data[0];
+
+    if (checkinData.submitted_at) { showError(); return; }
+
+    var formRes = await fetch(API + '/coach_intake_forms?id=eq.' + checkinData.form_id + '&select=name,questions', { headers: HEADERS });
+    var forms = await formRes.json();
+    if (!forms || !forms.length) { showError(); return; }
+
+    var form = forms[0];
+    formQuestions = Array.isArray(form.questions) ? form.questions : [];
+    if (!formQuestions.length) { showError(); return; }
+
+    document.getElementById('form-title').textContent = form.name || 'Pre-Session Check-in';
+    if (checkinData.client_name) {
+      document.getElementById('form-subtitle').textContent = 'Hi ' + checkinData.client_name + ', take a few minutes to reflect before your session.';
+    }
+
+    renderQuestions();
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('form-view').style.display = '';
+  } catch(e) {
+    showError();
+  }
+}
+
+function showError() {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('error').style.display = '';
+}
+
+function renderQuestions() {
+  var html = '';
+  formQuestions.forEach(function(q, idx) {
+    var reqMark = q.required ? ' <span class="req">*</span>' : '';
+    html += '<div class="form-group">';
+    html += '<label>' + escapeHtml(q.text) + reqMark + '</label>';
+
+    switch(q.type) {
+      case 'short_text':
+        html += '<input type="text" class="ci-answer" data-idx="' + idx + '">';
+        break;
+      case 'long_text':
+        html += '<textarea class="ci-answer" data-idx="' + idx + '"></textarea>';
+        break;
+      case 'multiple_choice':
+        html += '<div class="radio-row">';
+        (q.options || []).forEach(function(opt, oi) {
+          html += '<label><input type="radio" name="ci-q-' + idx + '" class="ci-radio" data-idx="' + idx + '" value="' + escapeHtml(opt) + '"> ' + escapeHtml(opt) + '</label>';
+        });
+        html += '</div>';
+        break;
+      case 'yes_no':
+        html += '<div class="radio-row">';
+        html += '<label><input type="radio" name="ci-q-' + idx + '" class="ci-radio" data-idx="' + idx + '" value="Yes"> Yes</label>';
+        html += '<label><input type="radio" name="ci-q-' + idx + '" class="ci-radio" data-idx="' + idx + '" value="No"> No</label>';
+        html += '</div>';
+        break;
+      case 'scale':
+        html += '<div class="scale-wrap">';
+        html += '<span>1</span>';
+        html += '<input type="range" min="1" max="10" value="5" class="ci-answer" data-idx="' + idx + '" oninput="document.getElementById(\'sv-' + idx + '\').textContent=this.value">';
+        html += '<span>10</span>';
+        html += '<span class="scale-val" id="sv-' + idx + '">5</span>';
+        html += '</div>';
+        break;
+    }
+    html += '</div>';
+  });
+  document.getElementById('questions-container').innerHTML = html;
+}
+
+document.getElementById('submit-btn').addEventListener('click', async function() {
+  var btn = this;
+  var responses = [];
+  var valid = true;
+
+  formQuestions.forEach(function(q, idx) {
+    var answer = '';
+    if (q.type === 'multiple_choice' || q.type === 'yes_no') {
+      var checked = document.querySelector('input[name="ci-q-' + idx + '"]:checked');
+      answer = checked ? checked.value : '';
+    } else {
+      var el = document.querySelector('.ci-answer[data-idx="' + idx + '"]');
+      answer = el ? el.value : '';
+    }
+    if (q.required && !answer) valid = false;
+    responses.push({ question: q.text, type: q.type, answer: answer });
+  });
+
+  if (!valid) {
+    alert('Please complete all required fields.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+
+  try {
+    await fetch(API + '/coach_checkin_responses?id=eq.' + checkinData.id, {
+      method: 'PATCH',
+      headers: { ...HEADERS, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ responses: responses, submitted_at: new Date().toISOString() })
+    });
+    document.getElementById('form-view').style.display = 'none';
+    document.getElementById('success').style.display = '';
+  } catch(e) {
+    alert('Something went wrong. Please try again.');
+    btn.disabled = false;
+    btn.textContent = 'Submit Check-in';
+  }
+});
+
+loadCheckin();
+</script>
+</body>
+</html>
