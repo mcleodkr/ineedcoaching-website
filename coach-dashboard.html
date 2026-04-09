@@ -2649,6 +2649,7 @@ async function loadDashProposals() {
         + '<td><span class="status-pill" style="' + statusStyle + '">' + escapeHtml(statusLabel) + '</span></td>'
         + '<td style="font-size:0.78rem;color:var(--muted);">' + date + '</td>'
         + '<td style="white-space:nowrap;">'
+        + (p.status === 'draft' ? '<a href="/proposal-builder.html?edit=' + p.id + '" class="action-btn action-confirm" style="text-decoration:none;font-size:0.75rem;padding:5px 12px;margin-right:4px;" onclick="event.stopPropagation();">Edit</a>' : '')
         + '<a href="/proposal-view.html?id=' + p.id + '" target="_blank" class="action-btn action-confirm" style="text-decoration:none;font-size:0.75rem;padding:5px 12px;margin-right:4px;" onclick="event.stopPropagation();">View</a>'
         + '<button class="action-btn action-remove" data-proposal-id="' + p.id + '" style="font-size:0.75rem;padding:5px 12px;" onclick="event.stopPropagation();">Delete</button>'
         + '</td>'

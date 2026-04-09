@@ -297,6 +297,7 @@ var TOKEN_KEY = 'sb_access_token';
 var currentToken = null;
 var coachProfile = null;
 var inclusions = [];
+var currentProposalId = null;
 
 function $(id) { return document.getElementById(id); }
 function escHtml(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
@@ -370,8 +371,52 @@ async function verifyAndInit(token) {
     $('login-screen').style.display = 'none';
     $('app').style.display = 'block';
     updatePreview();
+
+    var editId = new URLSearchParams(window.location.search).get('edit');
+    if (editId) { loadProposalForEdit(editId); }
   } catch (e) {
     localStorage.removeItem(TOKEN_KEY);
+  }
+}
+
+async function loadProposalForEdit(id) {
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_proposals?id=eq.' + id + '&select=*', {
+      headers: apiHeaders()
+    });
+    if (!res.ok) return;
+    var data = await res.json();
+    if (!data || !data.length) return;
+    var p = data[0];
+
+    currentProposalId = p.id;
+    $('f-company').value = p.client_company || '';
+    $('f-contact').value = p.client_name || '';
+    $('f-email').value = p.client_email || '';
+    $('f-send-email').value = p.client_email || '';
+    $('f-service').value = p.service_type || '';
+    $('f-participants').value = p.participants || 10;
+    $('f-dates').value = p.proposed_dates || '';
+    $('f-investment').value = p.investment || '';
+    $('f-scope').value = p.scope_of_work || '';
+    $('f-message').value = p.custom_message || '';
+
+    if (p.inclusions) {
+      inclusions = Array.isArray(p.inclusions) ? p.inclusions : [];
+      renderInclusions();
+    }
+
+    if (p.terms_and_conditions) {
+      $('f-terms-toggle').checked = true;
+      toggleTerms();
+      $('f-terms').value = p.terms_and_conditions;
+    }
+
+    document.title = 'Edit Proposal | ineedcoaching.org';
+    document.querySelector('.page-header h1').innerHTML = 'Edit <em>Proposal</em>';
+    updatePreview();
+  } catch (err) {
+    console.error('Failed to load proposal for edit:', err);
   }
 }
 
@@ -552,14 +597,23 @@ async function saveDraft() {
     status: 'draft',
   };
 
-  var res = await fetch(SUPABASE_URL + '/rest/v1/coach_proposals', {
-    method: 'POST',
+  var url = currentProposalId
+    ? SUPABASE_URL + '/rest/v1/coach_proposals?id=eq.' + currentProposalId
+    : SUPABASE_URL + '/rest/v1/coach_proposals';
+  var method = currentProposalId ? 'PATCH' : 'POST';
+
+  var res = await fetch(url, {
+    method: method,
     headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
     body: JSON.stringify(payload)
   });
 
   if (res.ok) {
-    showMsg('Draft saved.', 'var(--forest)');
+    if (!currentProposalId) {
+      var saved = await res.json();
+      if (Array.isArray(saved) && saved.length > 0) { currentProposalId = saved[0].id; }
+    }
+    showMsg('Draft saved.', '#4a7c59');
   } else {
     showMsg('Failed to save. Try again.', '#c44');
   }
@@ -591,15 +645,20 @@ async function sendProposal() {
     status: 'sent',
   };
 
-  var res = await fetch(SUPABASE_URL + '/rest/v1/coach_proposals', {
-    method: 'POST',
+  var sendUrl = currentProposalId
+    ? SUPABASE_URL + '/rest/v1/coach_proposals?id=eq.' + currentProposalId
+    : SUPABASE_URL + '/rest/v1/coach_proposals';
+  var sendMethod = currentProposalId ? 'PATCH' : 'POST';
+
+  var res = await fetch(sendUrl, {
+    method: sendMethod,
     headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
     body: JSON.stringify(payload)
   });
 
   if (res.ok) {
     var inserted = await res.json();
-    var insertedId = Array.isArray(inserted) && inserted.length > 0 ? inserted[0].id : null;
+    var insertedId = currentProposalId || (Array.isArray(inserted) && inserted.length > 0 ? inserted[0].id : null);
     var coachName = coachProfile.display_name || coachProfile.full_name || 'A coach';
     var sendTo = d.sendEmail || d.email;
 
