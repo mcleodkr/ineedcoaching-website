@@ -2688,7 +2688,7 @@ async function loadDashProposals() {
         + '<span class="prop-badge ' + badge + '">' + escapeHtml(statusLabel) + '</span>'
         + '<span class="prop-date">' + date + '</span>'
         + '<div class="prop-actions">'
-        + (p.status === 'draft' ? '<a href="/proposal-builder.html?edit=' + p.id + '" class="prop-btn prop-btn-edit" onclick="event.stopPropagation();">Edit</a>' : '')
+        + (p.status === 'draft' || p.status === 'changes_requested' ? '<a href="/proposal-builder.html?edit=' + p.id + '" class="prop-btn prop-btn-edit" onclick="event.stopPropagation();">Edit</a>' : '')
         + '<a href="/proposal-view.html?id=' + p.id + '" target="_blank" class="prop-btn prop-btn-view" onclick="event.stopPropagation();">View</a>'
         + '<button class="prop-btn prop-btn-delete" data-proposal-id="' + p.id + '" onclick="event.stopPropagation();">Delete</button>'
         + '</div>'

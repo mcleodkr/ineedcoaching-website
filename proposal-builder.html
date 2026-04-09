@@ -643,6 +643,7 @@ async function sendProposal() {
     custom_message: d.message,
     terms_and_conditions: d.terms || null,
     status: 'sent',
+    client_notes: null,
   };
 
   var sendUrl = currentProposalId
@@ -683,7 +684,8 @@ async function sendProposal() {
       console.log('===');
     }
 
-    showMsg('Proposal sent to ' + sendTo + '.', '#4a7c59');
+    var sentLabel = currentProposalId ? 'Revised proposal sent to ' : 'Proposal sent to ';
+    showMsg(sentLabel + sendTo + '.', '#4a7c59');
   } else {
     showMsg('Failed to send. Try again.', '#c44');
   }
