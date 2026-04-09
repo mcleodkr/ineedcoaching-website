@@ -3086,9 +3086,38 @@ async function cbLoadModuleLessons(modId) {
         + '</div>'
         + '<div id="quiz-builder-' + l.id + '" style="display:none;margin-top:12px;"></div>'
         + '<div id="ai-quiz-' + l.id + '" style="display:none;margin-top:12px;"></div>'
-        + '</div>'
+        + '</div>';
 
-        + '</div>'; // lesson card
+      // Lesson Contents summary
+      var hasFile = !!fileUrl;
+      var hasVideo = !!realVideoUrl;
+      var hasContent = !!(l.content && l.content.trim());
+      var hasQuizLoaded = !!quizData[l.id];
+      if (hasFile || hasVideo || hasContent) {
+        html += '<div style="padding:10px 0;border-top:1px solid #f0ede6;">'
+          + '<div style="font-size:0.6rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#c49a3c;margin-bottom:8px;">Lesson Contents</div>'
+          + '<div style="background:#faf3e0;border:1px solid #e8dfc0;border-radius:8px;padding:10px 14px;display:flex;flex-direction:column;gap:6px;">';
+        if (hasFile) {
+          html += '<div style="display:flex;align-items:center;gap:8px;font-size:0.78rem;color:#1a3a52;">&#128196; <span style="font-weight:600;">' + escapeHtml(cbCleanFilename(fileUrl)) + '</span>'
+            + ' <a href="' + escapeHtml(fileUrl) + '" target="_blank" style="color:#c49a3c;text-decoration:none;font-weight:700;font-size:0.72rem;">View</a>'
+            + ' <button onclick="cbRemoveLessonFile(\'' + modId + '\',\'' + l.id + '\')" style="background:none;border:none;color:#c44;cursor:pointer;font-weight:700;font-size:0.72rem;">Remove</button></div>';
+        }
+        if (hasVideo) {
+          html += '<div style="display:flex;align-items:center;gap:8px;font-size:0.78rem;color:#1a3a52;">&#127916; Video attached'
+            + ' <a href="' + escapeHtml(realVideoUrl) + '" target="_blank" style="color:#c49a3c;text-decoration:none;font-weight:700;font-size:0.72rem;">View</a>'
+            + ' <button onclick="cbRemoveLessonVideo(\'' + modId + '\',\'' + l.id + '\')" style="background:none;border:none;color:#c44;cursor:pointer;font-weight:700;font-size:0.72rem;">Remove</button></div>';
+        }
+        if (hasContent) {
+          html += '<div style="display:flex;align-items:center;gap:8px;font-size:0.78rem;color:#1a3a52;">&#128221; Written content added'
+            + ' <a href="#" onclick="event.preventDefault();cbLessonTab(\'' + l.id + '\',\'write\')" style="color:#c49a3c;text-decoration:none;font-weight:700;font-size:0.72rem;">Edit</a></div>';
+        }
+        html += '<div id="lesson-contents-quiz-' + l.id + '"></div>';
+        html += '</div></div>';
+      } else {
+        html += '<div id="lesson-contents-quiz-' + l.id + '" style="display:none;"></div>';
+      }
+
+        html += '</div>'; // lesson card
     });
     container.innerHTML = html;
 
@@ -3218,6 +3247,16 @@ async function cbRemoveLessonFile(modId, lessonId) {
   } catch (e) { console.error('Remove file error:', e); }
 }
 
+async function cbRemoveLessonVideo(modId, lessonId) {
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?id=eq.' + lessonId, {
+      method: 'PATCH', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ video_url: null })
+    });
+    cbLoadModuleLessons(modId);
+  } catch (e) { console.error('Remove video error:', e); }
+}
+
 /* Drip Scheduling */
 function cbToggleDrip(lessonId) {
   var toggle = $('drip-toggle-' + lessonId);
@@ -3250,16 +3289,26 @@ async function cbLoadQuiz(lessonId) {
   try {
     var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_quizzes?lesson_id=eq.' + lessonId + '&select=*&limit=1', { headers: apiHeaders() });
     var quizzes = await res.json();
+    var contentsQuiz = $('lesson-contents-quiz-' + lessonId);
     if (!Array.isArray(quizzes) || quizzes.length === 0) {
       area.innerHTML = '<div style="font-size:0.78rem;color:#8a8a9a;font-style:italic;">No quiz yet.</div>';
+      if (contentsQuiz) contentsQuiz.innerHTML = '';
       return;
     }
     var q = quizzes[0];
     quizData[lessonId] = q;
     quizData[lessonId]._questions = Array.isArray(q.questions) ? q.questions.slice() : [];
+    var qCount = quizData[lessonId]._questions.length;
     cbRenderQuizSummary(lessonId, false);
     var btns = $('quiz-buttons-' + lessonId);
     if (btns) btns.style.display = 'none';
+    // Update lesson contents quiz line
+    if (contentsQuiz) {
+      contentsQuiz.innerHTML = '<div style="display:flex;align-items:center;gap:8px;font-size:0.78rem;color:#1a3a52;">&#129504; Quiz: ' + escapeHtml(q.title || 'Quiz') + ' &middot; ' + qCount + ' question' + (qCount !== 1 ? 's' : '')
+        + ' <a href="#" onclick="event.preventDefault();cbShowQuizBuilder(\'' + lessonId + '\')" style="color:#c49a3c;text-decoration:none;font-weight:700;font-size:0.72rem;">Edit</a>'
+        + ' <button onclick="cbDeleteQuiz(\'' + lessonId + '\',\'' + q.id + '\')" style="background:none;border:none;color:#c44;cursor:pointer;font-weight:700;font-size:0.72rem;">Delete</button></div>';
+      contentsQuiz.style.display = 'block';
+    }
   } catch (e) {
     area.innerHTML = '';
   }
