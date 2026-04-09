@@ -2554,7 +2554,7 @@ function renderStep4() {
   html += '<div style="display:flex;flex-direction:column;gap:10px;">';
   html += '<button onclick="cbPublish()" class="cb-btn-publish">Publish My Course</button>';
   if (currentCourseId) {
-    html += '<button onclick="window.open(\'/course-view.html?id=' + currentCourseId + '\',\'_blank\')" class="cb-btn-preview">Preview My Course</button>';
+    html += '<button onclick="window.open(\'/course-view.html?id=' + currentCourseId + '&preview=true\',\'_blank\')" class="cb-btn-preview">Preview My Course</button>';
   }
   html += '</div>';
 

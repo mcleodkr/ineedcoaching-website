@@ -32,6 +32,10 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
 .nav-links a { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: rgba(247,244,238,0.6); text-decoration: none; transition: color 0.2s; }
 .nav-links a:hover { color: var(--cream); }
 
+/* PREVIEW BANNER */
+.preview-banner { position: fixed; top: 54px; left: 0; right: 0; z-index: 250; background: var(--gold); color: var(--ink); text-align: center; padding: 10px 24px; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.02em; }
+.preview-banner ~ .course-hero { padding-top: 156px; }
+
 /* HERO */
 .course-hero { background: var(--ink); padding: 120px 80px 64px; position: relative; overflow: hidden; }
 .course-hero::after { content: 'ENROLL'; font-family: 'Cormorant Garamond', serif; font-size: 14rem; font-weight: 700; color: rgba(255,255,255,0.03); position: absolute; right: -40px; top: 50%; transform: translateY(-50%); pointer-events: none; user-select: none; line-height: 1; }
@@ -214,11 +218,25 @@ function formatDate(d) {
   return new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
+async function getLoggedInEmail() {
+  var token = localStorage.getItem('sb_access_token');
+  if (!token) return null;
+  try {
+    var res = await fetch(SUPABASE_URL + '/auth/v1/user', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) return null;
+    var user = await res.json();
+    return (user.email || '').toLowerCase();
+  } catch (e) { return null; }
+}
+
 async function loadPage() {
   var params = new URLSearchParams(window.location.search);
   var courseId = params.get('id');
   var courseSlug = params.get('slug');
   var coachSlug = params.get('coach');
+  var isPreview = params.get('preview') === 'true';
 
   if (!courseId && (!courseSlug || !coachSlug)) {
     showError();
@@ -229,8 +247,8 @@ async function loadPage() {
     var course, coach;
 
     if (courseId) {
-      // Fetch course by UUID, embed coach profile
-      var courseRes = await fetch(API + '/coach_courses?id=eq.' + encodeURIComponent(courseId) + '&select=*,coach_profiles(id,display_name,full_name,slug,photo_url,headline,bio)', {
+      // Fetch course by UUID, embed coach profile (include user_email for ownership check)
+      var courseRes = await fetch(API + '/coach_courses?id=eq.' + encodeURIComponent(courseId) + '&select=*,coach_profiles(id,display_name,full_name,slug,photo_url,headline,bio,user_email)', {
         headers: GET_HEADERS
       });
       var courses = await courseRes.json();
@@ -241,14 +259,15 @@ async function loadPage() {
       delete course.coach_profiles;
     } else {
       // Fetch coach by slug, then course by slug + coach_id
-      var coachRes = await fetch(API + '/coach_profiles?slug=eq.' + encodeURIComponent(coachSlug) + '&select=id,display_name,full_name,slug,photo_url,headline,bio', {
+      var coachRes = await fetch(API + '/coach_profiles?slug=eq.' + encodeURIComponent(coachSlug) + '&select=id,display_name,full_name,slug,photo_url,headline,bio,user_email', {
         headers: GET_HEADERS
       });
       var coaches = await coachRes.json();
       if (!coaches || !coaches.length) { showError(); return; }
       coach = coaches[0];
 
-      var courseRes = await fetch(API + '/coach_courses?slug=eq.' + encodeURIComponent(courseSlug) + '&coach_id=eq.' + coach.id + '&status=neq.draft&select=*', {
+      var statusFilter = isPreview ? '' : '&status=neq.draft';
+      var courseRes = await fetch(API + '/coach_courses?slug=eq.' + encodeURIComponent(courseSlug) + '&coach_id=eq.' + coach.id + statusFilter + '&select=*', {
         headers: GET_HEADERS
       });
       var courses = await courseRes.json();
@@ -256,13 +275,26 @@ async function loadPage() {
       course = courses[0];
     }
 
+    // Draft preview: verify ownership
+    if (course.status === 'draft' || isPreview) {
+      var email = await getLoggedInEmail();
+      var ownerEmail = (coach.user_email || '').toLowerCase();
+      if (!email || email !== ownerEmail) {
+        showError();
+        return;
+      }
+    }
+
+    // Clean user_email from coach before rendering
+    delete coach.user_email;
+
     var syllabusRes = await fetch(API + '/coach_course_lessons?course_id=eq.' + course.id + '&select=title,sort_order&order=sort_order.asc', {
       headers: GET_HEADERS
     });
     var lessons = await syllabusRes.json();
     if (!Array.isArray(lessons)) lessons = [];
 
-    renderPage(course, coach, lessons);
+    renderPage(course, coach, lessons, course.status === 'draft');
   } catch (e) {
     showError();
   }
@@ -273,8 +305,16 @@ function showError() {
   document.getElementById('error').style.display = 'block';
 }
 
-function renderPage(course, coach, lessons) {
+function renderPage(course, coach, lessons, isDraft) {
   document.title = (course.title || 'Course') + ' — ineedcoaching.org';
+
+  // Show preview banner for drafts
+  if (isDraft) {
+    var banner = document.createElement('div');
+    banner.className = 'preview-banner';
+    banner.textContent = 'Preview mode \u2014 this course is not yet published. Only you can see this.';
+    document.getElementById('course-page').prepend(banner);
+  }
 
   var formatLabels = { 'self-paced': 'Self-Paced', 'cohort': 'Cohort', 'masterclass': 'Masterclass' };
   var formatLabel = formatLabels[course.format || course.course_type] || course.format || course.course_type || 'Course';
