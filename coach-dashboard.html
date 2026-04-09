@@ -2888,11 +2888,13 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
   // Wire session notes save
   document.querySelectorAll('.session-notes-save').forEach(function(btn) {
     btn.addEventListener('click', async function() {
-      var bid = this.dataset.bookingId;
-      var clientEmail = this.dataset.clientEmail;
+      var saveBtn = this;
+      var bid = saveBtn.dataset.bookingId;
+      var clientEmail = saveBtn.dataset.clientEmail;
       var text = $('notes-input-' + bid).value.trim();
-      this.disabled = true;
-      this.textContent = 'Saving...';
+      console.log('[SaveNotes] Saving plain notes for booking:', bid);
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
       try {
         var saveRes = await fetch('/api/save-session-notes', {
           method: 'POST',
@@ -2901,12 +2903,19 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
         });
         var saveData = await saveRes.json();
         if (!saveRes.ok) throw new Error(saveData.error || 'Save failed');
-        openClientDetail(clientEmail);
+        saveBtn.textContent = '\u2713 Notes saved';
+        saveBtn.style.background = '#2d6a4f';
+        saveBtn.style.color = '#fff';
+        var msg = document.createElement('span');
+        msg.textContent = '\u2713 Notes saved';
+        msg.style.cssText = 'color:#2d6a4f;font-size:0.82rem;font-weight:600;margin-left:12px;';
+        saveBtn.parentNode.insertBefore(msg, saveBtn.nextSibling);
+        setTimeout(function() { msg.remove(); openClientDetail(clientEmail); }, 1500);
       } catch(e) {
         console.error('[SaveNotes] Error:', e);
         alert('Error saving notes: ' + (e.message || e));
-        this.disabled = false;
-        this.textContent = 'Save Notes';
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Notes';
       }
     });
   });
@@ -3002,8 +3011,10 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
 
               // Wire save
               panel.querySelector('.proc-save-btn').addEventListener('click', async function() {
-                this.disabled = true;
-                this.textContent = 'Saving...';
+                var saveBtn = this;
+                console.log('[ProcessSession] Saving structured notes for booking:', bid, 'format:', format);
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Saving...';
                 var structuredNotes = {};
                 panel.querySelectorAll('.proc-section-input').forEach(function(input) {
                   structuredNotes[input.dataset.section] = input.value;
@@ -3022,20 +3033,29 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
                   });
                   var saveData = await saveRes.json();
                   if (!saveRes.ok) throw new Error(saveData.error || 'Save failed');
-                  this.textContent = '\u2713 Notes saved';
-                  this.style.background = '#2d6a4f';
-                  setTimeout(function() { openClientDetail(clientEmail); }, 1500);
+                  saveBtn.textContent = '\u2713 Notes saved';
+                  saveBtn.style.background = '#2d6a4f';
+                  var savedMsg = document.createElement('span');
+                  savedMsg.textContent = '\u2713 Notes saved';
+                  savedMsg.style.cssText = 'color:#2d6a4f;font-size:0.82rem;font-weight:600;margin-left:12px;';
+                  saveBtn.parentNode.insertBefore(savedMsg, saveBtn.nextSibling);
+                  setTimeout(function() { savedMsg.remove(); openClientDetail(clientEmail); }, 1500);
                 } catch(saveErr) {
                   console.error('[ProcessSession] Save error:', saveErr);
-                  alert('Error saving notes.');
-                  this.disabled = false;
-                  this.textContent = 'Save Notes';
+                  alert('Error saving notes: ' + (saveErr.message || saveErr));
+                  saveBtn.disabled = false;
+                  saveBtn.textContent = 'Save Notes';
                 }
               });
 
             } catch(e) {
               console.error('[ProcessSession] Error:', e);
-              $('proc-status-' + bid).innerHTML = '<span style="color:#c44;">Error: ' + escapeHtml(e.message) + '</span>';
+              var statusEl = $('proc-status-' + bid);
+              if (statusEl) {
+                statusEl.innerHTML = '<span style="color:#c44;">Error: ' + escapeHtml(e.message) + '</span>';
+              } else {
+                alert('Error processing session: ' + (e.message || e));
+              }
               this.disabled = false;
               this.textContent = 'Generate Notes';
             }
