@@ -6,6 +6,7 @@
 <title>Coach Dashboard | ineedcoaching.org</title>
 <meta name="description" content="Manage your coaching profile, bookings, testimonials, and recommendations on ineedcoaching.org">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
 <style>
 :root {
   --ink: #1a3a52;
@@ -3193,7 +3194,7 @@ async function cbUploadLessonFile(modId, lessonId) {
       body: JSON.stringify(patchPayload)
     });
 
-    if (statusEl) { statusEl.innerHTML = '<span style="color:#4a7c59;">&#10003; ' + escapeHtml(file.name) + ' attached</span>'; }
+    if (statusEl) { statusEl.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:#1a3a52;">&#128196; <span style="font-weight:600;">' + escapeHtml(file.name) + '</span> <a href="' + escapeHtml(publicUrl) + '" target="_blank" style="font-size:0.72rem;color:#c49a3c;text-decoration:none;font-weight:700;">View</a> <button onclick="cbRemoveLessonFile(\'' + modId + '\',\'' + lessonId + '\')" style="font-size:0.72rem;color:#c44;background:none;border:none;cursor:pointer;font-weight:700;">Remove</button></div>'; }
     fileInput.value = '';
   } catch (e) {
     console.error('Lesson upload error:', e);
@@ -3474,21 +3475,44 @@ async function cbGenerateAIQuiz(lessonId) {
   var fileEl = $('ai-quiz-file-' + lessonId);
   var content = contentEl ? contentEl.value.trim() : '';
 
-  // Try reading files (multiple supported)
+  // Try reading files (multiple supported, PDF.js for PDFs)
   if (!content && fileEl && fileEl.files.length > 0) {
+    if (statusEl) { statusEl.textContent = 'Reading files...'; statusEl.style.color = '#8a8a9a'; }
     try {
       var fileTexts = [];
       for (var fi = 0; fi < fileEl.files.length; fi++) {
-        var fileText = await new Promise(function(resolve, reject) {
-          var reader = new FileReader();
-          reader.onload = function() { resolve(reader.result); };
-          reader.onerror = reject;
-          reader.readAsText(fileEl.files[fi]);
-        });
-        fileTexts.push(fileText);
+        var f = fileEl.files[fi];
+        if (f.name.toLowerCase().endsWith('.pdf') && typeof pdfjsLib !== 'undefined') {
+          // Extract text from PDF using PDF.js
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          var arrayBuf = await new Promise(function(resolve, reject) {
+            var reader = new FileReader();
+            reader.onload = function() { resolve(reader.result); };
+            reader.onerror = reject;
+            reader.readAsArrayBuffer(f);
+          });
+          var pdf = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
+          var pdfTexts = [];
+          for (var pi = 1; pi <= pdf.numPages; pi++) {
+            var page = await pdf.getPage(pi);
+            var tc = await page.getTextContent();
+            var pageText = tc.items.map(function(item) { return item.str; }).join(' ');
+            if (pageText.trim()) pdfTexts.push(pageText);
+          }
+          fileTexts.push(pdfTexts.join('\n\n'));
+        } else {
+          // Plain text files
+          var fileText = await new Promise(function(resolve, reject) {
+            var reader = new FileReader();
+            reader.onload = function() { resolve(reader.result); };
+            reader.onerror = reject;
+            reader.readAsText(f);
+          });
+          fileTexts.push(fileText);
+        }
       }
       content = fileTexts.join('\n\n--- Next Document ---\n\n');
-    } catch (e) { content = ''; }
+    } catch (e) { console.error('File read error:', e); content = ''; }
   }
 
   if (!content) {
