@@ -171,6 +171,41 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .badge-pending-review { background: rgba(196,154,60,0.15); color: var(--gold); }
 .review-card-actions { display: flex; gap: 8px; margin-top: 14px; }
 
+/* PROPOSAL CARDS */
+.prop-grid { display: flex; flex-direction: column; gap: 14px; }
+.prop-card { display: grid; grid-template-columns: 1fr auto auto; gap: 20px; align-items: center; background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; cursor: pointer; transition: box-shadow 0.2s, transform 0.2s; }
+.prop-card:hover { box-shadow: 0 8px 28px rgba(26,58,82,0.10); transform: translateY(-1px); }
+.prop-left { min-width: 0; }
+.prop-company { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prop-contact { font-size: 0.78rem; color: var(--muted); margin-bottom: 6px; }
+.prop-service { font-size: 0.82rem; color: var(--ink); font-weight: 600; }
+.prop-notes { font-size: 0.75rem; font-style: italic; color: #e67e22; margin-top: 6px; line-height: 1.4; }
+.prop-center { text-align: center; padding: 0 12px; }
+.prop-amount { font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 900; color: var(--gold); line-height: 1; }
+.prop-amount-label { font-size: 0.6rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+.prop-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; min-width: 110px; }
+.prop-badge { display: inline-block; padding: 5px 14px; border-radius: 50px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
+.prop-badge-draft { background: transparent; color: #c49a3c; border: 1.5px solid #c49a3c; }
+.prop-badge-sent { background: transparent; color: #1a3a52; border: 1.5px solid #1a3a52; }
+.prop-badge-accepted { background: #4a7c59; color: #fff; border: 1.5px solid #4a7c59; }
+.prop-badge-changes { background: #e67e22; color: #fff; border: 1.5px solid #e67e22; }
+.prop-date { font-size: 0.72rem; color: var(--muted); }
+.prop-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.prop-btn { padding: 5px 14px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; font-family: inherit; cursor: pointer; text-decoration: none; display: inline-block; transition: all 0.15s; border: none; }
+.prop-btn-edit { background: #c49a3c; color: #1a3a52; }
+.prop-btn-edit:hover { background: #d4a94c; }
+.prop-btn-view { background: #1a3a52; color: #fff; }
+.prop-btn-view:hover { background: #24506e; }
+.prop-btn-delete { background: #fff; color: #c44; border: 1.5px solid #c44; }
+.prop-btn-delete:hover { background: #fef2f2; }
+.prop-new { display: inline-flex; align-items: center; gap: 6px; padding: 12px 24px; background: var(--gold); color: var(--ink); border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 0.88rem; transition: background 0.2s; margin-bottom: 20px; }
+.prop-new:hover { background: #d4a94c; }
+@media (max-width: 700px) {
+  .prop-card { grid-template-columns: 1fr; gap: 12px; }
+  .prop-center { text-align: left; padding: 0; }
+  .prop-right { align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
+}
+
 /* DRAFT ARTICLES */
 .draft-article-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 28px; margin-bottom: 16px; transition: border-color 0.2s; }
 .draft-article-card:hover { border-color: var(--gold); }
@@ -2622,50 +2657,54 @@ async function loadDashProposals() {
       return;
     }
 
-    var html = '<div style="margin-bottom:16px;"><a href="/proposal-builder.html" class="action-btn action-confirm" style="text-decoration:none;display:inline-flex;padding:10px 20px;">+ New Proposal</a></div>';
-    html += '<div class="bookings-table-wrap"><table class="bookings-table"><thead><tr>'
-      + '<th>Company</th><th>Service</th><th>Investment</th><th>Status</th><th>Date</th><th>Actions</th>'
-      + '</tr></thead><tbody>';
+    var html = '<a href="/proposal-builder.html" class="prop-new">+ New Proposal</a>';
+    html += '<div class="prop-grid">';
 
     data.forEach(function(p) {
-      var statusStyles = {
-        draft: 'background:transparent;color:#c49a3c;border:1.5px solid #c49a3c;',
-        sent: 'background:transparent;color:#1a3a52;border:1.5px solid #1a3a52;',
-        accepted: 'background:#4a7c59;color:#fff;border:1.5px solid #4a7c59;',
-        changes_requested: 'background:#e67e22;color:#fff;border:1.5px solid #e67e22;'
-      };
-      var statusStyle = statusStyles[p.status] || statusStyles.draft;
+      var badgeClass = { draft: 'prop-badge-draft', sent: 'prop-badge-sent', accepted: 'prop-badge-accepted', changes_requested: 'prop-badge-changes' };
+      var badge = badgeClass[p.status] || badgeClass.draft;
       var statusLabels = { changes_requested: 'Changes Requested' };
       var statusLabel = statusLabels[p.status] || ((p.status || 'draft').charAt(0).toUpperCase() + (p.status || 'draft').slice(1));
-      var date = p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+      var date = p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
       var inv = p.investment ? '$' + Number(p.investment).toLocaleString() : '';
       var rowUrl = p.status === 'draft'
-        ? '/proposal-builder.html?id=' + p.id
+        ? '/proposal-builder.html?edit=' + p.id
         : '/proposal-view.html?id=' + p.id;
-      var rowTarget = p.status === 'draft' ? '' : ' target="_blank"';
 
-      html += '<tr style="cursor:pointer;" data-row-url="' + rowUrl + '" data-row-target="' + (p.status === 'draft' ? '_self' : '_blank') + '">'
-        + '<td style="font-weight:700;">' + escapeHtml(p.client_company || '') + (p.client_notes ? '<br><span style="font-size:0.72rem;font-weight:400;font-style:italic;color:#e67e22;">"' + escapeHtml(p.client_notes.substring(0, 80)) + (p.client_notes.length > 80 ? '...' : '') + '"</span>' : '') + '</td>'
-        + '<td>' + escapeHtml(p.service_type || '') + '</td>'
-        + '<td style="font-weight:700;">' + inv + '</td>'
-        + '<td><span class="status-pill" style="' + statusStyle + '">' + escapeHtml(statusLabel) + '</span></td>'
-        + '<td style="font-size:0.78rem;color:var(--muted);">' + date + '</td>'
-        + '<td style="white-space:nowrap;">'
-        + (p.status === 'draft' ? '<a href="/proposal-builder.html?edit=' + p.id + '" style="text-decoration:none;font-size:0.75rem;padding:5px 12px;margin-right:4px;background:#c49a3c;color:#1a3a52;border:none;border-radius:6px;font-weight:700;font-family:inherit;display:inline-block;" onclick="event.stopPropagation();">Edit</a>' : '')
-        + '<a href="/proposal-view.html?id=' + p.id + '" target="_blank" style="text-decoration:none;font-size:0.75rem;padding:5px 12px;margin-right:4px;background:#1a3a52;color:#fff;border:none;border-radius:6px;font-weight:700;font-family:inherit;display:inline-block;" onclick="event.stopPropagation();">View</a>'
-        + '<button class="action-btn action-remove" data-proposal-id="' + p.id + '" style="font-size:0.75rem;padding:5px 12px;background:#fff;color:#c44;border:1.5px solid #c44;border-radius:6px;font-weight:700;font-family:inherit;cursor:pointer;" onclick="event.stopPropagation();">Delete</button>'
-        + '</td>'
-        + '</tr>';
+      html += '<div class="prop-card" data-row-url="' + rowUrl + '" data-row-target="' + (p.status === 'draft' ? '_self' : '_blank') + '">'
+
+        + '<div class="prop-left">'
+        + '<div class="prop-company">' + escapeHtml(p.client_company || 'Untitled') + '</div>'
+        + '<div class="prop-contact">' + escapeHtml(p.client_name || '') + (p.client_email ? ' &middot; ' + escapeHtml(p.client_email) : '') + '</div>'
+        + '<div class="prop-service">' + escapeHtml(p.service_type || '') + '</div>'
+        + (p.client_notes ? '<div class="prop-notes">&ldquo;' + escapeHtml(p.client_notes.substring(0, 100)) + (p.client_notes.length > 100 ? '...' : '') + '&rdquo;</div>' : '')
+        + '</div>'
+
+        + '<div class="prop-center">'
+        + (inv ? '<div class="prop-amount">' + inv + '</div><div class="prop-amount-label">Investment</div>' : '')
+        + '</div>'
+
+        + '<div class="prop-right">'
+        + '<span class="prop-badge ' + badge + '">' + escapeHtml(statusLabel) + '</span>'
+        + '<span class="prop-date">' + date + '</span>'
+        + '<div class="prop-actions">'
+        + (p.status === 'draft' ? '<a href="/proposal-builder.html?edit=' + p.id + '" class="prop-btn prop-btn-edit" onclick="event.stopPropagation();">Edit</a>' : '')
+        + '<a href="/proposal-view.html?id=' + p.id + '" target="_blank" class="prop-btn prop-btn-view" onclick="event.stopPropagation();">View</a>'
+        + '<button class="prop-btn prop-btn-delete" data-proposal-id="' + p.id + '" onclick="event.stopPropagation();">Delete</button>'
+        + '</div>'
+        + '</div>'
+
+        + '</div>';
     });
 
-    html += '</tbody></table></div>';
+    html += '</div>';
     $('proposals-content').innerHTML = html;
 
-    // Row click handlers
-    document.querySelectorAll('#proposals-content .bookings-table tbody tr').forEach(function(row) {
-      row.addEventListener('click', function() {
-        var url = row.dataset.rowUrl;
-        var target = row.dataset.rowTarget;
+    // Card click handlers
+    document.querySelectorAll('#proposals-content .prop-card').forEach(function(card) {
+      card.addEventListener('click', function() {
+        var url = card.dataset.rowUrl;
+        var target = card.dataset.rowTarget;
         if (target === '_blank') {
           window.open(url, '_blank');
         } else {
@@ -2675,7 +2714,7 @@ async function loadDashProposals() {
     });
 
     // Delete handlers
-    document.querySelectorAll('#proposals-content .action-remove').forEach(function(btn) {
+    document.querySelectorAll('#proposals-content .prop-btn-delete').forEach(function(btn) {
       btn.addEventListener('click', async function(e) {
         e.stopPropagation();
         if (!confirm('Delete this proposal?')) return;
@@ -2685,10 +2724,10 @@ async function loadDashProposals() {
           headers: apiHeaders()
         });
         if (delRes.ok) {
-          btn.closest('tr').remove();
-          var rows = document.querySelectorAll('#proposals-content .bookings-table tbody tr');
-          if (rows.length === 0) {
-            $('proposals-content').innerHTML = '<div class="empty-state"><p>No proposals yet.</p><a href="/proposal-builder.html" style="display:inline-block;margin-top:16px;padding:12px 24px;background:var(--gold);color:var(--ink);border-radius:8px;font-weight:700;text-decoration:none;">Create Your First Proposal</a></div>';
+          btn.closest('.prop-card').remove();
+          var cards = document.querySelectorAll('#proposals-content .prop-card');
+          if (cards.length === 0) {
+            $('proposals-content').innerHTML = '<div class="empty-state"><p>No proposals yet.</p><a href="/proposal-builder.html" class="prop-new" style="margin-top:16px;">Create Your First Proposal</a></div>';
           }
         }
       });
