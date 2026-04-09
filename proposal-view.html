@@ -139,11 +139,18 @@ async function loadProposal(id) {
   }
 }
 
+var _coachEmail = '';
+var _clientName = '';
+var _clientCompany = '';
+
 function renderProposal(p, coach) {
   var coachName = coach ? (coach.display_name || coach.full_name || 'Coach') : 'Coach';
   var coachHeadline = coach ? (coach.headline || '') : '';
   var coachCompany = coach ? (coach.company_name || '') : '';
   var coachEmail = coach ? (coach.email || coach.user_email || '') : '';
+  _coachEmail = coachEmail;
+  _clientName = p.client_name || '';
+  _clientCompany = p.client_company || '';
   var coachWebsite = coach ? (coach.website_url || '') : '';
   var coachPhone = coach ? (coach.phone || '') : '';
 
@@ -244,7 +251,7 @@ function renderProposal(p, coach) {
       + '</div>'
       + '<div class="pv-changes-form" id="changes-form">'
       + '<textarea id="changes-text" placeholder="Describe what you\'d like changed..."></textarea>'
-      + '<button onclick="submitChanges(\'' + escHtml(p.id) + '\', \'' + escHtml(coachEmail) + '\', \'' + escHtml(p.client_name || '') + '\', \'' + escHtml(p.client_company || '') + '\')">Send Request</button>'
+      + '<button onclick="submitChanges(\'' + escHtml(p.id) + '\')">Send Request</button>'
       + '</div>'
       + '<div class="pv-accept-msg" id="accept-msg"></div>'
       + '</div>';
@@ -294,7 +301,7 @@ function showChangesForm() {
   document.getElementById('changes-btn').style.display = 'none';
 }
 
-async function submitChanges(id, coachEmail, clientName, company) {
+async function submitChanges(id) {
   var text = document.getElementById('changes-text').value.trim();
   if (!text) { document.getElementById('accept-msg').textContent = 'Please describe the changes you need.'; document.getElementById('accept-msg').style.color = '#c44'; return; }
 
@@ -314,30 +321,36 @@ async function submitChanges(id, coachEmail, clientName, company) {
       body: JSON.stringify({ status: 'changes_requested', client_notes: text })
     });
 
-    if (res.ok) {
-      var proposalUrl = window.location.href;
-      fetch('/api/send-proposal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          isChangeRequest: true,
-          to: coachEmail,
-          clientName: clientName || company,
-          company: company,
-          clientMessage: text,
-          proposalUrl: proposalUrl
-        })
-      }).catch(function() {});
-
-      document.getElementById('action-btns').style.display = 'none';
-      document.getElementById('changes-form').style.display = 'none';
-      msg.textContent = 'Your request has been sent. Your coach will be in touch shortly.';
-      msg.style.color = '#e67e22';
-    } else {
+    if (!res.ok) {
+      var errBody = await res.text();
+      console.error('PATCH failed:', res.status, errBody);
       msg.textContent = 'Something went wrong. Please try again.';
       msg.style.color = '#c44';
+      return;
     }
+
+    // PATCH succeeded — send email notification (non-blocking)
+    var proposalUrl = window.location.href;
+    fetch('/api/send-proposal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        isChangeRequest: true,
+        to: _coachEmail,
+        coachEmail: _coachEmail,
+        clientName: _clientName || _clientCompany,
+        company: _clientCompany,
+        clientMessage: text,
+        proposalUrl: proposalUrl
+      })
+    }).catch(function(emailErr) { console.error('Email notification failed:', emailErr); });
+
+    document.getElementById('action-btns').style.display = 'none';
+    document.getElementById('changes-form').style.display = 'none';
+    msg.textContent = 'Your request has been sent. Your coach will be in touch shortly.';
+    msg.style.color = '#e67e22';
   } catch (err) {
+    console.error('submitChanges error:', err);
     msg.textContent = 'Connection error. Please try again.';
     msg.style.color = '#c44';
   }

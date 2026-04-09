@@ -2651,9 +2651,9 @@ async function loadDashProposals() {
         + '<td><span class="status-pill" style="' + statusStyle + '">' + escapeHtml(statusLabel) + '</span></td>'
         + '<td style="font-size:0.78rem;color:var(--muted);">' + date + '</td>'
         + '<td style="white-space:nowrap;">'
-        + (p.status === 'draft' ? '<a href="/proposal-builder.html?edit=' + p.id + '" class="action-btn action-confirm" style="text-decoration:none;font-size:0.75rem;padding:5px 12px;margin-right:4px;" onclick="event.stopPropagation();">Edit</a>' : '')
-        + '<a href="/proposal-view.html?id=' + p.id + '" target="_blank" class="action-btn action-confirm" style="text-decoration:none;font-size:0.75rem;padding:5px 12px;margin-right:4px;" onclick="event.stopPropagation();">View</a>'
-        + '<button class="action-btn action-remove" data-proposal-id="' + p.id + '" style="font-size:0.75rem;padding:5px 12px;" onclick="event.stopPropagation();">Delete</button>'
+        + (p.status === 'draft' ? '<a href="/proposal-builder.html?edit=' + p.id + '" style="text-decoration:none;font-size:0.75rem;padding:5px 12px;margin-right:4px;background:#c49a3c;color:#1a3a52;border:none;border-radius:6px;font-weight:700;font-family:inherit;display:inline-block;" onclick="event.stopPropagation();">Edit</a>' : '')
+        + '<a href="/proposal-view.html?id=' + p.id + '" target="_blank" style="text-decoration:none;font-size:0.75rem;padding:5px 12px;margin-right:4px;background:#1a3a52;color:#fff;border:none;border-radius:6px;font-weight:700;font-family:inherit;display:inline-block;" onclick="event.stopPropagation();">View</a>'
+        + '<button class="action-btn action-remove" data-proposal-id="' + p.id + '" style="font-size:0.75rem;padding:5px 12px;background:#fff;color:#c44;border:1.5px solid #c44;border-radius:6px;font-weight:700;font-family:inherit;cursor:pointer;" onclick="event.stopPropagation();">Delete</button>'
         + '</td>'
         + '</tr>';
     });
