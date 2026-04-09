@@ -1331,10 +1331,16 @@ async function addService() {
 /* ================================================
    BOOKINGS
    ================================================ */
+function extractClientName(notes) {
+  if (!notes) return '';
+  var match = notes.match(/^Name:\s*(.+)/m);
+  return match ? match[1].trim() : '';
+}
+
 async function loadBookings() {
   try {
     var data = await supabaseGet(
-      'coach_bookings?coach_id=eq.' + coachProfile.id + '&order=created_at.desc&select=*'
+      'coach_bookings?coach_id=eq.' + coachProfile.id + '&order=scheduled_at.desc&select=id,client_email,client_phone,scheduled_at,status,notes,zoom_link,service_id'
     );
     $('bookings-loading').style.display = 'none';
     $('bookings-content').classList.remove('hidden');
@@ -1345,27 +1351,27 @@ async function loadBookings() {
     }
 
     var html = '<div class="bookings-table-wrap"><table class="bookings-table"><thead><tr>'
-      + '<th>Client</th><th>Email</th><th>Service</th><th>Date</th><th>Notes</th><th>Status</th><th>Actions</th>'
+      + '<th>Client</th><th>Email</th><th>Date</th><th>Notes</th><th>Status</th><th>Actions</th>'
       + '</tr></thead><tbody>';
 
     data.forEach(function(b) {
       var statusClass = 'status-' + (b.status || 'pending');
       var statusText = (b.status || 'pending').charAt(0).toUpperCase() + (b.status || 'pending').slice(1);
-      var dateStr = b.preferred_date ? new Date(b.preferred_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : (b.created_at ? new Date(b.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '');
+      var dateStr = b.scheduled_at ? new Date(b.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      var clientName = extractClientName(b.notes);
       var actions = '';
       if (b.status === 'pending') {
         actions = '<button class="action-btn action-confirm" data-booking-id="' + b.id + '" data-action="confirmed">Confirm</button>'
           + '<button class="action-btn action-decline" data-booking-id="' + b.id + '" data-action="rejected">Decline</button>';
       }
 
-      html += '<tr>'
-        + '<td>' + escapeHtml(b.client_name || '') + '</td>'
+      html += '<tr data-booking-id="' + b.id + '">'
+        + '<td>' + escapeHtml(clientName) + '</td>'
         + '<td>' + escapeHtml(b.client_email || '') + '</td>'
-        + '<td>' + escapeHtml(b.service_name || '') + '</td>'
         + '<td>' + escapeHtml(dateStr) + '</td>'
         + '<td>' + escapeHtml(b.notes || '') + '</td>'
-        + '<td><span class="status-pill ' + statusClass + '">' + escapeHtml(statusText) + '</span></td>'
-        + '<td>' + actions + '</td>'
+        + '<td class="booking-status-cell"><span class="status-pill ' + statusClass + '">' + escapeHtml(statusText) + '</span></td>'
+        + '<td class="booking-actions-cell">' + actions + '</td>'
         + '</tr>';
     });
 
@@ -1377,6 +1383,7 @@ async function loadBookings() {
       btn.addEventListener('click', async function() {
         var id = this.dataset.bookingId;
         var action = this.dataset.action;
+        var row = this.closest('tr');
         this.disabled = true;
         await supabasePatch('coach_bookings', { id: 'eq.' + id }, { status: action });
         // Send confirmation email if confirmed
@@ -1389,7 +1396,10 @@ async function loadBookings() {
             });
           } catch(e) { console.warn('Confirmation email failed:', e); }
         }
-        loadBookings();
+        // Update DOM directly instead of reloading
+        var label = action.charAt(0).toUpperCase() + action.slice(1);
+        row.querySelector('.booking-status-cell').innerHTML = '<span class="status-pill status-' + action + '">' + escapeHtml(label) + '</span>';
+        row.querySelector('.booking-actions-cell').innerHTML = '';
       });
     });
 
