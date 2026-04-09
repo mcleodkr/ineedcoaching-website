@@ -3051,20 +3051,28 @@ async function cbLoadModuleLessons(modId) {
         + '<div id="lp-write-' + l.id + '" style="display:' + (activeTab === 'write' ? 'block' : 'none') + ';"><textarea class="cb-input cb-lesson-autosave" data-lesson-id="' + l.id + '" data-lesson-field="content" data-mod-id="' + modId + '" placeholder="Write your lesson content here..." style="font-size:0.82rem;min-height:100px;resize:vertical;">' + escapeHtml(l.content || '') + '</textarea></div>'
         + '<div id="lp-video-' + l.id + '" style="display:' + (activeTab === 'video' ? 'block' : 'none') + ';"><input type="text" class="cb-input cb-lesson-autosave" data-lesson-id="' + l.id + '" data-lesson-field="video_url" data-mod-id="' + modId + '" value="' + escapeHtml(l.video_url || '') + '" placeholder="Paste video URL (YouTube, Vimeo, Zoom recording...)" style="font-size:0.82rem;"></div>'
         + '<div id="lp-upload-' + l.id + '" style="display:none;"><input type="file" id="lesson-file-' + l.id + '" accept=".pdf,.mp4,.mp3,.jpg,.jpeg,.png,.doc,.docx,.ppt,.pptx" style="font-size:0.82rem;" onchange="cbUploadLessonFile(\'' + modId + '\',\'' + l.id + '\')"><div id="lesson-upload-status-' + l.id + '" style="font-size:0.78rem;margin-top:4px;"></div>'
-        + (l.video_url && l.video_url.includes('/storage/') ? '<div style="font-size:0.75rem;color:#4a7c59;margin-top:4px;">File attached: ' + escapeHtml(l.video_url.split('/').pop()) + '</div>' : '')
-        + '</div></div>'
+        + (l.lesson_file_url ? '<div style="font-size:0.75rem;color:#4a7c59;margin-top:4px;">File attached: ' + escapeHtml(l.lesson_file_url.split('/').pop()) + '</div>' : '')
+        + '</div></div>';
 
-        // Drip scheduling
-        + '<div style="padding:10px 0;border-top:1px solid #f0ede6;">'
+      // Drip scheduling
+      var courseDays = 0;
+      if (courseData.start_date && courseData.end_date) {
+        courseDays = Math.ceil((new Date(courseData.end_date) - new Date(courseData.start_date)) / (1000 * 60 * 60 * 24));
+      }
+      var dripHint = courseDays > 0
+        ? 'This course runs ' + courseDays + ' days. Choose which day students unlock this lesson.'
+        : 'Students enrolled on Day 1 will see this lesson on the day you choose. Leave unchecked to make available immediately.';
+
+      html += '<div style="padding:10px 0;border-top:1px solid #f0ede6;">'
         + '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.82rem;font-weight:600;color:#1a3a52;">'
         + '<input type="checkbox" id="drip-toggle-' + l.id + '" ' + (hasDrip ? 'checked' : '') + ' onchange="cbToggleDrip(\'' + l.id + '\')" style="width:auto;margin:0;accent-color:#c49a3c;">'
         + ' Release on a specific day</label>'
         + '<div id="drip-fields-' + l.id + '" style="display:' + (hasDrip ? 'flex' : 'none') + ';align-items:center;gap:8px;margin-top:8px;padding-left:26px;">'
         + '<span style="font-size:0.82rem;color:#1a3a52;">Release on day</span>'
-        + '<input type="number" id="drip-day-' + l.id + '" value="' + (l.drip_day || '') + '" min="1" style="width:60px;padding:6px 10px;border:1.5px solid #e0ddd5;border-radius:6px;font-family:inherit;font-size:0.82rem;text-align:center;outline:none;" onblur="cbSaveDrip(\'' + l.id + '\')">'
+        + '<input type="number" id="drip-day-' + l.id + '" value="' + (l.drip_day || '') + '" min="1"' + (courseDays > 0 ? ' max="' + courseDays + '"' : '') + ' style="width:60px;padding:6px 10px;border:1.5px solid #e0ddd5;border-radius:6px;font-family:inherit;font-size:0.82rem;text-align:center;outline:none;" onblur="cbSaveDrip(\'' + l.id + '\')">'
         + '<span style="font-size:0.82rem;color:#1a3a52;">of enrollment</span>'
         + '</div>'
-        + '<div style="font-size:0.68rem;color:#8a8a9a;margin-top:4px;padding-left:26px;">Students enrolled on Day 1 will see this lesson on the day you choose. Leave unchecked to make available immediately.</div>'
+        + '<div style="font-size:0.68rem;color:#8a8a9a;margin-top:4px;padding-left:26px;">' + dripHint + '</div>'
         + '</div>'
 
         // Quiz section
@@ -3176,9 +3184,13 @@ async function cbUploadLessonFile(modId, lessonId) {
     }
 
     var publicUrl = SUPABASE_URL + '/storage/v1/object/public/course-resources/' + filePath;
+    var isVideo = /\.(mp4|webm|mov|avi)$/i.test(file.name);
+    var patchField = isVideo ? 'video_url' : 'lesson_file_url';
+    var patchPayload = {};
+    patchPayload[patchField] = publicUrl;
     await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?id=eq.' + lessonId, {
       method: 'PATCH', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ video_url: publicUrl })
+      body: JSON.stringify(patchPayload)
     });
 
     if (statusEl) { statusEl.innerHTML = '<span style="color:#4a7c59;">&#10003; ' + escapeHtml(file.name) + ' attached</span>'; }
@@ -3227,13 +3239,16 @@ async function cbLoadQuiz(lessonId) {
     }
     var q = quizzes[0];
     quizData[lessonId] = q;
-    var questions = Array.isArray(q.questions) ? q.questions : [];
-    area.innerHTML = '<div style="background:#faf3e0;border-radius:8px;padding:12px 14px;">'
-      + '<div style="font-weight:700;font-size:0.85rem;color:#1a3a52;">' + escapeHtml(q.title || 'Quiz') + '</div>'
-      + '<div style="font-size:0.75rem;color:#8a8a9a;">' + questions.length + ' question' + (questions.length !== 1 ? 's' : '') + ' &middot; Pass: ' + (q.pass_score || 80) + '%</div>'
+    quizData[lessonId]._questions = Array.isArray(q.questions) ? q.questions.slice() : [];
+    var questions = quizData[lessonId]._questions;
+    area.innerHTML = '<div style="background:#faf3e0;border-radius:10px;padding:16px 18px;">'
+      + '<div style="font-weight:700;font-size:0.92rem;color:#1a3a52;margin-bottom:4px;">' + escapeHtml(q.title || 'Quiz') + '</div>'
+      + '<div style="font-size:0.78rem;color:#8a8a9a;margin-bottom:12px;">' + questions.length + ' question' + (questions.length !== 1 ? 's' : '') + ' &middot; Pass: ' + (q.pass_score || 80) + '%</div>'
+      + '<button onclick="cbShowQuizBuilder(\'' + lessonId + '\')" style="display:block;width:100%;padding:10px;background:#c49a3c;color:#1a3a52;border:none;border-radius:8px;font-family:inherit;font-size:0.85rem;font-weight:700;cursor:pointer;margin-bottom:6px;">Edit Quiz</button>'
+      + '<button onclick="cbDeleteQuiz(\'' + lessonId + '\',\'' + q.id + '\')" style="display:block;width:100%;padding:8px;background:#fff;color:#c44;border:1.5px solid #c44;border-radius:8px;font-family:inherit;font-size:0.78rem;font-weight:700;cursor:pointer;">Delete Quiz</button>'
       + '</div>';
     var btns = $('quiz-buttons-' + lessonId);
-    if (btns) btns.innerHTML = '<button onclick="cbShowQuizBuilder(\'' + lessonId + '\')" style="padding:7px 16px;background:#fff;color:#c49a3c;border:1.5px solid #c49a3c;border-radius:6px;font-family:inherit;font-size:0.78rem;font-weight:700;cursor:pointer;">Edit Quiz</button>';
+    if (btns) btns.style.display = 'none';
   } catch (e) {
     area.innerHTML = '';
   }
@@ -3382,6 +3397,24 @@ async function cbSaveQuiz(lessonId) {
   }
 }
 
+async function cbDeleteQuiz(lessonId, quizId) {
+  if (!confirm('Are you sure you want to delete this quiz? This cannot be undone.')) return;
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/coach_course_quizzes?id=eq.' + quizId, { method: 'DELETE', headers: apiHeaders() });
+    delete quizData[lessonId];
+    var area = $('quiz-area-' + lessonId);
+    if (area) area.innerHTML = '<div style="font-size:0.78rem;color:#8a8a9a;font-style:italic;">No quiz yet.</div>';
+    var btns = $('quiz-buttons-' + lessonId);
+    if (btns) {
+      btns.style.display = 'flex';
+      btns.innerHTML = '<button onclick="cbShowQuizBuilder(\'' + lessonId + '\')" style="padding:7px 16px;background:#fff;color:#c49a3c;border:1.5px solid #c49a3c;border-radius:6px;font-family:inherit;font-size:0.78rem;font-weight:700;cursor:pointer;">Add Quiz</button>'
+        + '<button onclick="cbShowAIQuiz(\'' + lessonId + '\')" style="padding:7px 16px;background:#fff;color:#1a3a52;border:1.5px solid #1a3a52;border-radius:6px;font-family:inherit;font-size:0.78rem;font-weight:700;cursor:pointer;">&#10022; AI Build Quiz</button>';
+    }
+    var builder = $('quiz-builder-' + lessonId);
+    if (builder) builder.style.display = 'none';
+  } catch (e) { console.error('Delete quiz error:', e); }
+}
+
 /* AI Quiz */
 function cbShowAIQuiz(lessonId) {
   var container = $('ai-quiz-' + lessonId);
@@ -3395,8 +3428,8 @@ function cbShowAIQuiz(lessonId) {
     + '<div style="font-size:0.82rem;color:#8a8a9a;margin-bottom:12px;">Paste your lesson content, objectives, or upload a PDF and we will generate quiz questions for you.</div>'
     + '<textarea class="cb-input" id="ai-quiz-content-' + lessonId + '" placeholder="Paste lesson content here..." style="min-height:120px;font-size:0.82rem;resize:vertical;margin-bottom:8px;"></textarea>'
     + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">'
-    + '<span style="font-size:0.78rem;color:#8a8a9a;">Or upload a PDF:</span>'
-    + '<input type="file" id="ai-quiz-file-' + lessonId + '" accept=".pdf,.txt,.doc,.docx" style="font-size:0.78rem;">'
+    + '<span style="font-size:0.78rem;color:#8a8a9a;">Or upload files:</span>'
+    + '<input type="file" id="ai-quiz-file-' + lessonId + '" accept=".pdf,.txt,.doc,.docx" multiple style="font-size:0.78rem;">'
     + '</div>'
     + '<button onclick="cbGenerateAIQuiz(\'' + lessonId + '\')" class="cb-btn-next" style="width:100%;">Generate Quiz</button>'
     + '<div id="ai-quiz-status-' + lessonId + '" style="font-size:0.82rem;margin-top:8px;"></div>'
@@ -3409,15 +3442,20 @@ async function cbGenerateAIQuiz(lessonId) {
   var fileEl = $('ai-quiz-file-' + lessonId);
   var content = contentEl ? contentEl.value.trim() : '';
 
-  // Try reading file
-  if (!content && fileEl && fileEl.files[0]) {
+  // Try reading files (multiple supported)
+  if (!content && fileEl && fileEl.files.length > 0) {
     try {
-      content = await new Promise(function(resolve, reject) {
-        var reader = new FileReader();
-        reader.onload = function() { resolve(reader.result); };
-        reader.onerror = reject;
-        reader.readAsText(fileEl.files[0]);
-      });
+      var fileTexts = [];
+      for (var fi = 0; fi < fileEl.files.length; fi++) {
+        var fileText = await new Promise(function(resolve, reject) {
+          var reader = new FileReader();
+          reader.onload = function() { resolve(reader.result); };
+          reader.onerror = reject;
+          reader.readAsText(fileEl.files[fi]);
+        });
+        fileTexts.push(fileText);
+      }
+      content = fileTexts.join('\n\n--- Next Document ---\n\n');
     } catch (e) { content = ''; }
   }
 
@@ -3429,35 +3467,20 @@ async function cbGenerateAIQuiz(lessonId) {
   if (statusEl) { statusEl.textContent = 'Reviewing your content and building quiz questions...'; statusEl.style.color = '#8a8a9a'; }
 
   try {
-    var res = await fetch('https://api.anthropic.com/v1/messages', {
+    var res = await fetch('/api/generate-quiz', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': '', 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: 'You are a coaching education expert. Generate quiz questions from the provided content. Return ONLY valid JSON with this structure: { "title": "string", "questions": [ { "type": "multiple_choice" or "true_false", "question": "string", "options": ["string"] (for mc, 4 options), "correct_answer": "string", "explanation": "string" } ] }. Generate 5-8 questions. Make them thoughtful and practical, not just factual recall.',
-        messages: [{ role: 'user', content: 'Generate quiz questions from this content:\n\n' + content.substring(0, 4000) }]
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: content.substring(0, 6000) })
     });
 
     if (!res.ok) {
-      var errText = await res.text();
-      console.error('AI quiz generation failed:', res.status, errText);
+      var errData = await res.json().catch(function() { return {}; });
+      console.error('AI quiz generation failed:', res.status, errData);
       if (statusEl) { statusEl.textContent = 'AI generation failed. Try the manual quiz builder instead.'; statusEl.style.color = '#c44'; }
       return;
     }
 
-    var data = await res.json();
-    var text = data.content && data.content[0] ? data.content[0].text : '';
-
-    // Extract JSON from response
-    var jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      if (statusEl) { statusEl.textContent = 'Could not parse AI response. Try the manual builder.'; statusEl.style.color = '#c44'; }
-      return;
-    }
-
-    var quizJson = JSON.parse(jsonMatch[0]);
+    var quizJson = await res.json();
     var questions = Array.isArray(quizJson.questions) ? quizJson.questions : [];
 
     // Populate quiz data and show builder
