@@ -2959,9 +2959,11 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
           panel.querySelectorAll('.proc-format-card').forEach(function(c) { c.style.borderColor = 'var(--border)'; });
           this.style.borderColor = 'var(--gold)';
 
-          // Step 2: Paste transcript
-          var step2 = panel.querySelector('.proc-step2');
-          if (step2) step2.remove();
+          // Remove any existing step 2 and step 3 content
+          var oldStep2 = panel.querySelector('.proc-step2');
+          if (oldStep2) oldStep2.remove();
+          var oldStep3 = panel.querySelector('.proc-step3');
+          if (oldStep3) oldStep3.remove();
           var step2Html = '<div class="proc-step2" style="margin-top:20px;">'
             + '<div style="font-size:0.85rem;font-weight:700;color:var(--ink);margin-bottom:8px;">Paste your transcript or notes</div>'
             + '<textarea id="proc-transcript-' + bid + '" style="width:100%;padding:16px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:var(--ink);background:var(--cream);min-height:140px;resize:vertical;" placeholder="Paste your session transcript, recording summary, or notes here..."></textarea>'
@@ -2987,7 +2989,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
               if (!apiRes.ok) throw new Error(result.error || 'Processing failed');
 
               // Step 3: Review and save
-              var step3Html = '<div style="margin-top:20px;">'
+              var step3Html = '<div class="proc-step3" style="margin-top:20px;">'
                 + '<div style="font-family:\'Cormorant Garamond\',serif;font-weight:700;font-size:1rem;color:var(--ink);margin-bottom:16px;">' + escapeHtml(result.frameworkName) + ' Notes</div>';
 
               (result.sections || []).forEach(function(section) {
