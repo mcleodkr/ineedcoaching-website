@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Write a Recommendation — ineedcoaching.org</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root { --ink: #1a3a52; --gold: #c49a3c; --gold-hover: #a87d1f; --cream: #f7f4ee; --white: #ffffff; --muted: #6b6b60; --border: #e0ddd5; --r: 14px; --r-sm: 8px; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; font-size: 18px; background: var(--cream); color: var(--ink); min-height: 100vh; }
+.container { max-width: 600px; margin: 0 auto; padding: 48px 24px 80px; }
+h1 { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+.subtitle { font-size: 0.9rem; color: var(--muted); margin-bottom: 28px; line-height: 1.6; }
+.coach-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+.coach-photo { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); }
+.coach-initials { width: 56px; height: 56px; border-radius: 50%; background: var(--ink); display: flex; align-items: center; justify-content: center; font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; font-weight: 700; color: var(--gold); }
+.coach-name { font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; font-weight: 700; color: var(--ink); }
+.personal-note { background: var(--white); border-left: 3px solid var(--gold); border-radius: 0 var(--r-sm) var(--r-sm) 0; padding: 16px 20px; margin-bottom: 24px; font-size: 0.9rem; line-height: 1.6; color: var(--muted); font-style: italic; }
+.form-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 36px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+.form-group { margin-bottom: 24px; }
+.form-group label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+.form-group textarea, .form-group input[type="text"] { width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--ink); background: var(--cream); }
+.form-group textarea { min-height: 120px; resize: vertical; }
+.form-group textarea:focus, .form-group input:focus { outline: none; border-color: var(--gold); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.checkbox-row { display: flex; align-items: center; gap: 10px; }
+.checkbox-row input { width: 18px; height: 18px; accent-color: var(--gold); }
+.checkbox-row label { font-size: 0.88rem; color: var(--ink); }
+.submit-btn { width: 100%; padding: 16px 24px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.2s; margin-top: 8px; }
+.submit-btn:hover { background: var(--gold-hover); }
+.submit-btn:disabled { opacity: 0.55; cursor: default; }
+.success { text-align: center; padding: 60px 24px; }
+.success h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; color: var(--ink); margin-bottom: 12px; }
+.success p { color: var(--muted); font-size: 0.95rem; }
+.error { text-align: center; padding: 80px 24px; }
+.error h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; color: var(--ink); margin-bottom: 8px; }
+.error p { color: var(--muted); }
+.loading { text-align: center; padding: 80px 24px; }
+.spinner { width: 44px; height: 44px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.branding { text-align: center; margin-top: 40px; font-size: 0.78rem; color: var(--muted); }
+.branding a { color: var(--gold); text-decoration: none; font-weight: 600; }
+@media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <div id="loading" class="loading"><div class="spinner"></div><p style="color:var(--muted);">Loading...</p></div>
+  <div id="error" class="error" style="display:none;"><h2>Request not found</h2><p>This link may have expired or already been used.</p></div>
+  <div id="form-view" style="display:none;">
+    <div class="coach-header" id="coach-header"></div>
+    <h1>Write a professional recommendation</h1>
+    <p class="subtitle" id="subtitle">Your professional perspective helps others understand what it's like to work with this coach.</p>
+    <div id="personal-note-area"></div>
+    <div class="form-card">
+      <div class="form-row">
+        <div class="form-group"><label>Your Full Name</label><input type="text" id="r-name" placeholder="Full name"></div>
+        <div class="form-group"><label>Title</label><input type="text" id="r-title" placeholder="e.g. Director of Operations"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Company</label><input type="text" id="r-company" placeholder="Company name"></div>
+        <div class="form-group"><label>How do you know them?</label><input type="text" id="r-how" placeholder="e.g. Former client, colleague"></div>
+      </div>
+      <div class="form-group">
+        <label>Your Recommendation</label>
+        <textarea id="r-content" placeholder="Share your experience working with or knowing this coach professionally..." required></textarea>
+      </div>
+      <div class="form-group">
+        <div class="checkbox-row">
+          <input type="checkbox" id="r-allow-name" checked>
+          <label for="r-allow-name">Display my name and title with this recommendation</label>
+        </div>
+      </div>
+      <button class="submit-btn" id="submit-btn">Submit Recommendation</button>
+    </div>
+  </div>
+  <div id="success" class="success" style="display:none;">
+    <h2>Thank you!</h2>
+    <p>Your recommendation has been submitted for review. It means a lot.</p>
+  </div>
+  <div class="branding"><a href="/">ineedcoaching.org</a></div>
+</div>
+<script>
+function escapeHtml(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+var recId = null;
+
+async function load() {
+  var token = new URLSearchParams(window.location.search).get('token');
+  if (!token) { document.getElementById('loading').style.display = 'none'; document.getElementById('error').style.display = ''; return; }
+  try {
+    var res = await fetch('/api/get-recommendation?token=' + encodeURIComponent(token));
+    var data = await res.json();
+    if (!res.ok) { document.getElementById('loading').style.display = 'none'; document.getElementById('error').style.display = ''; return; }
+    recId = data.id;
+    var hdr = '';
+    if (data.coachPhoto) { hdr += '<img class="coach-photo" src="' + escapeHtml(data.coachPhoto) + '" alt="">'; }
+    else { var ini = (data.coachName || '?').split(' ').map(function(w){return w[0];}).join('').toUpperCase().slice(0,2); hdr += '<div class="coach-initials">' + escapeHtml(ini) + '</div>'; }
+    hdr += '<div class="coach-name">' + escapeHtml(data.coachName) + '</div>';
+    document.getElementById('coach-header').innerHTML = hdr;
+    document.getElementById('subtitle').textContent = 'Share your professional perspective on ' + data.coachName + '.';
+    if (data.recommenderName) document.getElementById('r-name').value = data.recommenderName;
+    if (data.recommenderTitle) document.getElementById('r-title').value = data.recommenderTitle;
+    if (data.recommenderCompany) document.getElementById('r-company').value = data.recommenderCompany;
+    if (data.personalNote) document.getElementById('personal-note-area').innerHTML = '<div class="personal-note">"' + escapeHtml(data.personalNote) + '"</div>';
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('form-view').style.display = '';
+  } catch(e) { document.getElementById('loading').style.display = 'none'; document.getElementById('error').style.display = ''; }
+}
+
+document.getElementById('submit-btn').addEventListener('click', async function() {
+  var content = document.getElementById('r-content').value.trim();
+  if (!content) { alert('Please write your recommendation.'); return; }
+  this.disabled = true; this.textContent = 'Submitting...';
+  try {
+    var res = await fetch('/api/submit-recommendation', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recommendationId: recId,
+        recommenderName: document.getElementById('r-name').value.trim(),
+        recommenderTitle: document.getElementById('r-title').value.trim(),
+        recommenderCompany: document.getElementById('r-company').value.trim(),
+        howYouKnow: document.getElementById('r-how').value.trim(),
+        content: content,
+        allowName: document.getElementById('r-allow-name').checked
+      })
+    });
+    if (!res.ok) throw new Error('Submit failed');
+    document.getElementById('form-view').style.display = 'none';
+    document.getElementById('success').style.display = '';
+  } catch(e) { alert('Something went wrong. Please try again.'); this.disabled = false; this.textContent = 'Submit Recommendation'; }
+});
+load();
+</script>
+</body>
+</html>

@@ -712,10 +712,62 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 
     <!-- RECOMMENDATIONS TAB -->
     <div id="tab-recommendations" class="tab-panel">
-      <div id="recs-loading" class="loading-state" style="min-height:30vh;">
-        <div class="loading-spinner"></div>
+      <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:24px;">
+        <button class="recs-subtab active" data-recs-subtab="professional" style="padding:12px 24px;font-family:'Cabinet Grotesk',sans-serif;font-size:0.85rem;font-weight:700;color:var(--ink);background:none;border:none;border-bottom:2.5px solid var(--gold);cursor:pointer;margin-bottom:-2px;">Professional Recommendations</button>
+        <button class="recs-subtab" data-recs-subtab="refer" style="padding:12px 24px;font-family:'Cabinet Grotesk',sans-serif;font-size:0.85rem;font-weight:700;color:var(--muted);background:none;border:none;border-bottom:2.5px solid transparent;cursor:pointer;margin-bottom:-2px;">Refer a Coach</button>
+        <button class="recs-subtab" data-recs-subtab="links" style="padding:12px 24px;font-family:'Cabinet Grotesk',sans-serif;font-size:0.85rem;font-weight:700;color:var(--muted);background:none;border:none;border-bottom:2.5px solid transparent;cursor:pointer;margin-bottom:-2px;">Client Referral Links</button>
       </div>
-      <div id="recs-content" class="hidden"></div>
+
+      <!-- Professional Recommendations sub-tab -->
+      <div id="recs-subtab-professional">
+        <div class="form-section" style="margin-bottom:24px;">
+          <h2 class="form-section-title" style="font-family:'Cormorant Garamond','Playfair Display',serif;">Request a Recommendation</h2>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:700px;">
+            <div class="form-group" style="margin-bottom:0;"><label for="req-rec-email">Email</label><input type="email" id="req-rec-email" placeholder="colleague@company.com"></div>
+            <div class="form-group" style="margin-bottom:0;"><label for="req-rec-name">Name</label><input type="text" id="req-rec-name" placeholder="Full name"></div>
+            <div class="form-group" style="margin-bottom:0;"><label for="req-rec-title">Title</label><input type="text" id="req-rec-title" placeholder="Job title"></div>
+            <div class="form-group" style="margin-bottom:0;"><label for="req-rec-company">Company</label><input type="text" id="req-rec-company" placeholder="Company name"></div>
+            <div class="form-group" style="margin-bottom:0;"><label for="req-rec-relationship">Relationship</label>
+              <select id="req-rec-relationship"><option value="">Select...</option><option value="Colleague">Colleague</option><option value="Former Manager">Former Manager</option><option value="Business Partner">Business Partner</option><option value="Professional Contact">Professional Contact</option><option value="Other">Other</option></select></div>
+          </div>
+          <div class="form-group" style="max-width:700px;margin-top:12px;"><label for="req-rec-note">Personal Note (optional)</label><textarea id="req-rec-note" placeholder="e.g. I'd really value your perspective on our work together." style="min-height:60px;"></textarea></div>
+          <div style="display:flex;gap:12px;align-items:center;">
+            <button class="save-btn" id="req-rec-btn" style="background:var(--gold);">Send Request</button>
+            <span id="req-rec-msg" class="save-msg"></span>
+          </div>
+        </div>
+        <div id="recs-loading" class="loading-state" style="min-height:20vh;"><div class="loading-spinner"></div></div>
+        <div id="recs-content" class="hidden"></div>
+      </div>
+
+      <!-- Refer a Coach sub-tab -->
+      <div id="recs-subtab-refer" style="display:none;">
+        <div class="form-section"><h2 class="form-section-title" style="font-family:'Cormorant Garamond','Playfair Display',serif;">Refer a Fellow Coach</h2>
+          <p style="font-size:0.88rem;color:var(--muted);margin-bottom:16px;">Recommend a colleague to the coaching community.</p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;max-width:700px;">
+            <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;"><label for="refer-coach-select">Coach</label><select id="refer-coach-select"><option value="">Select a coach...</option></select></div>
+            <div class="form-group" style="flex:1;min-width:160px;margin-bottom:0;"><label for="refer-specialty">I recommend them for</label><input type="text" id="refer-specialty" placeholder="e.g. Executive coaching"></div>
+          </div>
+          <div class="form-group" style="max-width:700px;margin-top:12px;"><label for="refer-note">Why you recommend them</label><textarea id="refer-note" placeholder="What makes this coach stand out?" style="min-height:60px;"></textarea></div>
+          <div style="display:flex;gap:12px;align-items:center;">
+            <button class="save-btn" id="save-referral-btn">Save Referral</button>
+            <span id="save-referral-msg" class="save-msg"></span>
+          </div>
+        </div>
+        <div id="referrals-list" style="margin-top:24px;"></div>
+      </div>
+
+      <!-- Client Referral Links sub-tab -->
+      <div id="recs-subtab-links" style="display:none;">
+        <div class="form-section"><h2 class="form-section-title" style="font-family:'Cormorant Garamond','Playfair Display',serif;">Client Referral Links</h2>
+          <p style="font-size:0.88rem;color:var(--muted);margin-bottom:16px;">Generate trackable referral links for your clients to share.</p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;max-width:700px;">
+            <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;"><label for="reflink-client">Client</label><select id="reflink-client"><option value="">Select a client...</option></select></div>
+            <button class="save-btn" id="gen-reflink-btn" style="background:var(--gold);">Generate Link</button>
+          </div>
+        </div>
+        <div id="reflinks-list" style="margin-top:16px;"></div>
+      </div>
     </div>
 
     <!-- SCHEDULING TAB -->
@@ -1964,67 +2016,232 @@ async function loadTestimonials() {
    RECOMMENDATIONS
    ================================================ */
 async function loadRecommendations() {
+  // Sub-tab toggle
+  document.querySelectorAll('.recs-subtab').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.recs-subtab').forEach(function(b) { b.classList.remove('active'); b.style.color = 'var(--muted)'; b.style.borderBottomColor = 'transparent'; });
+      this.classList.add('active'); this.style.color = 'var(--ink)'; this.style.borderBottomColor = 'var(--gold)';
+      var tab = this.dataset.recsSubtab;
+      $('recs-subtab-professional').style.display = tab === 'professional' ? '' : 'none';
+      $('recs-subtab-refer').style.display = tab === 'refer' ? '' : 'none';
+      $('recs-subtab-links').style.display = tab === 'links' ? '' : 'none';
+      if (tab === 'refer') loadReferrals();
+      if (tab === 'links') loadRefLinks();
+    });
+  });
+
+  // Load professional recommendations
   try {
-    var data = await supabaseGet(
-      'coach_recommendations?coach_id=eq.' + coachProfile.id + '&order=created_at.desc&select=*'
-    );
+    var data = await supabaseGet('coach_recommendations?coach_id=eq.' + coachProfile.id + '&order=created_at.desc&select=*');
     $('recs-loading').style.display = 'none';
     $('recs-content').classList.remove('hidden');
 
-    if (!data || data.length === 0) {
-      $('recs-content').innerHTML = '<div class="empty-state"><p>No recommendations yet.</p></div>';
-      return;
-    }
+    if (!data || !data.length) {
+      $('recs-content').innerHTML = '<div class="empty-state"><p>No recommendations yet. Use the form above to request one.</p></div>';
+    } else {
+      var submitted = data.filter(function(r) { return r.status === 'submitted' && !r.is_approved; });
+      var approved = data.filter(function(r) { return r.is_approved; });
+      var pending = data.filter(function(r) { return r.status === 'pending'; });
+      var html = '';
 
-    var html = '';
-    data.forEach(function(r) {
-      var badge = r.is_approved
-        ? '<span class="review-badge badge-live">Live</span>'
-        : '<span class="review-badge badge-pending-review">Pending review</span>';
+      if (submitted.length) {
+        html += '<div class="form-section" style="margin-bottom:20px;"><h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;color:var(--ink);margin-bottom:12px;">Needs Review (' + submitted.length + ')</h3>';
+        submitted.forEach(function(r) { html += renderRecCard(r); });
+        html += '</div>';
+      }
+      if (approved.length) {
+        html += '<div class="form-section" style="margin-bottom:20px;"><h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;color:var(--ink);margin-bottom:12px;">Approved & Live (' + approved.length + ')</h3>';
+        approved.forEach(function(r) { html += renderRecCard(r); });
+        html += '</div>';
+      }
+      if (pending.length) {
+        html += '<div class="form-section"><h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;color:var(--ink);margin-bottom:12px;">Awaiting Response (' + pending.length + ')</h3>';
+        pending.forEach(function(r) {
+          html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:14px 20px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">'
+            + '<span style="font-size:0.88rem;color:var(--ink);">' + escapeHtml(r.recommender_email || r.recommender_name || 'Unknown') + '</span>'
+            + '<span class="status-pill status-pending" style="font-size:0.65rem;padding:2px 8px;">Pending</span></div>';
+        });
+        html += '</div>';
+      }
+      $('recs-content').innerHTML = html;
 
-      html += '<div class="review-card">'
-        + '<div class="review-card-header">'
-        + '<div>'
-        + '<div class="review-card-author">' + escapeHtml(r.recommender_name || 'Anonymous') + '</div>'
-        + (r.recommender_title ? '<div class="review-card-title">' + escapeHtml(r.recommender_title) + '</div>' : '')
-        + (r.recommender_company ? '<div class="review-card-company">' + escapeHtml(r.recommender_company) + '</div>' : '')
-        + '</div>'
-        + badge
-        + '</div>'
-        + '<div class="review-card-text">"' + escapeHtml(r.content || '') + '"</div>'
-        + '<div class="review-card-actions">'
-        + (r.is_approved
-          ? '<button class="action-btn action-remove" data-rec-id="' + r.id + '" data-rec-action="unapprove">Remove</button>'
-          : '<button class="action-btn action-approve" data-rec-id="' + r.id + '" data-rec-action="approve">Approve</button>'
-            + '<button class="action-btn action-remove" data-rec-id="' + r.id + '" data-rec-action="remove">Remove</button>')
-        + '</div></div>';
-    });
-    $('recs-content').innerHTML = html;
-
-    // Action handlers
-    $('recs-content').querySelectorAll('.action-btn').forEach(function(btn) {
-      btn.addEventListener('click', async function() {
-        var id = this.dataset.recId;
-        var action = this.dataset.recAction;
-        this.disabled = true;
-        if (action === 'approve') {
-          await supabasePatch('coach_recommendations', { id: 'eq.' + id }, { is_approved: true });
-        } else if (action === 'unapprove') {
-          await supabasePatch('coach_recommendations', { id: 'eq.' + id }, { is_approved: false });
-        } else if (action === 'remove') {
-          if (confirm('Remove this recommendation?')) {
-            await supabaseDelete('coach_recommendations', { id: 'eq.' + id });
-          }
-        }
-        loadRecommendations();
+      $('recs-content').querySelectorAll('.action-btn').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+          var id = this.dataset.recId;
+          var action = this.dataset.recAction;
+          this.disabled = true;
+          if (action === 'approve') await supabasePatch('coach_recommendations', { id: 'eq.' + id }, { is_approved: true });
+          else if (action === 'unapprove') await supabasePatch('coach_recommendations', { id: 'eq.' + id }, { is_approved: false });
+          else if (action === 'remove' && confirm('Remove?')) await supabaseDelete('coach_recommendations', { id: 'eq.' + id });
+          loadRecommendations();
+        });
       });
-    });
-
+    }
   } catch (err) {
     $('recs-loading').style.display = 'none';
     $('recs-content').classList.remove('hidden');
     $('recs-content').innerHTML = '<div class="empty-state"><p>Error loading recommendations.</p></div>';
   }
+
+  function renderRecCard(r) {
+    var displayName = r.allow_name !== false ? escapeHtml(r.recommender_name || 'Anonymous') : 'Anonymous';
+    var badge = r.is_approved
+      ? '<span class="status-pill status-confirmed" style="font-size:0.65rem;padding:2px 10px;">Live</span>'
+      : '<span class="status-pill" style="font-size:0.65rem;padding:2px 10px;background:rgba(196,154,60,0.15);color:var(--gold);">Review</span>';
+    return '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:24px;margin-bottom:10px;">'
+      + '<div style="display:flex;justify-content:space-between;margin-bottom:10px;"><div>'
+      + '<div style="font-weight:700;font-size:0.92rem;color:var(--ink);">' + displayName + '</div>'
+      + (r.recommender_title ? '<div style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(r.recommender_title) + (r.recommender_company ? ' at ' + escapeHtml(r.recommender_company) : '') + '</div>' : '')
+      + '</div>' + badge + '</div>'
+      + '<div style="font-size:0.92rem;line-height:1.7;color:var(--muted);font-style:italic;">"' + escapeHtml(r.content || '') + '"</div>'
+      + '<div style="display:flex;gap:8px;margin-top:12px;">'
+      + (r.is_approved
+        ? '<button class="action-btn action-decline" data-rec-id="' + r.id + '" data-rec-action="unapprove" style="padding:6px 14px;font-size:0.75rem;">Remove</button>'
+        : '<button class="action-btn action-confirm" data-rec-id="' + r.id + '" data-rec-action="approve" style="padding:6px 14px;font-size:0.75rem;">Approve</button>'
+          + '<button class="action-btn action-decline" data-rec-id="' + r.id + '" data-rec-action="remove" style="padding:6px 14px;font-size:0.75rem;color:#c44;">Delete</button>')
+      + '</div></div>';
+  }
+
+  // Wire request recommendation
+  var reqRecBtn = $('req-rec-btn');
+  if (reqRecBtn && !reqRecBtn._wired) {
+    reqRecBtn._wired = true;
+    reqRecBtn.addEventListener('click', async function() {
+      var email = $('req-rec-email').value.trim();
+      if (!email) { alert('Please enter an email.'); return; }
+      this.disabled = true; this.textContent = 'Sending...';
+      var msg = $('req-rec-msg');
+      msg.classList.remove('show');
+      try {
+        var res = await fetch('/api/request-recommendation', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            coachId: coachProfile.id, recommenderEmail: email,
+            recommenderName: $('req-rec-name').value.trim(), recommenderTitle: $('req-rec-title').value.trim(),
+            recommenderCompany: $('req-rec-company').value.trim(), relationship: $('req-rec-relationship').value,
+            personalNote: $('req-rec-note').value.trim()
+          })
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed');
+        msg.textContent = 'Request sent to ' + email; msg.style.color = 'var(--forest)'; msg.classList.add('show');
+        ['req-rec-email','req-rec-name','req-rec-title','req-rec-company','req-rec-note'].forEach(function(id) { $(id).value = ''; });
+        $('req-rec-relationship').value = '';
+        setTimeout(function() { msg.classList.remove('show'); }, 5000);
+      } catch(e) { msg.textContent = 'Error: ' + (e.message || e); msg.style.color = '#c44'; msg.classList.add('show'); }
+      this.disabled = false; this.textContent = 'Send Request';
+    });
+  }
+
+  // Wire referral sub-tab
+  $('save-referral-btn').onclick = async function() {
+    var toCoachId = $('refer-coach-select').value;
+    if (!toCoachId) { alert('Select a coach.'); return; }
+    this.disabled = true; this.textContent = 'Saving...';
+    var msg = $('save-referral-msg');
+    try {
+      await fetch(SUPABASE_URL + '/rest/v1/coach_referrals', {
+        method: 'POST', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ from_coach_id: coachProfile.id, to_coach_id: toCoachId, specialty: $('refer-specialty').value.trim(), note: $('refer-note').value.trim() })
+      });
+      msg.textContent = 'Referral saved'; msg.style.color = 'var(--forest)'; msg.classList.add('show');
+      $('refer-specialty').value = ''; $('refer-note').value = '';
+      setTimeout(function() { msg.classList.remove('show'); }, 3000);
+      loadReferrals();
+    } catch(e) { msg.textContent = 'Error'; msg.style.color = '#c44'; msg.classList.add('show'); }
+    this.disabled = false; this.textContent = 'Save Referral';
+  };
+
+  // Wire ref link generator
+  $('gen-reflink-btn').onclick = async function() {
+    var clientSel = $('reflink-client');
+    if (!clientSel.value) { alert('Select a client.'); return; }
+    var opt = clientSel.selectedOptions[0];
+    var token = 'ref_' + Math.random().toString(36).substr(2, 10);
+    this.disabled = true;
+    try {
+      await fetch(SUPABASE_URL + '/rest/v1/coach_referral_links', {
+        method: 'POST', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ coach_id: coachProfile.id, client_email: clientSel.value, client_name: opt.dataset.name || null, token: token })
+      });
+      loadRefLinks();
+    } catch(e) { alert('Error generating link.'); }
+    this.disabled = false;
+  };
+}
+
+async function loadReferrals() {
+  try {
+    var coaches = await supabaseGet('coach_profiles?is_published=eq.true&select=id,display_name,slug');
+    var sel = $('refer-coach-select');
+    sel.innerHTML = '<option value="">Select a coach...</option>';
+    (coaches || []).forEach(function(c) {
+      if (c.id !== coachProfile.id) sel.innerHTML += '<option value="' + c.id + '">' + escapeHtml(c.display_name || c.slug) + '</option>';
+    });
+
+    var [given, received] = await Promise.all([
+      supabaseGet('coach_referrals?from_coach_id=eq.' + coachProfile.id + '&select=*,coach_profiles!coach_referrals_to_coach_id_fkey(display_name)'),
+      supabaseGet('coach_referrals?to_coach_id=eq.' + coachProfile.id + '&select=*,coach_profiles!coach_referrals_from_coach_id_fkey(display_name)')
+    ]);
+    var html = '';
+    if (given && given.length) {
+      html += '<div class="form-section"><h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;color:var(--ink);margin-bottom:12px;">Coaches You\'ve Referred</h3>';
+      given.forEach(function(r) {
+        var name = (r.coach_profiles && r.coach_profiles.display_name) || 'Unknown';
+        html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 20px;margin-bottom:8px;">'
+          + '<span style="font-weight:600;color:var(--ink);">' + escapeHtml(name) + '</span>'
+          + (r.specialty ? '<span style="font-size:0.82rem;color:var(--muted);margin-left:12px;">for ' + escapeHtml(r.specialty) + '</span>' : '') + '</div>';
+      });
+      html += '</div>';
+    }
+    if (received && received.length) {
+      html += '<div class="form-section" style="margin-top:20px;"><h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;color:var(--ink);margin-bottom:12px;">Coaches Who Referred You</h3>';
+      received.forEach(function(r) {
+        var name = (r.coach_profiles && r.coach_profiles.display_name) || 'Unknown';
+        html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 20px;margin-bottom:8px;">'
+          + '<span style="font-weight:600;color:var(--ink);">' + escapeHtml(name) + '</span>'
+          + (r.specialty ? '<span style="font-size:0.82rem;color:var(--muted);margin-left:12px;">for ' + escapeHtml(r.specialty) + '</span>' : '') + '</div>';
+      });
+      html += '</div>';
+    }
+    if (!html) html = '<div class="empty-state" style="padding:24px;"><p>No referrals yet.</p></div>';
+    $('referrals-list').innerHTML = html;
+  } catch(e) { $('referrals-list').innerHTML = '<div class="empty-state"><p>Error loading referrals.</p></div>'; }
+}
+
+async function loadRefLinks() {
+  try {
+    // Populate client dropdown
+    var bookings = await supabaseGet('coach_bookings?coach_id=eq.' + coachProfile.id + '&status=eq.confirmed&select=client_email,notes');
+    var seen = {};
+    var sel = $('reflink-client');
+    sel.innerHTML = '<option value="">Select a client...</option>';
+    (bookings || []).forEach(function(b) {
+      if (!b.client_email || seen[b.client_email]) return;
+      seen[b.client_email] = true;
+      var nm = (b.notes || '').match(/^Name:\s*(.+)/m);
+      var name = nm ? nm[1].trim() : '';
+      sel.innerHTML += '<option value="' + escapeHtml(b.client_email) + '" data-name="' + escapeHtml(name) + '">' + escapeHtml(name ? name + ' (' + b.client_email + ')' : b.client_email) + '</option>';
+    });
+
+    var links = await supabaseGet('coach_referral_links?coach_id=eq.' + coachProfile.id + '&order=created_at.desc&select=*');
+    var html = '';
+    if (links && links.length) {
+      links.forEach(function(l) {
+        var url = 'https://www.ineedcoaching.org/coach-profile.html?slug=' + (coachProfile.slug || '') + '&ref=' + l.token;
+        html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px 20px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
+          + '<div><div style="font-weight:600;font-size:0.88rem;color:var(--ink);">' + escapeHtml(l.client_name || l.client_email) + '</div>'
+          + '<div style="font-size:0.75rem;color:var(--muted);word-break:break-all;">' + escapeHtml(url) + '</div></div>'
+          + '<div style="display:flex;gap:8px;align-items:center;">'
+          + '<span style="font-size:0.78rem;color:var(--muted);">' + (l.click_count || 0) + ' clicks</span>'
+          + '<button onclick="navigator.clipboard.writeText(\'' + escapeHtml(url) + '\');this.textContent=\'Copied!\';setTimeout(()=>this.textContent=\'Copy link\',1500)" style="font-size:0.72rem;color:var(--muted);background:none;border:1px solid var(--border);padding:4px 10px;border-radius:50px;cursor:pointer;">Copy link</button>'
+          + '</div></div>';
+      });
+    } else {
+      html = '<div class="empty-state" style="padding:24px;"><p>No referral links yet.</p></div>';
+    }
+    $('reflinks-list').innerHTML = html;
+  } catch(e) { $('reflinks-list').innerHTML = '<div class="empty-state"><p>Error loading links.</p></div>'; }
 }
 
 /* ================================================
