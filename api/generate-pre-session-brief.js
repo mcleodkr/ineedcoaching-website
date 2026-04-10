@@ -51,15 +51,16 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 2000,
-        system: `You are a coaching intelligence assistant preparing a pre-session brief for a professional coach. Write in strength-based, forward-focused language. Use tentative language: "appears to," "may suggest," "you might explore." Never use "you should" or "you must." No em dashes. Keep last_session_summary.recap to 2 sentences maximum. Return ONLY valid JSON with these exact keys:
+        system: `You are a coaching intelligence assistant preparing a pre-session brief for a professional coach. Write in strength-based, forward-focused language. Use tentative language: "appears to," "may suggest," "you might explore." Never use "you should" or "you must." No em dashes. Keep last_session_summary.recap to 2 sentences maximum. opening_questions must be specific, slightly uncomfortable, and movement-oriented. Not "What are you noticing..." but "What did you actually do differently in that moment vs what you usually do?" Create productive tension that opens the session with direction. Return ONLY valid JSON with these exact keys:
 {
   "session_header": { "client_name": string, "session_number": number, "date": string },
   "orientation_snapshot": { "readiness_level": string, "primary_focus": string, "open_commitments": [{"title": string, "is_complete": boolean}] },
   "last_session_summary": { "recap": "2 sentences max", "key_insight": string, "between_session_plan": string },
-  "patterns_noticed": [{ "pattern": string, "evidence": string }],
+  "patterns_noticed": [{ "title": string, "evidence": "1 sentence", "what_it_enables": "what this strength makes possible in coaching, 1 sentence", "risk_if_ignored": "what happens if coach overlooks this, 1 sentence" }],
+  "trajectory": ["2-3 strings showing direction of change over time. Start each with arrow: ↑ improving, → stable/stuck, ↓ declining. Pull from patterns across all sessions. 1 sentence each."],
   "session_strategy": { "primary_move": "single most important coaching action, 1 sentence", "watch_for": "something to notice in real-time, 1 sentence", "leverage": "a specific strength or recent win to build on, 1 sentence", "avoid": "what to steer away from, 1 sentence" },
   "watch_signals": ["2-3 specific risks or fragility indicators, forward-facing, tentative language"],
-  "opening_questions": [string, string, string],
+  "opening_questions": ["specific, slightly uncomfortable, movement-oriented question", "another", "another"],
   "focus_this_session": "one sentence starting with an action verb: If nothing else this session, [action]",
   "this_session_is": [string, string, string],
   "this_session_is_not": [string, string, string]

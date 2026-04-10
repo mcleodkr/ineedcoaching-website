@@ -4318,9 +4318,27 @@ function renderPreSessionBrief(b, container) {
   if (b.patterns_noticed && b.patterns_noticed.length) {
     h += '<div style="margin-bottom:24px;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:10px;">Patterns Noticed</div>';
     b.patterns_noticed.forEach(function(p) {
-      h += '<div style="background:var(--cream);border-radius:8px;padding:14px;margin-bottom:8px;">'
-        + '<div style="font-size:0.88rem;font-weight:700;color:var(--ink);margin-bottom:4px;">' + escapeHtml(p.pattern) + '</div>'
-        + '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;">' + escapeHtml(p.evidence) + '</div></div>';
+      var title = p.title || p.pattern || '';
+      h += '<div style="background:var(--cream);border-radius:8px;padding:16px;margin-bottom:10px;">'
+        + '<div style="font-size:0.9rem;font-weight:700;color:var(--ink);margin-bottom:4px;">' + escapeHtml(title) + '</div>'
+        + '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;margin-bottom:10px;">' + escapeHtml(p.evidence || '') + '</div>'
+        + (p.what_it_enables ? '<div style="margin-bottom:4px;"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);">Enables \u2192</span> <span style="font-size:0.82rem;color:var(--ink);">' + escapeHtml(p.what_it_enables) + '</span></div>' : '')
+        + (p.risk_if_ignored ? '<div><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#b8860b;">Watch \u2192</span> <span style="font-size:0.82rem;color:var(--muted);">' + escapeHtml(p.risk_if_ignored) + '</span></div>' : '')
+        + '</div>';
+    });
+    h += '</div>';
+  }
+
+  // Trajectory
+  if (b.trajectory && b.trajectory.length) {
+    h += '<div style="margin-bottom:24px;background:var(--cream);border-radius:8px;padding:20px;">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:12px;">Trajectory</div>';
+    b.trajectory.forEach(function(t) {
+      var arrow = t.charAt(0);
+      var arrowColor = arrow === '\u2191' ? 'var(--gold)' : (arrow === '\u2193' ? '#b8860b' : 'var(--muted)');
+      h += '<div style="font-size:0.88rem;color:var(--ink);line-height:1.6;margin-bottom:8px;display:flex;align-items:flex-start;gap:8px;">'
+        + '<span style="color:' + arrowColor + ';font-size:1.1rem;font-weight:700;flex-shrink:0;line-height:1.3;">' + escapeHtml(arrow) + '</span>'
+        + '<span>' + escapeHtml(t.substring(1).trim()) + '</span></div>';
     });
     h += '</div>';
   }
