@@ -50,14 +50,17 @@ export default async function handler(req, res) {
       headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 1500,
-        system: `You are a coaching intelligence assistant preparing a pre-session brief for a professional coach. Write in strength-based, forward-focused language. Use tentative language: "appears to," "may suggest," "you might explore." Never use "you should" or "you must." No em dashes. Return ONLY valid JSON with these exact keys:
+        max_tokens: 2000,
+        system: `You are a coaching intelligence assistant preparing a pre-session brief for a professional coach. Write in strength-based, forward-focused language. Use tentative language: "appears to," "may suggest," "you might explore." Never use "you should" or "you must." No em dashes. Keep last_session_summary.recap to 2 sentences maximum. Return ONLY valid JSON with these exact keys:
 {
   "session_header": { "client_name": string, "session_number": number, "date": string },
   "orientation_snapshot": { "readiness_level": string, "primary_focus": string, "open_commitments": [{"title": string, "is_complete": boolean}] },
-  "last_session_summary": { "recap": string, "key_insight": string, "between_session_plan": string },
+  "last_session_summary": { "recap": "2 sentences max", "key_insight": string, "between_session_plan": string },
   "patterns_noticed": [{ "pattern": string, "evidence": string }],
+  "session_strategy": { "primary_move": "single most important coaching action, 1 sentence", "watch_for": "something to notice in real-time, 1 sentence", "leverage": "a specific strength or recent win to build on, 1 sentence", "avoid": "what to steer away from, 1 sentence" },
+  "watch_signals": ["2-3 specific risks or fragility indicators, forward-facing, tentative language"],
   "opening_questions": [string, string, string],
+  "focus_this_session": "one sentence starting with an action verb: If nothing else this session, [action]",
   "this_session_is": [string, string, string],
   "this_session_is_not": [string, string, string]
 }`,

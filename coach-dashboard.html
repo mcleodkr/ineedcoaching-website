@@ -4309,7 +4309,7 @@ function renderPreSessionBrief(b, container) {
     h += '<div style="margin-bottom:24px;border-left:3px solid var(--gold);padding-left:20px;">'
       + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:8px;">Last Session</div>'
       + '<div style="font-size:0.88rem;color:var(--muted);line-height:1.7;margin-bottom:8px;">' + escapeHtml(ls.recap || '') + '</div>'
-      + (ls.key_insight ? '<div style="font-size:0.85rem;color:var(--gold);font-weight:600;margin-bottom:4px;">Key insight: ' + escapeHtml(ls.key_insight) + '</div>' : '')
+      + (ls.key_insight ? '<div style="font-size:0.85rem;color:var(--gold);font-weight:700;margin-bottom:4px;">Key insight: ' + escapeHtml(ls.key_insight) + '</div>' : '')
       + (ls.between_session_plan ? '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;">Between sessions: ' + escapeHtml(ls.between_session_plan) + '</div>' : '')
       + '</div>';
   }
@@ -4319,8 +4319,31 @@ function renderPreSessionBrief(b, container) {
     h += '<div style="margin-bottom:24px;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:10px;">Patterns Noticed</div>';
     b.patterns_noticed.forEach(function(p) {
       h += '<div style="background:var(--cream);border-radius:8px;padding:14px;margin-bottom:8px;">'
-        + '<div style="font-size:0.88rem;font-weight:600;color:var(--ink);margin-bottom:4px;">' + escapeHtml(p.pattern) + '</div>'
+        + '<div style="font-size:0.88rem;font-weight:700;color:var(--ink);margin-bottom:4px;">' + escapeHtml(p.pattern) + '</div>'
         + '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;">' + escapeHtml(p.evidence) + '</div></div>';
+    });
+    h += '</div>';
+  }
+
+  // Session Strategy
+  if (b.session_strategy) {
+    var ss = b.session_strategy;
+    h += '<div style="margin-bottom:24px;border-left:4px solid var(--gold);border-radius:0 8px 8px 0;background:var(--white);padding:20px 24px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:14px;">Session Strategy</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">';
+    [['Primary Move', ss.primary_move], ['Watch For', ss.watch_for], ['Leverage', ss.leverage], ['Avoid', ss.avoid]].forEach(function(row) {
+      h += '<div><div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:4px;">' + row[0] + '</div>'
+        + '<div style="font-size:0.88rem;font-weight:700;color:var(--ink);line-height:1.5;">' + escapeHtml(row[1] || '') + '</div></div>';
+    });
+    h += '</div></div>';
+  }
+
+  // Watch Signals
+  if (b.watch_signals && b.watch_signals.length) {
+    h += '<div style="margin-bottom:24px;background:rgba(196,154,60,0.08);border:1px solid rgba(196,154,60,0.25);border-radius:8px;padding:20px;">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="font-size:0.85rem;">&#9888;</span><span style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);">Watch Signals</span></div>';
+    b.watch_signals.forEach(function(s) {
+      h += '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;margin-bottom:6px;padding-left:16px;position:relative;"><span style="position:absolute;left:0;color:var(--gold);">\u2022</span>' + escapeHtml(s) + '</div>';
     });
     h += '</div>';
   }
@@ -4329,10 +4352,18 @@ function renderPreSessionBrief(b, container) {
   if (b.opening_questions && b.opening_questions.length) {
     h += '<div style="margin-bottom:24px;background:var(--ink);border-radius:8px;padding:20px;">'
       + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><span style="font-size:0.9rem;">&#128274;</span><span style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);">For Your Eyes Only</span></div>';
-    b.opening_questions.forEach(function(q, i) {
-      h += '<div style="font-size:0.9rem;color:var(--cream);line-height:1.6;margin-bottom:8px;padding-left:20px;border-left:2px solid var(--gold);">' + escapeHtml(q) + '</div>';
+    b.opening_questions.forEach(function(q) {
+      h += '<div style="font-size:0.9rem;color:var(--cream);line-height:1.6;margin-bottom:8px;padding-left:24px;border-left:2px solid var(--gold);"><span style="color:var(--gold);margin-right:6px;">&#9889;</span>' + escapeHtml(q) + '</div>';
     });
     h += '</div>';
+  }
+
+  // Focus This Session
+  if (b.focus_this_session) {
+    h += '<div style="margin-bottom:24px;background:var(--ink);border-radius:8px;padding:24px;text-align:center;">'
+      + '<div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);margin-bottom:10px;">IF NOTHING ELSE THIS SESSION</div>'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:700;color:var(--gold);line-height:1.4;">' + escapeHtml(b.focus_this_session) + '</div>'
+      + '</div>';
   }
 
   // This session is / is not
