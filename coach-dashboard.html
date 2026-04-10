@@ -3133,8 +3133,16 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
 
       // Expandable session panel (hidden by default)
       html += '<div id="session-panel-' + s.id + '" style="display:none;">';
+      // Progress indicator
+      html += '<div style="display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 20px;background:var(--cream);border-top:1px solid var(--border);">'
+        + '<span style="font-size:0.75rem;font-weight:700;color:' + (hasTranscript ? 'var(--gold)' : 'var(--muted)') + ';">\u2460 Transcript ' + (hasTranscript ? '\u2713' : '') + '</span>'
+        + '<span style="color:var(--border);font-size:0.7rem;">\u2192</span>'
+        + '<span style="font-size:0.75rem;font-weight:700;color:' + (hasNotes ? 'var(--gold)' : 'var(--muted)') + ';">\u2461 Notes ' + (hasNotes ? '\u2713' : '') + '</span>'
+        + '<span style="color:var(--border);font-size:0.7rem;">\u2192</span>'
+        + '<span style="font-size:0.75rem;font-weight:700;color:' + (hasAnalysis ? 'var(--gold)' : 'var(--muted)') + ';">\u2462 Intelligence ' + (hasAnalysis ? '\u2713' : '') + '</span>'
+        + '</div>';
       // Tab bar
-      html += '<div style="display:flex;border-top:1px solid var(--border);border-bottom:1px solid var(--border);overflow-x:auto;">'
+      html += '<div style="display:flex;border-bottom:1px solid var(--border);overflow-x:auto;">'
         + '<button class="stab active" data-sid="' + s.id + '" data-stab="transcript" style="flex:1;padding:10px 16px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:700;color:var(--ink);background:none;border:none;border-bottom:2.5px solid var(--gold);cursor:pointer;white-space:nowrap;">Transcript</button>'
         + '<button class="stab" data-sid="' + s.id + '" data-stab="notes" style="flex:1;padding:10px 16px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:700;color:var(--muted);background:none;border:none;border-bottom:2.5px solid transparent;cursor:pointer;white-space:nowrap;">Session Notes</button>'
         + '<button class="stab" data-sid="' + s.id + '" data-stab="intelligence" style="flex:1;padding:10px 16px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:700;color:var(--muted);background:none;border:none;border-bottom:2.5px solid transparent;cursor:pointer;white-space:nowrap;">Intelligence</button>'
@@ -3160,7 +3168,14 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
           + '<button class="session-notes-edit" data-booking-id="' + s.id + '" style="font-size:0.72rem;color:var(--gold);background:none;border:none;cursor:pointer;font-weight:600;">Edit</button></div>'
           + '<div style="font-size:0.85rem;color:var(--muted);line-height:1.7;white-space:pre-line;" id="notes-display-' + s.id + '">' + escapeHtml(note.notes) + '</div>';
       } else {
-        html += '<p style="font-size:0.85rem;color:var(--muted);font-style:italic;margin-bottom:16px;">Structure your session using a coaching framework. Select a format to get started.</p>';
+        if (hasTranscript) {
+          html += '<div style="background:rgba(196,154,60,0.08);border:1px solid rgba(196,154,60,0.2);border-radius:8px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">'
+            + '<span style="color:var(--gold);font-size:1rem;">\u2713</span>'
+            + '<span style="font-size:0.85rem;color:var(--ink);">Transcript available. Select a framework below and we\'ll generate your notes from it.</span>'
+            + '</div>';
+        } else {
+          html += '<p style="font-size:0.85rem;color:var(--muted);font-style:italic;margin-bottom:16px;">Structure your session using a coaching framework. Select a format to get started.</p>';
+        }
       }
       html += '<div id="notes-editor-' + s.id + '" style="' + (hasNotes ? 'display:none;' : '') + '">'
         + '<textarea id="notes-input-' + s.id + '" style="width:100%;padding:14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:var(--ink);background:var(--cream);min-height:120px;resize:vertical;" placeholder="Write your session notes here...">' + escapeHtml(hasNotes ? note.notes : '') + '</textarea>'
@@ -3364,7 +3379,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
     });
   });
 
-  // Wire transcript save
+  // Wire transcript save — stays in place, no redirect
   document.querySelectorAll('.transcript-save-btn').forEach(function(btn) {
     btn.addEventListener('click', async function() {
       var sid = this.dataset.sid;
@@ -3379,9 +3394,32 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ bookingId: sid, coachId: coachProfile.id, clientEmail: clientEmail, rawTranscript: text })
         });
+        // Update in-memory data
+        if (!notesByBooking[sid]) notesByBooking[sid] = {};
+        notesByBooking[sid].raw_transcript = text;
+        // Update UI in place — show saved state, hide editor
+        var editorEl = $('transcript-editor-' + sid);
+        editorEl.style.display = 'none';
+        var parentTab = $('stab-transcript-' + sid);
+        var savedHtml = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><span style="color:#2d6a4f;font-size:0.78rem;font-weight:600;">\u2713 Transcript saved — ready to generate notes</span>'
+          + '<button class="transcript-edit-btn" data-sid="' + sid + '" style="font-size:0.72rem;color:var(--gold);background:none;border:none;cursor:pointer;font-weight:600;">Edit</button></div>'
+          + '<div id="transcript-display-' + sid + '" style="font-size:0.85rem;color:var(--muted);line-height:1.7;white-space:pre-line;max-height:300px;overflow-y:auto;">' + escapeHtml(text) + '</div>';
+        editorEl.insertAdjacentHTML('beforebegin', savedHtml);
+        // Re-wire the edit button
+        parentTab.querySelector('.transcript-edit-btn').addEventListener('click', function() {
+          this.parentElement.style.display = 'none';
+          var display = $('transcript-display-' + sid);
+          if (display) display.style.display = 'none';
+          editorEl.style.display = '';
+        });
+        // Update progress indicator
+        var progressEl = $('session-panel-' + sid).querySelector('div:first-child');
+        if (progressEl) {
+          var spans = progressEl.querySelectorAll('span');
+          if (spans[0]) { spans[0].style.color = 'var(--gold)'; spans[0].textContent = '\u2460 Transcript \u2713'; }
+        }
         this.textContent = '\u2713 Saved';
         this.style.background = '#2d6a4f';
-        setTimeout(function() { openClientDetail(clientEmail); }, 1200);
       } catch(e) {
         this.disabled = false;
         this.textContent = 'Save Transcript';
@@ -3429,14 +3467,27 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
         });
         var saveData = await saveRes.json();
         if (!saveRes.ok) throw new Error(saveData.error || 'Save failed');
+        // Update in-memory
+        if (!notesByBooking[bid]) notesByBooking[bid] = {};
+        notesByBooking[bid].notes = text;
+        // Show saved state in place
         saveBtn.textContent = '\u2713 Notes saved';
         saveBtn.style.background = '#2d6a4f';
         saveBtn.style.color = '#fff';
-        var msg = document.createElement('span');
-        msg.textContent = '\u2713 Notes saved';
-        msg.style.cssText = 'color:#2d6a4f;font-size:0.82rem;font-weight:600;margin-left:12px;';
-        saveBtn.parentNode.insertBefore(msg, saveBtn.nextSibling);
-        setTimeout(function() { msg.remove(); openClientDetail(clientEmail); }, 1500);
+        // Update display
+        var notesDisplay = $('notes-display-' + bid);
+        if (notesDisplay) {
+          notesDisplay.textContent = text;
+          notesDisplay.style.display = '';
+        }
+        var notesEditor = $('notes-editor-' + bid);
+        if (notesEditor) notesEditor.style.display = 'none';
+        // Update progress indicator
+        var panel = $('session-panel-' + bid);
+        if (panel) {
+          var spans = panel.querySelector('div:first-child').querySelectorAll('span');
+          if (spans[2]) { spans[2].style.color = 'var(--gold)'; spans[2].textContent = '\u2461 Notes \u2713'; }
+        }
       } catch(e) {
         console.error('[SaveNotes] Error:', e);
         alert('Error saving notes: ' + (e.message || e));
