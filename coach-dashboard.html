@@ -1135,18 +1135,78 @@ function safeHTML(id, html) { var el = $(id); if (el) el.innerHTML = html; }
 /* ================================================
    AUTH: CHECK URL HASH FOR TOKEN
    ================================================ */
-(function checkHash() {
+(async function checkAuthCallback() {
+  // Handle PKCE flow: Supabase redirects with ?code= in query string
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get('code');
+  if (code) {
+    console.log('[Auth] PKCE code found, exchanging for session...');
+    try {
+      const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=pkce', {
+        method: 'POST',
+        headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ auth_code: code, code_verifier: localStorage.getItem('sb_code_verifier') || '' })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.access_token) {
+          localStorage.setItem(TOKEN_KEY, data.access_token);
+          if (data.refresh_token) localStorage.setItem('sb_refresh_token', data.refresh_token);
+          console.log('[Auth] PKCE session established');
+          window.history.replaceState({}, '', window.location.pathname);
+          window.location.reload();
+          return;
+        }
+      } else {
+        console.error('[Auth] PKCE exchange failed:', res.status);
+      }
+    } catch (e) {
+      console.error('[Auth] PKCE exchange error:', e);
+    }
+  }
+
+  // Handle legacy implicit flow: tokens in URL hash fragment
   const hash = window.location.hash;
   if (hash && hash.includes('access_token')) {
     const params = new URLSearchParams(hash.substring(1));
     const token = params.get('access_token');
     const refreshToken = params.get('refresh_token');
     if (token) {
+      console.log('[Auth] Hash token found');
       localStorage.setItem(TOKEN_KEY, token);
       if (refreshToken) localStorage.setItem('sb_refresh_token', refreshToken);
       window.location.hash = '';
       window.location.reload();
       return;
+    }
+  }
+
+  // Handle Supabase email link with token_hash (newer magic link format)
+  const tokenHash = urlParams.get('token_hash');
+  const type = urlParams.get('type');
+  if (tokenHash && type === 'magiclink') {
+    console.log('[Auth] token_hash magic link found, verifying...');
+    try {
+      const res = await fetch(SUPABASE_URL + '/auth/v1/verify', {
+        method: 'POST',
+        headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token_hash: tokenHash, type: 'magiclink' })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.access_token) {
+          localStorage.setItem(TOKEN_KEY, data.access_token);
+          if (data.refresh_token) localStorage.setItem('sb_refresh_token', data.refresh_token);
+          console.log('[Auth] Magic link verified, session established');
+          window.history.replaceState({}, '', window.location.pathname);
+          window.location.reload();
+          return;
+        }
+      } else {
+        console.error('[Auth] Magic link verify failed:', res.status);
+      }
+    } catch (e) {
+      console.error('[Auth] Magic link verify error:', e);
     }
   }
 })();
