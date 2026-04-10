@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Share Your Experience — ineedcoaching.org</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root { --ink: #1a3a52; --gold: #c49a3c; --gold-hover: #a87d1f; --cream: #f7f4ee; --white: #ffffff; --muted: #6b6b60; --border: #e0ddd5; --r: 14px; --r-sm: 8px; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; font-size: 18px; background: var(--cream); color: var(--ink); min-height: 100vh; }
+.container { max-width: 600px; margin: 0 auto; padding: 48px 24px 80px; }
+h1 { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+.subtitle { font-size: 0.9rem; color: var(--muted); margin-bottom: 32px; line-height: 1.6; }
+.coach-header { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
+.coach-photo { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); }
+.coach-initials { width: 56px; height: 56px; border-radius: 50%; background: var(--ink); display: flex; align-items: center; justify-content: center; font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; font-weight: 700; color: var(--gold); }
+.coach-name { font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; font-weight: 700; color: var(--ink); }
+.personal-note { background: var(--white); border-left: 3px solid var(--gold); border-radius: 0 var(--r-sm) var(--r-sm) 0; padding: 16px 20px; margin-bottom: 28px; font-size: 0.9rem; line-height: 1.6; color: var(--muted); font-style: italic; }
+.form-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 36px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+.form-group { margin-bottom: 24px; }
+.form-group label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+.form-group .helper { font-size: 0.78rem; color: var(--muted); margin-bottom: 8px; font-weight: 400; text-transform: none; letter-spacing: 0; }
+.form-group textarea, .form-group input[type="text"] { width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--ink); background: var(--cream); }
+.form-group textarea { min-height: 100px; resize: vertical; }
+.form-group textarea:focus, .form-group input:focus { outline: none; border-color: var(--gold); }
+.stars-input { display: flex; gap: 6px; }
+.stars-input .star-btn { background: none; border: none; font-size: 2rem; color: var(--border); cursor: pointer; transition: color 0.15s; padding: 0; line-height: 1; }
+.stars-input .star-btn.active { color: var(--gold); }
+.stars-input .star-btn:hover { color: var(--gold); }
+.checkbox-row { display: flex; align-items: center; gap: 10px; }
+.checkbox-row input { width: 18px; height: 18px; accent-color: var(--gold); }
+.checkbox-row label { font-size: 0.88rem; color: var(--ink); }
+.submit-btn { width: 100%; padding: 16px 24px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.2s; margin-top: 8px; }
+.submit-btn:hover { background: var(--gold-hover); }
+.submit-btn:disabled { opacity: 0.55; cursor: default; }
+.success { text-align: center; padding: 60px 24px; }
+.success h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; color: var(--ink); margin-bottom: 12px; }
+.success p { color: var(--muted); font-size: 0.95rem; line-height: 1.6; }
+.error { text-align: center; padding: 80px 24px; }
+.error h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; color: var(--ink); margin-bottom: 8px; }
+.error p { color: var(--muted); }
+.loading { text-align: center; padding: 80px 24px; }
+.spinner { width: 44px; height: 44px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.branding { text-align: center; margin-top: 40px; font-size: 0.78rem; color: var(--muted); }
+.branding a { color: var(--gold); text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div id="loading" class="loading"><div class="spinner"></div><p style="color:var(--muted);">Loading...</p></div>
+  <div id="error" class="error" style="display:none;"><h2>Request not found</h2><p>This link may have expired or already been used.</p></div>
+
+  <div id="form-view" style="display:none;">
+    <div class="coach-header" id="coach-header"></div>
+    <h1>Share your experience</h1>
+    <p class="subtitle" id="subtitle">Your feedback helps others find the right coach — and means the world.</p>
+    <div id="personal-note-area"></div>
+
+    <div class="form-card">
+      <div class="form-group">
+        <label>Your Name</label>
+        <input type="text" id="t-name" placeholder="How you'd like to be identified">
+      </div>
+      <div class="form-group">
+        <label>How would you rate your experience?</label>
+        <div class="stars-input" id="stars-input">
+          <button class="star-btn" data-rating="1">&#9733;</button>
+          <button class="star-btn" data-rating="2">&#9733;</button>
+          <button class="star-btn" data-rating="3">&#9733;</button>
+          <button class="star-btn" data-rating="4">&#9733;</button>
+          <button class="star-btn" data-rating="5">&#9733;</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>What changed for you?</label>
+        <div class="helper">What shifted in your thinking, behavior, or life as a result of coaching?</div>
+        <textarea id="t-changed" placeholder="Before coaching, I was... Now I..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Would you recommend this coach?</label>
+        <div class="helper">What would you say to someone considering working with them?</div>
+        <textarea id="t-recommend" placeholder="I would recommend this coach because..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Describe your coach in a few words</label>
+        <input type="text" id="t-describe" placeholder="e.g. Thoughtful, challenging, supportive">
+      </div>
+      <div class="form-group">
+        <div class="checkbox-row">
+          <input type="checkbox" id="t-allow-name" checked>
+          <label for="t-allow-name">You may use my first name with this testimonial</label>
+        </div>
+      </div>
+      <button class="submit-btn" id="submit-btn">Submit Testimonial</button>
+    </div>
+  </div>
+
+  <div id="success" class="success" style="display:none;">
+    <h2>Thank you!</h2>
+    <p>Your testimonial has been submitted for review. It means more than you know.</p>
+  </div>
+  <div class="branding"><a href="/">ineedcoaching.org</a></div>
+</div>
+
+<script>
+function escapeHtml(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+var testimonialId = null;
+var selectedRating = 0;
+
+// Star rating
+document.querySelectorAll('#stars-input .star-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    selectedRating = parseInt(this.dataset.rating);
+    document.querySelectorAll('#stars-input .star-btn').forEach(function(b) {
+      b.classList.toggle('active', parseInt(b.dataset.rating) <= selectedRating);
+    });
+  });
+  btn.addEventListener('mouseenter', function() {
+    var r = parseInt(this.dataset.rating);
+    document.querySelectorAll('#stars-input .star-btn').forEach(function(b) {
+      b.style.color = parseInt(b.dataset.rating) <= r ? 'var(--gold)' : 'var(--border)';
+    });
+  });
+  btn.addEventListener('mouseleave', function() {
+    document.querySelectorAll('#stars-input .star-btn').forEach(function(b) {
+      b.style.color = '';
+    });
+  });
+});
+
+async function loadTestimonial() {
+  var params = new URLSearchParams(window.location.search);
+  var token = params.get('token');
+  if (!token) { showError(); return; }
+
+  try {
+    var res = await fetch('/api/get-testimonial?token=' + encodeURIComponent(token));
+    var data = await res.json();
+    if (!res.ok) { showError(); return; }
+
+    testimonialId = data.id;
+
+    // Coach header
+    var headerHtml = '';
+    if (data.coachPhoto) {
+      headerHtml += '<img class="coach-photo" src="' + escapeHtml(data.coachPhoto) + '" alt="">';
+    } else {
+      var initials = (data.coachName || '?').split(' ').map(function(w) { return w[0]; }).join('').toUpperCase().slice(0, 2);
+      headerHtml += '<div class="coach-initials">' + escapeHtml(initials) + '</div>';
+    }
+    headerHtml += '<div class="coach-name">' + escapeHtml(data.coachName) + '</div>';
+    document.getElementById('coach-header').innerHTML = headerHtml;
+
+    document.getElementById('subtitle').textContent = 'How was your experience with ' + data.coachName + '?';
+    if (data.clientName) document.getElementById('t-name').value = data.clientName;
+
+    if (data.personalNote) {
+      document.getElementById('personal-note-area').innerHTML = '<div class="personal-note">"' + escapeHtml(data.personalNote) + '"</div>';
+    }
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('form-view').style.display = '';
+  } catch(e) {
+    showError();
+  }
+}
+
+function showError() {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('error').style.display = '';
+}
+
+document.getElementById('submit-btn').addEventListener('click', async function() {
+  var changed = document.getElementById('t-changed').value.trim();
+  var recommend = document.getElementById('t-recommend').value.trim();
+  if (!changed && !recommend) { alert('Please share at least one response.'); return; }
+
+  this.disabled = true;
+  this.textContent = 'Submitting...';
+
+  try {
+    var res = await fetch('/api/submit-testimonial', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        testimonialId: testimonialId,
+        whatChanged: changed,
+        recommendation: recommend,
+        coachDescription: document.getElementById('t-describe').value.trim(),
+        allowName: document.getElementById('t-allow-name').checked,
+        rating: selectedRating || null,
+        clientName: document.getElementById('t-name').value.trim()
+      })
+    });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Submit failed');
+    document.getElementById('form-view').style.display = 'none';
+    document.getElementById('success').style.display = '';
+  } catch(e) {
+    alert('Something went wrong. Please try again.');
+    this.disabled = false;
+    this.textContent = 'Submit Testimonial';
+  }
+});
+
+loadTestimonial();
+</script>
+</body>
+</html>

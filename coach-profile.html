@@ -713,11 +713,15 @@ function renderProfile(coach, services, testimonials, recommendations, courses, 
     document.getElementById('testimonials-section').classList.remove('hidden');
     let testHtml = '';
     testimonials.forEach(t => {
+      const displayName = t.allow_name !== false ? escapeHtml(t.client_name || 'A client') : 'Anonymous';
+      const quoteText = t.what_changed || t.content || t.recommendation || '';
       testHtml += `
         <div class="testimonial-card">
           ${t.rating ? `<div class="testimonial-stars">${renderStars(t.rating)}</div>` : ''}
-          <p class="testimonial-text">"${escapeHtml(t.content)}"</p>
-          <div class="testimonial-author">${escapeHtml(t.client_name)}</div>
+          <p class="testimonial-text">"${escapeHtml(quoteText)}"</p>
+          ${t.recommendation && t.what_changed ? `<p style="font-size:0.88rem;line-height:1.6;color:var(--muted);margin-bottom:16px;">${escapeHtml(t.recommendation)}</p>` : ''}
+          ${t.coach_description ? `<p style="font-size:0.85rem;color:var(--gold);font-weight:600;margin-bottom:16px;">"${escapeHtml(t.coach_description)}"</p>` : ''}
+          <div class="testimonial-author">${displayName}</div>
           ${t.client_title ? `<div class="testimonial-title">${escapeHtml(t.client_title)}</div>` : ''}
         </div>
       `;

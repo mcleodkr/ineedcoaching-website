@@ -682,7 +682,29 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 
     <!-- TESTIMONIALS TAB -->
     <div id="tab-testimonials" class="tab-panel">
-      <div id="testimonials-loading" class="loading-state" style="min-height:30vh;">
+      <div class="form-section" style="margin-bottom:24px;">
+        <h2 class="form-section-title" style="font-family:'Cormorant Garamond','Playfair Display',serif;">Request a Testimonial</h2>
+        <p style="font-size:0.88rem;color:var(--muted);margin-bottom:16px;">Send a personalized request to a client. They'll receive an email with a link to share their experience.</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;max-width:700px;">
+          <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;">
+            <label for="req-testimonial-email">Client Email</label>
+            <input type="email" id="req-testimonial-email" placeholder="client@example.com">
+          </div>
+          <div class="form-group" style="flex:1;min-width:160px;margin-bottom:0;">
+            <label for="req-testimonial-name">Client Name (optional)</label>
+            <input type="text" id="req-testimonial-name" placeholder="First name">
+          </div>
+        </div>
+        <div class="form-group" style="max-width:700px;margin-top:12px;">
+          <label for="req-testimonial-note">Personal Note (optional)</label>
+          <textarea id="req-testimonial-note" placeholder="e.g. It was wonderful working with you on your leadership goals. I'd love to hear how coaching has impacted your journey." style="min-height:70px;"></textarea>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <button class="save-btn" id="req-testimonial-btn" style="background:var(--gold);">Send Request</button>
+          <span id="req-testimonial-msg" class="save-msg"></span>
+        </div>
+      </div>
+      <div id="testimonials-loading" class="loading-state" style="min-height:20vh;">
         <div class="loading-spinner"></div>
       </div>
       <div id="testimonials-content" class="hidden"></div>
@@ -1799,41 +1821,75 @@ async function loadTestimonials() {
     $('testimonials-content').classList.remove('hidden');
 
     if (!data || data.length === 0) {
-      $('testimonials-content').innerHTML = '<div class="empty-state"><p>No testimonials yet. Share your profile link with clients to collect testimonials.</p></div>';
+      $('testimonials-content').innerHTML = '<div class="empty-state"><p>No testimonials yet. Use the form above to request one from a client.</p></div>';
       return;
     }
 
+    var submitted = data.filter(function(t) { return t.status === 'submitted' && !t.is_approved; });
+    var approved = data.filter(function(t) { return t.is_approved; });
+    var pending = data.filter(function(t) { return t.status === 'pending'; });
+
     var html = '';
-    data.forEach(function(t) {
+
+    // Submitted — needs review
+    if (submitted.length) {
+      html += '<div class="form-section" style="margin-bottom:24px;"><h3 style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.1rem;color:var(--ink);margin-bottom:16px;">Needs Review (' + submitted.length + ')</h3>';
+      submitted.forEach(function(t) { html += renderTestimonialCard(t); });
+      html += '</div>';
+    }
+
+    // Approved — live on profile
+    if (approved.length) {
+      html += '<div class="form-section" style="margin-bottom:24px;"><h3 style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.1rem;color:var(--ink);margin-bottom:16px;">Approved & Live (' + approved.length + ')</h3>';
+      approved.forEach(function(t) { html += renderTestimonialCard(t); });
+      html += '</div>';
+    }
+
+    // Pending — waiting for client
+    if (pending.length) {
+      html += '<div class="form-section"><h3 style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.1rem;color:var(--ink);margin-bottom:16px;">Awaiting Response (' + pending.length + ')</h3>';
+      pending.forEach(function(t) {
+        html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">'
+          + '<div><span style="font-weight:600;font-size:0.88rem;color:var(--ink);">' + escapeHtml(t.client_email || t.client_name || 'Unknown') + '</span>'
+          + '<span class="status-pill status-pending" style="font-size:0.65rem;padding:2px 8px;margin-left:8px;">Pending</span></div>'
+          + '<span style="font-size:0.78rem;color:var(--muted);">' + (t.created_at ? new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '') + '</span>'
+          + '</div>';
+      });
+      html += '</div>';
+    }
+
+    $('testimonials-content').innerHTML = html;
+
+    function renderTestimonialCard(t) {
       var stars = '';
       if (t.rating) {
-        stars = '<div class="review-card-stars">';
-        for (var i = 1; i <= 5; i++) {
-          stars += '<span class="star' + (i > t.rating ? ' empty' : '') + '">' + (i <= t.rating ? '\u2605' : '\u2606') + '</span>';
-        }
+        stars = '<div style="display:flex;gap:3px;margin-bottom:10px;">';
+        for (var i = 1; i <= 5; i++) { stars += '<span style="color:' + (i <= t.rating ? 'var(--gold)' : 'var(--border)') + ';font-size:1.1rem;">\u2605</span>'; }
         stars += '</div>';
       }
       var badge = t.is_approved
-        ? '<span class="review-badge badge-live">Live</span>'
-        : '<span class="review-badge badge-pending-review">Pending review</span>';
+        ? '<span class="status-pill status-confirmed" style="font-size:0.65rem;padding:2px 10px;">Live</span>'
+        : '<span class="status-pill" style="font-size:0.65rem;padding:2px 10px;background:rgba(196,154,60,0.15);color:var(--gold);">Needs Review</span>';
+      var displayName = t.allow_name !== false ? escapeHtml(t.client_name || 'Anonymous') : 'Anonymous';
+      var quoteText = t.what_changed || t.content || t.recommendation || '';
+      var descText = t.coach_description ? '<div style="font-size:0.82rem;color:var(--gold);font-weight:600;margin-top:10px;">"' + escapeHtml(t.coach_description) + '"</div>' : '';
 
-      html += '<div class="review-card">'
-        + '<div class="review-card-header">'
-        + '<div><div class="review-card-author">' + escapeHtml(t.client_name || 'Anonymous') + '</div>'
-        + (t.client_title ? '<div class="review-card-title">' + escapeHtml(t.client_title) + '</div>' : '')
-        + '</div>'
-        + badge
-        + '</div>'
+      return '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:24px;margin-bottom:12px;">'
+        + '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">'
+        + '<div><div style="font-weight:700;font-size:0.92rem;color:var(--ink);">' + displayName + '</div>'
+        + (t.client_email ? '<div style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(t.client_email) + '</div>' : '') + '</div>'
+        + badge + '</div>'
         + stars
-        + '<div class="review-card-text">"' + escapeHtml(t.content || '') + '"</div>'
-        + '<div class="review-card-actions">'
+        + '<div style="font-size:0.92rem;line-height:1.7;color:var(--muted);font-style:italic;margin-bottom:8px;">"' + escapeHtml(quoteText) + '"</div>'
+        + (t.recommendation && t.what_changed ? '<div style="font-size:0.85rem;line-height:1.6;color:var(--muted);margin-bottom:8px;"><strong style="color:var(--ink);">Recommendation:</strong> ' + escapeHtml(t.recommendation) + '</div>' : '')
+        + descText
+        + '<div style="display:flex;gap:8px;margin-top:14px;">'
         + (t.is_approved
-          ? '<button class="action-btn action-remove" data-testimonial-id="' + t.id + '" data-testimonial-action="unapprove">Remove</button>'
-          : '<button class="action-btn action-approve" data-testimonial-id="' + t.id + '" data-testimonial-action="approve">Approve</button>'
-            + '<button class="action-btn action-remove" data-testimonial-id="' + t.id + '" data-testimonial-action="remove">Remove</button>')
+          ? '<button class="action-btn action-decline" data-testimonial-id="' + t.id + '" data-testimonial-action="unapprove" style="padding:6px 14px;font-size:0.75rem;">Remove from Profile</button>'
+          : '<button class="action-btn action-confirm" data-testimonial-id="' + t.id + '" data-testimonial-action="approve" style="padding:6px 14px;font-size:0.75rem;">Approve & Publish</button>'
+            + '<button class="action-btn action-decline" data-testimonial-id="' + t.id + '" data-testimonial-action="remove" style="padding:6px 14px;font-size:0.75rem;color:#c44;">Delete</button>')
         + '</div></div>';
-    });
-    $('testimonials-content').innerHTML = html;
+    }
 
     // Action handlers
     $('testimonials-content').querySelectorAll('.action-btn').forEach(function(btn) {
@@ -1859,6 +1915,41 @@ async function loadTestimonials() {
     $('testimonials-content').classList.remove('hidden');
     $('testimonials-content').innerHTML = '<div class="empty-state"><p>Error loading testimonials.</p></div>';
   }
+
+  // Wire request testimonial button
+  $('req-testimonial-btn').addEventListener('click', async function() {
+    var email = $('req-testimonial-email').value.trim();
+    if (!email) { alert('Please enter a client email.'); return; }
+    var name = $('req-testimonial-name').value.trim();
+    var note = $('req-testimonial-note').value.trim();
+    var btn = this;
+    var msg = $('req-testimonial-msg');
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    msg.classList.remove('show');
+    try {
+      var res = await fetch('/api/request-testimonial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coachId: coachProfile.id, clientEmail: email, clientName: name, personalNote: note })
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send');
+      msg.textContent = 'Request sent to ' + email;
+      msg.style.color = 'var(--forest)';
+      msg.classList.add('show');
+      $('req-testimonial-email').value = '';
+      $('req-testimonial-name').value = '';
+      $('req-testimonial-note').value = '';
+      setTimeout(function() { msg.classList.remove('show'); }, 5000);
+    } catch(e) {
+      msg.textContent = 'Error: ' + (e.message || e);
+      msg.style.color = '#c44';
+      msg.classList.add('show');
+    }
+    btn.disabled = false;
+    btn.textContent = 'Send Request';
+  });
 }
 
 /* ================================================
