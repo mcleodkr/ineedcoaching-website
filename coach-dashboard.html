@@ -5993,7 +5993,12 @@ async function loadDashArticles() {
     $('articles-content').classList.remove('hidden');
 
     if (!data || data.length === 0) {
-      $('articles-content').innerHTML = '<div class="empty-state"><p>No articles yet. Articles are generated weekly based on your coaching specialty.</p></div>';
+      $('articles-content').innerHTML = '<div class="empty-state" style="padding:40px;">'
+        + '<p style="font-size:0.95rem;color:var(--muted);margin-bottom:16px;">Your personalized articles will appear here. Articles are generated weekly based on your coaching specialties and published to your profile after your review.</p>'
+        + '<button class="save-btn" id="generate-article-btn" style="background:var(--gold);">Generate an Article Now</button>'
+        + '<span id="generate-article-msg" style="display:block;margin-top:12px;font-size:0.82rem;color:var(--muted);"></span>'
+        + '</div>';
+      wireGenerateArticle();
       return;
     }
 
@@ -6002,17 +6007,24 @@ async function loadDashArticles() {
 
     var html = '';
 
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">'
+      + '<h3 style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.1rem;color:var(--ink);margin:0;">Drafts (' + drafts.length + ')</h3>'
+      + '<button class="save-btn" id="generate-article-btn" style="background:var(--gold);font-size:0.78rem;padding:8px 18px;">Generate an Article</button>'
+      + '</div>';
+    html += '<span id="generate-article-msg" style="display:block;margin-bottom:12px;font-size:0.82rem;color:var(--muted);"></span>';
     if (drafts.length > 0) {
-      html += '<h3 style="font-family:\'Playfair Display\',serif;font-size:1.1rem;color:var(--ink);margin-bottom:16px;">Pending Review (' + drafts.length + ')</h3>';
       drafts.forEach(function(a) { html += renderArticleCard(a, false); });
+    } else {
+      html += '<div class="empty-state" style="padding:24px;"><p>No drafts. Click "Generate an Article" to create one.</p></div>';
     }
 
     if (published.length > 0) {
-      html += '<h3 style="font-family:\'Playfair Display\',serif;font-size:1.1rem;color:var(--ink);margin:28px 0 16px;">Published (' + published.length + ')</h3>';
+      html += '<h3 style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.1rem;color:var(--ink);margin:28px 0 16px;">Published (' + published.length + ')</h3>';
       published.forEach(function(a) { html += renderArticleCard(a, true); });
     }
 
     $('articles-content').innerHTML = html;
+    wireGenerateArticle();
     attachArticleHandlers();
   } catch (err) {
     $('articles-loading').style.display = 'none';
@@ -6023,6 +6035,7 @@ async function loadDashArticles() {
 
 function renderArticleCard(a, isPublished) {
   var date = a.created_at ? new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+  var wordCount = (a.content || '').replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(Boolean).length;
   var statusPill = isPublished
     ? '<span class="status-pill status-confirmed">Published</span>'
     : '<span class="status-pill status-pending">Draft</span>';
@@ -6041,10 +6054,10 @@ function renderArticleCard(a, isPublished) {
 
   return '<div class="draft-article-card" id="article-card-' + a.id + '">'
     + '<div class="draft-article-header">'
-    + '<div class="draft-article-title">' + escapeHtml(a.title) + '</div>'
+    + '<div class="draft-article-title" style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;">' + escapeHtml(a.title) + '</div>'
     + statusPill
     + '</div>'
-    + '<div class="draft-article-meta">' + escapeHtml(date) + (a.meta_description ? ' &middot; ' + escapeHtml(a.meta_description) : '') + '</div>'
+    + '<div class="draft-article-meta">' + escapeHtml(date) + ' &middot; <span style="background:rgba(196,154,60,0.12);color:var(--gold);padding:2px 8px;border-radius:50px;font-size:0.72rem;font-weight:700;">' + wordCount + ' words</span>' + (a.meta_description ? ' &middot; ' + escapeHtml(a.meta_description) : '') + '</div>'
     + '<div class="draft-article-preview" id="preview-' + a.id + '">' + escapeHtml(preview) + (preview.length >= 280 ? '...' : '') + '</div>'
     + '<div class="draft-article-actions">' + actions + '</div>'
     + '<div class="draft-edit-form" id="edit-form-' + a.id + '">'
@@ -6054,6 +6067,33 @@ function renderArticleCard(a, isPublished) {
     + '<button class="save-btn" data-article-id="' + a.id + '" data-article-action="save">Save Changes</button>'
     + '<button class="action-btn" data-article-id="' + a.id + '" data-article-action="cancel-edit" style="margin-left:4px;">Cancel</button>'
     + '</div></div></div>';
+}
+
+function wireGenerateArticle() {
+  var genBtn = $('generate-article-btn');
+  if (!genBtn || genBtn._wired) return;
+  genBtn._wired = true;
+  genBtn.addEventListener('click', async function() {
+    this.disabled = true;
+    this.textContent = 'Generating...';
+    safeText('generate-article-msg', 'Claude is writing your article...');
+    try {
+      var res = await fetch('/api/generate-coach-article', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coachId: coachProfile.id })
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Generation failed');
+      safeText('generate-article-msg', 'Article created: "' + (data.title || 'Untitled') + '"');
+      setTimeout(function() { loadDashArticles(); }, 1500);
+    } catch(e) {
+      console.error('[GenerateArticle] Error:', e);
+      safeHTML('generate-article-msg', '<span style="color:#c44;">Error: ' + escapeHtml(e.message) + '</span>');
+      this.disabled = false;
+      this.textContent = 'Generate an Article Now';
+    }
+  });
 }
 
 function attachArticleHandlers() {
