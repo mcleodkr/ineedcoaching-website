@@ -6046,7 +6046,7 @@ function renderArticleCard(a, isPublished) {
   if (!isPublished) {
     actions = '<button class="action-btn action-approve" data-article-id="' + a.id + '" data-article-action="preview">Preview</button>'
       + '<button class="action-btn action-confirm" data-article-id="' + a.id + '" data-article-action="edit">Edit</button>'
-      + '<button class="action-btn action-confirm" style="background:rgba(74,124,89,0.2);" data-article-id="' + a.id + '" data-article-action="publish">Publish</button>'
+      + '<button class="action-btn" style="background:var(--gold);color:#fff;" data-article-id="' + a.id + '" data-article-action="publish">Publish</button>'
       + '<button class="action-btn action-decline" data-article-id="' + a.id + '" data-article-action="delete">Delete</button>';
   } else {
     actions = '<a href="/article.html?slug=' + encodeURIComponent(a.slug) + '" target="_blank" class="action-btn action-approve" style="text-decoration:none;">View Live</a>'
@@ -6104,9 +6104,46 @@ function attachArticleHandlers() {
       var action = this.dataset.articleAction;
 
       if (action === 'preview') {
-        var previewEl = $('preview-' + id);
-        previewEl.classList.toggle('expanded');
-        this.textContent = previewEl.classList.contains('expanded') ? 'Collapse' : 'Preview';
+        // Find article content from the edit textarea (has unescaped content)
+        var contentEl = $('edit-content-' + id);
+        var titleEl = $('edit-title-' + id);
+        var articleContent = contentEl ? contentEl.value : '';
+        var articleTitle = titleEl ? titleEl.value : '';
+
+        // Simple markdown to HTML conversion
+        var htmlContent = articleContent;
+        if (!htmlContent.includes('<p>') && !htmlContent.includes('<h2>')) {
+          htmlContent = htmlContent
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g, '<em>$1</em>')
+            .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+            .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+            .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+            .replace(/^- (.+)$/gm, '<li>$1</li>')
+            .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')
+            .replace(/\n\n/g, '</p><p>')
+            .replace(/^(?!<[hpul])(.+)$/gm, '<p>$1</p>');
+        }
+
+        // Create or reuse modal
+        var modal = $('article-preview-modal');
+        if (!modal) {
+          modal = document.createElement('div');
+          modal.id = 'article-preview-modal';
+          modal.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;';
+          modal.innerHTML = '<div style="background:var(--white);border-radius:var(--r);max-width:700px;width:90%;max-height:85vh;overflow-y:auto;padding:40px;position:relative;box-shadow:0 12px 40px rgba(0,0,0,0.15);">'
+            + '<button id="article-modal-close" style="position:absolute;top:14px;right:18px;background:none;border:none;font-size:1.4rem;color:var(--muted);cursor:pointer;">&times;</button>'
+            + '<h1 id="article-modal-title" style="font-family:\'Cormorant Garamond\',serif;font-size:1.6rem;font-weight:700;color:var(--ink);margin-bottom:20px;line-height:1.3;"></h1>'
+            + '<div id="article-modal-body" style="font-family:\'DM Sans\',sans-serif;font-size:0.95rem;line-height:1.8;color:var(--muted);"></div>'
+            + '</div>';
+          document.body.appendChild(modal);
+          $('article-modal-close').addEventListener('click', function() { modal.style.display = 'none'; });
+          modal.addEventListener('click', function(e) { if (e.target === modal) modal.style.display = 'none'; });
+        }
+
+        $('article-modal-title').textContent = articleTitle;
+        $('article-modal-body').innerHTML = htmlContent;
+        modal.style.display = 'flex';
         return;
       }
 
