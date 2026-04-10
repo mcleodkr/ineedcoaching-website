@@ -1701,6 +1701,7 @@ async function loadBookings() {
               + '</span>';
           } else {
             actions += ' <button class="booking-checkin-btn" data-send-checkin="' + b.id + '" data-client-email="' + escapeHtml(b.client_email || '') + '" data-client-name="' + escapeHtml(clientName) + '" style="font-size:0.75rem;color:var(--ink);cursor:pointer;border:1px solid var(--ink);background:none;font-weight:700;padding:4px 10px;border-radius:50px;margin-left:4px;">Send check-in</button>';
+          actions += ' <button class="booking-testimonial-btn" data-client-email="' + escapeHtml(b.client_email || '') + '" data-client-name="' + escapeHtml(clientName) + '" style="font-size:0.75rem;color:var(--gold);cursor:pointer;border:1px solid var(--gold);background:none;font-weight:700;padding:4px 10px;border-radius:50px;margin-left:4px;">Request Testimonial</button>';
           }
         }
         var hasNotes = b.notes && b.notes.trim();
@@ -1789,6 +1790,7 @@ async function loadBookings() {
       });
 
       wireSendCheckinButtons();
+      wireTestimonialButtons();
       bindFilterButtons(filter);
     }
 
@@ -2952,6 +2954,15 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
       + '</div>';
   }
 
+  // Section 7: Request Testimonial
+  html += '<div class="form-section">'
+    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.15rem;">Request Testimonial</h2>'
+    + '<p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">Ask this client to share their experience working with you.</p>'
+    + '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">'
+    + '<button class="save-btn" id="client-request-testimonial-btn" data-client-email="' + escapeHtml(client.email) + '" data-client-name="' + escapeHtml(client.name) + '" style="padding:10px 24px;font-size:0.82rem;background:none;border:2px solid var(--gold);color:var(--gold);">Request Testimonial</button>'
+    + '<span id="client-testimonial-msg" style="font-size:0.82rem;"></span>'
+    + '</div></div>';
+
   $('clients-detail-view').innerHTML = html;
 
   // Wire back button
@@ -3207,6 +3218,30 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
     });
     openClientDetail(client.email);
   });
+
+  // Wire request testimonial
+  var testBtn = $('client-request-testimonial-btn');
+  if (testBtn) {
+    testBtn.addEventListener('click', async function() {
+      console.log('[ClientsTab] Request testimonial clicked');
+      this.disabled = true;
+      this.textContent = 'Sending...';
+      try {
+        var res = await fetch('/api/request-testimonial', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ coachId: coachProfile.id, clientEmail: client.email, clientName: client.name })
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to send');
+        $('client-testimonial-msg').innerHTML = '<span style="color:var(--forest);font-weight:600;">Request sent to ' + escapeHtml(client.email) + '</span>';
+      } catch(e) {
+        $('client-testimonial-msg').innerHTML = '<span style="color:#c44;">Error: ' + escapeHtml(e.message) + '</span>';
+      }
+      this.disabled = false;
+      this.textContent = 'Request Testimonial';
+    });
+  }
 
   // Wire send check-in
   var checkinBtn = $('client-send-checkin-btn');
@@ -3649,6 +3684,34 @@ function wireSendCheckinButtons() {
           this.textContent = 'Send';
         }
       });
+    });
+  });
+}
+
+function wireTestimonialButtons() {
+  document.querySelectorAll('.booking-testimonial-btn').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      var clientEmail = this.dataset.clientEmail;
+      var clientName = this.dataset.clientName;
+      this.disabled = true;
+      this.textContent = 'Sending...';
+      try {
+        var res = await fetch('/api/request-testimonial', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ coachId: coachProfile.id, clientEmail: clientEmail, clientName: clientName })
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed');
+        this.textContent = '\u2713 Sent';
+        this.style.background = '#2d6a4f';
+        this.style.borderColor = '#2d6a4f';
+        this.style.color = '#fff';
+      } catch(e) {
+        alert('Error: ' + (e.message || e));
+        this.disabled = false;
+        this.textContent = 'Request Testimonial';
+      }
     });
   });
 }
