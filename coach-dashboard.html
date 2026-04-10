@@ -498,6 +498,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
     <button class="tab-btn" data-tab="intake">Forms</button>
     <button class="tab-btn" data-tab="messages" id="tab-btn-messages">Messages</button>
     <button class="tab-btn" data-tab="goals">Goals</button>
+    <button class="tab-btn" data-tab="coach-dna">Coach DNA</button>
     <button class="tab-btn" data-tab="courses">Courses</button>
     <button class="tab-btn" data-tab="articles">Draft Articles</button>
     <button class="tab-btn" data-tab="proposals">Proposals</button>
@@ -1045,6 +1046,14 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
       <div id="goals-content" class="hidden"></div>
     </div>
 
+    <!-- COACH DNA TAB -->
+    <div id="tab-coach-dna" class="tab-panel">
+      <div id="dna-loading" class="loading-state" style="min-height:30vh;">
+        <div class="loading-spinner" style="border-top-color:var(--gold);"></div>
+      </div>
+      <div id="dna-content" class="hidden"></div>
+    </div>
+
     <!-- COURSES TAB -->
     <div id="tab-courses" class="tab-panel">
       <div id="courses-loading" class="loading-state" style="min-height:30vh;">
@@ -1409,6 +1418,10 @@ function setupTabs() {
       if (btn.dataset.tab === 'goals' && !btn._loaded) {
         btn._loaded = true;
         loadDashGoals();
+      }
+      if (btn.dataset.tab === 'coach-dna' && !btn._loaded) {
+        btn._loaded = true;
+        loadCoachDNA();
       }
       if (btn.dataset.tab === 'courses' && !btn._loaded) {
         btn._loaded = true;
@@ -3083,7 +3096,11 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
 
   // Section 1: Sessions
   html += '<div class="form-section" style="margin-bottom:24px;">'
-    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.15rem;">Sessions</h2>';
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">'
+    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.15rem;margin-bottom:0;">Sessions</h2>'
+    + '<button id="gen-brief-btn" data-client-email="' + escapeHtml(client.email) + '" data-booking-id="' + (client.sessions.length ? client.sessions[0].id : '') + '" style="padding:8px 20px;background:var(--gold);color:#fff;border:none;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;transition:background 0.2s;">Generate Pre-Session Brief</button>'
+    + '</div>'
+    + '<div id="pre-session-brief-container" style="margin-bottom:16px;"></div>';
   if (!client.sessions.length) {
     html += '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;">No sessions yet</p>';
   } else {
@@ -3118,6 +3135,8 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
         + '<button class="session-notes-save pill-add-btn" data-booking-id="' + s.id + '" data-note-id="' + (note ? note.id : '') + '" data-client-email="' + escapeHtml(client.email) + '" style="margin-top:8px;padding:8px 16px;">Save Notes</button>'
         + '</div>'
         + '<div class="session-processor" id="processor-' + s.id + '" style="display:none;margin-top:12px;padding-top:16px;border-top:1px solid var(--border);"></div>'
+        + (note ? '<div style="margin-top:12px;"><button class="post-analysis-btn" data-booking-id="' + s.id + '" data-client-email="' + escapeHtml(client.email) + '" style="padding:8px 20px;background:var(--ink);color:var(--gold);border:none;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;">Run Post-Session Analysis</button></div>' : '')
+        + '<div id="post-analysis-' + s.id + '" style="display:none;margin-top:12px;"></div>'
         + '</div>';
     });
   }
@@ -3500,6 +3519,29 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
       })
     });
     openClientDetail(client.email);
+  });
+
+  // Wire Pre-Session Brief
+  var briefBtn = $('gen-brief-btn');
+  if (briefBtn) {
+    briefBtn.addEventListener('click', function() {
+      generatePreSessionBrief(this.dataset.clientEmail, this.dataset.bookingId, $('pre-session-brief-container'));
+    });
+  }
+
+  // Wire Post-Session Analysis
+  document.querySelectorAll('.post-analysis-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var bid = this.dataset.bookingId;
+      var noteText = '';
+      var noteDisplay = $('notes-display-' + bid);
+      var noteInput = $('notes-input-' + bid);
+      if (noteDisplay) noteText = noteDisplay.textContent;
+      else if (noteInput) noteText = noteInput.value;
+      var noteData = notesByBooking[bid];
+      var fmt = (noteData && noteData.format) || 'general';
+      runPostSessionAnalysis(bid, this.dataset.clientEmail, noteText, fmt, $('post-analysis-' + bid));
+    });
   });
 
   // Wire request testimonial
@@ -4182,6 +4224,347 @@ async function sendCoachReply(key, thread) {
     alert('Failed to send message.');
   }
   btn.disabled = false;
+}
+
+/* ================================================
+   COACHING INTELLIGENCE SUITE
+   ================================================ */
+var CI_LABEL = '<span style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;display:block;">AI \u00b7 COACHING INTELLIGENCE</span>';
+
+function ciCard(title, content, opts) {
+  opts = opts || {};
+  return '<div style="background:var(--white);border:1px solid var(--border);border-left:4px solid var(--gold);border-radius:var(--r);padding:24px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">'
+    + (opts.label !== false ? CI_LABEL : '')
+    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:700;color:var(--ink);margin-bottom:12px;">' + escapeHtml(title) + '</div>'
+    + '<div style="font-size:0.88rem;line-height:1.7;color:var(--muted);">' + content + '</div>'
+    + '</div>';
+}
+
+function ciSpinner(text) {
+  return '<div style="display:flex;flex-direction:column;align-items:center;padding:40px;gap:12px;">'
+    + '<div style="width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite;"></div>'
+    + '<span style="font-size:0.85rem;color:var(--muted);font-style:italic;">' + escapeHtml(text) + '</span></div>';
+}
+
+function signalBadge(type) {
+  var colors = { 'Forward Momentum': '#2d6a4f', 'Resistance': '#c0392b', 'Values Clarity': '#c49a3c', 'Goal Ambivalence': '#6b6b60', 'Identity Shift': '#1a3a52', 'Strength Recognition': '#2d6a4f', 'Accountability Gap': '#c0392b' };
+  var c = colors[type] || 'var(--muted)';
+  return '<span style="display:inline-block;padding:3px 10px;border-radius:50px;font-size:0.7rem;font-weight:700;background:' + c + ';color:#fff;margin-right:6px;">' + escapeHtml(type) + '</span>';
+}
+
+function frameworkBadge(level) {
+  if (level === 'Primary') return '<span style="display:inline-block;padding:3px 10px;border-radius:50px;font-size:0.68rem;font-weight:700;background:var(--gold);color:#fff;">Primary</span>';
+  if (level === 'Secondary') return '<span style="display:inline-block;padding:3px 10px;border-radius:50px;font-size:0.68rem;font-weight:700;background:none;border:1.5px solid var(--gold);color:var(--gold);">Secondary</span>';
+  return '<span style="display:inline-block;padding:3px 10px;border-radius:50px;font-size:0.68rem;font-weight:700;background:none;border:1.5px solid var(--muted);color:var(--muted);">Incidental</span>';
+}
+
+// --- Pre-Session Brief ---
+async function generatePreSessionBrief(clientEmail, bookingId, container) {
+  container.innerHTML = ciSpinner('Preparing your brief...');
+  try {
+    var res = await fetch('/api/generate-pre-session-brief', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ coachId: coachProfile.id, clientEmail: clientEmail, bookingId: bookingId })
+    });
+    var brief = await res.json();
+    if (!res.ok) throw new Error(brief.error || 'Failed');
+    renderPreSessionBrief(brief, container);
+  } catch(e) {
+    container.innerHTML = '<div style="color:#c44;font-size:0.88rem;">Error generating brief: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function renderPreSessionBrief(b, container) {
+  var h = '<div style="border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.06);">';
+  // Header
+  h += '<div style="background:var(--ink);padding:28px 32px;color:var(--cream);">'
+    + '<div style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">AI \u00b7 PRE-SESSION BRIEF</div>'
+    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:700;">' + escapeHtml(b.session_header?.client_name || 'Client') + '</div>'
+    + '<div style="font-size:0.82rem;opacity:0.7;">Session #' + (b.session_header?.session_number || '?') + ' \u00b7 ' + escapeHtml(b.session_header?.date || '') + '</div>'
+    + '</div>';
+  // Body
+  h += '<div style="padding:28px 32px;background:var(--white);">';
+
+  // Orientation snapshot
+  if (b.orientation_snapshot) {
+    var os = b.orientation_snapshot;
+    h += '<div style="margin-bottom:24px;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:10px;">Orientation Snapshot</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'
+      + '<div style="background:var(--cream);border-radius:8px;padding:14px;"><div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Readiness</div><div style="font-size:0.88rem;color:var(--ink);">' + escapeHtml(os.readiness_level || '') + '</div></div>'
+      + '<div style="background:var(--cream);border-radius:8px;padding:14px;"><div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Primary Focus</div><div style="font-size:0.88rem;color:var(--ink);">' + escapeHtml(os.primary_focus || '') + '</div></div>'
+      + '</div>';
+    if (os.open_commitments && os.open_commitments.length) {
+      h += '<div style="margin-top:10px;"><div style="font-size:0.75rem;font-weight:700;color:var(--muted);margin-bottom:6px;">OPEN COMMITMENTS</div>';
+      os.open_commitments.forEach(function(c) {
+        h += '<div style="display:flex;align-items:center;gap:8px;font-size:0.85rem;color:var(--ink);margin-bottom:4px;"><span style="color:' + (c.is_complete ? '#2d6a4f' : 'var(--gold)') + ';">' + (c.is_complete ? '\u2713' : '\u25cb') + '</span>' + escapeHtml(c.title) + '</div>';
+      });
+      h += '</div>';
+    }
+    h += '</div>';
+  }
+
+  // Last session summary
+  if (b.last_session_summary) {
+    var ls = b.last_session_summary;
+    h += '<div style="margin-bottom:24px;border-left:3px solid var(--gold);padding-left:20px;">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:8px;">Last Session</div>'
+      + '<div style="font-size:0.88rem;color:var(--muted);line-height:1.7;margin-bottom:8px;">' + escapeHtml(ls.recap || '') + '</div>'
+      + (ls.key_insight ? '<div style="font-size:0.85rem;color:var(--gold);font-weight:600;margin-bottom:4px;">Key insight: ' + escapeHtml(ls.key_insight) + '</div>' : '')
+      + (ls.between_session_plan ? '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;">Between sessions: ' + escapeHtml(ls.between_session_plan) + '</div>' : '')
+      + '</div>';
+  }
+
+  // Patterns
+  if (b.patterns_noticed && b.patterns_noticed.length) {
+    h += '<div style="margin-bottom:24px;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:10px;">Patterns Noticed</div>';
+    b.patterns_noticed.forEach(function(p) {
+      h += '<div style="background:var(--cream);border-radius:8px;padding:14px;margin-bottom:8px;">'
+        + '<div style="font-size:0.88rem;font-weight:600;color:var(--ink);margin-bottom:4px;">' + escapeHtml(p.pattern) + '</div>'
+        + '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;">' + escapeHtml(p.evidence) + '</div></div>';
+    });
+    h += '</div>';
+  }
+
+  // Opening questions (For Your Eyes Only)
+  if (b.opening_questions && b.opening_questions.length) {
+    h += '<div style="margin-bottom:24px;background:var(--ink);border-radius:8px;padding:20px;">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><span style="font-size:0.9rem;">&#128274;</span><span style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);">For Your Eyes Only</span></div>';
+    b.opening_questions.forEach(function(q, i) {
+      h += '<div style="font-size:0.9rem;color:var(--cream);line-height:1.6;margin-bottom:8px;padding-left:20px;border-left:2px solid var(--gold);">' + escapeHtml(q) + '</div>';
+    });
+    h += '</div>';
+  }
+
+  // This session is / is not
+  if (b.this_session_is && b.this_session_is.length) {
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">';
+    h += '<div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:#2d6a4f;margin-bottom:8px;">This session is</div>';
+    b.this_session_is.forEach(function(s) { h += '<div style="font-size:0.85rem;color:var(--ink);margin-bottom:4px;">\u2022 ' + escapeHtml(s) + '</div>'; });
+    h += '</div>';
+    if (b.this_session_is_not && b.this_session_is_not.length) {
+      h += '<div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">This session is not</div>';
+      b.this_session_is_not.forEach(function(s) { h += '<div style="font-size:0.85rem;color:var(--muted);margin-bottom:4px;">\u2022 ' + escapeHtml(s) + '</div>'; });
+      h += '</div>';
+    }
+    h += '</div>';
+  }
+
+  h += '</div>'; // body
+  // Controls
+  h += '<div style="padding:16px 32px;border-top:1px solid var(--border);display:flex;gap:12px;align-items:center;">'
+    + '<button onclick="this.closest(\'[data-brief-container]\').querySelector(\'.brief-regen\').click()" class="brief-regen" style="display:none;">Regen</button>'
+    + '<button onclick="var t=this.closest(\'div\').previousElementSibling.innerText;navigator.clipboard.writeText(t);this.textContent=\'Copied!\';setTimeout(()=>this.textContent=\'Copy to Clipboard\',1500)" style="padding:8px 18px;background:none;border:1px solid var(--border);border-radius:8px;font-size:0.78rem;font-weight:600;color:var(--muted);cursor:pointer;">Copy to Clipboard</button>'
+    + '</div>';
+  h += '</div>';
+  container.innerHTML = h;
+}
+
+// --- Post-Session Analysis ---
+async function runPostSessionAnalysis(bookingId, clientEmail, sessionNotes, format, container) {
+  container.innerHTML = ciSpinner('Analyzing your session...');
+  container.style.display = '';
+  try {
+    var res = await fetch('/api/post-session-analysis', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ coachId: coachProfile.id, clientEmail: clientEmail, bookingId: bookingId, sessionNotes: sessionNotes, format: format })
+    });
+    var analysis = await res.json();
+    if (!res.ok) throw new Error(analysis.error || 'Failed');
+    renderPostSessionAnalysis(analysis, container);
+  } catch(e) {
+    container.innerHTML = '<div style="color:#c44;font-size:0.88rem;">Error: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function renderPostSessionAnalysis(a, container) {
+  var h = CI_LABEL;
+  h += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:700;color:var(--ink);margin-bottom:16px;">Post-Session Analysis</div>';
+
+  // Summary
+  h += ciCard('Session Summary', escapeHtml(a.session_summary || ''));
+
+  // Breakthrough
+  if (a.breakthrough_moment) {
+    h += ciCard('Breakthrough Moment', '<div style="font-style:italic;color:var(--gold);font-weight:600;">' + escapeHtml(a.breakthrough_moment) + '</div>');
+  }
+
+  // Coaching Signals
+  if (a.coaching_signals && a.coaching_signals.length) {
+    var sigHtml = '';
+    a.coaching_signals.forEach(function(s) {
+      sigHtml += '<details style="margin-bottom:8px;"><summary style="cursor:pointer;display:flex;align-items:center;gap:8px;">'
+        + signalBadge(s.signal_type)
+        + '<span style="font-size:0.85rem;color:var(--ink);">' + escapeHtml(s.interpretation) + '</span></summary>'
+        + '<div style="margin-top:8px;padding-left:20px;font-size:0.82rem;color:var(--muted);font-style:italic;">' + escapeHtml(s.evidence) + '</div></details>';
+    });
+    h += ciCard('Coaching Signals', sigHtml);
+  }
+
+  // Frameworks Detected
+  if (a.frameworks_detected && a.frameworks_detected.length) {
+    var fwHtml = '';
+    a.frameworks_detected.forEach(function(f) {
+      fwHtml += '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">'
+        + frameworkBadge(f.presence_level)
+        + '<div><div style="font-weight:600;font-size:0.88rem;color:var(--ink);">' + escapeHtml(f.name) + '</div>'
+        + '<div style="font-size:0.82rem;color:var(--muted);">' + escapeHtml(f.description || '') + '</div></div></div>';
+    });
+    fwHtml += '<div style="margin-top:12px;"><a href="#" onclick="document.querySelector(\'[data-tab=coach-dna]\').click();return false;" style="font-size:0.82rem;color:var(--gold);font-weight:600;text-decoration:none;">These approaches have been logged to your Coach DNA \u2192</a></div>';
+    h += ciCard('Frameworks Detected', fwHtml);
+  }
+
+  // Commitments
+  if (a.client_commitments && a.client_commitments.length) {
+    var cmHtml = '';
+    a.client_commitments.forEach(function(c) {
+      cmHtml += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="color:var(--gold);">\u25cb</span>'
+        + '<span style="font-size:0.88rem;color:var(--ink);">' + escapeHtml(c.title) + '</span>'
+        + (c.due_date_suggested ? '<span style="font-size:0.75rem;color:var(--muted);margin-left:8px;">by ' + escapeHtml(c.due_date_suggested) + '</span>' : '')
+        + '</div>';
+    });
+    h += ciCard('Client Commitments', cmHtml);
+  }
+
+  // Pre-session seed
+  if (a.pre_session_seed) {
+    h += ciCard('Next Session Seed', '<div style="font-style:italic;color:var(--ink);">"' + escapeHtml(a.pre_session_seed) + '"</div>');
+  }
+
+  container.innerHTML = h;
+}
+
+// --- Coach DNA ---
+async function loadCoachDNA() {
+  $('dna-loading').style.display = 'none';
+  $('dna-content').classList.remove('hidden');
+  $('dna-content').innerHTML = ciSpinner('Loading your Coach DNA...');
+
+  try {
+    // Check existing DNA profile
+    var existRes = await supabaseGet('coach_dna_profiles?coach_id=eq.' + coachProfile.id + '&select=*');
+    // Check session count with frameworks
+    var countRes = await supabaseGet('coach_session_notes?coach_id=eq.' + coachProfile.id + '&frameworks_detected=not.is.null&select=id');
+    var sessionCount = Array.isArray(countRes) ? countRes.length : 0;
+
+    if (sessionCount < 5 && (!existRes || !existRes.length)) {
+      // Locked state
+      var pct = Math.round((sessionCount / 5) * 100);
+      $('dna-content').innerHTML = '<div style="text-align:center;padding:60px 24px;">'
+        + CI_LABEL
+        + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.6rem;font-weight:700;color:var(--ink);margin-bottom:12px;">Your Coach DNA</div>'
+        + '<p style="font-size:0.92rem;color:var(--muted);max-width:480px;margin:0 auto 28px;line-height:1.6;">Your coaching fingerprint will emerge as you document more sessions. Each session adds depth to the pattern.</p>'
+        + '<div style="max-width:300px;margin:0 auto 16px;"><div style="background:var(--cream);border-radius:50px;height:10px;overflow:hidden;"><div style="background:var(--gold);height:100%;border-radius:50px;width:' + pct + '%;transition:width 0.5s;"></div></div></div>'
+        + '<div style="font-size:0.85rem;color:var(--muted);font-weight:600;">' + sessionCount + ' of 5 sessions analyzed</div>'
+        + '<p style="font-size:0.82rem;color:var(--muted);font-style:italic;margin-top:16px;">Run Post-Session Analysis after your next session to continue building your profile.</p>'
+        + '</div>';
+      return;
+    }
+
+    if (existRes && existRes.length) {
+      renderCoachDNA(existRes[0], sessionCount);
+    } else {
+      // Generate fresh
+      $('dna-content').innerHTML = ciSpinner('Analyzing your coaching patterns...');
+      var res = await fetch('/api/generate-coach-dna', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coachId: coachProfile.id })
+      });
+      var dna = await res.json();
+      if (!res.ok) throw new Error(dna.error || 'Failed');
+      if (dna.locked) {
+        loadCoachDNA(); return;
+      }
+      renderCoachDNA({ framework_distribution: dna.framework_distribution, signal_patterns: { what_works: dna.what_appears_to_be_working }, growth_edges: dna.growth_edges, session_count: dna.session_count, last_analyzed: new Date().toISOString() }, sessionCount);
+    }
+  } catch(e) {
+    $('dna-content').innerHTML = '<div style="color:#c44;padding:24px;">Error loading Coach DNA: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function renderCoachDNA(profile, sessionCount) {
+  var fw = Array.isArray(profile.framework_distribution) ? profile.framework_distribution : [];
+  var works = (profile.signal_patterns && profile.signal_patterns.what_works) || [];
+  var edges = Array.isArray(profile.growth_edges) ? profile.growth_edges : [];
+  var lastDate = profile.last_analyzed ? new Date(profile.last_analyzed).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Never';
+
+  var h = '<div style="padding:8px 0;">';
+  h += CI_LABEL;
+  h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">'
+    + '<div><div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:700;color:var(--ink);">Your Coach DNA</div>'
+    + '<div style="font-size:0.82rem;color:var(--muted);">' + (profile.session_count || sessionCount || 0) + ' sessions analyzed \u00b7 Last updated ' + escapeHtml(lastDate) + '</div></div>'
+    + '<div style="display:flex;gap:10px;">'
+    + '<button id="regen-dna-btn" style="padding:8px 18px;background:var(--gold);color:#fff;border:none;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;">Regenerate DNA</button>'
+    + '</div></div>';
+
+  // Framework Distribution
+  if (fw.length) {
+    h += '<div style="margin-bottom:28px;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:700;color:var(--ink);margin-bottom:16px;">Framework Distribution</div>';
+    var maxPct = Math.max.apply(null, fw.map(function(f) { return f.percentage || 0; }));
+    fw.forEach(function(f) {
+      var barW = maxPct > 0 ? Math.round((f.percentage / maxPct) * 100) : 0;
+      h += '<details style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin-bottom:8px;">'
+        + '<summary style="cursor:pointer;display:flex;align-items:center;gap:12px;">'
+        + '<div style="flex:1;min-width:0;">'
+        + '<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-weight:700;font-size:0.88rem;color:var(--ink);">' + escapeHtml(f.name) + '</span><span style="font-size:0.82rem;font-weight:700;color:var(--gold);">' + (f.percentage || 0) + '%</span></div>'
+        + '<div style="background:var(--cream);border-radius:50px;height:8px;overflow:hidden;"><div style="background:var(--ink);height:100%;border-radius:50px;width:' + barW + '%;transition:width 0.5s;"></div></div>'
+        + '</div></summary>'
+        + '<div style="margin-top:12px;font-size:0.85rem;color:var(--muted);line-height:1.6;">' + escapeHtml(f.description || '') + '</div>'
+        + (f.evidence_excerpts && f.evidence_excerpts.length ? '<div style="margin-top:8px;">' + f.evidence_excerpts.map(function(e) { return '<div style="font-size:0.8rem;color:var(--muted);font-style:italic;padding:4px 0;">"' + escapeHtml(e) + '"</div>'; }).join('') + '</div>' : '')
+        + '</details>';
+    });
+    h += '</div>';
+  }
+
+  // What appears to be working
+  if (works.length) {
+    h += '<div style="margin-bottom:28px;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:700;color:var(--ink);margin-bottom:16px;">What Appears to Be Working</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;">';
+    works.forEach(function(w) {
+      h += '<details style="background:var(--white);border:1px solid var(--border);border-left:4px solid #2d6a4f;border-radius:8px;padding:20px;">'
+        + '<summary style="cursor:pointer;font-weight:700;font-size:0.88rem;color:var(--ink);">' + escapeHtml(w.observation) + '</summary>'
+        + '<div style="margin-top:10px;font-size:0.82rem;color:var(--muted);line-height:1.6;">' + escapeHtml(w.evidence || '') + '</div></details>';
+    });
+    h += '</div></div>';
+  }
+
+  // Growth Edges
+  if (edges.length) {
+    h += '<div style="margin-bottom:28px;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:700;color:var(--ink);margin-bottom:16px;">Growth Edges</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;">';
+    edges.forEach(function(e) {
+      h += '<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:20px;">'
+        + '<div style="font-weight:700;font-size:0.88rem;color:var(--ink);margin-bottom:6px;">' + escapeHtml(e.framework) + '</div>'
+        + '<div style="font-size:0.82rem;color:var(--muted);line-height:1.6;margin-bottom:8px;">' + escapeHtml(e.reason || '') + '</div>'
+        + '<span style="display:inline-block;padding:3px 10px;border-radius:50px;font-size:0.68rem;font-weight:700;background:rgba(26,58,82,0.08);color:var(--ink);">' + escapeHtml(e.icf_competency || '') + '</span>'
+        + '</div>';
+    });
+    h += '</div></div>';
+  }
+
+  // Disclaimer
+  h += '<div style="font-size:0.75rem;color:var(--muted);line-height:1.5;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);font-style:italic;">'
+    + 'This is a reflective tool generated from your documentation patterns. It is not a credential assessment or performance evaluation.'
+    + '</div>';
+
+  h += '</div>';
+  $('dna-content').innerHTML = h;
+
+  // Wire regenerate
+  $('regen-dna-btn').addEventListener('click', async function() {
+    this.disabled = true; this.textContent = 'Regenerating...';
+    $('dna-content').innerHTML = ciSpinner('Reanalyzing your coaching patterns...');
+    try {
+      var res = await fetch('/api/generate-coach-dna', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coachId: coachProfile.id })
+      });
+      var dna = await res.json();
+      if (!res.ok) throw new Error(dna.error || 'Failed');
+      loadCoachDNA();
+    } catch(e) {
+      $('dna-content').innerHTML = '<div style="color:#c44;padding:24px;">Error: ' + escapeHtml(e.message) + '</div>';
+    }
+  });
 }
 
 /* ================================================
