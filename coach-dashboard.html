@@ -1138,6 +1138,49 @@ function escapeHtml(str) {
 }
 
 function $(id) { return document.getElementById(id); }
+
+// Ensure token is fresh before API calls — returns true if valid, false if unrecoverable
+async function ensureToken() {
+  if (!currentToken) return false;
+  try {
+    var res = await fetch(SUPABASE_URL + '/auth/v1/user', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + currentToken }
+    });
+    if (res.ok) return true;
+    // Try refresh
+    var refreshToken = localStorage.getItem('sb_refresh_token');
+    if (!refreshToken) return false;
+    var refreshRes = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
+      method: 'POST',
+      headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken })
+    });
+    if (refreshRes.ok) {
+      var data = await refreshRes.json();
+      currentToken = data.access_token;
+      localStorage.setItem(TOKEN_KEY, data.access_token);
+      if (data.refresh_token) localStorage.setItem('sb_refresh_token', data.refresh_token);
+      return true;
+    }
+    return false;
+  } catch(e) { return false; }
+}
+
+// Helper to update progress indicator for a session
+function updateSessionProgress(sid, step, complete) {
+  var panel = $('session-panel-' + sid);
+  if (!panel) return;
+  var progressBar = panel.querySelector('div:first-child');
+  if (!progressBar) return;
+  var spans = progressBar.querySelectorAll('span');
+  // spans: 0=step1, 1=arrow, 2=step2, 3=arrow, 4=step3
+  var idx = (step - 1) * 2;
+  if (spans[idx]) {
+    var labels = ['\u2460 Transcript', '\u2461 Notes', '\u2462 Intelligence'];
+    spans[idx].style.color = complete ? 'var(--gold)' : 'var(--muted)';
+    spans[idx].textContent = labels[step - 1] + (complete ? ' \u2713' : '');
+  }
+}
 function safeText(id, text) { var el = $(id); if (el) el.textContent = text; }
 function safeHTML(id, html) { var el = $(id); if (el) el.innerHTML = html; }
 
@@ -3389,12 +3432,38 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
       document.querySelectorAll('.stab-panel[data-sid="' + sid + '"]').forEach(function(p) { p.style.display = 'none'; });
       var target = $('stab-' + tab + '-' + sid);
       if (target) target.style.display = '';
-      // Render persisted analysis on first Intelligence tab open
+      // Dynamically populate Intelligence tab on open
       if (tab === 'intelligence') {
         var analysisContainer = $('post-analysis-' + sid);
         var noteData = notesByBooking[sid];
-        if (noteData && noteData.post_session_analysis && analysisContainer && !analysisContainer.innerHTML.trim()) {
-          renderPostSessionAnalysis(noteData.post_session_analysis, analysisContainer);
+        var hasData = noteData && (noteData.raw_transcript || noteData.notes);
+        var hasExisting = noteData && noteData.post_session_analysis;
+        if (analysisContainer) {
+          if (hasExisting && !analysisContainer.innerHTML.trim()) {
+            renderPostSessionAnalysis(noteData.post_session_analysis, analysisContainer);
+          }
+          // Ensure analysis button exists if data is available
+          var existingBtn = analysisContainer.parentElement.querySelector('.post-analysis-btn');
+          if (!existingBtn && hasData) {
+            var btnHtml = '<button class="post-analysis-btn" data-booking-id="' + sid + '" data-client-email="' + (noteData.client_email || client.email) + '" style="padding:10px 24px;background:var(--ink);color:var(--gold);border:none;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer;margin-top:12px;">' + (hasExisting ? 'Regenerate Analysis' : 'Run Post-Session Analysis') + '</button>';
+            analysisContainer.insertAdjacentHTML('afterend', btnHtml);
+            // Wire the new button
+            var newBtn = analysisContainer.parentElement.querySelector('.post-analysis-btn');
+            if (newBtn) {
+              newBtn.addEventListener('click', function() {
+                var nd = notesByBooking[sid] || {};
+                var transcript = nd.raw_transcript || '';
+                var notes = nd.notes || '';
+                var input = transcript && notes ? 'TRANSCRIPT:\n' + transcript + '\n\nSTRUCTURED NOTES:\n' + notes : (transcript || notes);
+                if (!input) return;
+                runPostSessionAnalysis(sid, client.email, input, nd.format || 'general', $('post-analysis-' + sid));
+                updateSessionProgress(sid, 3, true);
+              });
+            }
+          }
+          if (!hasData && !hasExisting) {
+            analysisContainer.innerHTML = '<p style="font-size:0.85rem;color:var(--muted);font-style:italic;">Save a transcript or session notes first to unlock analysis.</p>';
+          }
         }
       }
     });
@@ -3407,6 +3476,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
       var clientEmail = this.dataset.clientEmail;
       var text = $('transcript-input-' + sid).value.trim();
       if (!text) return;
+      if (!await ensureToken()) { safeHTML('transcript-editor-' + sid, '<span style="color:#c44;font-size:0.82rem;">Session expired. Please refresh the page to re-authenticate.</span>'); return; }
       this.disabled = true;
       this.textContent = 'Saving...';
       try {
@@ -3527,6 +3597,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
     btn.addEventListener('click', async function() {
       var saveBtn = this;
       var bid = saveBtn.dataset.bookingId;
+      if (!await ensureToken()) { alert('Session expired. Please refresh.'); return; }
       var clientEmail = saveBtn.dataset.clientEmail;
       var text = $('notes-input-' + bid).value.trim();
       console.log('[SaveNotes] Saving plain notes for booking:', bid);
@@ -3555,12 +3626,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
         }
         var notesEditor = $('notes-editor-' + bid);
         if (notesEditor) notesEditor.style.display = 'none';
-        // Update progress indicator
-        var panel = $('session-panel-' + bid);
-        if (panel) {
-          var spans = panel.querySelector('div:first-child').querySelectorAll('span');
-          if (spans[2]) { spans[2].style.color = 'var(--gold)'; spans[2].textContent = '\u2461 Notes \u2713'; }
-        }
+        updateSessionProgress(bid, 2, true);
       } catch(e) {
         console.error('[SaveNotes] Error:', e);
         alert('Error saving notes: ' + (e.message || e));
