@@ -3171,16 +3171,37 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
         if (hasTranscript) {
           html += '<div style="background:rgba(196,154,60,0.08);border:1px solid rgba(196,154,60,0.2);border-radius:8px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">'
             + '<span style="color:var(--gold);font-size:1rem;">\u2713</span>'
-            + '<span style="font-size:0.85rem;color:var(--ink);">Transcript available. Select a framework below and we\'ll generate your notes from it.</span>'
+            + '<span style="font-size:0.85rem;color:var(--ink);">Transcript available. Select a framework and generate structured notes.</span>'
             + '</div>';
         } else {
-          html += '<p style="font-size:0.85rem;color:var(--muted);font-style:italic;margin-bottom:16px;">Structure your session using a coaching framework. Select a format to get started.</p>';
+          html += '<p style="font-size:0.85rem;color:var(--muted);font-style:italic;margin-bottom:16px;">Structure your session using a coaching framework.</p>';
+        }
+        // Framework selector cards
+        html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">'
+          + '<div class="fmt-card" data-sid="' + s.id + '" data-format="grow" style="background:var(--white);border:2px solid var(--border);border-radius:8px;padding:16px;cursor:pointer;transition:border-color 0.2s;text-align:center;">'
+          + '<div style="font-family:\'Cormorant Garamond\',serif;font-weight:700;font-size:0.95rem;color:var(--ink);margin-bottom:4px;">GROW</div>'
+          + '<div style="font-size:0.7rem;color:var(--muted);">Goal \u2022 Reality \u2022 Options \u2022 Way Forward</div></div>'
+          + '<div class="fmt-card" data-sid="' + s.id + '" data-format="clear" style="background:var(--white);border:2px solid var(--border);border-radius:8px;padding:16px;cursor:pointer;transition:border-color 0.2s;text-align:center;">'
+          + '<div style="font-family:\'Cormorant Garamond\',serif;font-weight:700;font-size:0.95rem;color:var(--ink);margin-bottom:4px;">CLEAR</div>'
+          + '<div style="font-size:0.7rem;color:var(--muted);">Contract \u2022 Listen \u2022 Explore \u2022 Action \u2022 Review</div></div>'
+          + '<div class="fmt-card" data-sid="' + s.id + '" data-format="oskar" style="background:var(--white);border:2px solid var(--border);border-radius:8px;padding:16px;cursor:pointer;transition:border-color 0.2s;text-align:center;">'
+          + '<div style="font-family:\'Cormorant Garamond\',serif;font-weight:700;font-size:0.95rem;color:var(--ink);margin-bottom:4px;">OSKAR</div>'
+          + '<div style="font-size:0.7rem;color:var(--muted);">Outcome \u2022 Scaling \u2022 Know-how \u2022 Action \u2022 Review</div></div>'
+          + '</div>';
+        if (hasTranscript) {
+          html += '<button class="gen-from-transcript-btn" data-sid="' + s.id + '" data-client-email="' + escapeHtml(client.email) + '" style="width:100%;padding:12px 24px;background:var(--gold);color:#fff;border:none;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.88rem;font-weight:700;cursor:pointer;margin-bottom:16px;">Generate Notes from Transcript</button>'
+            + '<div id="gen-transcript-status-' + s.id + '" style="margin-bottom:12px;"></div>';
         }
       }
+      // Manual notes — secondary option
+      html += '<div style="' + (hasNotes ? '' : 'margin-top:8px;') + '">';
+      if (!hasNotes && hasTranscript) {
+        html += '<div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px;">Or write notes manually</div>';
+      }
       html += '<div id="notes-editor-' + s.id + '" style="' + (hasNotes ? 'display:none;' : '') + '">'
-        + '<textarea id="notes-input-' + s.id + '" style="width:100%;padding:14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:var(--ink);background:var(--cream);min-height:120px;resize:vertical;" placeholder="Write your session notes here...">' + escapeHtml(hasNotes ? note.notes : '') + '</textarea>'
+        + '<textarea id="notes-input-' + s.id + '" style="width:100%;padding:14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:var(--ink);background:var(--cream);min-height:100px;resize:vertical;" placeholder="Write your session notes here...">' + escapeHtml(hasNotes ? note.notes : '') + '</textarea>'
         + '<button class="session-notes-save pill-add-btn" data-booking-id="' + s.id + '" data-client-email="' + escapeHtml(client.email) + '" style="margin-top:10px;padding:10px 24px;">Save Notes</button>'
-        + '</div>';
+        + '</div></div>';
       html += '<div class="session-processor" id="processor-' + s.id + '" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);"></div>';
       html += '</div>';
 
@@ -3423,6 +3444,58 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
       } catch(e) {
         this.disabled = false;
         this.textContent = 'Save Transcript';
+      }
+    });
+  });
+
+  // Wire framework card selection
+  document.querySelectorAll('.fmt-card').forEach(function(card) {
+    card.addEventListener('click', function() {
+      var sid = this.dataset.sid;
+      document.querySelectorAll('.fmt-card[data-sid="' + sid + '"]').forEach(function(c) { c.style.borderColor = 'var(--border)'; });
+      this.style.borderColor = 'var(--gold)';
+      this.closest('.stab-panel').dataset.selectedFormat = this.dataset.format;
+    });
+  });
+
+  // Wire generate-from-transcript button
+  document.querySelectorAll('.gen-from-transcript-btn').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      var sid = this.dataset.sid;
+      var clientEmail = this.dataset.clientEmail;
+      var panel = this.closest('.stab-panel');
+      var format = panel.dataset.selectedFormat;
+      if (!format) { alert('Please select a framework first (GROW, CLEAR, or OSKAR).'); return; }
+      var noteData = notesByBooking[sid];
+      var transcript = (noteData && noteData.raw_transcript) || '';
+      if (!transcript) { alert('No transcript found. Save a transcript first.'); return; }
+      this.disabled = true;
+      this.textContent = 'Generating...';
+      safeText('gen-transcript-status-' + sid, 'Claude is structuring your notes...');
+      try {
+        var res = await fetch('/api/process-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transcript: transcript, format: format, clientName: client.name, sessionDate: '', coachId: coachProfile.id })
+        });
+        var result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Generation failed');
+        var plainNotes = Object.entries(result.notes || {}).map(function(e) { return e[0] + ':\n' + e[1]; }).join('\n\n');
+        await fetch('/api/save-session-notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookingId: sid, coachId: coachProfile.id, clientEmail: clientEmail, notes: plainNotes, format: format, structuredNotes: result.notes })
+        });
+        if (!notesByBooking[sid]) notesByBooking[sid] = {};
+        notesByBooking[sid].notes = plainNotes;
+        notesByBooking[sid].format = format;
+        notesByBooking[sid].structured_notes = result.notes;
+        safeText('gen-transcript-status-' + sid, '\u2713 Notes generated and saved');
+        setTimeout(function() { openClientDetail(clientEmail); }, 1200);
+      } catch(e) {
+        safeHTML('gen-transcript-status-' + sid, '<span style="color:#c44;">' + escapeHtml(e.message) + '</span>');
+        this.disabled = false;
+        this.textContent = 'Generate Notes from Transcript';
       }
     });
   });
@@ -4642,11 +4715,14 @@ function renderPostSessionAnalysis(a, container) {
     var bm = typeof a.breakthrough_moment === 'string' ? { text: a.breakthrough_moment, type_tag: null } : a.breakthrough_moment;
     if (bm && bm.text) {
       var tagHtml = bm.type_tag ? '<span style="display:inline-block;padding:3px 10px;border-radius:50px;font-size:0.68rem;font-weight:700;background:var(--gold);color:#fff;margin-bottom:8px;">' + escapeHtml(bm.type_tag) + '</span>' : '';
-      h += ciCard('Breakthrough Moment', tagHtml + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:700;color:var(--ink);line-height:1.4;font-style:italic;">"' + escapeHtml(bm.text) + '"</div>');
+      var bmBody = tagHtml + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:700;color:var(--ink);line-height:1.4;font-style:italic;margin-bottom:10px;">"' + escapeHtml(bm.text) + '"</div>';
+      if (bm.identity_shift) bmBody += '<div style="margin-bottom:4px;"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);">Identity Shift \u2192</span> <span style="font-size:0.82rem;color:var(--ink);">' + escapeHtml(bm.identity_shift) + '</span></div>';
+      if (bm.repeat_behavior) bmBody += '<div><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink);">Repeat \u2192</span> <span style="font-size:0.82rem;color:var(--ink);">' + escapeHtml(bm.repeat_behavior) + '</span></div>';
+      h += ciCard('Breakthrough Moment', bmBody);
     }
   }
 
-  // 2. Active Pattern + Pattern Timeline
+  // 2. Active Pattern + Pattern Timeline + Pattern Continuity
   if (a.active_pattern) {
     var ap = a.active_pattern;
     var apHtml = '<div style="font-size:0.85rem;color:var(--muted);margin-bottom:6px;"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:0.06em;">Trigger:</span> ' + escapeHtml(ap.trigger || '') + '</div>'
@@ -4661,6 +4737,9 @@ function renderPostSessionAnalysis(a, container) {
         + '</div>';
     }
     apHtml += '<div style="font-size:0.85rem;color:var(--ink);"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;color:var(--gold);letter-spacing:0.06em;">Next Session:</span> ' + escapeHtml(ap.next_session_use || '') + '</div>';
+    if (a.pattern_continuity) {
+      apHtml += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);">Continuity \u2192</span> <span style="font-size:0.82rem;color:var(--muted);font-style:italic;">' + escapeHtml(a.pattern_continuity) + '</span></div>';
+    }
     h += ciCard('\u201c' + (ap.name || 'Unnamed Pattern') + '\u201d', apHtml);
   }
 
@@ -4684,7 +4763,18 @@ function renderPostSessionAnalysis(a, container) {
     h += ciCard('Next Session Strategy', nsHtml);
   }
 
-  // 4. If Stuck
+  // 4. Likely Breakpoint
+  if (a.likely_breakpoint && a.likely_breakpoint.length) {
+    var bpHtml = '';
+    a.likely_breakpoint.forEach(function(bp) {
+      bpHtml += '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;margin-bottom:4px;padding-left:16px;position:relative;"><span style="position:absolute;left:0;color:#b8860b;">\u2022</span>' + escapeHtml(bp) + '</div>';
+    });
+    h += '<div style="background:var(--cream);border-left:3px solid #b8860b;border-radius:0 8px 8px 0;padding:16px 20px;margin-bottom:12px;">'
+      + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;"><span style="color:#b8860b;font-size:0.8rem;">\u26a0</span><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#b8860b;">Likely Breakpoint</span></div>'
+      + bpHtml + '</div>';
+  }
+
+  // 5. If Stuck
   if (a.if_stuck) {
     var is = a.if_stuck;
     h += '<div style="background:var(--cream);border-left:3px solid #b8860b;border-radius:0 var(--r) var(--r) 0;padding:20px 24px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">'
@@ -4735,7 +4825,9 @@ function renderPostSessionAnalysis(a, container) {
         + frameworkBadge(f.presence_level)
         + '<div><div style="font-weight:600;font-size:0.88rem;color:var(--ink);">' + escapeHtml(f.name) + '</div>'
         + '<div style="font-size:0.82rem;color:var(--muted);margin-bottom:4px;">' + escapeHtml(f.description || '') + '</div>'
-        + (f.leverage_note ? '<div style="font-size:0.8rem;color:var(--gold);font-style:italic;">' + escapeHtml(f.leverage_note) + '</div>' : '')
+        + (f.leverage_note ? '<div style="font-size:0.8rem;color:var(--muted);font-style:italic;margin-bottom:4px;">' + escapeHtml(f.leverage_note) + '</div>' : '')
+        + (f.use_next_time ? '<div style="margin-bottom:3px;"><span style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);">Use Next Time \u2192</span> <span style="font-size:0.8rem;color:var(--ink);">' + escapeHtml(f.use_next_time) + '</span></div>' : '')
+        + (f.be_careful_of ? '<div><span style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#b8860b;">Be Careful Of \u2192</span> <span style="font-size:0.8rem;color:var(--muted);">' + escapeHtml(f.be_careful_of) + '</span></div>' : '')
         + '</div></div>';
     });
     fwHtml += '<div style="margin-top:8px;"><a href="#" onclick="document.querySelector(\'[data-tab=coach-dna]\').click();return false;" style="font-size:0.82rem;color:var(--gold);font-weight:600;text-decoration:none;">These approaches have been logged to your Coach DNA \u2192</a></div>';
