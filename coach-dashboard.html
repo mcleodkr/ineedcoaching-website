@@ -3112,32 +3112,83 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
       var svcName = svcMatch ? svcMatch[1].trim() : '';
       var note = notesByBooking[s.id];
 
-      html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px 20px;margin-bottom:8px;">'
-        + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">'
+      var hasTranscript = note && note.raw_transcript;
+      var hasNotes = note && note.notes;
+      var hasAnalysis = note && note.post_session_analysis;
+      var statusIcons = (hasTranscript ? '<span style="font-size:0.7rem;color:#2d6a4f;" title="Transcript saved">\u2713T</span> ' : '')
+        + (hasNotes ? '<span style="font-size:0.7rem;color:#2d6a4f;" title="Notes saved">\u2713N</span> ' : '')
+        + (hasAnalysis ? '<span style="font-size:0.7rem;color:#2d6a4f;" title="Analysis complete">\u2713A</span>' : '');
+
+      html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:0;margin-bottom:12px;overflow:hidden;">';
+      // Session header
+      html += '<div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">'
         + '<div><span style="font-weight:700;font-size:0.9rem;color:var(--ink);">' + escapeHtml(dateStr) + '</span>'
         + (timeStr ? '<span style="font-size:0.82rem;color:var(--muted);margin-left:8px;">' + escapeHtml(timeStr) + '</span>' : '')
         + (svcName ? '<span style="font-size:0.82rem;color:var(--muted);margin-left:12px;">' + escapeHtml(svcName) + '</span>' : '')
         + '</div>'
-        + '<div style="display:flex;gap:8px;align-items:center;">'
-        + (s.zoom_link ? '<a href="' + escapeHtml(s.zoom_link) + '" target="_blank" rel="noopener noreferrer" style="font-size:0.78rem;color:var(--gold);text-decoration:none;font-weight:600;">&#127909; Link</a>' : '')
-        + '<button class="session-notes-toggle" data-booking-id="' + s.id + '" data-client-email="' + escapeHtml(client.email) + '" style="font-size:0.75rem;color:var(--gold);background:none;border:1px solid var(--gold);padding:4px 10px;border-radius:50px;cursor:pointer;font-weight:600;">' + (note ? 'View Notes' : 'Add Notes') + '</button>'
-        + '<button class="session-process-btn" data-booking-id="' + s.id + '" data-client-email="' + escapeHtml(client.email) + '" data-client-name="' + escapeHtml(client.name) + '" data-session-date="' + escapeHtml(dateStr) + '" style="font-size:0.75rem;color:var(--ink);background:none;border:1px solid var(--ink);padding:4px 10px;border-radius:50px;cursor:pointer;font-weight:600;">Process Session</button>'
+        + '<div style="display:flex;gap:8px;align-items:center;">' + statusIcons
+        + (s.zoom_link ? ' <a href="' + escapeHtml(s.zoom_link) + '" target="_blank" rel="noopener noreferrer" style="font-size:0.78rem;color:var(--gold);text-decoration:none;font-weight:600;">&#127909;</a>' : '')
+        + ' <button class="session-expand-btn" data-sid="' + s.id + '" style="font-size:0.75rem;color:var(--gold);background:none;border:1px solid var(--gold);padding:4px 12px;border-radius:50px;cursor:pointer;font-weight:600;">Open</button>'
         + '</div></div>';
 
-      // Notes area (hidden by default)
-      html += '<div class="session-notes-area" id="notes-area-' + s.id + '" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">';
-      if (note) {
-        html += '<div style="font-size:0.88rem;color:var(--muted);line-height:1.6;white-space:pre-line;" id="notes-display-' + s.id + '">' + escapeHtml(note.notes) + '</div>'
-          + '<button class="session-notes-edit" data-booking-id="' + s.id + '" style="font-size:0.75rem;color:var(--gold);background:none;border:none;cursor:pointer;font-weight:600;margin-top:8px;">Edit</button>';
-      }
-      html += '<div id="notes-editor-' + s.id + '" style="' + (note ? 'display:none;' : '') + '">'
-        + '<textarea id="notes-input-' + s.id + '" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:\'DM Sans\',\'Cabinet Grotesk\',sans-serif;font-size:0.88rem;color:var(--ink);background:var(--cream);min-height:80px;resize:vertical;">' + escapeHtml(note ? note.notes : '') + '</textarea>'
-        + '<button class="session-notes-save pill-add-btn" data-booking-id="' + s.id + '" data-note-id="' + (note ? note.id : '') + '" data-client-email="' + escapeHtml(client.email) + '" style="margin-top:8px;padding:8px 16px;">Save Notes</button>'
-        + '</div>'
-        + '<div class="session-processor" id="processor-' + s.id + '" style="display:none;margin-top:12px;padding-top:16px;border-top:1px solid var(--border);"></div>'
-        + (note ? '<div style="margin-top:12px;"><button class="post-analysis-btn" data-booking-id="' + s.id + '" data-client-email="' + escapeHtml(client.email) + '" style="padding:8px 20px;background:var(--ink);color:var(--gold);border:none;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;">Run Post-Session Analysis</button></div>' : '')
-        + '<div id="post-analysis-' + s.id + '" style="display:none;margin-top:12px;"></div>'
+      // Expandable session panel (hidden by default)
+      html += '<div id="session-panel-' + s.id + '" style="display:none;">';
+      // Tab bar
+      html += '<div style="display:flex;border-top:1px solid var(--border);border-bottom:1px solid var(--border);overflow-x:auto;">'
+        + '<button class="stab active" data-sid="' + s.id + '" data-stab="transcript" style="flex:1;padding:10px 16px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:700;color:var(--ink);background:none;border:none;border-bottom:2.5px solid var(--gold);cursor:pointer;white-space:nowrap;">Transcript</button>'
+        + '<button class="stab" data-sid="' + s.id + '" data-stab="notes" style="flex:1;padding:10px 16px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:700;color:var(--muted);background:none;border:none;border-bottom:2.5px solid transparent;cursor:pointer;white-space:nowrap;">Session Notes</button>'
+        + '<button class="stab" data-sid="' + s.id + '" data-stab="intelligence" style="flex:1;padding:10px 16px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:700;color:var(--muted);background:none;border:none;border-bottom:2.5px solid transparent;cursor:pointer;white-space:nowrap;">Intelligence</button>'
         + '</div>';
+
+      // Tab 1: Transcript
+      html += '<div id="stab-transcript-' + s.id + '" class="stab-panel" data-sid="' + s.id + '" style="padding:20px;">';
+      if (hasTranscript) {
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><span style="color:#2d6a4f;font-size:0.78rem;font-weight:600;">\u2713 Transcript saved</span>'
+          + '<button class="transcript-edit-btn" data-sid="' + s.id + '" style="font-size:0.72rem;color:var(--gold);background:none;border:none;cursor:pointer;font-weight:600;">Edit</button></div>'
+          + '<div id="transcript-display-' + s.id + '" style="font-size:0.85rem;color:var(--muted);line-height:1.7;white-space:pre-line;max-height:300px;overflow-y:auto;">' + escapeHtml(note.raw_transcript) + '</div>';
+      }
+      html += '<div id="transcript-editor-' + s.id + '" style="' + (hasTranscript ? 'display:none;' : '') + '">'
+        + '<textarea id="transcript-input-' + s.id + '" style="width:100%;padding:14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:var(--ink);background:var(--cream);min-height:180px;resize:vertical;" placeholder="Paste your session transcript from Zoom, Otter, Fireflies, or any recording tool.">' + escapeHtml(hasTranscript ? note.raw_transcript : '') + '</textarea>'
+        + '<button class="transcript-save-btn" data-sid="' + s.id + '" data-client-email="' + escapeHtml(client.email) + '" style="margin-top:10px;padding:10px 24px;background:var(--gold);color:#fff;border:none;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer;">Save Transcript</button>'
+        + '</div></div>';
+
+      // Tab 2: Session Notes
+      html += '<div id="stab-notes-' + s.id + '" class="stab-panel" data-sid="' + s.id + '" style="padding:20px;display:none;">';
+      if (hasNotes) {
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><span style="color:#2d6a4f;font-size:0.78rem;font-weight:600;">\u2713 Notes saved</span>'
+          + (note.format ? '<span style="font-size:0.7rem;color:var(--gold);font-weight:600;text-transform:uppercase;">' + escapeHtml(note.format) + '</span>' : '')
+          + '<button class="session-notes-edit" data-booking-id="' + s.id + '" style="font-size:0.72rem;color:var(--gold);background:none;border:none;cursor:pointer;font-weight:600;">Edit</button></div>'
+          + '<div style="font-size:0.85rem;color:var(--muted);line-height:1.7;white-space:pre-line;" id="notes-display-' + s.id + '">' + escapeHtml(note.notes) + '</div>';
+      } else {
+        html += '<p style="font-size:0.85rem;color:var(--muted);font-style:italic;margin-bottom:16px;">Structure your session using a coaching framework. Select a format to get started.</p>';
+      }
+      html += '<div id="notes-editor-' + s.id + '" style="' + (hasNotes ? 'display:none;' : '') + '">'
+        + '<textarea id="notes-input-' + s.id + '" style="width:100%;padding:14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:var(--ink);background:var(--cream);min-height:120px;resize:vertical;" placeholder="Write your session notes here...">' + escapeHtml(hasNotes ? note.notes : '') + '</textarea>'
+        + '<button class="session-notes-save pill-add-btn" data-booking-id="' + s.id + '" data-client-email="' + escapeHtml(client.email) + '" style="margin-top:10px;padding:10px 24px;">Save Notes</button>'
+        + '</div>';
+      html += '<div class="session-processor" id="processor-' + s.id + '" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);"></div>';
+      html += '</div>';
+
+      // Tab 3: Intelligence
+      html += '<div id="stab-intelligence-' + s.id + '" class="stab-panel" data-sid="' + s.id + '" style="padding:20px;display:none;">';
+      var canAnalyze = hasTranscript || hasNotes;
+      if (hasAnalysis) {
+        html += '<div id="post-analysis-' + s.id + '"></div>';
+      } else if (canAnalyze) {
+        html += '<p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">Analyze this session to surface coaching signals, frameworks, client patterns, and action items.</p>';
+      } else {
+        html += '<p style="font-size:0.85rem;color:var(--muted);font-style:italic;">Add a transcript or session notes first to unlock AI analysis.</p>';
+      }
+      if (canAnalyze) {
+        html += '<button class="post-analysis-btn" data-booking-id="' + s.id + '" data-client-email="' + escapeHtml(client.email) + '" style="padding:10px 24px;background:var(--ink);color:var(--gold);border:none;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer;">' + (hasAnalysis ? 'Regenerate Analysis' : 'Run Post-Session Analysis') + '</button>';
+      }
+      if (!hasAnalysis) {
+        html += '<div id="post-analysis-' + s.id + '" style="margin-top:16px;"></div>';
+      }
+      html += '</div>';
+
+      html += '</div>'; // session-panel
+      html += '</div>'; // session card
     });
   }
   html += '</div>';
@@ -3273,11 +3324,79 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
     $('clients-list-view').classList.remove('hidden');
   });
 
-  // Wire session notes toggle
-  document.querySelectorAll('.session-notes-toggle').forEach(function(btn) {
+  // Wire session expand/collapse
+  document.querySelectorAll('.session-expand-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
-      var area = $('notes-area-' + this.dataset.bookingId);
-      area.style.display = area.style.display === 'none' ? '' : 'none';
+      var sid = this.dataset.sid;
+      var panel = $('session-panel-' + sid);
+      var isOpen = panel.style.display !== 'none';
+      panel.style.display = isOpen ? 'none' : '';
+      this.textContent = isOpen ? 'Open' : 'Close';
+    });
+  });
+
+  // Wire session sub-tabs
+  document.querySelectorAll('.stab').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var sid = this.dataset.sid;
+      var tab = this.dataset.stab;
+      // Toggle active tab style
+      document.querySelectorAll('.stab[data-sid="' + sid + '"]').forEach(function(b) {
+        b.classList.remove('active');
+        b.style.color = 'var(--muted)';
+        b.style.borderBottomColor = 'transparent';
+      });
+      this.classList.add('active');
+      this.style.color = 'var(--ink)';
+      this.style.borderBottomColor = 'var(--gold)';
+      // Toggle panels
+      document.querySelectorAll('.stab-panel[data-sid="' + sid + '"]').forEach(function(p) { p.style.display = 'none'; });
+      var target = $('stab-' + tab + '-' + sid);
+      if (target) target.style.display = '';
+      // Render persisted analysis on first Intelligence tab open
+      if (tab === 'intelligence') {
+        var analysisContainer = $('post-analysis-' + sid);
+        var noteData = notesByBooking[sid];
+        if (noteData && noteData.post_session_analysis && analysisContainer && !analysisContainer.innerHTML.trim()) {
+          renderPostSessionAnalysis(noteData.post_session_analysis, analysisContainer);
+        }
+      }
+    });
+  });
+
+  // Wire transcript save
+  document.querySelectorAll('.transcript-save-btn').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      var sid = this.dataset.sid;
+      var clientEmail = this.dataset.clientEmail;
+      var text = $('transcript-input-' + sid).value.trim();
+      if (!text) return;
+      this.disabled = true;
+      this.textContent = 'Saving...';
+      try {
+        await fetch('/api/save-session-notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookingId: sid, coachId: coachProfile.id, clientEmail: clientEmail, rawTranscript: text })
+        });
+        this.textContent = '\u2713 Saved';
+        this.style.background = '#2d6a4f';
+        setTimeout(function() { openClientDetail(clientEmail); }, 1200);
+      } catch(e) {
+        this.disabled = false;
+        this.textContent = 'Save Transcript';
+      }
+    });
+  });
+
+  // Wire transcript edit
+  document.querySelectorAll('.transcript-edit-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var sid = this.dataset.sid;
+      var display = $('transcript-display-' + sid);
+      if (display) display.style.display = 'none';
+      this.style.display = 'none';
+      $('transcript-editor-' + sid).style.display = '';
     });
   });
 
@@ -3285,7 +3404,8 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
   document.querySelectorAll('.session-notes-edit').forEach(function(btn) {
     btn.addEventListener('click', function() {
       var bid = this.dataset.bookingId;
-      $('notes-display-' + bid).style.display = 'none';
+      var display = $('notes-display-' + bid);
+      if (display) display.style.display = 'none';
       this.style.display = 'none';
       $('notes-editor-' + bid).style.display = '';
     });
@@ -3529,18 +3649,24 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
     });
   }
 
-  // Wire Post-Session Analysis
+  // Wire Post-Session Analysis (uses transcript OR notes, transcript preferred)
   document.querySelectorAll('.post-analysis-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
       var bid = this.dataset.bookingId;
-      var noteText = '';
-      var noteDisplay = $('notes-display-' + bid);
-      var noteInput = $('notes-input-' + bid);
-      if (noteDisplay) noteText = noteDisplay.textContent;
-      else if (noteInput) noteText = noteInput.value;
       var noteData = notesByBooking[bid];
+      var transcript = (noteData && noteData.raw_transcript) || '';
+      var notes = (noteData && noteData.notes) || '';
+      var sessionInput = '';
+      if (transcript && notes) {
+        sessionInput = 'TRANSCRIPT:\n' + transcript + '\n\nSTRUCTURED NOTES:\n' + notes;
+      } else if (transcript) {
+        sessionInput = transcript;
+      } else if (notes) {
+        sessionInput = notes;
+      }
+      if (!sessionInput) { return; }
       var fmt = (noteData && noteData.format) || 'general';
-      runPostSessionAnalysis(bid, this.dataset.clientEmail, noteText, fmt, $('post-analysis-' + bid));
+      runPostSessionAnalysis(bid, this.dataset.clientEmail, sessionInput, fmt, $('post-analysis-' + bid));
     });
   });
 

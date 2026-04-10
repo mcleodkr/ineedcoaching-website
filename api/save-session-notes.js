@@ -17,7 +17,7 @@ export default async function handler(req, res) {
 
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const { bookingId, coachId, clientEmail, notes, format, structuredNotes, shareWithClient } = body;
+    const { bookingId, coachId, clientEmail, notes, format, structuredNotes, shareWithClient, rawTranscript } = body;
 
     if (!bookingId || !coachId) {
       return res.status(400).json({ error: 'Missing bookingId or coachId' });
@@ -31,23 +31,24 @@ export default async function handler(req, res) {
     };
 
     // Check if notes exist for this booking
-    console.log('[save-session-notes] Checking existing notes for booking:', bookingId);
     const checkRes = await fetch(
       `${SUPABASE_URL}/rest/v1/coach_session_notes?booking_id=eq.${bookingId}&select=id`,
       { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
     );
     const existing = await checkRes.json();
 
+    // Build payload — only include fields that were provided (don't overwrite existing fields with null)
     const payload = {
       booking_id: bookingId,
       coach_id: coachId,
-      client_email: clientEmail || null,
-      notes: notes || null,
-      format: format || 'grow',
-      structured_notes: structuredNotes || null,
-      share_with_client: shareWithClient || false,
       updated_at: new Date().toISOString()
     };
+    if (clientEmail !== undefined) payload.client_email = clientEmail || null;
+    if (notes !== undefined) payload.notes = notes || null;
+    if (format !== undefined) payload.format = format || 'grow';
+    if (structuredNotes !== undefined) payload.structured_notes = structuredNotes || null;
+    if (shareWithClient !== undefined) payload.share_with_client = shareWithClient || false;
+    if (rawTranscript !== undefined) payload.raw_transcript = rawTranscript || null;
 
     let saveRes;
     if (existing && existing.length > 0) {
