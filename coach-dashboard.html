@@ -4584,8 +4584,9 @@ async function runPostSessionAnalysis(bookingId, clientEmail, sessionNotes, form
 function renderPostSessionAnalysis(a, container) {
   var h = CI_LABEL;
   h += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:700;color:var(--ink);margin-bottom:16px;">Post-Session Analysis</div>';
+  // Reordered for decision hierarchy
 
-  // 1. Breakthrough Moment (most prominent)
+  // 1. Breakthrough Moment
   if (a.breakthrough_moment) {
     var bm = typeof a.breakthrough_moment === 'string' ? { text: a.breakthrough_moment, type_tag: null } : a.breakthrough_moment;
     if (bm && bm.text) {
@@ -4594,12 +4595,21 @@ function renderPostSessionAnalysis(a, container) {
     }
   }
 
-  // 2. Active Pattern
+  // 2. Active Pattern + Pattern Timeline
   if (a.active_pattern) {
     var ap = a.active_pattern;
     var apHtml = '<div style="font-size:0.85rem;color:var(--muted);margin-bottom:6px;"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:0.06em;">Trigger:</span> ' + escapeHtml(ap.trigger || '') + '</div>'
-      + '<div style="font-size:0.85rem;color:var(--muted);margin-bottom:6px;"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:0.06em;">Behavior:</span> ' + escapeHtml(ap.behavior || '') + '</div>'
-      + '<div style="font-size:0.85rem;color:var(--ink);"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;color:var(--gold);letter-spacing:0.06em;">Next Session:</span> ' + escapeHtml(ap.next_session_use || '') + '</div>';
+      + '<div style="font-size:0.85rem;color:var(--muted);margin-bottom:6px;"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:0.06em;">Behavior:</span> ' + escapeHtml(ap.behavior || '') + '</div>';
+    if (a.pattern_timeline) {
+      var pt = a.pattern_timeline;
+      apHtml += '<div style="margin:12px 0;padding:12px 16px;background:var(--cream);border-radius:8px;">'
+        + '<div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:8px;">Timeline</div>'
+        + '<div style="font-size:0.82rem;color:var(--ink);margin-bottom:4px;"><span style="font-weight:700;color:var(--muted);margin-right:6px;">Past:</span>' + escapeHtml(pt.past || '') + '</div>'
+        + '<div style="font-size:0.82rem;color:var(--ink);margin-bottom:4px;"><span style="font-weight:700;color:var(--muted);margin-right:6px;">Present:</span>' + escapeHtml(pt.present || '') + '</div>'
+        + '<div style="font-size:0.82rem;color:var(--ink);"><span style="font-weight:700;color:#b8860b;margin-right:6px;">Future Risk:</span>' + escapeHtml(pt.future_risk || '') + '</div>'
+        + '</div>';
+    }
+    apHtml += '<div style="font-size:0.85rem;color:var(--ink);"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;color:var(--gold);letter-spacing:0.06em;">Next Session:</span> ' + escapeHtml(ap.next_session_use || '') + '</div>';
     h += ciCard('\u201c' + (ap.name || 'Unnamed Pattern') + '\u201d', apHtml);
   }
 
@@ -4607,7 +4617,7 @@ function renderPostSessionAnalysis(a, container) {
   if (a.next_session_strategy) {
     var ns = a.next_session_strategy;
     var nsHtml = '<div style="margin-bottom:14px;"><div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);margin-bottom:6px;">Primary Move</div>'
-      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:700;color:var(--ink);line-height:1.4;">' + escapeHtml(ns.primary_move || '') + '</div></div>'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:700;color:var(--ink);line-height:1.4;">' + escapeHtml(ns.primary_move || '') + '</div></div>'
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">';
     [['Notice In-Session', ns.watch_for], ['Test This', ns.test_this]].forEach(function(row) {
       nsHtml += '<div><div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:4px;">' + row[0] + '</div>'
@@ -4623,17 +4633,15 @@ function renderPostSessionAnalysis(a, container) {
     h += ciCard('Next Session Strategy', nsHtml);
   }
 
-  // 4. Coaching Signals
-  if (a.coaching_signals && a.coaching_signals.length) {
-    var sigHtml = '';
-    a.coaching_signals.forEach(function(s) {
-      sigHtml += '<div style="margin-bottom:12px;">'
-        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' + signalBadge(s.signal_type) + '</div>'
-        + '<div style="font-size:0.88rem;font-weight:600;color:var(--ink);line-height:1.5;margin-bottom:4px;">' + escapeHtml(s.observation || s.evidence || s.interpretation || '') + '</div>'
-        + (s.coach_move ? '<div style="font-size:0.82rem;color:var(--gold);font-style:italic;line-height:1.5;">\u2192 ' + escapeHtml(s.coach_move) + '</div>' : '')
-        + '</div>';
-    });
-    h += ciCard('Coaching Signals', sigHtml);
+  // 4. If Stuck
+  if (a.if_stuck) {
+    var is = a.if_stuck;
+    h += '<div style="background:var(--cream);border-left:3px solid #b8860b;border-radius:0 var(--r) var(--r) 0;padding:20px 24px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">'
+      + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;"><span style="color:#b8860b;">\u26a0</span><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#b8860b;">If Stuck</span></div>'
+      + '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;margin-bottom:10px;">' + escapeHtml(is.scenario || '') + '</div>'
+      + '<div style="font-size:0.85rem;color:var(--ink);margin-bottom:8px;"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:0.06em;">Pivot:</span> ' + escapeHtml(is.pivot || '') + '</div>'
+      + '<div style="font-size:0.85rem;color:var(--ink);"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;color:var(--gold);letter-spacing:0.06em;">In-Session Move:</span> ' + escapeHtml(is.in_session_move || '') + '</div>'
+      + '</div>';
   }
 
   // 5. Client Commitments
@@ -4655,7 +4663,20 @@ function renderPostSessionAnalysis(a, container) {
     h += ciCard('Client Commitments', cmHtml);
   }
 
-  // 6. Frameworks Detected
+  // 6. Coaching Signals
+  if (a.coaching_signals && a.coaching_signals.length) {
+    var sigHtml = '';
+    a.coaching_signals.forEach(function(s) {
+      sigHtml += '<div style="margin-bottom:12px;">'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' + signalBadge(s.signal_type) + '</div>'
+        + '<div style="font-size:0.88rem;font-weight:600;color:var(--ink);line-height:1.5;margin-bottom:4px;">' + escapeHtml(s.observation || s.evidence || '') + '</div>'
+        + (s.coach_move ? '<div style="font-size:0.82rem;color:var(--gold);font-style:italic;line-height:1.5;">\u2192 ' + escapeHtml(s.coach_move) + '</div>' : '')
+        + '</div>';
+    });
+    h += ciCard('Coaching Signals', sigHtml);
+  }
+
+  // 7. Frameworks Detected
   if (a.frameworks_detected && a.frameworks_detected.length) {
     var fwHtml = '';
     a.frameworks_detected.forEach(function(f) {
@@ -4670,12 +4691,29 @@ function renderPostSessionAnalysis(a, container) {
     h += ciCard('Frameworks Detected', fwHtml);
   }
 
-  // 7. Session Summary (context, at bottom)
+  // 8. Coach DNA Update
+  if (a.coach_dna_update) {
+    var du = a.coach_dna_update;
+    h += '<div style="background:var(--ink);border-radius:8px;padding:20px;margin-bottom:12px;">'
+      + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold);margin-bottom:12px;">COACH DNA UPDATE</div>';
+    if (du.patterns_observed && du.patterns_observed.length) {
+      du.patterns_observed.forEach(function(p) {
+        h += '<div style="font-size:0.88rem;color:var(--cream);line-height:1.6;margin-bottom:6px;padding-left:16px;position:relative;"><span style="position:absolute;left:0;color:var(--gold);">\u2022</span>' + escapeHtml(p) + '</div>';
+      });
+    }
+    if (du.suggestion) {
+      h += '<div style="font-size:0.85rem;color:var(--gold);font-style:italic;margin-top:10px;line-height:1.5;">' + escapeHtml(du.suggestion) + '</div>';
+    }
+    h += '<div style="margin-top:12px;"><a href="#" onclick="document.querySelector(\'[data-tab=coach-dna]\').click();return false;" style="font-size:0.78rem;color:var(--gold);font-weight:600;text-decoration:none;opacity:0.7;">View your full Coach DNA \u2192</a></div>'
+      + '</div>';
+  }
+
+  // 9. Session Summary
   if (a.session_summary) {
     h += ciCard('Session Summary', '<div style="font-size:0.88rem;color:var(--muted);line-height:1.7;">' + escapeHtml(a.session_summary) + '</div>', { label: false });
   }
 
-  // 8. Opening Question for Next Session
+  // 10. Opening Question for Next Session (always last)
   if (a.pre_session_seed) {
     h += '<div style="background:var(--ink);border-radius:8px;padding:24px;margin-bottom:12px;text-align:center;">'
       + '<div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);margin-bottom:10px;">OPENING QUESTION FOR NEXT SESSION</div>'
