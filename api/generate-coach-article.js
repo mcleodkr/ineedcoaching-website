@@ -50,7 +50,9 @@ export default async function handler(req, res) {
 Return ONLY valid JSON with exactly these keys:
 - "title": A compelling, specific article title (not generic)
 - "body": The full article in clean HTML (use <h2>, <p>, <ul>, <li> tags). Approximately 600 words. Include a brief introduction, 3-4 practical sections with subheadings, and a closing thought.
-- "meta_description": A 150-character SEO description`,
+- "meta_description": A 150-character SEO description
+- "category": One of: Leadership, Wellness, Career, Relationships, Personal Growth, Business, Mindset
+- "tags": Array of 3-5 relevant lowercase tags`,
         messages: [{
           role: 'user',
           content: `Write a coaching article for ${coachName}, who specializes in ${specialties}. ${headline ? 'Their tagline is: "' + headline + '".' : ''} Pick a specific, relevant topic that would attract their ideal client. Make it practical and immediately useful.`
@@ -99,8 +101,11 @@ Return ONLY valid JSON with exactly these keys:
         slug: slug + '-' + Date.now().toString(36),
         content: article.body,
         meta_description: article.meta_description || null,
+        category: article.category || null,
+        tags: Array.isArray(article.tags) ? article.tags : null,
         is_published: false,
-        site: 'ineedcoaching'
+        site: 'ineedcoaching',
+        audience: 'coaching-consumer'
       })
     });
 

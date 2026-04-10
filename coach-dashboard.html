@@ -5996,9 +5996,10 @@ async function loadDashArticles() {
       $('articles-content').innerHTML = '<div class="empty-state" style="padding:40px;text-align:center;">'
         + '<h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.3rem;color:var(--ink);margin-bottom:12px;">Your Articles</h3>'
         + '<p style="font-size:0.92rem;color:var(--muted);margin-bottom:20px;max-width:480px;margin-left:auto;margin-right:auto;line-height:1.6;">Your personalized coaching articles will appear here each week for your review before they\'re published to your profile.</p>'
-        + '<button disabled style="padding:14px 28px;background:var(--gold);color:#fff;border:none;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.92rem;font-weight:700;opacity:0.55;cursor:default;" title="Article generation is available on the Growth plan — coming soon">Generate Article Now &#128274;</button>'
-        + '<p style="font-size:0.75rem;color:var(--muted);margin-top:10px;">Article generation is available on the Growth plan — coming soon</p>'
+        + '<button id="generate-article-btn" style="padding:14px 28px;background:var(--gold);color:#fff;border:none;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.92rem;font-weight:700;cursor:pointer;transition:background 0.2s;">Generate Article Now</button>'
+        + '<span id="generate-article-msg" style="display:block;margin-top:12px;font-size:0.82rem;color:var(--muted);"></span>'
         + '</div>';
+      wireGenerateArticle();
       return;
     }
 
