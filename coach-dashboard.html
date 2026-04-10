@@ -3121,27 +3121,37 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
   var checkinBtn = $('client-send-checkin-btn');
   if (checkinBtn) {
     checkinBtn.addEventListener('click', async function() {
+      console.log('[ClientsTab] Send check-in clicked');
       var formId = $('client-checkin-form').value;
       if (!formId) { alert('Select a form first.'); return; }
       this.disabled = true;
       this.textContent = 'Sending...';
-      var token = generateToken();
+      // Use most recent confirmed booking for bookingId
+      var latestBooking = client.sessions.find(function(s) { return s.status === 'confirmed'; });
+      var bookingId = latestBooking ? latestBooking.id : null;
+      console.log('[ClientsTab] formId:', formId, 'bookingId:', bookingId, 'clientEmail:', client.email);
       try {
-        await fetch(SUPABASE_URL + '/rest/v1/coach_checkin_responses', {
+        var res = await fetch('/api/send-checkin', {
           method: 'POST',
-          headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            coach_id: coachProfile.id,
-            client_email: client.email,
-            client_name: client.name || null,
-            form_id: formId,
-            token: token
+            bookingId: bookingId,
+            formId: formId,
+            clientEmail: client.email,
+            clientName: client.name || null,
+            coachId: coachProfile.id
           })
         });
-        var url = window.location.origin + '/checkin.html?token=' + token;
-        $('client-checkin-msg').innerHTML = '<span style="color:var(--forest);font-weight:600;">Sent!</span> Link: <a href="' + url + '" target="_blank" style="color:var(--gold);word-break:break-all;">' + url + '</a>';
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error || data.details || 'Failed to send check-in');
+        console.log('[ClientsTab] Check-in sent:', data);
+        $('client-checkin-msg').innerHTML = '<span style="color:var(--forest);font-weight:600;">Sent!</span> '
+          + '<span style="font-size:0.82rem;color:var(--gold);font-weight:600;">' + escapeHtml(data.formName) + '</span> '
+          + '<a href="' + escapeHtml(data.checkinUrl) + '" target="_blank" style="font-size:0.82rem;color:var(--gold);font-weight:700;text-decoration:none;">View form &rarr;</a> '
+          + '<button onclick="navigator.clipboard.writeText(\'' + escapeHtml(data.checkinUrl) + '\');this.textContent=\'Copied!\';setTimeout(()=>this.textContent=\'Copy link\',1500)" style="font-size:0.72rem;color:var(--muted);background:none;border:1px solid var(--border);padding:2px 8px;border-radius:50px;cursor:pointer;margin-left:6px;">Copy link</button>';
       } catch(e) {
-        alert('Error sending check-in.');
+        console.error('[ClientsTab] Send check-in error:', e);
+        alert('Error sending check-in: ' + (e.message || e));
       }
       this.disabled = false;
       this.textContent = 'Send Check-in';
