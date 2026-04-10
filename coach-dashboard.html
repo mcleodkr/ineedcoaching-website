@@ -4323,7 +4323,7 @@ function renderPreSessionBrief(b, container) {
         + '<div style="font-size:0.9rem;font-weight:700;color:var(--ink);margin-bottom:4px;">' + escapeHtml(title) + '</div>'
         + '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;margin-bottom:10px;">' + escapeHtml(p.evidence || '') + '</div>'
         + (p.what_it_enables ? '<div style="margin-bottom:4px;"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);">Enables \u2192</span> <span style="font-size:0.82rem;color:var(--ink);">' + escapeHtml(p.what_it_enables) + '</span></div>' : '')
-        + (p.risk_if_ignored ? '<div style="margin-bottom:4px;"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#b8860b;">Watch \u2192</span> <span style="font-size:0.82rem;color:var(--muted);">' + escapeHtml(p.risk_if_ignored) + '</span></div>' : '')
+        + (p.risk_if_ignored ? '<div style="margin-bottom:4px;"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#b8860b;">Risk \u2192</span> <span style="font-size:0.82rem;color:var(--muted);">' + escapeHtml(p.risk_if_ignored) + '</span></div>' : '')
         + (p.possibility_flag ? '<div><span style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);">Possibility \u2192</span> <span style="font-size:0.8rem;color:var(--muted);font-style:italic;">' + escapeHtml(p.possibility_flag) + '</span></div>' : '')
         + '</div>';
     });
@@ -4348,21 +4348,42 @@ function renderPreSessionBrief(b, container) {
   if (b.session_strategy) {
     var ss = b.session_strategy;
     h += '<div style="margin-bottom:24px;border-left:4px solid var(--gold);border-radius:0 8px 8px 0;background:var(--white);padding:20px 24px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">'
-      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:14px;">Session Strategy</div>'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">';
-    [['Primary Move', ss.primary_move], ['Watch For', ss.watch_for], ['Leverage', ss.leverage], ['Avoid', ss.avoid]].forEach(function(row) {
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:14px;">Session Strategy</div>';
+    // Primary Move — visually dominant
+    h += '<div style="margin-bottom:16px;padding-top:4px;"><div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);margin-bottom:6px;">Primary Move</div>'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:700;color:var(--ink);line-height:1.4;">' + escapeHtml(ss.primary_move || '') + '</div></div>';
+    // 2-column grid for remaining
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">';
+    [['Notice In-Session', ss.notice_in_session || ss.watch_for], ['Leverage', ss.leverage], ['Avoid', ss.avoid]].forEach(function(row) {
       h += '<div><div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:4px;">' + row[0] + '</div>'
         + '<div style="font-size:0.88rem;font-weight:700;color:var(--ink);line-height:1.5;">' + escapeHtml(row[1] || '') + '</div></div>';
     });
-    h += '</div></div>';
+    h += '</div>';
+    // Decision Point
+    if (ss.decision_point) {
+      h += '<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">'
+        + '<div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);margin-bottom:8px;">Decision Point</div>'
+        + '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;margin-bottom:4px;">\u2192 If reflective: ' + escapeHtml(ss.decision_point.if_reflective || '') + '</div>'
+        + '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;">\u2192 If analytical: ' + escapeHtml(ss.decision_point.if_analytical || '') + '</div>'
+        + '</div>';
+    }
+    h += '</div>';
   }
 
-  // Watch Signals
-  if (b.watch_signals && b.watch_signals.length) {
+  // Real-Time Signals
+  var signals = b.realtime_signals || b.watch_signals;
+  if (signals && signals.length) {
     h += '<div style="margin-bottom:24px;background:rgba(196,154,60,0.08);border:1px solid rgba(196,154,60,0.25);border-radius:8px;padding:20px;">'
-      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="font-size:0.85rem;">&#9888;</span><span style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);">Watch Signals</span></div>';
-    b.watch_signals.forEach(function(s) {
-      h += '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;margin-bottom:6px;padding-left:16px;position:relative;"><span style="position:absolute;left:0;color:var(--gold);">\u2022</span>' + escapeHtml(s) + '</div>';
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><span style="font-size:0.85rem;">&#9888;</span><span style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);">Real-Time Signals</span></div>';
+    signals.forEach(function(s) {
+      if (typeof s === 'string') {
+        h += '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;margin-bottom:8px;padding-left:16px;position:relative;"><span style="position:absolute;left:0;color:var(--gold);">\u2022</span>' + escapeHtml(s) + '</div>';
+      } else {
+        h += '<div style="margin-bottom:12px;padding-left:16px;position:relative;"><span style="position:absolute;left:0;color:var(--gold);">\u2022</span>'
+          + '<div style="font-size:0.88rem;font-weight:600;color:var(--ink);line-height:1.5;">' + escapeHtml(s.signal || '') + '</div>'
+          + (s.micro_intervention ? '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;line-height:1.5;margin-top:3px;">\u2192 ' + escapeHtml(s.micro_intervention) + '</div>' : '')
+          + '</div>';
+      }
     });
     h += '</div>';
   }
@@ -4375,10 +4396,10 @@ function renderPreSessionBrief(b, container) {
       + '</div>';
   }
 
-  // Opening questions (For Your Eyes Only)
+  // Opening questions (Coach Lens)
   if (b.opening_questions && b.opening_questions.length) {
     h += '<div style="margin-bottom:24px;background:var(--ink);border-radius:8px;padding:20px;">'
-      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><span style="font-size:0.9rem;">&#128274;</span><span style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);">For Your Eyes Only</span></div>';
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><span style="font-size:0.9rem;">&#128274;</span><span style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);">Coach Lens</span></div>';
     b.opening_questions.forEach(function(q) {
       h += '<div style="font-size:0.9rem;color:var(--cream);line-height:1.6;margin-bottom:8px;padding-left:24px;border-left:2px solid var(--gold);"><span style="color:var(--gold);margin-right:6px;">&#9889;</span>' + escapeHtml(q) + '</div>';
     });
