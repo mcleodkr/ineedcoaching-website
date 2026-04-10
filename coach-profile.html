@@ -163,7 +163,7 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
 .coach-articles-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
 .coach-article-card { background: white; border: 1px solid var(--border); border-radius: var(--r); padding: 32px; display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s; }
 .coach-article-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.08); }
-.coach-article-card h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--ink); margin-bottom: 10px; line-height: 1.3; }
+.coach-article-card h3 { font-family: 'Cormorant Garamond', 'Playfair Display', serif; font-size: 1.15rem; font-weight: 700; color: var(--ink); margin-bottom: 10px; line-height: 1.3; }
 .coach-article-card p { font-size: 0.88rem; line-height: 1.65; color: var(--muted); margin-bottom: 16px; flex: 1; }
 .coach-article-date { font-size: 0.75rem; color: var(--muted); margin-bottom: 12px; }
 .coach-article-link { display: inline-flex; align-items: center; gap: 6px; color: var(--gold); text-decoration: none; font-weight: 700; font-size: 0.85rem; transition: color 0.2s; }
@@ -757,11 +757,12 @@ function renderProfile(coach, services, testimonials, recommendations, courses, 
       const pubDate = a.published_at
         ? new Date(a.published_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
         : '';
+      const excerpt = a.meta_description || (a.content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 150);
       artHtml += `
-        <div class="coach-article-card">
+        <div class="coach-article-card" style="border-left:3px solid var(--gold);">
           <h3>${escapeHtml(a.title)}</h3>
           ${pubDate ? `<div class="coach-article-date">${pubDate}</div>` : ''}
-          <p>${escapeHtml(a.meta_description || '')}</p>
+          <p>${escapeHtml(excerpt)}${excerpt.length >= 150 ? '...' : ''}</p>
           <a href="/article.html?slug=${encodeURIComponent(a.slug)}" class="coach-article-link">Read article &#8594;</a>
         </div>
       `;
