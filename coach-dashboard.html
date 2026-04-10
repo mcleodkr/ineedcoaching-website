@@ -1913,13 +1913,18 @@ async function loadTestimonials() {
     });
 
   } catch (err) {
+    console.error('[Testimonials] Load error:', err);
     $('testimonials-loading').style.display = 'none';
     $('testimonials-content').classList.remove('hidden');
     $('testimonials-content').innerHTML = '<div class="empty-state"><p>Error loading testimonials.</p></div>';
   }
 
-  // Wire request testimonial button
-  $('req-testimonial-btn').addEventListener('click', async function() {
+  // Wire request testimonial button (always, even if load fails)
+  var reqBtn = $('req-testimonial-btn');
+  if (reqBtn && !reqBtn._wired) {
+    reqBtn._wired = true;
+    reqBtn.addEventListener('click', async function() {
+    console.log('[Testimonials] Send request clicked');
     var email = $('req-testimonial-email').value.trim();
     if (!email) { alert('Please enter a client email.'); return; }
     var name = $('req-testimonial-name').value.trim();
@@ -1952,6 +1957,7 @@ async function loadTestimonials() {
     btn.disabled = false;
     btn.textContent = 'Send Request';
   });
+  }
 }
 
 /* ================================================
