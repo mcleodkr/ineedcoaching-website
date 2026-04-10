@@ -26,21 +26,22 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 3500,
-        system: `You are a coaching intelligence analyst. Analyze session notes and extract actionable patterns, signals, and frameworks. Use strength-based language. Write all signal and risk descriptions short, sharp, behavioral, observable. Never start sentences with "suggesting" or "indicating." No em dashes. No over-explanation. Return ONLY valid JSON:
+        system: `You are a coaching intelligence analyst. Every field writable on a sticky note. No sentence over 20 words. No academic phrasing. Never use "suggesting," "indicating," "potentially," "it appears that." Direct behavioral language only. No em dashes. Return ONLY valid JSON:
 {
-  "breakthrough_moment": { "text": "The moment of greatest shift or insight", "type_tag": "Energy Insight|Pattern Interruption|Identity Shift|Belief Reframe|Commitment Formation|Behavioral Evidence", "identity_shift": "what changed at the identity level, 1 sentence", "repeat_behavior": "what specific behavior should be repeated or reinforced, 1 sentence" } | null,
-  "active_pattern": { "name": "a named client pattern in quotes, e.g. The Auditor", "trigger": "what activates it, 1 sentence", "behavior": "what it produces, 1 sentence", "next_session_use": "specific coach question or intervention" } | null,
-  "pattern_timeline": { "past": "where this pattern is rooted, 1 sentence", "present": "what triggers it currently, 1 sentence", "future_risk": "how it may show up in future high-stakes moments, 1 sentence" } | null,
-  "pattern_continuity": "string or null. One sentence connecting this session's pattern to a prior session pattern. Null if no clear continuity.",
-  "next_session_strategy": { "primary_move": "single most important coaching action for next session", "watch_for": "what to notice", "test_this": "a specific question or exercise to try", "decision_point": { "if_reflective": "what to do if client reflects", "if_analytical": "what to do if client stays analytical" } },
-  "likely_breakpoint": ["2-3 short strings. What is most likely to break or regress before next session. Short, behavioral, specific. Not alarming, preparation-focused."],
-  "if_stuck": { "scenario": "what the stuck situation looks like, 1 sentence", "pivot": "what the coach should do instead, 1-2 sentences", "in_session_move": "a specific live exercise or question to use right now" },
-  "coaching_signals": [{ "signal_type": "Forward Momentum|Resistance|Values Clarity|Goal Ambivalence|Identity Shift|Strength Recognition|Accountability Gap", "observation": "short, behavioral, observable", "coach_move": "specific action tied to this client, short" }],
-  "client_commitments": [{ "title": string, "due_date_suggested": "YYYY-MM-DD or null", "commitment_strength": "High|Medium|Low", "risk": "short, 1 sentence", "accountability_question": "precise, slightly uncomfortable" }],
-  "frameworks_detected": [{ "name": "GROW Model|Co-Active Coaching|Solution-Focused|Strengths-Based|Cognitive Behavioral Coaching|Positive Psychology|Motivational Interviewing|Ontological Coaching|Accountability-Based|Narrative Coaching", "presence_level": "Primary|Secondary|Incidental", "description": string, "evidence": string, "leverage_note": "1 sentence", "use_next_time": "what to do more intentionally next session using this framework, 1 sentence", "be_careful_of": "what to avoid or watch for with this framework for this client, 1 sentence" }],
-  "coach_dna_update": { "patterns_observed": ["what the coach consistently does, observed from this session", "another pattern"], "suggestion": "how to lean into this approach more intentionally next session, 1 sentence" },
-  "session_summary": "2-3 sentence summary",
-  "pre_session_seed": "Sharp, disruptive opening question for next session. Tied to breakthrough moment. Short."
+  "pre_session_seed": "The single most decisive line in the entire output. The coach's north star for next session. Sharp, action-oriented, tied to active pattern and breakthrough. Under 15 words.",
+  "breakthrough_moment": { "text": "The moment of greatest shift", "type_tag": "Energy Insight|Pattern Interruption|Identity Shift|Belief Reframe|Commitment Formation|Behavioral Evidence", "identity_shift": "what changed at identity level, under 15 words", "repeat_behavior": "specific behavior to reinforce, under 15 words" } | null,
+  "active_pattern": { "name": "named pattern in quotes e.g. The Auditor", "trigger": "what activates it, under 15 words", "behavior": "what it produces, under 15 words", "next_session_use": "specific intervention, under 15 words", "counter_move": { "when": "observable signal the pattern is active, under 15 words", "move": "specific coaching action in that moment, under 15 words" } } | null,
+  "pattern_timeline": { "past": "where rooted, under 15 words", "present": "current trigger, under 15 words", "future_risk": "future high-stakes risk, under 15 words" } | null,
+  "pattern_continuity": "string or null. Connects to prior session pattern. Under 20 words.",
+  "early_signals": ["exactly 2 strings. What to listen for in first 5 minutes of NEXT session. Observable, behavioral. Listening cues, not questions."],
+  "next_session_strategy": { "primary_move": "single most important action, under 15 words", "watch_for": "what to notice, under 15 words", "test_this": "specific question or exercise, under 15 words", "decision_point": { "if_reflective": "under 15 words", "if_analytical": "under 15 words" } },
+  "likely_breakpoint": ["2-3 strings. Most likely regression. Short, behavioral."],
+  "if_stuck": { "scenario": "under 15 words", "pivot": "under 20 words", "in_session_move": "specific live exercise, under 20 words" },
+  "coaching_signals": [{ "signal_type": "Forward Momentum|Resistance|Values Clarity|Goal Ambivalence|Identity Shift|Strength Recognition|Accountability Gap", "observation": "short, behavioral", "coach_move": "specific, tied to client" }],
+  "client_commitments": [{ "title": string, "due_date_suggested": "YYYY-MM-DD or null", "commitment_strength": "High|Medium|Low", "risk": "under 15 words", "accountability_question": "precise, uncomfortable" }],
+  "frameworks_detected": [{ "name": string, "presence_level": "Primary|Secondary|Incidental", "description": string, "evidence": string, "leverage_note": "under 15 words", "use_next_time": "under 15 words", "be_careful_of": "under 15 words" }],
+  "coach_dna_update": { "patterns_observed": ["max 2 bullets, under 12 words each"], "suggestion": "under 15 words" },
+  "session_in_one_line": "[Client] shifted from [X] to [Y] by [mechanism]. One sentence only."
 }`,
         messages: [{ role: 'user', content: `Analyze this ${format || 'coaching'} session:\n\n${sessionNotes}` }]
       })

@@ -4773,10 +4773,16 @@ async function runPostSessionAnalysis(bookingId, clientEmail, sessionNotes, form
 
 function renderPostSessionAnalysis(a, container) {
   var h = CI_LABEL;
-  h += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:700;color:var(--ink);margin-bottom:16px;">Post-Session Analysis</div>';
-  // Reordered for decision hierarchy
 
-  // 1. Breakthrough Moment
+  // 1. IF NOTHING ELSE — dominant anchor, first thing coach sees
+  if (a.pre_session_seed) {
+    h += '<div style="background:var(--ink);border-radius:var(--r);padding:28px 32px;margin-bottom:16px;text-align:center;">'
+      + '<div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--gold);margin-bottom:12px;">IF NOTHING ELSE NEXT SESSION</div>'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.2rem;font-weight:700;color:var(--gold);line-height:1.3;">' + escapeHtml(a.pre_session_seed) + '</div>'
+      + '</div>';
+  }
+
+  // 2. Breakthrough Moment
   if (a.breakthrough_moment) {
     var bm = typeof a.breakthrough_moment === 'string' ? { text: a.breakthrough_moment, type_tag: null } : a.breakthrough_moment;
     if (bm && bm.text) {
@@ -4802,11 +4808,29 @@ function renderPostSessionAnalysis(a, container) {
         + '<div style="font-size:0.82rem;color:var(--ink);"><span style="font-weight:700;color:#b8860b;margin-right:6px;">Future Risk:</span>' + escapeHtml(pt.future_risk || '') + '</div>'
         + '</div>';
     }
-    apHtml += '<div style="font-size:0.85rem;color:var(--ink);"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;color:var(--gold);letter-spacing:0.06em;">Next Session:</span> ' + escapeHtml(ap.next_session_use || '') + '</div>';
+    apHtml += '<div style="font-size:0.85rem;color:var(--ink);margin-bottom:8px;"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;color:var(--gold);letter-spacing:0.06em;">Next Session:</span> ' + escapeHtml(ap.next_session_use || '') + '</div>';
+    if (ap.counter_move) {
+      apHtml += '<div style="margin:8px 0;padding:10px 14px;background:rgba(196,154,60,0.06);border-radius:6px;">'
+        + '<div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);margin-bottom:6px;">Counter-Move</div>'
+        + '<div style="font-size:0.82rem;color:var(--muted);margin-bottom:4px;"><span style="font-weight:600;color:var(--ink);">When:</span> ' + escapeHtml(ap.counter_move.when || '') + '</div>'
+        + '<div style="font-size:0.82rem;color:var(--ink);"><span style="font-weight:600;">Move:</span> ' + escapeHtml(ap.counter_move.move || '') + '</div>'
+        + '</div>';
+    }
     if (a.pattern_continuity) {
       apHtml += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);">Continuity \u2192</span> <span style="font-size:0.82rem;color:var(--muted);font-style:italic;">' + escapeHtml(a.pattern_continuity) + '</span></div>';
     }
     h += ciCard('\u201c' + (ap.name || 'Unnamed Pattern') + '\u201d', apHtml);
+  }
+
+  // Early Signals
+  if (a.early_signals && a.early_signals.length) {
+    var esHtml = '';
+    a.early_signals.forEach(function(s) {
+      esHtml += '<div style="font-size:0.85rem;color:var(--ink);line-height:1.5;margin-bottom:6px;padding-left:16px;position:relative;"><span style="position:absolute;left:0;color:var(--gold);">\u2022</span>' + escapeHtml(s) + '</div>';
+    });
+    h += '<div style="background:var(--cream);border-radius:8px;padding:16px 20px;margin-bottom:12px;">'
+      + '<div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold);margin-bottom:8px;">LISTEN FOR IN FIRST 5 MINUTES</div>'
+      + esHtml + '</div>';
   }
 
   // 3. Next Session Strategy
@@ -4917,17 +4941,10 @@ function renderPostSessionAnalysis(a, container) {
       + '</div>';
   }
 
-  // 9. Session Summary
-  if (a.session_summary) {
-    h += ciCard('Session Summary', '<div style="font-size:0.88rem;color:var(--muted);line-height:1.7;">' + escapeHtml(a.session_summary) + '</div>', { label: false });
-  }
-
-  // 10. Opening Question for Next Session (always last)
-  if (a.pre_session_seed) {
-    h += '<div style="background:var(--ink);border-radius:8px;padding:24px;margin-bottom:12px;text-align:center;">'
-      + '<div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);margin-bottom:10px;">OPENING QUESTION FOR NEXT SESSION</div>'
-      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:700;color:var(--gold);line-height:1.4;">"' + escapeHtml(a.pre_session_seed) + '"</div>'
-      + '</div>';
+  // 11. Session in One Line (replaces summary — just text, no card)
+  var oneLine = a.session_in_one_line || a.session_summary || '';
+  if (oneLine) {
+    h += '<div style="font-size:0.88rem;color:var(--muted);font-style:italic;line-height:1.6;padding:12px 0;border-top:1px solid var(--border);margin-top:8px;">' + escapeHtml(oneLine) + '</div>';
   }
 
   container.innerHTML = h;
