@@ -25,16 +25,17 @@ export default async function handler(req, res) {
       headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
-        system: `You are a coaching intelligence analyst. Analyze session notes and extract patterns, signals, and frameworks. Use strength-based, tentative language: "appears to suggest," "may indicate," "seems to reflect." Never "you should" or "you must." No em dashes. Return ONLY valid JSON:
+        max_tokens: 3000,
+        system: `You are a coaching intelligence analyst. Analyze session notes and extract actionable patterns, signals, and frameworks. Use strength-based, tentative language: "appears to suggest," "may indicate," "seems to reflect." Never "you should" or "you must." No em dashes. Return ONLY valid JSON:
 {
+  "breakthrough_moment": { "text": "The moment of greatest shift or insight, or null", "type_tag": "Energy Insight|Pattern Interruption|Identity Shift|Belief Reframe|Commitment Formation|Behavioral Evidence" } | null,
+  "active_pattern": { "name": "a named client pattern in quotes, e.g. The Auditor", "trigger": "what activates it, 1 sentence", "behavior": "what it produces, 1 sentence", "next_session_use": "specific coach question or intervention to use with this pattern next session" } | null,
+  "next_session_strategy": { "primary_move": "single most important coaching action for next session", "watch_for": "what to notice", "test_this": "a specific question or exercise to try", "decision_point": { "if_reflective": "what to do if client reflects", "if_analytical": "what to do if client stays analytical" } },
+  "coaching_signals": [{ "signal_type": "Forward Momentum|Resistance|Values Clarity|Goal Ambivalence|Identity Shift|Strength Recognition|Accountability Gap", "observation": "what was seen, specific and behavioral", "coach_move": "specific action the coach can take when this signal appears, tied to this client" }],
+  "client_commitments": [{ "title": string, "due_date_suggested": "YYYY-MM-DD or null", "commitment_strength": "High|Medium|Low", "risk": "what could undermine it, 1 sentence", "accountability_question": "precise, slightly uncomfortable question to ask next session" }],
+  "frameworks_detected": [{ "name": "GROW Model|Co-Active Coaching|Solution-Focused|Strengths-Based|Cognitive Behavioral Coaching|Positive Psychology|Motivational Interviewing|Ontological Coaching|Accountability-Based|Narrative Coaching", "presence_level": "Primary|Secondary|Incidental", "description": string, "evidence": string, "leverage_note": "how to use this framework more intentionally next session based on what worked, 1 sentence" }],
   "session_summary": "2-3 sentence summary",
-  "client_commitments": [{ "title": string, "due_date_suggested": "YYYY-MM-DD or null" }],
-  "breakthrough_moment": "The moment of greatest shift or insight, or null if none clear",
-  "coaching_signals": [{ "signal_type": "Forward Momentum|Resistance|Values Clarity|Goal Ambivalence|Identity Shift|Strength Recognition|Accountability Gap", "evidence": string, "interpretation": string }],
-  "frameworks_detected": [{ "name": "GROW Model|Co-Active Coaching|Solution-Focused|Strengths-Based|Cognitive Behavioral Coaching|Positive Psychology|Motivational Interviewing|Ontological Coaching|Accountability-Based|Narrative Coaching", "presence_level": "Primary|Secondary|Incidental", "description": string, "evidence": string }],
-  "between_session_assignment": ["suggestion 1", "suggestion 2"],
-  "pre_session_seed": "A single sentence to anchor the next session opening"
+  "pre_session_seed": "A sharp, slightly disruptive opening question for next session. Movement-oriented, tied to the breakthrough moment. Not 'how has your week been' but specific and uncomfortable."
 }`,
         messages: [{ role: 'user', content: `Analyze this ${format || 'coaching'} session:\n\n${sessionNotes}` }]
       })
