@@ -4806,34 +4806,29 @@ function renderPreSessionBrief(b, container) {
 async function runPostSessionAnalysis(bookingId, clientEmail, sessionNotes, format, container, existingGoals) {
   container.style.display = '';
   container.dataset.clientEmail = clientEmail;
-  // Loading state with progressive status messages (4 passes)
+  // Loading state with progressive status messages (5 passes)
   container.innerHTML = '<div style="text-align:center;padding:40px 24px;">'
     + '<div class="loading-spinner" style="margin:0 auto 16px;"></div>'
     + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:700;color:var(--gold);font-style:italic;margin-bottom:8px;">Analyzing your session...</div>'
-    + '<div style="font-size:0.78rem;color:var(--muted);line-height:1.5;margin-bottom:16px;">This usually takes 60\u2013120 seconds. The system is running four passes to extract evidence, build coaching insights, and refine the language.</div>'
+    + '<div style="font-size:0.78rem;color:var(--muted);line-height:1.5;margin-bottom:16px;">This usually takes 60\u2013120 seconds. The system is running five passes to extract evidence, build coaching insights, and refine the language.</div>'
     + '<div id="psi-progress" style="font-size:0.82rem;color:var(--ink);line-height:1.8;text-align:left;max-width:380px;margin:0 auto;">'
     + '<div id="psi-step1" style="color:var(--gold);font-weight:600;">\u25B6 Extracting session evidence...</div>'
     + '<div id="psi-step2" style="color:var(--muted);opacity:0.4;">\u25CB Building core coaching insights...</div>'
     + '<div id="psi-step3" style="color:var(--muted);opacity:0.4;">\u25CB Building supporting intelligence...</div>'
     + '<div id="psi-step4" style="color:var(--muted);opacity:0.4;">\u25CB Refining language and tone...</div>'
+    + '<div id="psi-step5" style="color:var(--muted);opacity:0.4;">\u25CB Generating coaching reflection...</div>'
     + '</div></div>';
-  // Animate progress steps (~20s per pass)
+  // Animate progress steps (~15-20s per pass)
   var psiTimers = [];
-  psiTimers.push(setTimeout(function() {
-    var s1 = $('psi-step1'); var s2 = $('psi-step2');
-    if (s1) { s1.innerHTML = '\u2713 Extracting session evidence'; s1.style.color = '#2d6a4f'; }
-    if (s2) { s2.innerHTML = '\u25B6 Building core coaching insights...'; s2.style.color = 'var(--gold)'; s2.style.fontWeight = '600'; s2.style.opacity = '1'; }
-  }, 20000));
-  psiTimers.push(setTimeout(function() {
-    var s2 = $('psi-step2'); var s3 = $('psi-step3');
-    if (s2) { s2.innerHTML = '\u2713 Building core coaching insights'; s2.style.color = '#2d6a4f'; }
-    if (s3) { s3.innerHTML = '\u25B6 Building supporting intelligence...'; s3.style.color = 'var(--gold)'; s3.style.fontWeight = '600'; s3.style.opacity = '1'; }
-  }, 40000));
-  psiTimers.push(setTimeout(function() {
-    var s3 = $('psi-step3'); var s4 = $('psi-step4');
-    if (s3) { s3.innerHTML = '\u2713 Building supporting intelligence'; s3.style.color = '#2d6a4f'; }
-    if (s4) { s4.innerHTML = '\u25B6 Refining language and tone...'; s4.style.color = 'var(--gold)'; s4.style.fontWeight = '600'; s4.style.opacity = '1'; }
-  }, 60000));
+  function advanceStep(doneId, doneText, nextId, nextText) {
+    var done = $(doneId); var next = $(nextId);
+    if (done) { done.innerHTML = '\u2713 ' + doneText; done.style.color = '#2d6a4f'; done.style.fontWeight = '400'; }
+    if (next) { next.innerHTML = '\u25B6 ' + nextText; next.style.color = 'var(--gold)'; next.style.fontWeight = '600'; next.style.opacity = '1'; }
+  }
+  psiTimers.push(setTimeout(function() { advanceStep('psi-step1', 'Evidence extracted', 'psi-step2', 'Building core coaching insights...'); }, 15000));
+  psiTimers.push(setTimeout(function() { advanceStep('psi-step2', 'Core insights built', 'psi-step3', 'Building supporting intelligence...'); }, 35000));
+  psiTimers.push(setTimeout(function() { advanceStep('psi-step3', 'Supporting intelligence built', 'psi-step4', 'Refining language and tone...'); }, 55000));
+  psiTimers.push(setTimeout(function() { advanceStep('psi-step4', 'Language refined', 'psi-step5', 'Generating coaching reflection...'); }, 70000));
   try {
     var goalTitles = (existingGoals || []).filter(function(g) { return g.status !== 'completed'; }).map(function(g) { return g.title; });
     var res = await fetch('/api/generate-post-session-intelligence', {

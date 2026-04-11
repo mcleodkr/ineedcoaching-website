@@ -104,89 +104,57 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'No transcript or notes found for this booking' });
     }
 
+    // Shared constraints for all synthesis passes
+    const CONCISE = 'Every string value: 1-2 sentences max, under 40 words. Surface the signal, not the essay.';
+    const JSON_ONLY = 'Return ONLY raw JSON. No markdown. No explanation. No preamble. Start with { and end with }.';
+    const TONE = 'Address coach as "you". Never use: should, must, ask the client, do this. Use: you might explore, this may suggest, one possible direction.';
+
     // ── Pass 1: Extraction ──────────────────────────────────────────────
     const extractionOutput = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
-      2000,
-      'You are an evidence extraction engine. Extract only what is explicitly present. Do not interpret or infer. Return JSON only.',
-      `Extract structured evidence from this coaching session transcript and notes.
+      1500,
+      `You are an evidence extraction engine. Extract only what is explicitly present. Do not interpret. ${CONCISE} ${JSON_ONLY}`,
+      `Extract from this session: client_quotes (max 5 verbatim), commitments, emotional_shifts [{before,after}], themes, coach_interventions, tension_points, mentioned_goals. All arrays of short strings.
 
-Return a JSON object with these fields:
-- "client_quotes": array of verbatim client quotes that are significant
-- "commitments": array of explicit agreements or commitments made
-- "emotional_shifts": array of objects with "before" and "after" describing emotional transitions
-- "themes": array of repeated phrases, beliefs, or recurring topics
-- "coach_interventions": array of notable coach questions, reframes, or techniques used
-- "tension_points": array of moments of avoidance, resistance, or discomfort
-- "mentioned_goals": array of any goals explicitly mentioned or discussed
-
-TRANSCRIPT AND NOTES:
 ${sessionContent}`,
       'Pass 1: Extraction'
     );
 
-    // ── Pass 2a: Core Intelligence ────────────────────────────────────────
-    const synthesisSystem = `You are a senior coaching intelligence system. Interpret extracted session evidence into structured coaching insights. Address the coach as "you" throughout. Use only suggestive language. Never use: should, must, ask the client, do this. Always use: you might explore, this may suggest, one possible direction. Every insight must include why it matters. Return JSON only.`;
+    // ── Pass 2a: Core Intelligence ──────────────────────────────────────
+    const synthesisSystem = `You are a senior coaching intelligence system. ${TONE} ${CONCISE} ${JSON_ONLY}`;
 
     const coreOutput = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
-      3000,
+      2000,
       synthesisSystem,
-      `Using the extracted session evidence below, generate the CORE coaching intelligence fields.
+      `Generate CORE intelligence from this evidence. ${CONCISE}
 
-EXTRACTED EVIDENCE:
-${JSON.stringify(extractionOutput, null, 2)}
+EVIDENCE: ${JSON.stringify(extractionOutput)}
 
-Return a JSON object with ONLY these fields:
-{
-  "core_focus": { "summary": "", "why_it_matters": "" },
-  "breakthrough": { "client_quote": "", "what_changed": "", "why_it_matters": "", "reinforcement_suggestion": "" },
-  "pattern": { "name": "", "description": "", "trigger": "", "behavior": "", "timeline": {"past":"","present":"","future_risk":""}, "next_session_watch": "", "next_session_why": "" },
-  "strategic_direction": { "suggestion": "", "why_it_matters": "", "what_it_may_reveal": "", "use_with_awareness": "" },
-  "early_cues": { "signals": [], "why_it_matters": "" },
-  "opening_question": { "question": "", "why_start_here": "" },
-  "next_session": { "focus": "", "listen_for": "", "explore": "", "if_shift": { "options": [], "why_it_matters": "" } },
-  "session_in_one_line": "[Client] shifted from [X] to [Y] by [mechanism]. One sentence."
-}`,
+Return ONLY this JSON:
+{"core_focus":{"summary":"","why_it_matters":""},"breakthrough":{"client_quote":"","what_changed":"","why_it_matters":"","reinforcement_suggestion":""},"pattern":{"name":"","description":"","trigger":"","behavior":"","timeline":{"past":"","present":"","future_risk":""},"next_session_watch":"","next_session_why":""},"strategic_direction":{"suggestion":"","why_it_matters":"","what_it_may_reveal":"","use_with_awareness":""},"early_cues":{"signals":[],"why_it_matters":""},"opening_question":{"question":"","why_start_here":""},"next_session":{"focus":"","listen_for":"","explore":"","if_shift":{"options":[],"why_it_matters":""}},"session_in_one_line":""}`,
       'Pass 2a: Core Intelligence'
     );
 
     // ── Pass 2b: Supporting Intelligence ────────────────────────────────
     const goalsContext = existingGoals && existingGoals.length
-      ? '\n\nExisting client goals:\n' + existingGoals.map((g, i) => `${i + 1}. ${g}`).join('\n')
+      ? '\nGoals: ' + existingGoals.join(', ')
       : '';
 
     const supportOutput = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
-      2500,
+      2000,
       synthesisSystem,
-      `Using the extracted evidence AND the core intelligence already generated, produce the SUPPORTING intelligence fields. Stay consistent with the core insights.
-${goalsContext}
+      `Generate SUPPORTING intelligence. Stay consistent with core insights. ${CONCISE}${goalsContext}
 
-EXTRACTED EVIDENCE:
-${JSON.stringify(extractionOutput, null, 2)}
+EVIDENCE: ${JSON.stringify(extractionOutput)}
+CORE: ${JSON.stringify(coreOutput)}
 
-CORE INTELLIGENCE (already generated — stay consistent):
-${JSON.stringify(coreOutput, null, 2)}
-
-Return a JSON object with ONLY these fields:
-{
-  "friction_points": { "points": [], "why_it_matters": "" },
-  "if_stuck": { "scenario": "", "explore": "", "one_possible_direction": "" },
-  "goals": { "existing": [{"title":"","status":"","session_relevance":"","signal_reason":""}], "suggested": [{"title":"","description":"","suggested_target_date":""}] },
-  "commitments": [{ "text": "", "priority": "", "follow_up_question": "" }],
-  "between_session": [{ "title": "", "invitation": "", "why_it_matters": "", "connection": "" }],
-  "coaching_signals": [{ "type": "", "description": "", "implication": "" }],
-  "frameworks": [{ "name": "", "presence_level": "", "what_was_observed": "", "what_it_suggests": "", "build_on_this": "", "mindful_of": "" }],
-  "coach_dna": { "patterns": [], "why_it_matters": "" },
-  "coaching_reflection": null
-}
-
-For coaching_reflection: set to null unless ALL of these are true: session has 10+ meaningful exchanges, session is not logistical, has no crisis language, and coach presence is meaningful. When generated:
-{ "session_type": "growth"|"processing"|"crisis_adjacent", "what_stood_out": {"observation":"","why_it_matters":""}, "what_seemed_effective": {"observation":"","why_it_matters":""}|null, "one_thing_to_consider": {"suggestion":"","why_it_matters":"","use_with_care":""}|null }`,
+Return ONLY this JSON:
+{"friction_points":{"points":[],"why_it_matters":""},"if_stuck":{"scenario":"","explore":"","one_possible_direction":""},"goals":{"existing":[{"title":"","status":"","session_relevance":"","signal_reason":""}],"suggested":[{"title":"","description":"","suggested_target_date":""}]},"commitments":[{"text":"","priority":"","follow_up_question":""}],"between_session":[{"title":"","invitation":"","why_it_matters":"","connection":""}],"coaching_signals":[{"type":"","description":"","implication":""}],"frameworks":[{"name":"","presence_level":"","what_was_observed":"","what_it_suggests":"","build_on_this":"","mindful_of":""}],"coach_dna":{"patterns":[],"why_it_matters":""}}`,
       'Pass 2b: Supporting Intelligence'
     );
 
@@ -200,15 +168,42 @@ For coaching_reflection: set to null unless ALL of these are true: session has 1
         ANTHROPIC_API_KEY,
         'claude-haiku-4-5-20251001',
         2000,
-        `You are a UX writer for a coaching intelligence platform. Review the structured JSON and correct any remaining directive language. Find every instance of: should, must, do not, don't, ask her/him/them, you need to, have to — and rewrite as suggestive alternatives (you might explore, it may be worth considering, one possible approach). Also verify every section has a non-empty why_it_matters field. Return the corrected JSON only with identical structure.`,
-        `Review and correct the following coaching intelligence JSON. Replace any directive language with suggestive alternatives. Ensure all why_it_matters fields are populated. Return the corrected JSON only.
-
-${JSON.stringify(synthesisOutput, null, 2)}`,
+        `You are a UX writer. Fix directive language: should→you might explore, must→it may be worth, do not→one possible approach. Verify all why_it_matters fields are non-empty. ${JSON_ONLY}`,
+        `Fix directive language in this JSON. Return corrected JSON with identical structure: ${JSON.stringify(synthesisOutput)}`,
         'Pass 3: Formatting'
       );
     } catch (e) {
       console.error('[Pass 3: Formatting] Failed, falling back to synthesis output:', e.message);
       formattedOutput = synthesisOutput;
+    }
+
+    // ── Pass 3b: Coaching Reflection (conditional, fault-tolerant) ──────
+    try {
+      const exchanges = (extractionOutput.client_quotes || []).length + (extractionOutput.coach_interventions || []).length;
+      const hasCrisis = (extractionOutput.tension_points || []).some(t => /crisis|self.harm|suicid|emergenc/i.test(t));
+      if (exchanges >= 10 && !hasCrisis) {
+        const reflectionOutput = await callClaude(
+          ANTHROPIC_API_KEY,
+          'claude-sonnet-4-6',
+          800,
+          `You are a coaching reflection system. ${TONE} ${CONCISE} ${JSON_ONLY}`,
+          `Based on this session evidence, generate a coaching reflection. ${CONCISE}
+
+EVIDENCE: ${JSON.stringify(extractionOutput)}
+CORE: ${JSON.stringify(coreOutput)}
+
+Return: {"session_type":"growth|processing|crisis_adjacent","what_stood_out":{"observation":"","why_it_matters":""},"what_seemed_effective":{"observation":"","why_it_matters":""},"one_thing_to_consider":{"suggestion":"You might consider...","why_it_matters":"","use_with_care":""}}
+If session_type is processing: set what_seemed_effective and one_thing_to_consider to null.
+If crisis_adjacent: return null.`,
+          'Pass 3b: Coaching Reflection'
+        );
+        formattedOutput.coaching_reflection = reflectionOutput;
+      } else {
+        formattedOutput.coaching_reflection = null;
+      }
+    } catch (e) {
+      console.error('[Pass 3b: Coaching Reflection] Failed, setting to null:', e.message);
+      formattedOutput.coaching_reflection = null;
     }
 
     // ── Save results to Supabase ────────────────────────────────────────
