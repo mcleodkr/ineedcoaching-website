@@ -3518,17 +3518,61 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
     });
   });
 
-  // Wire framework card selection
+  // Wire framework card selection — auto-generates from transcript if available
   document.querySelectorAll('.fmt-card').forEach(function(card) {
-    card.addEventListener('click', function() {
+    card.addEventListener('click', async function() {
       var sid = this.dataset.sid;
+      var format = this.dataset.format;
+      var panel = this.closest('.stab-panel');
+      // Highlight selected
       document.querySelectorAll('.fmt-card[data-sid="' + sid + '"]').forEach(function(c) { c.style.borderColor = 'var(--border)'; });
       this.style.borderColor = 'var(--gold)';
-      this.closest('.stab-panel').dataset.selectedFormat = this.dataset.format;
+      panel.dataset.selectedFormat = format;
+
+      // If transcript exists, auto-generate immediately
+      var noteData = notesByBooking[sid];
+      if (noteData && noteData.raw_transcript) {
+        var statusEl = $('gen-transcript-status-' + sid);
+        var genBtn = panel.querySelector('.gen-from-transcript-btn');
+        if (genBtn) { genBtn.disabled = true; genBtn.textContent = 'Generating ' + format.toUpperCase() + ' notes...'; }
+        if (statusEl) statusEl.textContent = 'Claude is structuring your ' + format.toUpperCase() + ' notes from transcript...';
+        if (!await ensureToken()) { if (statusEl) statusEl.innerHTML = '<span style="color:#c44;">Session expired. Please refresh.</span>'; return; }
+        try {
+          var res = await fetch('/api/process-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ transcript: noteData.raw_transcript, format: format, clientName: client.name, sessionDate: '', coachId: coachProfile.id })
+          });
+          var result = await res.json();
+          if (!res.ok) throw new Error(result.error || 'Generation failed');
+          var plainNotes = Object.entries(result.notes || {}).map(function(e) { return e[0] + ':\n' + e[1]; }).join('\n\n');
+          var clientEmail = panel.querySelector('.gen-from-transcript-btn') ? panel.querySelector('.gen-from-transcript-btn').dataset.clientEmail : client.email;
+          await fetch('/api/save-session-notes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bookingId: sid, coachId: coachProfile.id, clientEmail: clientEmail, notes: plainNotes, format: format, structuredNotes: result.notes })
+          });
+          if (!notesByBooking[sid]) notesByBooking[sid] = {};
+          notesByBooking[sid].notes = plainNotes;
+          notesByBooking[sid].format = format;
+          notesByBooking[sid].structured_notes = result.notes;
+          updateSessionProgress(sid, 2, true);
+          if (statusEl) statusEl.innerHTML = '<span style="color:#2d6a4f;font-weight:600;">\u2713 ' + format.toUpperCase() + ' notes generated from transcript</span>';
+          // Show notes in display area
+          var notesDisplay = $('notes-display-' + sid);
+          if (notesDisplay) { notesDisplay.textContent = plainNotes; notesDisplay.style.display = ''; }
+          var notesEditor = $('notes-editor-' + sid);
+          if (notesEditor) notesEditor.style.display = 'none';
+          if (genBtn) { genBtn.textContent = '\u2713 Generated'; genBtn.style.background = '#2d6a4f'; }
+        } catch(e) {
+          if (statusEl) statusEl.innerHTML = '<span style="color:#c44;">' + escapeHtml(e.message) + '</span>';
+          if (genBtn) { genBtn.disabled = false; genBtn.textContent = 'Generate Notes from Transcript'; }
+        }
+      }
     });
   });
 
-  // Wire generate-from-transcript button
+  // Wire generate-from-transcript button (fallback if card click didn't auto-trigger)
   document.querySelectorAll('.gen-from-transcript-btn').forEach(function(btn) {
     btn.addEventListener('click', async function() {
       var sid = this.dataset.sid;
@@ -3536,32 +3580,9 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
       var panel = this.closest('.stab-panel');
       var format = panel.dataset.selectedFormat;
       if (!format) { alert('Please select a framework first (GROW, CLEAR, or OSKAR).'); return; }
-      var noteData = notesByBooking[sid];
-      var transcript = (noteData && noteData.raw_transcript) || '';
-      if (!transcript) { alert('No transcript found. Save a transcript first.'); return; }
-      this.disabled = true;
-      this.textContent = 'Generating...';
-      safeText('gen-transcript-status-' + sid, 'Claude is structuring your notes...');
-      try {
-        var res = await fetch('/api/process-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ transcript: transcript, format: format, clientName: client.name, sessionDate: '', coachId: coachProfile.id })
-        });
-        var result = await res.json();
-        if (!res.ok) throw new Error(result.error || 'Generation failed');
-        var plainNotes = Object.entries(result.notes || {}).map(function(e) { return e[0] + ':\n' + e[1]; }).join('\n\n');
-        await fetch('/api/save-session-notes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bookingId: sid, coachId: coachProfile.id, clientEmail: clientEmail, notes: plainNotes, format: format, structuredNotes: result.notes })
-        });
-        if (!notesByBooking[sid]) notesByBooking[sid] = {};
-        notesByBooking[sid].notes = plainNotes;
-        notesByBooking[sid].format = format;
-        notesByBooking[sid].structured_notes = result.notes;
-        safeText('gen-transcript-status-' + sid, '\u2713 Notes generated and saved');
-        setTimeout(function() { openClientDetail(clientEmail); }, 1200);
+      // Trigger the framework card click which handles everything
+      var selectedCard = panel.querySelector('.fmt-card[data-format="' + format + '"]');
+      if (selectedCard) selectedCard.click();
       } catch(e) {
         safeHTML('gen-transcript-status-' + sid, '<span style="color:#c44;">' + escapeHtml(e.message) + '</span>');
         this.disabled = false;

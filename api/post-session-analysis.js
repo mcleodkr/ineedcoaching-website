@@ -15,10 +15,24 @@ export default async function handler(req, res) {
 
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const { coachId, clientEmail, bookingId, sessionNotes, format } = body;
-    if (!coachId || !sessionNotes) return res.status(400).json({ error: 'Missing required fields' });
+    const { coachId, clientEmail, bookingId, format, useTranscript } = body;
+    let { sessionNotes } = body;
 
     const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
+
+    // If useTranscript flag, fetch raw_transcript from DB
+    if (useTranscript && bookingId) {
+      const tRes = await fetch(`${SUPABASE_URL}/rest/v1/coach_session_notes?booking_id=eq.${bookingId}&select=raw_transcript,notes`, {
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+      });
+      const tData = await tRes.json();
+      if (tData && tData.length && tData[0].raw_transcript) {
+        sessionNotes = tData[0].raw_transcript;
+        if (tData[0].notes) sessionNotes += '\n\nSTRUCTURED NOTES:\n' + tData[0].notes;
+      }
+    }
+
+    if (!coachId || !sessionNotes) return res.status(400).json({ error: 'Missing required fields' });
 
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
