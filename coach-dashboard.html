@@ -3146,16 +3146,25 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
   html += '<div class="form-section" style="margin-bottom:24px;">'
     + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">'
     + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.15rem;margin-bottom:0;">Sessions</h2>'
-    + '<button id="gen-brief-btn" data-client-email="' + escapeHtml(client.email) + '" data-booking-id="' + (client.sessions.length ? client.sessions[0].id : '') + '" style="padding:8px 20px;background:var(--gold);color:#fff;border:none;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;transition:background 0.2s;">Generate Pre-Session Brief</button>'
+    + ''
     + '</div>'
     + '<div id="pre-session-brief-container" style="margin-bottom:16px;"></div>';
   if (!client.sessions.length) {
     html += '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;">No sessions yet</p>';
   } else {
+    // Find next upcoming confirmed session
+    var now = new Date();
+    var nextUpcomingId = null;
+    client.sessions.forEach(function(s) {
+      if (s.status === 'confirmed' && s.scheduled_at && new Date(s.scheduled_at) > now) {
+        if (!nextUpcomingId) nextUpcomingId = s.id;
+      }
+    });
     client.sessions.forEach(function(s) {
       var dt = s.scheduled_at ? new Date(s.scheduled_at) : null;
       var dateStr = dt ? dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
       var timeStr = dt ? dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+      var isNextUpcoming = s.id === nextUpcomingId;
       var svcMatch = (s.notes || '').match(/^Service:\s*(.+)/m);
       var svcName = svcMatch ? svcMatch[1].trim() : '';
       var note = notesByBooking[s.id];
@@ -3176,6 +3185,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
         + '</div>'
         + '<div style="display:flex;gap:8px;align-items:center;">' + statusIcons
         + (s.zoom_link ? ' <a href="' + escapeHtml(s.zoom_link) + '" target="_blank" rel="noopener noreferrer" style="font-size:0.78rem;color:var(--gold);text-decoration:none;font-weight:600;">&#127909;</a>' : '')
+        + (isNextUpcoming ? ' <button class="gen-brief-inline-btn" data-client-email="' + escapeHtml(client.email) + '" data-booking-id="' + s.id + '" style="font-size:0.72rem;color:var(--gold);background:none;border:1px solid var(--gold);padding:4px 12px;border-radius:50px;cursor:pointer;font-weight:600;" title="Generate Pre-Session Brief">Prepare for this session \u2192</button>' : '')
         + ' <button class="session-expand-btn" data-sid="' + s.id + '" style="font-size:0.75rem;color:var(--gold);background:none;border:1px solid var(--gold);padding:4px 12px;border-radius:50px;cursor:pointer;font-weight:600;">Open</button>'
         + '</div></div>';
 
@@ -3865,13 +3875,14 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
     openClientDetail(client.email);
   });
 
-  // Wire Pre-Session Brief
-  var briefBtn = $('gen-brief-btn');
-  if (briefBtn) {
-    briefBtn.addEventListener('click', function() {
+  // Wire Pre-Session Brief (inline button on next upcoming session)
+  document.querySelectorAll('.gen-brief-inline-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
       generatePreSessionBrief(this.dataset.clientEmail, this.dataset.bookingId, $('pre-session-brief-container'));
+      this.textContent = 'Generating...';
+      this.disabled = true;
     });
-  }
+  });
 
   // Wire Post-Session Analysis (uses transcript OR notes, transcript preferred)
   document.querySelectorAll('.post-analysis-btn').forEach(function(btn) {
@@ -4579,7 +4590,7 @@ async function sendCoachReply(key, thread) {
 /* ================================================
    COACHING INTELLIGENCE SUITE
    ================================================ */
-var CI_LABEL = '<span style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;display:block;">AI \u00b7 COACHING INTELLIGENCE</span>';
+var CI_LABEL = '<span style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;display:block;">Coach Clarity</span>';
 
 function ciCard(title, content, opts) {
   opts = opts || {};
@@ -4846,14 +4857,24 @@ async function runPostSessionAnalysis(bookingId, clientEmail, sessionNotes, form
 }
 
 function renderPostSessionAnalysis(a, container) {
-  // Helper: section card with title, subtitle, and for-label
-  function psCard(title, subtitle, forLabel, body) {
-    return '<div style="border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">'
-      + '<div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;">'
+  // Helper: section card with title, subtitle, for-label, and optional id/collapsed
+  function psCard(title, subtitle, forLabel, body, opts) {
+    opts = opts || {};
+    var id = opts.id ? ' id="psi-' + opts.id + '"' : '';
+    var inner = '<div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;">'
       + '<div><div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:700;color:var(--ink);">' + title + '</div>'
       + '<div style="font-size:0.75rem;color:var(--muted);font-style:italic;line-height:1.4;margin-top:3px;">' + subtitle + '</div></div>'
       + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);white-space:nowrap;margin-left:12px;margin-top:2px;">' + forLabel + '</div>'
-      + '</div><div style="padding:16px 20px;">' + body + '</div></div>';
+      + '</div><div style="padding:16px 20px;">' + body + '</div>';
+    if (opts.collapsed) {
+      return '<div' + id + ' style="border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">'
+        + '<details><summary style="padding:16px 20px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">'
+        + '<div><div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:700;color:var(--ink);">' + title + '</div>'
+        + '<div style="font-size:0.75rem;color:var(--muted);font-style:italic;line-height:1.4;margin-top:3px;">' + subtitle + '</div></div>'
+        + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);white-space:nowrap;margin-left:12px;">' + forLabel + '</div>'
+        + '</summary><div style="padding:0 20px 16px 20px;border-top:1px solid var(--border);">' + body + '</div></details></div>';
+    }
+    return '<div' + id + ' style="border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">' + inner + '</div>';
   }
   // Compat: map old field names to new 3-pass schema
   var cf = a.core_focus || (a.pre_session_seed ? { summary: a.pre_session_seed, why_it_matters: '' } : null);
@@ -4874,12 +4895,61 @@ function renderPostSessionAnalysis(a, container) {
   var cr = a.coaching_reflection || null;
   var oneLine = a.session_in_one_line || a.session_summary || '';
 
+  // Section definitions for sidebar navigation
+  var sectionDefs = [
+    ['key-insights', 'Key Insights'], ['core-focus', 'Core Focus'], ['breakthrough', 'What Shifted'],
+    ['pattern', 'Recurring Pattern'], ['strategic', 'Strategic Direction'], ['early-cues', 'Early Cues'],
+    ['opening', 'Opening Question'], ['next-session', 'Next Session'], ['friction', 'Friction Points'],
+    ['if-stuck', 'If Stuck'], ['goals', 'Goals'], ['commitments', 'Commitments'],
+    ['between-session', 'Between-Session'], ['signals', 'Coaching Signals'], ['frameworks', 'Frameworks'],
+    ['coach-dna', 'Coach DNA'], ['reflection', 'Reflection']
+  ];
+
   var h = '';
+
+  // Intro banner
+  h += '<div style="background:var(--ink);border-radius:var(--r);padding:12px 24px;margin-bottom:16px;">'
+    + '<div style="font-size:0.78rem;color:var(--cream);line-height:1.5;">Coach Clarity is your reflective thinking partner \u2014 it surfaces patterns and possibilities so you can think more clearly, not follow a script.</div>'
+    + '</div>';
+
+  // Two-column layout: sidebar + main
+  h += '<div style="display:flex;gap:24px;align-items:flex-start;">';
+
+  // Sticky sidebar nav (desktop)
+  h += '<nav class="psi-sidebar" style="width:180px;flex-shrink:0;position:sticky;top:20px;max-height:calc(100vh - 40px);overflow-y:auto;">'
+    + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold);margin-bottom:10px;">In This Analysis</div>';
+  sectionDefs.forEach(function(s) {
+    h += '<a href="#psi-' + s[0] + '" class="psi-nav-link" data-section="psi-' + s[0] + '" style="display:block;font-size:0.75rem;color:var(--muted);text-decoration:none;padding:3px 0;line-height:1.4;transition:color 0.15s;">' + s[1] + '</a>';
+  });
+  h += '</nav>';
+
+  // Mobile pill nav (hidden on desktop, shown <768px via inline media query below)
+  h += '<style>@media(max-width:768px){.psi-sidebar{display:none!important}.psi-mobile-nav{display:flex!important}}</style>';
+  h += '<div class="psi-mobile-nav" style="display:none;overflow-x:auto;gap:8px;padding:8px 0;margin-bottom:12px;white-space:nowrap;width:100%;">';
+  sectionDefs.forEach(function(s) {
+    h += '<a href="#psi-' + s[0] + '" style="display:inline-block;padding:4px 12px;border-radius:50px;font-size:0.72rem;font-weight:600;color:var(--muted);background:var(--cream);text-decoration:none;white-space:nowrap;">' + s[1] + '</a>';
+  });
+  h += '</div>';
+
+  // Main content column
+  h += '<div style="flex:1;min-width:0;">';
+
+  // Key Insights block
+  var ki = a.key_insights || [];
+  if (ki.length) {
+    h += '<div id="psi-key-insights" style="background:var(--cream);border-left:3px solid var(--gold);border-radius:0 var(--r) var(--r) 0;padding:20px 24px;margin-bottom:16px;">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:700;color:var(--ink);margin-bottom:4px;">Coach Clarity \u2014 Key Insights</div>'
+      + '<div style="font-size:0.75rem;color:var(--muted);font-style:italic;margin-bottom:12px;">The most important signals from this session at a glance</div>';
+    ki.forEach(function(insight) {
+      h += '<div style="font-size:0.88rem;color:var(--ink);line-height:1.6;margin-bottom:6px;padding-left:16px;position:relative;"><span style="position:absolute;left:0;color:var(--gold);">\u2022</span>' + escapeHtml(insight) + '</div>';
+    });
+    h += '</div>';
+  }
 
   // 1. Core Focus
   if (cf) {
-    h += '<div style="background:var(--ink);border-radius:var(--r);padding:28px 32px;margin-bottom:16px;text-align:center;position:relative;">'
-      + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);position:absolute;top:16px;right:20px;">For you</div>'
+    h += '<div id="psi-core-focus" style="background:var(--ink);border-radius:var(--r);padding:28px 32px;margin-bottom:16px;text-align:center;position:relative;">'
+      + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);position:absolute;top:16px;right:20px;">For You</div>'
       + '<div style="font-size:0.72rem;color:var(--cream);opacity:0.7;margin-bottom:8px;">For you as the coach \u2014 one focus to hold regardless of where the session goes</div>'
       + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:700;color:var(--gold);margin-bottom:4px;">Core Focus for Next Session</div>'
       + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.2rem;font-weight:700;color:var(--gold);line-height:1.3;margin-top:8px;">' + escapeHtml(cf.summary || '') + '</div>'
@@ -4894,7 +4964,7 @@ function renderPostSessionAnalysis(a, container) {
       + (bt.what_changed ? '<div style="font-size:0.85rem;color:var(--ink);margin-bottom:6px;line-height:1.5;"><span style="font-weight:600;color:var(--muted);">What shifted:</span> ' + escapeHtml(bt.what_changed) + '</div>' : '')
       + (bt.why_it_matters ? '<div style="font-size:0.82rem;color:var(--muted);margin-bottom:6px;line-height:1.5;"><span style="font-weight:600;">Why this matters:</span> ' + escapeHtml(bt.why_it_matters) + '</div>' : '')
       + (bt.reinforcement_suggestion ? '<div style="font-size:0.85rem;color:var(--ink);line-height:1.5;"><span style="font-weight:600;color:var(--muted);">How you might reinforce this:</span> ' + escapeHtml(bt.reinforcement_suggestion) + '</div>' : '');
-    h += psCard('What Shifted in This Session', 'A moment where this client\u2019s thinking, identity, or awareness changed', 'About the client', btBody);
+    h += psCard('What Shifted in This Session', 'A moment where this client\u2019s thinking, identity, or awareness changed', 'Observed', btBody, {id:'breakthrough'});
   }
 
   // 3. Pattern
@@ -4912,7 +4982,7 @@ function renderPostSessionAnalysis(a, container) {
       + '<div style="font-size:0.85rem;color:var(--ink);margin-bottom:6px;line-height:1.5;"><span style="font-weight:600;color:var(--gold);">What you might pay attention to next session:</span> ' + escapeHtml(pt.next_session_watch || '') + '</div>'
       + (pt.next_session_why ? '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;line-height:1.5;"><span style="font-weight:600;">Why this matters:</span> ' + escapeHtml(pt.next_session_why) + '</div>' : '')
       + '</div>';
-    h += psCard('Recurring Pattern to Watch', 'A pattern this client tends to fall into under specific conditions \u2014 understanding it helps you anticipate and respond', 'About the client', ptBody);
+    h += psCard('Recurring Pattern to Watch', 'A pattern this client tends to fall into under specific conditions \u2014 understanding it helps you anticipate and respond', 'Observed', ptBody, {id:'pattern'});
   }
 
   // 4. Strategic Direction
@@ -4924,7 +4994,7 @@ function renderPostSessionAnalysis(a, container) {
       + (sd.what_it_may_reveal ? '<div style="margin-bottom:6px;"><span style="font-weight:600;color:var(--ink);">What it may reveal:</span> ' + escapeHtml(sd.what_it_may_reveal) + '</div>' : '')
       + (sd.use_with_awareness ? '<div><span style="font-weight:600;color:#b8860b;">Use with awareness:</span> ' + escapeHtml(sd.use_with_awareness) + '</div>' : '')
       + '</div></details>';
-    h += psCard('A Direction You Might Explore', 'One possible way to work with what emerged \u2014 adjust or set aside based on your judgment', 'For you to consider', sdBody);
+    h += psCard('A Direction You Might Explore', 'One possible way to work with what emerged \u2014 adjust or set aside based on your judgment', 'Coach Clarity \u2192 For You', sdBody, {id:'strategic'});
   }
 
   // 5. Early Cues
@@ -4932,14 +5002,14 @@ function renderPostSessionAnalysis(a, container) {
     var ecBody = '';
     ec.signals.forEach(function(s) { ecBody += '<div style="font-size:0.85rem;color:var(--ink);line-height:1.5;margin-bottom:6px;padding-left:16px;position:relative;"><span style="position:absolute;left:0;color:var(--gold);">\u2022</span>' + escapeHtml(s) + '</div>'; });
     if (ec.why_it_matters) ecBody += '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;line-height:1.5;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);"><span style="font-weight:600;">Why this matters:</span> ' + escapeHtml(ec.why_it_matters) + '</div>';
-    h += psCard('What to Listen for Early', 'Signals in the first few minutes that can reveal whether the previous session\u2019s shift is holding', 'For you to notice', ecBody);
+    h += psCard('What to Listen for Early', 'Signals in the first few minutes that can reveal whether the previous session\u2019s shift is holding', 'Coach Clarity \u2192 For You', ecBody, {id:'early-cues'});
   }
 
   // 6. Opening Question
   if (oq) {
     var oqBody = '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:700;color:var(--gold);line-height:1.4;font-style:italic;">' + escapeHtml(oq.question || '') + '</div>'
       + (oq.why_start_here ? '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;line-height:1.5;margin-top:10px;"><span style="font-weight:600;">Why this might be a useful place to start:</span> ' + escapeHtml(oq.why_start_here) + '</div>' : '');
-    h += psCard('A Question You Might Start With', 'Optional \u2014 use it, adapt it, or set it aside entirely', 'For you to consider', oqBody);
+    h += psCard('A Question You Might Start With', 'Optional \u2014 use it, adapt it, or set it aside entirely', 'Coach Clarity \u2192 For You', oqBody, {id:'opening'});
   }
 
   // 7. Next Session
@@ -4956,7 +5026,7 @@ function renderPostSessionAnalysis(a, container) {
       if (ns.if_shift.why_it_matters) nsBody += '<div style="margin-top:6px;"><span style="font-weight:600;color:var(--muted);">Why this matters:</span> ' + escapeHtml(ns.if_shift.why_it_matters) + '</div>';
       nsBody += '</div></details></div>';
     }
-    h += psCard('One Way to Approach the Next Session', 'One possible direction, not a prescription \u2014 your judgment takes precedence', 'For you', nsBody);
+    h += psCard('One Way to Approach the Next Session', 'One possible direction, not a prescription \u2014 your judgment takes precedence', 'Coach Clarity \u2192 For You', nsBody, {id:'next-session'});
   }
 
   // 8. Friction Points
@@ -4964,7 +5034,7 @@ function renderPostSessionAnalysis(a, container) {
     var fpBody = '';
     fp.points.forEach(function(p) { fpBody += '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;margin-bottom:4px;padding-left:16px;position:relative;"><span style="position:absolute;left:0;color:#b8860b;">\u2022</span>' + escapeHtml(p) + '</div>'; });
     if (fp.why_it_matters) fpBody += '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;line-height:1.5;margin-top:8px;"><span style="font-weight:600;">Why this matters:</span> ' + escapeHtml(fp.why_it_matters) + '</div>';
-    h += psCard('Where the Client May Get Stuck', 'Likely friction points worth anticipating before they arrive', 'About the client', fpBody);
+    h += psCard('Where the Client May Get Stuck', 'Likely friction points worth anticipating before they arrive', 'Observed', fpBody, {id:'friction'});
   }
 
   // 9. If Stuck
@@ -4972,11 +5042,13 @@ function renderPostSessionAnalysis(a, container) {
     var isBody = '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;margin-bottom:10px;">' + escapeHtml(ifS.scenario || '') + '</div>'
       + '<div style="font-size:0.85rem;color:var(--ink);margin-bottom:8px;"><span style="font-weight:600;color:var(--muted);">You might explore:</span> ' + escapeHtml(ifS.explore || ifS.pivot || '') + '</div>'
       + '<div style="font-size:0.85rem;color:var(--ink);"><span style="font-weight:600;color:var(--gold);">One possible direction:</span> ' + escapeHtml(ifS.one_possible_direction || ifS.in_session_move || '') + '</div>';
-    h += psCard('If the Session Loses Momentum', 'A possible way to redirect if the client can\u2019t move forward', 'For you', isBody);
+    h += psCard('If the Session Loses Momentum', 'A possible way to redirect if the client can\u2019t move forward', 'Coach Clarity \u2192 For You', isBody, {id:'if-stuck'});
   }
 
   // 10. Goals
+  // Live goals will be fetched after render
   var goalsBody = '';
+  goalsBody += '<div class="live-goals-slot" style="margin-bottom:12px;"></div>';
   if (goals && goals.existing && goals.existing.length) {
     var statusColors = { progressed: '#2d6a4f', stalled: '#b8860b', needs_revision: 'var(--gold)', completed: 'var(--ink)' };
     goals.existing.forEach(function(g) {
@@ -5019,7 +5091,7 @@ function renderPostSessionAnalysis(a, container) {
         + '</div></div>';
     });
   }
-  h += psCard('Goals \u2014 Where Things Stand', 'How this client\u2019s existing goals connect to today\u2019s session, plus new goals worth considering', 'About the client', goalsBody);
+  h += psCard('Goals \u2014 Where Things Stand', 'How this client\u2019s existing goals connect to today\u2019s session, plus new goals worth considering', 'Observed', goalsBody, {id:'goals'});
 
   // 11. Commitments
   if (cm && cm.length) {
@@ -5031,7 +5103,7 @@ function renderPostSessionAnalysis(a, container) {
         + (c.follow_up_question ? '<div style="background:var(--ink);border-radius:6px;padding:10px 14px;margin-top:6px;"><div style="font-size:0.7rem;font-weight:600;color:var(--gold);margin-bottom:4px;">A question you might explore with them:</div><div style="font-size:0.82rem;color:var(--cream);line-height:1.5;font-style:italic;">\u201c' + escapeHtml(c.follow_up_question || c.accountability_question || '') + '\u201d</div></div>' : '')
         + '</div>';
     });
-    h += psCard('Client-Stated Commitments', 'Specific agreements this client expressed or agreed to during this session \u2014 not system suggestions', 'About the client', cmBody);
+    h += psCard('Client-Stated Commitments', 'Specific agreements this client expressed or agreed to during this session \u2014 not Coach Clarity suggestions', 'Observed', cmBody, {id:'commitments'});
   }
 
   // 12. Between-Session Practices
@@ -5049,7 +5121,7 @@ function renderPostSessionAnalysis(a, container) {
         + '<button class="bsp-add-goal-btn" data-practice-title="' + escapeHtml(p.title || '') + '" data-practice-desc="' + escapeHtml(p.invitation || '') + '" style="padding:6px 14px;background:none;border:1px solid var(--gold);border-radius:6px;font-size:0.75rem;font-weight:600;color:var(--gold);cursor:pointer;font-family:\'DM Sans\',sans-serif;">+ Add as Client Goal</button>'
         + '</div>';
     });
-    h += psCard('Optional Between-Session Practices', 'System-generated suggestions you may offer the client \u2014 these have not been discussed yet and are for your consideration only', 'For you to offer', bsBody);
+    h += psCard('Optional Between-Session Practices', 'Coach Clarity suggestions you may offer the client \u2014 these have not been discussed yet and are for your consideration only', 'Coach Clarity \u2192 For You', bsBody, {id:'between-session'});
   }
 
   // 13. Coaching Signals
@@ -5062,7 +5134,7 @@ function renderPostSessionAnalysis(a, container) {
         + (s.implication || s.coach_move ? '<div style="font-size:0.82rem;color:var(--muted);line-height:1.5;"><span style="font-weight:600;color:var(--gold);">You might explore:</span> ' + escapeHtml(s.implication || s.coach_move || '') + '</div>' : '')
         + '</div>';
     });
-    h += psCard('What Stood Out in This Session', 'Observable moments that may indicate shifts in how this client is thinking, relating, or engaging', 'About the client', csBody);
+    h += psCard('What Stood Out in This Session', 'Observable moments that may indicate shifts in how this client is thinking, relating, or engaging', 'Observed', csBody, {id:'signals', collapsed:true});
   }
 
   // 14. Frameworks
@@ -5079,15 +5151,15 @@ function renderPostSessionAnalysis(a, container) {
         + '</div></details></div>';
     });
     fwBody += '<div style="margin-top:8px;"><a href="#" onclick="document.querySelector(\'[data-tab=coach-dna]\').click();return false;" style="font-size:0.82rem;color:var(--gold);font-weight:600;text-decoration:none;">These approaches have been logged to your Coach DNA \u2192</a></div>';
-    h += psCard('Coaching Approaches That Emerged', 'Patterns in how you guided this session \u2014 surfaced so you can use them more intentionally', 'About your coaching', fwBody);
+    h += psCard('Coaching Approaches That Emerged', 'Patterns in how you guided this session \u2014 surfaced so you can use them more intentionally', 'Coach Clarity \u2192 For You', fwBody, {id:'frameworks', collapsed:true});
   }
 
   // 15. Coach DNA
   if (cd) {
     var cdPatterns = cd.patterns || cd.patterns_observed || [];
     var cdWhy = cd.why_it_matters || cd.suggestion || '';
-    h += '<div style="background:var(--ink);border-radius:8px;padding:20px;margin-bottom:12px;position:relative;">'
-      + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);position:absolute;top:16px;right:20px;">About your coaching</div>'
+    h += '<div id="psi-coach-dna" style="background:var(--ink);border-radius:8px;padding:20px;margin-bottom:12px;position:relative;">'
+      + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);position:absolute;top:16px;right:20px;">Coach Clarity \u2192 For You</div>'
       + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:700;color:var(--cream);margin-bottom:4px;">Your Coaching Tendencies</div>'
       + '<div style="font-size:0.75rem;color:var(--cream);opacity:0.6;font-style:italic;margin-bottom:12px;">Trends across sessions in how you tend to coach this client</div>';
     cdPatterns.forEach(function(p) { h += '<div style="font-size:0.88rem;color:var(--cream);line-height:1.6;margin-bottom:6px;padding-left:16px;position:relative;"><span style="position:absolute;left:0;color:var(--gold);">\u2022</span>' + escapeHtml(p) + '</div>'; });
@@ -5102,8 +5174,8 @@ function renderPostSessionAnalysis(a, container) {
 
   // 17. Coaching Reflection & Growth (conditional — null = render nothing)
   if (cr) {
-    h += '<div style="border-left:2px solid var(--muted);background:var(--cream);border-radius:0 8px 8px 0;padding:20px 24px;margin-bottom:12px;margin-top:16px;position:relative;">'
-      + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);position:absolute;top:16px;right:20px;">For your development only</div>'
+    h += '<div id="psi-reflection" style="border-left:2px solid var(--muted);background:var(--cream);border-radius:0 8px 8px 0;padding:20px 24px;margin-bottom:12px;margin-top:16px;position:relative;">'
+      + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);position:absolute;top:16px;right:20px;">Coach Clarity \u2192 For Your Development</div>'
       + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:700;color:var(--ink);margin-bottom:4px;">Coaching Reflection & Growth</div>'
       + '<div style="font-size:0.75rem;color:var(--muted);font-style:italic;margin-bottom:16px;line-height:1.5;">Optional reflections on your approach in this session \u2014 for your development, not for the client. Use what fits your style and set aside what does not.</div>';
     if (cr.what_stood_out) {
@@ -5129,7 +5201,45 @@ function renderPostSessionAnalysis(a, container) {
     h += '</div>';
   }
 
+  h += '</div>'; // close main content column
+  h += '</div>'; // close two-column layout
+
   container.innerHTML = h;
+
+  // Wire sidebar IntersectionObserver
+  var navLinks = container.querySelectorAll('.psi-nav-link');
+  if (navLinks.length && typeof IntersectionObserver !== 'undefined') {
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        var link = container.querySelector('.psi-nav-link[data-section="' + entry.target.id + '"]');
+        if (link) { link.style.color = entry.isIntersecting ? 'var(--gold)' : 'var(--muted)'; link.style.fontWeight = entry.isIntersecting ? '600' : '400'; }
+      });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+    container.querySelectorAll('[id^="psi-"]').forEach(function(el) { observer.observe(el); });
+  }
+
+  // Live goals fetch
+  (async function() {
+    try {
+      var liveGoalsRes = await fetch(SUPABASE_URL + '/rest/v1/coach_goals?coach_id=eq.' + coachProfile.id + '&client_email=eq.' + encodeURIComponent(container.dataset.clientEmail) + '&order=created_at.desc&select=*', { headers: apiHeaders() });
+      var liveGoals = await liveGoalsRes.json();
+      if (liveGoals && liveGoals.length) {
+        var goalsEl = container.querySelector('#psi-goals .live-goals-slot');
+        if (goalsEl) {
+          var gh = '';
+          var statusColors = { not_started: 'var(--muted)', in_progress: 'var(--gold)', completed: '#2d6a4f' };
+          liveGoals.forEach(function(g) {
+            var sc = statusColors[g.status] || 'var(--muted)';
+            gh += '<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:8px;">'
+              + '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.65rem;font-weight:700;background:' + sc + ';color:#fff;">' + escapeHtml(g.status) + '</span>'
+              + '<span style="font-size:0.85rem;font-weight:600;color:var(--ink);">' + escapeHtml(g.title) + '</span>'
+              + '</div>';
+          });
+          goalsEl.innerHTML = '<div style="font-size:0.75rem;font-weight:600;color:var(--muted);margin-bottom:8px;">Current Goals</div>' + gh;
+        }
+      }
+    } catch(e) { /* silently fall back to analysis JSON goals */ }
+  })();
 
   // Wire suggested goal Add/Dismiss buttons
   container.querySelectorAll('.sg-add-btn').forEach(function(btn) {

@@ -108,6 +108,7 @@ export default async function handler(req, res) {
     const CONCISE = 'Every string value: 1-2 sentences max, under 40 words. Surface the signal, not the essay.';
     const JSON_ONLY = 'Return ONLY raw JSON. No markdown. No explanation. No preamble. Start with { and end with }.';
     const TONE = 'Address coach as "you". Never use: should, must, ask the client, do this. Use: you might explore, this may suggest, one possible direction.';
+    const IDENTITY = 'You are Coach Clarity, a reflective thinking partner for coaches. Your role is to surface patterns and possibilities, not to instruct. Think WITH the coach, not FOR them. All language must be suggestive, not prescriptive.';
 
     // ── Pass 1: Extraction ──────────────────────────────────────────────
     const extractionOutput = await callClaude(
@@ -122,7 +123,7 @@ ${sessionContent}`,
     );
 
     // ── Pass 2a: Core Intelligence ──────────────────────────────────────
-    const synthesisSystem = `You are a senior coaching intelligence system. ${TONE} ${CONCISE} ${JSON_ONLY}`;
+    const synthesisSystem = `${IDENTITY} ${TONE} ${CONCISE} ${JSON_ONLY}`;
 
     const coreOutput = await callClaude(
       ANTHROPIC_API_KEY,
@@ -134,7 +135,7 @@ ${sessionContent}`,
 EVIDENCE: ${JSON.stringify(extractionOutput)}
 
 Return ONLY this JSON:
-{"core_focus":{"summary":"","why_it_matters":""},"breakthrough":{"client_quote":"","what_changed":"","why_it_matters":"","reinforcement_suggestion":""},"pattern":{"name":"","description":"","trigger":"","behavior":"","timeline":{"past":"","present":"","future_risk":""},"next_session_watch":"","next_session_why":""},"strategic_direction":{"suggestion":"","why_it_matters":"","what_it_may_reveal":"","use_with_awareness":""},"early_cues":{"signals":[],"why_it_matters":""},"opening_question":{"question":"","why_start_here":""},"next_session":{"focus":"","listen_for":"","explore":"","if_shift":{"options":[],"why_it_matters":""}},"session_in_one_line":""}`,
+{"key_insights":["what client is doing or avoiding, max 20 words","what shifted this session if anything, max 20 words","what matters most to watch next session, max 20 words"],"core_focus":{"summary":"","why_it_matters":""},"breakthrough":{"client_quote":"","what_changed":"","why_it_matters":"","reinforcement_suggestion":""},"pattern":{"name":"","description":"","trigger":"","behavior":"","timeline":{"past":"","present":"","future_risk":""},"next_session_watch":"","next_session_why":""},"strategic_direction":{"suggestion":"","why_it_matters":"","what_it_may_reveal":"","use_with_awareness":""},"early_cues":{"signals":[],"why_it_matters":""},"opening_question":{"question":"","why_start_here":""},"next_session":{"focus":"","listen_for":"","explore":"","if_shift":{"options":[],"why_it_matters":""}},"session_in_one_line":""}`,
       'Pass 2a: Core Intelligence'
     );
 
@@ -162,19 +163,31 @@ Return ONLY this JSON:
     const synthesisOutput = { ...coreOutput, ...supportOutput };
 
     // ── Pass 3: Formatting (fault-tolerant — fall back to synthesis if this fails)
+    // Pre-clean directive language via string replacement before AI pass
+    let preCleaned = JSON.stringify(synthesisOutput);
+    const replacements = [
+      [/\bDon't\b/g, 'You might consider not'], [/\bdon't\b/g, 'you might consider not'],
+      [/\bDo not\b/g, 'It may be worth avoiding'], [/\bdo not\b/g, 'it may be worth avoiding'],
+      [/\bmust\b/gi, 'may want to'], [/\byou should\b/gi, 'you might'],
+      [/\bask her\b/gi, 'you might explore with them'], [/\bask him\b/gi, 'you might explore with them'],
+      [/\bask them\b/gi, 'you might explore with them'],
+      [/\btell her\b/gi, 'you might share with them'], [/\btell him\b/gi, 'you might share with them'],
+    ];
+    for (const [pat, rep] of replacements) { preCleaned = preCleaned.replace(pat, rep); }
+
     let formattedOutput;
     try {
       formattedOutput = await callClaude(
         ANTHROPIC_API_KEY,
         'claude-haiku-4-5-20251001',
         2000,
-        `You are a UX writer. Fix directive language: should→you might explore, must→it may be worth, do not→one possible approach. Verify all why_it_matters fields are non-empty. ${JSON_ONLY}`,
-        `Fix directive language in this JSON. Return corrected JSON with identical structure: ${JSON.stringify(synthesisOutput)}`,
+        `You are a UX writer for Coach Clarity. Scan every string value. Any directive language — commands, instructions, statements that remove the coach's choice — must be rewritten as a suggestive alternative. Fix: should→you might explore, must→it may be worth, do not→one possible approach. Verify all why_it_matters fields are non-empty. ${JSON_ONLY}`,
+        `Fix directive language in this JSON. Return corrected JSON with identical structure: ${preCleaned}`,
         'Pass 3: Formatting'
       );
     } catch (e) {
-      console.error('[Pass 3: Formatting] Failed, falling back to synthesis output:', e.message);
-      formattedOutput = synthesisOutput;
+      console.error('[Pass 3: Formatting] Failed, falling back to pre-cleaned synthesis:', e.message);
+      try { formattedOutput = JSON.parse(preCleaned); } catch (_) { formattedOutput = synthesisOutput; }
     }
 
     // ── Pass 3b: Coaching Reflection (conditional, fault-tolerant) ──────
