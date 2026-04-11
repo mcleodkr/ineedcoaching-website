@@ -5452,21 +5452,28 @@ function renderCoachingMirror(a, container) {
     h += mirrorSection('pm-interventions', 'Your Coaching Interventions This Session', 'Coach Clarity identified these specific techniques from this session. Each is grounded in a moment from your transcript.', 'Coach Clarity \u2192 For You', ciBody);
   }
 
+  // Stale data prompt if no new-schema sections exist
+  if ((!ci || !ci.length) && (!par || !par.length) && (!ws || !ws.length || !a.what_stood_out)) {
+    h += '<div style="border:2px solid var(--gold);border-radius:var(--r);padding:24px 28px;margin-bottom:16px;text-align:center;">'
+      + '<div style="font-size:0.88rem;color:var(--ink);line-height:1.6;">This analysis was generated before Coach Clarity\u2019s Coaching Mirror was updated. Regenerate Analysis on the Coach Clarity tab to see your coaching interventions, techniques, and mirror reflection.</div>'
+      + '</div>';
+  }
+
   // 5. Coaching Reflection & Growth
   if (rg) {
     var rgBody = '';
-    var rgStood = rg.what_stood_out_in_your_approach || (rg.what_stood_out ? rg.what_stood_out.observation : '') || '';
-    var rgEffective = rg.what_seemed_effective || (rg.what_seemed_effective ? rg.what_seemed_effective.observation : '') || '';
-    var rgCurious = rg.one_place_to_stay_curious || '';
-    // Compat with old coaching_reflection format
-    if (!rgStood && rg.what_stood_out && typeof rg.what_stood_out === 'object') rgStood = rg.what_stood_out.observation || '';
-    if (!rgEffective && rg.what_seemed_effective && typeof rg.what_seemed_effective === 'object') rgEffective = rg.what_seemed_effective.observation || '';
+    // Safely extract string from fields that could be string or object
+    function safeStr(val) { if (!val) return ''; if (typeof val === 'string') return val; if (typeof val === 'object') return val.observation || val.text || val.suggestion || JSON.stringify(val); return String(val); }
+    var rgStood = safeStr(rg.what_stood_out_in_your_approach) || safeStr(rg.what_stood_out);
+    var rgEffective = (typeof rg.what_seemed_effective === 'object' && rg.what_seemed_effective) ? safeStr(rg.what_seemed_effective) : (typeof rg.what_seemed_effective === 'string' ? rg.what_seemed_effective : '');
+    var rgCurious = safeStr(rg.one_place_to_stay_curious) || '';
     if (rgStood) rgBody += '<div style="margin-bottom:12px;"><div style="font-size:0.82rem;font-weight:600;color:var(--ink);margin-bottom:4px;">What stood out in your approach</div><div style="font-size:0.85rem;color:var(--ink);line-height:1.6;">' + escapeHtml(rgStood) + '</div></div>';
     if (rgEffective) rgBody += '<div style="margin-bottom:12px;"><div style="font-size:0.82rem;font-weight:600;color:var(--ink);margin-bottom:4px;">What seemed to be effective</div><div style="font-size:0.85rem;color:var(--ink);line-height:1.6;">' + escapeHtml(rgEffective) + '</div></div>';
     if (rgCurious) rgBody += '<div style="margin-bottom:8px;"><div style="font-size:0.82rem;font-weight:600;color:var(--ink);margin-bottom:4px;">A place to stay curious</div><div style="font-size:0.85rem;color:var(--muted);font-style:italic;line-height:1.6;">' + escapeHtml(rgCurious) + '</div></div>';
     // Compat: old one_thing_to_consider
-    if (rg.one_thing_to_consider && rg.one_thing_to_consider.suggestion) {
-      rgBody += '<div style="margin-bottom:8px;"><div style="font-size:0.82rem;font-weight:600;color:var(--ink);margin-bottom:4px;">One thing you might consider</div><div style="font-size:0.85rem;color:var(--ink);line-height:1.6;">' + escapeHtml(rg.one_thing_to_consider.suggestion) + '</div></div>';
+    var rgConsider = rg.one_thing_to_consider ? safeStr(rg.one_thing_to_consider) : '';
+    if (rgConsider) {
+      rgBody += '<div style="margin-bottom:8px;"><div style="font-size:0.82rem;font-weight:600;color:var(--ink);margin-bottom:4px;">One thing you might consider</div><div style="font-size:0.85rem;color:var(--ink);line-height:1.6;">' + escapeHtml(rgConsider) + '</div></div>';
     }
     if (rgBody) {
       h += '<div style="border-top:1px solid var(--border);padding-top:24px;margin-top:8px;"></div>';
