@@ -4694,27 +4694,41 @@ function renderPreSessionBrief(b, container) {
     h += '</div>';
   }
 
+  // SESSION OPENING MOVE — before strategy
+  if (b.opening_move) {
+    h += '<div style="border:2px solid var(--gold);border-radius:8px;padding:24px 28px;margin-bottom:24px;text-align:center;">'
+      + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);margin-bottom:12px;">SESSION OPENING MOVE</div>'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:700;color:var(--ink);line-height:1.4;">' + escapeHtml(b.opening_move) + '</div>'
+      + '</div>';
+  }
+
   // Session Strategy
   if (b.session_strategy) {
     var ss = b.session_strategy;
     h += '<div style="margin-bottom:24px;border-left:4px solid var(--gold);border-radius:0 8px 8px 0;background:var(--white);padding:20px 24px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">'
       + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:14px;">Session Strategy</div>';
     // Primary Move — visually dominant
-    h += '<div style="margin-bottom:16px;padding-top:4px;"><div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);margin-bottom:6px;">Primary Move</div>'
+    h += '<div style="margin-bottom:16px;padding-top:4px;"><div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);margin-bottom:6px;">One Direction to Consider</div>'
       + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:700;color:var(--ink);line-height:1.4;">' + escapeHtml(ss.primary_move || '') + '</div></div>';
     // 2-column grid for remaining
     h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">';
-    [['Notice In-Session', ss.notice_in_session || ss.watch_for], ['Leverage', ss.leverage], ['Avoid', ss.avoid]].forEach(function(row) {
+    [['Notice In-Session', ss.notice_in_session || ss.watch_for], ['Leverage', ss.leverage], ['Worth Being Cautious Of', ss.avoid]].forEach(function(row) {
       h += '<div><div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:4px;">' + row[0] + '</div>'
         + '<div style="font-size:0.88rem;font-weight:700;color:var(--ink);line-height:1.5;">' + escapeHtml(row[1] || '') + '</div></div>';
     });
     h += '</div>';
-    // Decision Point
+    // Decision Point — collapsible
     if (ss.decision_point) {
       h += '<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">'
-        + '<div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);margin-bottom:8px;">Decision Point</div>'
-        + '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;margin-bottom:4px;">\u2192 If reflective: ' + escapeHtml(ss.decision_point.if_reflective || '') + '</div>'
-        + '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;">\u2192 If analytical: ' + escapeHtml(ss.decision_point.if_analytical || '') + '</div>'
+        + '<div style="font-size:0.88rem;font-weight:600;color:var(--ink);line-height:1.5;margin-bottom:8px;">If the session shifts\u2026</div>'
+        + '<details style="cursor:pointer;"><summary style="font-size:0.75rem;font-weight:600;color:var(--gold);cursor:pointer;margin-bottom:6px;">View options</summary>'
+        + '<div style="padding:8px 0 0 0;font-size:0.85rem;color:var(--ink);line-height:1.6;">'
+        + '<div style="margin-bottom:4px;"><span style="font-weight:700;color:var(--muted);">Why this may matter:</span> The client\u2019s mode reveals how they\u2019re processing the work right now.</div>'
+        + '<div style="margin-bottom:4px;"><span style="font-weight:700;color:var(--muted);">What it may reveal:</span></div>'
+        + '<div style="margin-bottom:4px;">\u2192 If reflective: ' + escapeHtml(ss.decision_point.if_reflective || '') + '</div>'
+        + '<div style="margin-bottom:4px;">\u2192 If analytical: ' + escapeHtml(ss.decision_point.if_analytical || '') + '</div>'
+        + '<div><span style="font-weight:700;color:#b8860b;">Use with care:</span> Naming the mode too early can shut down the client\u2019s natural processing.</div>'
+        + '</div></details>'
         + '</div>';
     }
     h += '</div>';
@@ -4821,7 +4835,10 @@ function renderPostSessionAnalysis(a, container) {
     var bm = typeof a.breakthrough_moment === 'string' ? { text: a.breakthrough_moment, type_tag: null } : a.breakthrough_moment;
     if (bm && bm.text) {
       var tagHtml = bm.type_tag ? '<span style="display:inline-block;padding:3px 10px;border-radius:50px;font-size:0.68rem;font-weight:700;background:var(--gold);color:#fff;margin-bottom:8px;">' + escapeHtml(bm.type_tag) + '</span>' : '';
-      var bmBody = tagHtml + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:700;color:var(--ink);line-height:1.4;font-style:italic;margin-bottom:10px;">"' + escapeHtml(bm.text) + '"</div>';
+      var bmBody = tagHtml
+        + '<div style="font-size:0.72rem;color:var(--muted);margin-bottom:6px;line-height:1.4;">What shifted in how this client sees themselves:</div>'
+        + '<div style="margin-bottom:10px;"><span style="font-size:0.78rem;font-style:italic;color:var(--gold);margin-right:4px;">Client said:</span>'
+        + '<span style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:700;color:var(--ink);line-height:1.4;font-style:italic;">\u201c' + escapeHtml(bm.text) + '\u201d</span></div>';
       if (bm.identity_shift) bmBody += '<div style="margin-bottom:4px;"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);">Identity Shift \u2192</span> <span style="font-size:0.82rem;color:var(--ink);">' + escapeHtml(bm.identity_shift) + '</span></div>';
       if (bm.repeat_behavior) bmBody += '<div><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink);">Repeat \u2192</span> <span style="font-size:0.82rem;color:var(--ink);">' + escapeHtml(bm.repeat_behavior) + '</span></div>';
       h += ciCard('Breakthrough Moment', bmBody);
@@ -4831,7 +4848,9 @@ function renderPostSessionAnalysis(a, container) {
   // 2. Active Pattern + Pattern Timeline + Pattern Continuity
   if (a.active_pattern) {
     var ap = a.active_pattern;
-    var apHtml = '<div style="font-size:0.85rem;color:var(--muted);margin-bottom:6px;"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:0.06em;">Trigger:</span> ' + escapeHtml(ap.trigger || '') + '</div>'
+    var apHtml = '<div style="font-size:0.78rem;color:var(--muted);font-style:italic;margin-bottom:10px;line-height:1.5;">This is a recurring behavioral pattern your system has identified across sessions.</div>'
+      + '<div style="margin-bottom:6px;"><span style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);">Pattern identified:</span> <span style="font-size:0.85rem;color:var(--ink);font-weight:600;">' + escapeHtml(ap.name || 'Unnamed Pattern') + '</span></div>'
+      + '<div style="font-size:0.85rem;color:var(--muted);margin-bottom:6px;"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:0.06em;">Trigger:</span> ' + escapeHtml(ap.trigger || '') + '</div>'
       + '<div style="font-size:0.85rem;color:var(--muted);margin-bottom:6px;"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:0.06em;">Behavior:</span> ' + escapeHtml(ap.behavior || '') + '</div>';
     if (a.pattern_timeline) {
       var pt = a.pattern_timeline;
@@ -4843,11 +4862,22 @@ function renderPostSessionAnalysis(a, container) {
         + '</div>';
     }
     apHtml += '<div style="font-size:0.85rem;color:var(--ink);margin-bottom:8px;"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;color:var(--gold);letter-spacing:0.06em;">Next Session:</span> ' + escapeHtml(ap.next_session_use || '') + '</div>';
-    if (ap.counter_move) {
+    // Strategic Suggestion (formerly Counter-Move) — collapsible 4-part structure
+    var ss = ap.strategic_suggestion || ap.counter_move;
+    if (ss) {
+      var ssSuggestion = ss.suggestion || ss.move || '';
+      var ssWhy = ss.why_this_may_matter || '';
+      var ssReveal = ss.what_it_may_reveal || '';
+      var ssCaution = ss.use_with_care || '';
       apHtml += '<div style="margin:8px 0;padding:10px 14px;background:rgba(196,154,60,0.06);border-radius:6px;">'
-        + '<div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);margin-bottom:6px;">Counter-Move</div>'
-        + '<div style="font-size:0.82rem;color:var(--muted);margin-bottom:4px;"><span style="font-weight:600;color:var(--ink);">When:</span> ' + escapeHtml(ap.counter_move.when || '') + '</div>'
-        + '<div style="font-size:0.82rem;color:var(--ink);"><span style="font-weight:600;">Move:</span> ' + escapeHtml(ap.counter_move.move || '') + '</div>'
+        + '<div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);margin-bottom:6px;">Strategic Suggestion</div>'
+        + '<div style="font-size:0.88rem;font-weight:600;color:var(--ink);line-height:1.5;margin-bottom:8px;">' + escapeHtml(ssSuggestion) + '</div>'
+        + '<details style="cursor:pointer;"><summary style="font-size:0.75rem;font-weight:600;color:var(--gold);cursor:pointer;margin-bottom:6px;">View rationale</summary>'
+        + '<div style="padding:8px 0 0 0;font-size:0.82rem;color:var(--muted);line-height:1.6;">'
+        + (ssWhy ? '<div style="margin-bottom:6px;"><span style="font-weight:700;color:var(--ink);">Why this may matter:</span> ' + escapeHtml(ssWhy) + '</div>' : '')
+        + (ssReveal ? '<div style="margin-bottom:6px;"><span style="font-weight:700;color:var(--ink);">What it may reveal:</span> ' + escapeHtml(ssReveal) + '</div>' : '')
+        + (ssCaution ? '<div><span style="font-weight:700;color:#b8860b;">Use with care:</span> ' + escapeHtml(ssCaution) + '</div>' : '')
+        + '</div></details>'
         + '</div>';
     }
     if (a.pattern_continuity) {
@@ -4867,22 +4897,37 @@ function renderPostSessionAnalysis(a, container) {
       + esHtml + '</div>';
   }
 
+  // SESSION OPENING MOVE — before strategy
+  if (a.opening_move) {
+    h += '<div style="border:2px solid var(--gold);border-radius:var(--r);padding:24px 28px;margin-bottom:12px;text-align:center;">'
+      + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);margin-bottom:12px;">SESSION OPENING MOVE</div>'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:700;color:var(--ink);line-height:1.4;">' + escapeHtml(a.opening_move) + '</div>'
+      + '</div>';
+  }
+
   // 3. Next Session Strategy
   if (a.next_session_strategy) {
     var ns = a.next_session_strategy;
-    var nsHtml = '<div style="margin-bottom:14px;"><div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);margin-bottom:6px;">Primary Move</div>'
+    var nsHtml = '<div style="margin-bottom:14px;"><div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);margin-bottom:6px;">One Direction to Consider</div>'
       + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:700;color:var(--ink);line-height:1.4;">' + escapeHtml(ns.primary_move || '') + '</div></div>'
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">';
-    [['Notice In-Session', ns.watch_for], ['Test This', ns.test_this]].forEach(function(row) {
+    [['Notice In-Session', ns.watch_for], ['What to Watch For', ns.test_this]].forEach(function(row) {
       nsHtml += '<div><div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:4px;">' + row[0] + '</div>'
         + '<div style="font-size:0.88rem;font-weight:600;color:var(--ink);line-height:1.5;">' + escapeHtml(row[1] || '') + '</div></div>';
     });
     nsHtml += '</div>';
     if (ns.decision_point) {
       nsHtml += '<div style="padding-top:12px;border-top:1px solid var(--border);">'
-        + '<div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);margin-bottom:8px;">Decision Point</div>'
-        + '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;margin-bottom:4px;">\u2192 If reflective: ' + escapeHtml(ns.decision_point.if_reflective || '') + '</div>'
-        + '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;">\u2192 If analytical: ' + escapeHtml(ns.decision_point.if_analytical || '') + '</div></div>';
+        + '<div style="font-size:0.88rem;font-weight:600;color:var(--ink);line-height:1.5;margin-bottom:8px;">If the session shifts\u2026</div>'
+        + '<details style="cursor:pointer;"><summary style="font-size:0.75rem;font-weight:600;color:var(--gold);cursor:pointer;margin-bottom:6px;">View options</summary>'
+        + '<div style="padding:8px 0 0 0;font-size:0.85rem;color:var(--ink);line-height:1.6;">'
+        + '<div style="margin-bottom:4px;"><span style="font-weight:700;color:var(--muted);">Why this may matter:</span> The client\u2019s mode reveals how they\u2019re processing the work right now.</div>'
+        + '<div style="margin-bottom:4px;"><span style="font-weight:700;color:var(--muted);">What it may reveal:</span></div>'
+        + '<div style="margin-bottom:4px;">\u2192 If reflective: ' + escapeHtml(ns.decision_point.if_reflective || '') + '</div>'
+        + '<div style="margin-bottom:4px;">\u2192 If analytical: ' + escapeHtml(ns.decision_point.if_analytical || '') + '</div>'
+        + '<div><span style="font-weight:700;color:#b8860b;">Use with care:</span> Naming the mode too early can shut down the client\u2019s natural processing.</div>'
+        + '</div></details>'
+        + '</div>';
     }
     h += ciCard('Next Session Strategy', nsHtml);
   }
