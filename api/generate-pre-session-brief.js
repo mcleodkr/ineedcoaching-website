@@ -20,14 +20,15 @@ export default async function handler(req, res) {
 
     const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
-    const [notesRes, goalsRes, bookingsRes, checkinRes] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/coach_session_notes?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&order=created_at.desc&limit=3&select=notes,format,structured_notes,created_at`, { headers }),
+    const [notesRes, goalsRes, bookingsRes, checkinRes, intakeRes] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/coach_session_notes?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&order=created_at.desc&limit=3&select=notes,format,structured_notes,post_session_analysis,created_at`, { headers }),
       fetch(`${SUPABASE_URL}/rest/v1/coach_goals?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&order=created_at.desc&select=title,status,target_date`, { headers }),
       fetch(`${SUPABASE_URL}/rest/v1/coach_bookings?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&status=eq.confirmed&order=scheduled_at.desc&limit=5&select=id,scheduled_at,notes`, { headers }),
-      bookingId ? fetch(`${SUPABASE_URL}/rest/v1/coach_checkin_responses?booking_id=eq.${bookingId}&submitted_at=not.is.null&select=responses&limit=1`, { headers }) : Promise.resolve({ json: () => [] })
+      bookingId ? fetch(`${SUPABASE_URL}/rest/v1/coach_checkin_responses?booking_id=eq.${bookingId}&submitted_at=not.is.null&select=responses&limit=1`, { headers }) : Promise.resolve({ json: () => [] }),
+      fetch(`${SUPABASE_URL}/rest/v1/coach_intake_responses?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&order=created_at.desc&limit=1&select=responses`, { headers })
     ]);
 
-    const [notes, goals, bookings, checkins] = await Promise.all([notesRes.json(), goalsRes.json(), bookingsRes.json(), checkinRes.json ? checkinRes.json() : []]);
+    const [notes, goals, bookings, checkins, intakeData] = await Promise.all([notesRes.json(), goalsRes.json(), bookingsRes.json(), checkinRes.json ? checkinRes.json() : [], intakeRes.json()]);
 
     const clientName = (() => {
       for (const b of (bookings || [])) {
@@ -38,12 +39,31 @@ export default async function handler(req, res) {
     })();
 
     const sessionCount = (bookings || []).length;
-    const lastNotes = (notes || []).map(n => {
+
+    // Prefer structured post_session_analysis JSON from prior sessions
+    const priorAnalyses = (notes || []).filter(n => n.post_session_analysis).map(n => n.post_session_analysis);
+    let sessionContext = '';
+    if (priorAnalyses.length > 0) {
+      const latest = priorAnalyses[0];
+      const parts = [];
+      if (latest.core_focus) parts.push('Core focus: ' + (latest.core_focus.summary || ''));
+      if (latest.breakthrough) parts.push('Last breakthrough: ' + (latest.breakthrough.what_changed || latest.breakthrough.client_quote || ''));
+      if (latest.pattern) parts.push('Active pattern: ' + (latest.pattern.name || '') + ' — ' + (latest.pattern.description || latest.pattern.trigger || ''));
+      if (latest.goals && latest.goals.suggested) parts.push('Suggested goals: ' + latest.goals.suggested.map(g => g.title).join(', '));
+      if (latest.commitments) parts.push('Commitments: ' + latest.commitments.map(c => c.text || c.title || '').join(', '));
+      if (latest.session_in_one_line) parts.push('Session summary: ' + latest.session_in_one_line);
+      // Compat with old schema
+      if (latest.pre_session_seed) parts.push('North star: ' + latest.pre_session_seed);
+      sessionContext = parts.join('\n');
+    }
+
+    const lastNotes = sessionContext || (notes || []).map(n => {
       if (n.structured_notes) return Object.entries(n.structured_notes).map(([k, v]) => `${k}: ${v}`).join('\n');
       return n.notes || '';
     }).join('\n---\n');
     const goalsSummary = (goals || []).map(g => `${g.title} (${g.status})`).join(', ');
     const checkinText = (checkins || []).length ? JSON.stringify(checkins[0].responses) : 'No pre-session check-in submitted';
+    const intakeBaseline = (intakeData || []).length ? JSON.stringify(intakeData[0].responses) : '';
 
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -67,7 +87,7 @@ export default async function handler(req, res) {
   "this_session_is": [string, string, string],
   "this_session_is_not": [string, string, string]
 }`,
-        messages: [{ role: 'user', content: `Prepare a pre-session brief for session #${sessionCount + 1} with ${clientName}.\n\nPrevious session notes:\n${lastNotes || 'No previous notes'}\n\nActive goals: ${goalsSummary || 'None set'}\n\nPre-session check-in: ${checkinText}\n\nToday's date: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}` }]
+        messages: [{ role: 'user', content: `Prepare a pre-session brief for session #${sessionCount + 1} with ${clientName}.\n\nPrevious session context:\n${lastNotes || 'No previous notes'}\n\nActive goals: ${goalsSummary || 'None set'}\n\nPre-session check-in: ${checkinText}${intakeBaseline ? '\n\nIntake baseline:\n' + intakeBaseline : ''}\n\nToday's date: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}` }]
       })
     });
 

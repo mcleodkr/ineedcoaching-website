@@ -3,6 +3,9 @@
     "api/post-session-analysis.js": {
       "maxDuration": 120
     },
+    "api/generate-post-session-intelligence.js": {
+      "maxDuration": 120
+    },
     "api/generate-pre-session-brief.js": {
       "maxDuration": 120
     },
