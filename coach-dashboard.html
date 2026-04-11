@@ -3588,11 +3588,6 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
       // Trigger the framework card click which handles everything
       var selectedCard = panel.querySelector('.fmt-card[data-format="' + format + '"]');
       if (selectedCard) selectedCard.click();
-      } catch(e) {
-        safeHTML('gen-transcript-status-' + sid, '<span style="color:#c44;">' + escapeHtml(e.message) + '</span>');
-        this.disabled = false;
-        this.textContent = 'Generate Notes from Transcript';
-      }
     });
   });
 
