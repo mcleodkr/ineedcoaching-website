@@ -71,7 +71,8 @@ export default async function handler(req, res) {
 
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const { coachId, clientEmail, bookingId, existingGoals } = body;
+    const { coachId, clientEmail, bookingId, existingGoals, feedbackStyle } = body;
+    const fbStyle = feedbackStyle || 'reflective';
 
     if (!coachId || !bookingId) {
       return res.status(400).json({ error: 'Missing required fields: coachId, bookingId' });
@@ -170,20 +171,24 @@ Return ONLY:
       'Pass 2b: Interventions'
     );
 
-    // ── Pass 2c: Curiosity Edges only ───────────────────────────────────
+    // ── Pass 2c: Curiosity + Missed Windows ───────────────────────────
     const pass2cOutput = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
-      800,
-      MIRROR_RULES,
-      `Generate max 2 curiosity edges. Max 15 words per value.
+      1500,
+      `${MIRROR_RULES} Feedback style: ${fbStyle}. If reflective: lead with "There was an opening to...", "You might notice...". If direct: lead with "You stayed at the surface.", "You moved past a deeper opening.". Both: never shame, never say "you should have" or "you missed". Anchor in observable behavior.`,
+      `Generate max 2 curiosity edges and max 2 missed windows. Max 12 words per field. If no meaningful missed window exists return empty array.
+
+Scan for missed depth opportunities using 5 signal types. Each must meet 2+ criteria. Score: emotional_signal 1-3, pattern_relevance 1-3, depth_potential 1-3. Return top 2 by score.
+Signal types: EMOTIONAL_MISMATCH (emotion stronger than event), REPETITION_WITHOUT_MOVEMENT (same idea 2-3x without resolution), CHARGED_LANGUAGE (trapped/betrayed/invisible/stuck), BEHAVIORAL_CONTRADICTION (gap between stated and done), ENERGY_SHIFT (sudden relief/tension/tears/flatness).
+Strength: 3-4=Subtle opening, 5-6=Clear opening, 7-9=Strong opening.
 
 EVIDENCE: ${JSON.stringify(extractionOutput)}
 CORE: ${JSON.stringify(coreOutput)}
 
 Return ONLY:
-{"curiosity_edges":[{"curiosity_note":"","what_to_notice":"","why_this_stands_out":""}]}`,
-      'Pass 2c: Curiosity'
+{"curiosity_edges":[{"curiosity_note":"","what_to_notice":"","why_this_stands_out":""}],"missed_windows":[{"signal_type":"emotional_mismatch|repetition_without_movement|charged_language|behavioral_contradiction|energy_shift","signal_strength":"Subtle opening|Clear opening|Strong opening","moment":"","what_was_underneath":"","what_you_did":"You...","what_was_possible":"","why_this_matters_for_your_work":"","how_to_catch_this_next_time":{"signal_to_watch_for":"","what_that_may_mean":"","one_possible_way_to_respond":"You might...","a_question_that_could_open_this_up":""}}]}`,
+      'Pass 2c: Curiosity + Missed Windows'
     );
 
     // ── Pass 2d: Patterns + Goals + Frameworks (fault-tolerant) ────────

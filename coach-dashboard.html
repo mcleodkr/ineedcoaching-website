@@ -4871,7 +4871,7 @@ async function runPostSessionAnalysis(bookingId, clientEmail, sessionNotes, form
     var goalTitles = (existingGoals || []).filter(function(g) { return g.status !== 'completed'; }).map(function(g) { return g.title; });
     var res = await fetch('/api/generate-post-session-intelligence', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ coachId: coachProfile.id, clientEmail: clientEmail, bookingId: bookingId, existingGoals: goalTitles })
+      body: JSON.stringify({ coachId: coachProfile.id, clientEmail: clientEmail, bookingId: bookingId, existingGoals: goalTitles, feedbackStyle: coachProfile.feedback_style || 'reflective' })
     });
     psiTimers.forEach(function(t) { clearTimeout(t); });
     var analysis = await res.json();
@@ -5394,6 +5394,7 @@ function renderCoachingMirror(a, container) {
     + '<a href="#pm-interventions" class="pm-nav-link" data-section="pm-interventions" style="' + pmLinkStyle + '">Your Interventions</a>'
     + '<a href="#pm-tendencies" class="pm-nav-link" data-section="pm-tendencies" style="' + pmLinkStyle + '">Your Tendencies</a>'
     + '<a href="#pm-reflection" class="pm-nav-link" data-section="pm-reflection" style="' + pmLinkStyle + '">Reflection & Growth</a>'
+    + '<a href="#pm-missed" class="pm-nav-link" data-section="pm-missed" style="' + pmLinkStyle + '">Going Deeper</a>'
     + '<a href="#pm-curiosity" class="pm-nav-link" data-section="pm-curiosity" style="' + pmLinkStyle + '">Stay Curious</a>'
     + '</nav>';
 
@@ -5548,6 +5549,48 @@ function renderCoachingMirror(a, container) {
     }
   }
 
+  // 5.5 Where You Could Have Gone Deeper (missed_windows)
+  var mw = a.missed_windows || [];
+  if (mw && mw.length) {
+    mw = mw.filter(function(x) { return x != null; });
+    if (mw.length) {
+      var mwBody = '';
+      var strengthColors = { 'Subtle opening': 'var(--muted)', 'Clear opening': 'var(--gold)', 'Strong opening': '#b8860b' };
+      mw.forEach(function(w, idx) {
+        if (!w) return;
+        var stc = strengthColors[w.signal_strength] || 'var(--muted)';
+        mwBody += '<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin-bottom:12px;position:relative;">'
+          + '<div style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:700;background:' + stc + ';color:#fff;position:absolute;top:16px;right:16px;">' + escapeHtml(w.signal_strength || '') + '</div>'
+          + '<div style="font-weight:700;font-size:0.88rem;color:var(--ink);margin-bottom:8px;padding-right:120px;">' + escapeHtml(w.moment || '') + '</div>'
+          + (w.what_was_underneath ? '<div style="font-size:0.82rem;color:var(--ink);line-height:1.5;margin-bottom:4px;"><span style="font-weight:700;">What may have been underneath:</span> ' + escapeHtml(w.what_was_underneath) + '</div>' : '')
+          + (w.what_you_did ? '<div style="font-size:0.82rem;color:var(--ink);line-height:1.5;margin-bottom:4px;"><span style="font-weight:700;">What you did:</span> ' + escapeHtml(w.what_you_did) + '</div>' : '')
+          + (w.what_was_possible ? '<div style="font-size:0.82rem;color:var(--gold);font-style:italic;line-height:1.5;margin-bottom:4px;"><span style="font-weight:700;color:var(--ink);">What was available:</span> ' + escapeHtml(w.what_was_possible) + '</div>' : '')
+          + (w.why_this_matters_for_your_work ? '<div style="font-size:0.82rem;color:var(--muted);line-height:1.5;margin-bottom:8px;"><span style="font-weight:700;color:var(--ink);">Why this matters for your work:</span> ' + escapeHtml(w.why_this_matters_for_your_work) + '</div>' : '');
+        // Restoration layer
+        if (w.how_to_catch_this_next_time) {
+          var htc = w.how_to_catch_this_next_time;
+          mwBody += '<div style="background:var(--cream);border-left:2px solid #2d6a4f;border-radius:0 8px 8px 0;padding:14px 16px;margin-top:8px;">'
+            + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:8px;">How to Catch This Next Time</div>'
+            + (htc.signal_to_watch_for ? '<div style="font-size:0.78rem;color:var(--ink);line-height:1.5;margin-bottom:4px;"><span style="font-weight:700;">Signal to watch for:</span> ' + escapeHtml(htc.signal_to_watch_for) + '</div>' : '')
+            + (htc.what_that_may_mean ? '<div style="font-size:0.78rem;color:var(--ink);line-height:1.5;margin-bottom:4px;"><span style="font-weight:700;">What that may mean:</span> ' + escapeHtml(htc.what_that_may_mean) + '</div>' : '')
+            + (htc.one_possible_way_to_respond ? '<div style="font-size:0.78rem;color:var(--muted);font-style:italic;line-height:1.5;margin-bottom:4px;"><span style="font-weight:700;color:var(--ink);">One possible way to respond:</span> ' + escapeHtml(htc.one_possible_way_to_respond) + '</div>' : '')
+            + (htc.a_question_that_could_open_this_up ? '<div style="font-size:0.78rem;color:var(--gold);font-style:italic;line-height:1.5;"><span style="font-weight:700;color:var(--ink);">A question that could open this up:</span> ' + escapeHtml(htc.a_question_that_could_open_this_up) + '</div>' : '')
+            + '</div>';
+        }
+        // Direct read toggle
+        mwBody += '<div style="margin-top:8px;"><a href="#" class="mw-direct-read" data-mw-idx="' + idx + '" style="font-size:0.75rem;color:var(--gold);font-style:italic;text-decoration:none;cursor:pointer;">See a direct read \u2192</a></div>'
+          + '<div class="mw-direct-panel" data-mw-idx="' + idx + '" style="display:none;background:rgba(196,154,60,0.04);border-radius:8px;padding:14px 16px;margin-top:8px;">'
+          + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);margin-bottom:6px;">Direct read:</div>'
+          + '<div style="font-size:0.82rem;color:var(--ink);line-height:1.5;">You stayed at the surface. ' + escapeHtml(w.what_was_underneath || '') + ' was available and was not explored. ' + escapeHtml(w.what_was_possible || '') + '</div>'
+          + '<a href="#" class="mw-direct-close" data-mw-idx="' + idx + '" style="display:block;font-size:0.72rem;color:var(--muted);text-decoration:none;cursor:pointer;margin-top:6px;">Collapse</a>'
+          + '</div>';
+        mwBody += '<div style="font-size:0.72rem;color:var(--muted);font-style:italic;margin-top:8px;">Not every opening needs to be taken. This simply makes it visible.</div>';
+        mwBody += '</div>';
+      });
+      h += mirrorSection('pm-missed', 'Where You Could Have Gone Deeper', 'Moments where the session pointed toward deeper work that was available but not fully explored. Not corrections, just visibility.', 'Coach Clarity \u2192 For Your Development', mwBody);
+    }
+  }
+
   // 6. Where to Stay Curious
   if (ce && ce.length) {
     var ceBody = '';
@@ -5583,6 +5626,26 @@ function renderCoachingMirror(a, container) {
     }, { rootMargin: '-20% 0px -70% 0px' });
     container.querySelectorAll('[id^="pm-"]').forEach(function(el) { observer.observe(el); });
   }
+
+  // Wire direct read toggles
+  container.querySelectorAll('.mw-direct-read').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      var idx = this.dataset.mwIdx;
+      var panel = container.querySelector('.mw-direct-panel[data-mw-idx="' + idx + '"]');
+      if (panel) { panel.style.display = ''; this.style.display = 'none'; }
+    });
+  });
+  container.querySelectorAll('.mw-direct-close').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      var idx = this.dataset.mwIdx;
+      var panel = container.querySelector('.mw-direct-panel[data-mw-idx="' + idx + '"]');
+      var openLink = container.querySelector('.mw-direct-read[data-mw-idx="' + idx + '"]');
+      if (panel) panel.style.display = 'none';
+      if (openLink) openLink.style.display = '';
+    });
+  });
 
   // Smooth scroll
   container.querySelectorAll('.pm-nav-link').forEach(function(link) {
