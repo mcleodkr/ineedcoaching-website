@@ -126,23 +126,20 @@ ${sessionContent}`,
       'Pass 1: Extraction'
     );
 
-    // ── Pass 2: Synthesis ───────────────────────────────────────────────
-    const goalsContext = existingGoals && existingGoals.length
-      ? '\n\nExisting client goals:\n' + existingGoals.map((g, i) => `${i + 1}. ${g}`).join('\n')
-      : '';
+    // ── Pass 2a: Core Intelligence ────────────────────────────────────────
+    const synthesisSystem = `You are a senior coaching intelligence system. Interpret extracted session evidence into structured coaching insights. Address the coach as "you" throughout. Use only suggestive language. Never use: should, must, ask the client, do this. Always use: you might explore, this may suggest, one possible direction. Every insight must include why it matters. Return JSON only.`;
 
-    const synthesisOutput = await callClaude(
+    const coreOutput = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
-      4000,
-      `You are a senior coaching intelligence system. Interpret extracted session evidence into structured coaching insights. Address the coach as "you" throughout. Use only suggestive language. Never use: should, must, ask the client, do this. Always use: you might explore, this may suggest, one possible direction. Every insight must include why it matters. Return JSON only.`,
-      `Using the extracted session evidence below, generate a structured coaching intelligence report.
-${goalsContext}
+      3000,
+      synthesisSystem,
+      `Using the extracted session evidence below, generate the CORE coaching intelligence fields.
 
 EXTRACTED EVIDENCE:
 ${JSON.stringify(extractionOutput, null, 2)}
 
-Return a JSON object with this exact structure:
+Return a JSON object with ONLY these fields:
 {
   "core_focus": { "summary": "", "why_it_matters": "" },
   "breakthrough": { "client_quote": "", "what_changed": "", "why_it_matters": "", "reinforcement_suggestion": "" },
@@ -151,6 +148,32 @@ Return a JSON object with this exact structure:
   "early_cues": { "signals": [], "why_it_matters": "" },
   "opening_question": { "question": "", "why_start_here": "" },
   "next_session": { "focus": "", "listen_for": "", "explore": "", "if_shift": { "options": [], "why_it_matters": "" } },
+  "session_in_one_line": "[Client] shifted from [X] to [Y] by [mechanism]. One sentence."
+}`,
+      'Pass 2a: Core Intelligence'
+    );
+
+    // ── Pass 2b: Supporting Intelligence ────────────────────────────────
+    const goalsContext = existingGoals && existingGoals.length
+      ? '\n\nExisting client goals:\n' + existingGoals.map((g, i) => `${i + 1}. ${g}`).join('\n')
+      : '';
+
+    const supportOutput = await callClaude(
+      ANTHROPIC_API_KEY,
+      'claude-sonnet-4-6',
+      2500,
+      synthesisSystem,
+      `Using the extracted evidence AND the core intelligence already generated, produce the SUPPORTING intelligence fields. Stay consistent with the core insights.
+${goalsContext}
+
+EXTRACTED EVIDENCE:
+${JSON.stringify(extractionOutput, null, 2)}
+
+CORE INTELLIGENCE (already generated — stay consistent):
+${JSON.stringify(coreOutput, null, 2)}
+
+Return a JSON object with ONLY these fields:
+{
   "friction_points": { "points": [], "why_it_matters": "" },
   "if_stuck": { "scenario": "", "explore": "", "one_possible_direction": "" },
   "goals": { "existing": [{"title":"","status":"","session_relevance":"","signal_reason":""}], "suggested": [{"title":"","description":"","suggested_target_date":""}] },
@@ -159,14 +182,16 @@ Return a JSON object with this exact structure:
   "coaching_signals": [{ "type": "", "description": "", "implication": "" }],
   "frameworks": [{ "name": "", "presence_level": "", "what_was_observed": "", "what_it_suggests": "", "build_on_this": "", "mindful_of": "" }],
   "coach_dna": { "patterns": [], "why_it_matters": "" },
-  "coaching_reflection": null,
-  "session_in_one_line": ""
+  "coaching_reflection": null
 }
 
-For coaching_reflection: set to null unless ALL of these are true: session has 10+ meaningful exchanges, session is not logistical, has no crisis language, and coach presence is meaningful. When generated, use this structure:
-{ "session_type": "growth"|"processing"|"crisis_adjacent", "what_stood_out": {"observation":"", "why_it_matters":""}, "what_seemed_effective": {"observation":"", "why_it_matters":""}|null, "one_thing_to_consider": {"suggestion":"", "why_it_matters":"", "use_with_care":""}|null }`,
-      'Pass 2: Synthesis'
+For coaching_reflection: set to null unless ALL of these are true: session has 10+ meaningful exchanges, session is not logistical, has no crisis language, and coach presence is meaningful. When generated:
+{ "session_type": "growth"|"processing"|"crisis_adjacent", "what_stood_out": {"observation":"","why_it_matters":""}, "what_seemed_effective": {"observation":"","why_it_matters":""}|null, "one_thing_to_consider": {"suggestion":"","why_it_matters":"","use_with_care":""}|null }`,
+      'Pass 2b: Supporting Intelligence'
     );
+
+    // Merge 2a + 2b into one complete synthesis object
+    const synthesisOutput = { ...coreOutput, ...supportOutput };
 
     // ── Pass 3: Formatting (fault-tolerant — fall back to synthesis if this fails)
     let formattedOutput;
