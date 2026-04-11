@@ -4817,6 +4817,7 @@ function renderPreSessionBrief(b, container) {
 async function runPostSessionAnalysis(bookingId, clientEmail, sessionNotes, format, container, existingGoals) {
   container.style.display = '';
   container.dataset.clientEmail = clientEmail;
+  container.scrollIntoView({ behavior: 'smooth', block: 'start' });
   // Loading state with progressive status messages (5 passes)
   container.innerHTML = '<div style="text-align:center;padding:40px 24px;">'
     + '<div class="loading-spinner" style="margin:0 auto 16px;"></div>'
@@ -4861,20 +4862,20 @@ function renderPostSessionAnalysis(a, container) {
   function psCard(title, subtitle, forLabel, body, opts) {
     opts = opts || {};
     var id = opts.id ? ' id="psi-' + opts.id + '"' : '';
-    var inner = '<div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;">'
-      + '<div><div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:700;color:var(--ink);">' + title + '</div>'
+    var inner = '<div style="padding:16px 20px 16px 20px;border-bottom:1px solid var(--border);position:relative;">'
+      + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold);white-space:nowrap;position:absolute;top:16px;right:20px;">' + forLabel + '</div>'
+      + '<div style="padding-right:120px;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:700;color:var(--ink);">' + title + '</div>'
       + '<div style="font-size:0.75rem;color:var(--muted);font-style:italic;line-height:1.4;margin-top:3px;">' + subtitle + '</div></div>'
-      + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);white-space:nowrap;margin-left:12px;margin-top:2px;">' + forLabel + '</div>'
       + '</div><div style="padding:16px 20px;">' + body + '</div>';
     if (opts.collapsed) {
       return '<div' + id + ' style="border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">'
         + '<details><summary style="padding:16px 20px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">'
         + '<div><div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:700;color:var(--ink);">' + title + '</div>'
         + '<div style="font-size:0.75rem;color:var(--muted);font-style:italic;line-height:1.4;margin-top:3px;">' + subtitle + '</div></div>'
-        + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);white-space:nowrap;margin-left:12px;">' + forLabel + '</div>'
+        + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold);white-space:nowrap;margin-left:12px;">' + forLabel + '</div>'
         + '</summary><div style="padding:0 20px 16px 20px;border-top:1px solid var(--border);">' + body + '</div></details></div>';
     }
-    return '<div' + id + ' style="border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">' + inner + '</div>';
+    return '<div' + id + ' style="border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);position:relative;">' + inner + '</div>';
   }
   // Compat: map old field names to new 3-pass schema
   var cf = a.core_focus || (a.pre_session_seed ? { summary: a.pre_session_seed, why_it_matters: '' } : null);
@@ -4916,18 +4917,37 @@ function renderPostSessionAnalysis(a, container) {
   h += '<div style="display:flex;gap:24px;align-items:flex-start;">';
 
   // Sticky sidebar nav (desktop)
-  h += '<nav class="psi-sidebar" style="width:180px;flex-shrink:0;position:sticky;top:20px;max-height:calc(100vh - 40px);overflow-y:auto;">'
-    + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold);margin-bottom:10px;">In This Analysis</div>';
-  sectionDefs.forEach(function(s) {
-    h += '<a href="#psi-' + s[0] + '" class="psi-nav-link" data-section="psi-' + s[0] + '" style="display:block;font-size:0.75rem;color:var(--muted);text-decoration:none;padding:3px 0;line-height:1.4;transition:color 0.15s;">' + s[1] + '</a>';
-  });
-  h += '</nav>';
+  h += '<nav class="psi-sidebar" style="width:180px;flex-shrink:0;position:sticky;top:20px;max-height:calc(100vh - 40px);overflow-y:auto;background:var(--white);border-right:1px solid var(--border);padding:16px 0;">'
+    + '<div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);padding:0 16px;margin-bottom:12px;">In This Analysis</div>'
+    + '<div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--muted);padding:12px 16px 4px;">Session Intelligence</div>'
+    + '<a href="#psi-key-insights" class="psi-nav-link" data-section="psi-key-insights" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Key Insights</a>'
+    + '<a href="#psi-core-focus" class="psi-nav-link" data-section="psi-core-focus" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Core Focus</a>'
+    + '<a href="#psi-breakthrough" class="psi-nav-link" data-section="psi-breakthrough" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">What Shifted</a>'
+    + '<a href="#psi-pattern" class="psi-nav-link" data-section="psi-pattern" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Recurring Pattern</a>'
+    + '<div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--muted);padding:12px 16px 4px;">Next Session</div>'
+    + '<a href="#psi-strategic" class="psi-nav-link" data-section="psi-strategic" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Strategic Direction</a>'
+    + '<a href="#psi-early-cues" class="psi-nav-link" data-section="psi-early-cues" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Early Cues</a>'
+    + '<a href="#psi-opening" class="psi-nav-link" data-section="psi-opening" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Opening Question</a>'
+    + '<a href="#psi-next-session" class="psi-nav-link" data-section="psi-next-session" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Next Session</a>'
+    + '<div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--muted);padding:12px 16px 4px;">Client</div>'
+    + '<a href="#psi-friction" class="psi-nav-link" data-section="psi-friction" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Friction Points</a>'
+    + '<a href="#psi-if-stuck" class="psi-nav-link" data-section="psi-if-stuck" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">If Stuck</a>'
+    + '<a href="#psi-goals" class="psi-nav-link" data-section="psi-goals" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Goals</a>'
+    + '<a href="#psi-commitments" class="psi-nav-link" data-section="psi-commitments" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Commitments</a>'
+    + '<a href="#psi-between-session" class="psi-nav-link" data-section="psi-between-session" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Between-Session</a>'
+    + '<div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--muted);padding:12px 16px 4px;">Your Practice</div>'
+    + '<a href="#psi-signals" class="psi-nav-link" data-section="psi-signals" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Coaching Signals</a>'
+    + '<a href="#psi-frameworks" class="psi-nav-link" data-section="psi-frameworks" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Frameworks</a>'
+    + '<a href="#psi-coach-dna" class="psi-nav-link" data-section="psi-coach-dna" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Coach DNA</a>'
+    + '<a href="#psi-reflection" class="psi-nav-link" data-section="psi-reflection" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Reflection</a>'
+    + '</nav>';
 
   // Mobile pill nav (hidden on desktop, shown <768px via inline media query below)
   h += '<style>@media(max-width:768px){.psi-sidebar{display:none!important}.psi-mobile-nav{display:flex!important}}</style>';
   h += '<div class="psi-mobile-nav" style="display:none;overflow-x:auto;gap:8px;padding:8px 0;margin-bottom:12px;white-space:nowrap;width:100%;">';
-  sectionDefs.forEach(function(s) {
-    h += '<a href="#psi-' + s[0] + '" style="display:inline-block;padding:4px 12px;border-radius:50px;font-size:0.72rem;font-weight:600;color:var(--muted);background:var(--cream);text-decoration:none;white-space:nowrap;">' + s[1] + '</a>';
+  ['Session Intelligence', 'Next Session', 'Client', 'Your Practice'].forEach(function(group, i) {
+    var targets = [['psi-key-insights'],['psi-strategic'],['psi-goals'],['psi-signals']];
+    h += '<a href="#' + targets[i][0] + '" style="display:inline-block;padding:6px 14px;border-radius:50px;font-size:0.75rem;font-weight:600;color:var(--muted);background:var(--cream);text-decoration:none;white-space:nowrap;">' + group + '</a>';
   });
   h += '</div>';
 
@@ -5108,7 +5128,7 @@ function renderPostSessionAnalysis(a, container) {
 
   // 12. Between-Session Practices
   if (bs && bs.length) {
-    var bsBody = '<div style="font-size:0.78rem;color:var(--muted);font-style:italic;margin-bottom:14px;line-height:1.5;">System-generated suggestions you may offer the client \u2014 these have not been discussed yet and are for your consideration only.</div>';
+    var bsBody = '<div style="font-size:0.78rem;color:var(--muted);font-style:italic;margin-bottom:14px;line-height:1.5;">Coach Clarity has surfaced these between-session directions based on what emerged. They have not been discussed with the client yet \u2014 offer, adapt, or set aside as you see fit.</div>';
     bs.forEach(function(p, idx) {
       var whyField = p.why_it_matters || p.why_this_may_matter || '';
       bsBody += '<div style="background:var(--cream);border-radius:8px;padding:16px;margin-bottom:10px;">'
@@ -5121,7 +5141,7 @@ function renderPostSessionAnalysis(a, container) {
         + '<button class="bsp-add-goal-btn" data-practice-title="' + escapeHtml(p.title || '') + '" data-practice-desc="' + escapeHtml(p.invitation || '') + '" style="padding:6px 14px;background:none;border:1px solid var(--gold);border-radius:6px;font-size:0.75rem;font-weight:600;color:var(--gold);cursor:pointer;font-family:\'DM Sans\',sans-serif;">+ Add as Client Goal</button>'
         + '</div>';
     });
-    h += psCard('Optional Between-Session Practices', 'Coach Clarity suggestions you may offer the client \u2014 these have not been discussed yet and are for your consideration only', 'Coach Clarity \u2192 For You', bsBody, {id:'between-session'});
+    h += psCard('Optional Between-Session Practices', 'Coach Clarity has surfaced these between-session directions based on what emerged. They have not been discussed with the client yet \u2014 offer, adapt, or set aside as you see fit', 'Coach Clarity \u2192 For You', bsBody, {id:'between-session'});
   }
 
   // 13. Coaching Signals
@@ -5169,11 +5189,15 @@ function renderPostSessionAnalysis(a, container) {
 
   // 16. Session in One Line
   if (oneLine) {
-    h += '<div style="font-size:0.88rem;color:var(--muted);font-style:italic;line-height:1.6;padding:12px 0;border-top:1px solid var(--border);margin-top:8px;">' + escapeHtml(oneLine) + '</div>';
+    h += '<div id="psi-summary" style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:20px 24px;margin:16px 0 24px;">'
+      + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold);margin-bottom:8px;">Session in One Line</div>'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:0.95rem;color:var(--muted);font-style:italic;line-height:1.6;">' + escapeHtml(oneLine) + '</div>'
+      + '</div>';
   }
 
   // 17. Coaching Reflection & Growth (conditional — null = render nothing)
   if (cr) {
+    h += '<div style="border-top:1px solid var(--border);padding-top:24px;margin-top:8px;"></div>';
     h += '<div id="psi-reflection" style="border-left:2px solid var(--muted);background:var(--cream);border-radius:0 8px 8px 0;padding:20px 24px;margin-bottom:12px;margin-top:16px;position:relative;">'
       + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);position:absolute;top:16px;right:20px;">Coach Clarity \u2192 For Your Development</div>'
       + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:700;color:var(--ink);margin-bottom:4px;">Coaching Reflection & Growth</div>'
@@ -5212,11 +5236,23 @@ function renderPostSessionAnalysis(a, container) {
     var observer = new IntersectionObserver(function(entries) {
       entries.forEach(function(entry) {
         var link = container.querySelector('.psi-nav-link[data-section="' + entry.target.id + '"]');
-        if (link) { link.style.color = entry.isIntersecting ? 'var(--gold)' : 'var(--muted)'; link.style.fontWeight = entry.isIntersecting ? '600' : '400'; }
+        if (link) { link.style.color = entry.isIntersecting ? 'var(--ink)' : 'var(--muted)'; link.style.fontWeight = entry.isIntersecting ? '600' : '400'; link.style.borderLeftColor = entry.isIntersecting ? 'var(--gold)' : 'transparent'; link.style.background = entry.isIntersecting ? 'rgba(196,154,60,0.06)' : 'none'; }
       });
     }, { rootMargin: '-20% 0px -70% 0px' });
     container.querySelectorAll('[id^="psi-"]').forEach(function(el) { observer.observe(el); });
   }
+
+  // Smooth scroll with offset for nav links
+  container.querySelectorAll('.psi-nav-link, .psi-mobile-nav a').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      var target = container.querySelector(this.getAttribute('href'));
+      if (target) {
+        var top = target.getBoundingClientRect().top + window.pageYOffset - 80;
+        window.scrollTo({ top: top, behavior: 'smooth' });
+      }
+    });
+  });
 
   // Live goals fetch
   (async function() {
@@ -5227,12 +5263,17 @@ function renderPostSessionAnalysis(a, container) {
         var goalsEl = container.querySelector('#psi-goals .live-goals-slot');
         if (goalsEl) {
           var gh = '';
+          var statusLabels = { not_started: 'NOT STARTED', in_progress: 'IN PROGRESS', completed: 'COMPLETED' };
           var statusColors = { not_started: 'var(--muted)', in_progress: 'var(--gold)', completed: '#2d6a4f' };
           liveGoals.forEach(function(g) {
             var sc = statusColors[g.status] || 'var(--muted)';
-            gh += '<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:8px;">'
-              + '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.65rem;font-weight:700;background:' + sc + ';color:#fff;">' + escapeHtml(g.status) + '</span>'
+            var sl = statusLabels[g.status] || g.status;
+            gh += '<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;">'
+              + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:' + (g.description ? '4px' : '0') + ';">'
+              + '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:700;letter-spacing:0.04em;background:' + sc + ';color:#fff;">' + sl + '</span>'
               + '<span style="font-size:0.85rem;font-weight:600;color:var(--ink);">' + escapeHtml(g.title) + '</span>'
+              + '</div>'
+              + (g.description ? '<div style="font-size:0.78rem;color:var(--muted);line-height:1.4;padding-left:0;">' + escapeHtml(g.description) + '</div>' : '')
               + '</div>';
           });
           goalsEl.innerHTML = '<div style="font-size:0.75rem;font-weight:600;color:var(--muted);margin-bottom:8px;">Current Goals</div>' + gh;
@@ -5254,6 +5295,24 @@ function renderPostSessionAnalysis(a, container) {
         });
         self.textContent = '\u2713 Added';
         self.style.background = '#2d6a4f';
+        // Add to live goals list in real time
+        var goalsSlot = container.querySelector('#psi-goals .live-goals-slot');
+        if (goalsSlot) {
+          var newGoal = document.createElement('div');
+          newGoal.style.cssText = 'background:var(--white);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;transition:background 0.5s;';
+          newGoal.innerHTML = '<div style="display:flex;align-items:center;gap:8px;' + (self.dataset.sgDesc ? 'margin-bottom:4px;' : '') + '">'
+            + '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:700;letter-spacing:0.04em;background:var(--muted);color:#fff;">NOT STARTED</span>'
+            + '<span style="font-size:0.85rem;font-weight:600;color:var(--ink);">' + escapeHtml(self.dataset.sgTitle) + '</span></div>'
+            + (self.dataset.sgDesc ? '<div style="font-size:0.78rem;color:var(--muted);line-height:1.4;">' + escapeHtml(self.dataset.sgDesc) + '</div>' : '');
+          goalsSlot.appendChild(newGoal);
+          // Gold highlight fade
+          newGoal.style.background = 'rgba(196,154,60,0.15)';
+          setTimeout(function() { newGoal.style.background = 'var(--white)'; }, 1500);
+          // Ensure "Current Goals" header exists
+          if (!goalsSlot.querySelector('div[style*="font-weight:600"]')) {
+            goalsSlot.insertAdjacentHTML('afterbegin', '<div style="font-size:0.75rem;font-weight:600;color:var(--muted);margin-bottom:8px;">Current Goals</div>');
+          }
+        }
       } catch(e) { self.textContent = 'Error'; self.disabled = false; }
     });
   });
