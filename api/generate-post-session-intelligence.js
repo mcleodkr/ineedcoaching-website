@@ -148,42 +148,59 @@ Return ONLY this JSON:
       ? '\nGoals: ' + existingGoals.join(', ')
       : '';
 
-    const MIRROR_RULES = `You are Coach Clarity. Surface exactly what the coach DID. Every string value under 20 words. Return ONLY raw JSON starting with { and ending with }. If you cannot complete all items within the token limit, return fewer complete items rather than truncating mid-JSON. ${TONE}`;
+    const MIRROR_RULES = `You are Coach Clarity. HARD LIMIT: Maximum 2 items per array. Maximum 15 words per string value. If you exceed these limits the output will be rejected. Return incomplete items as null rather than truncating mid-string. Return ONLY raw JSON starting with { and ending with }. ${TONE}`;
 
+    // ── Pass 2b: Interventions + Reflection ─────────────────────────────
     const pass2bOutput = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
-      2000,
+      1800,
       MIRROR_RULES,
-      `Generate max 3 coaching interventions. Each must include a verbatim coach quote. Every field value under 20 words.
+      `Generate max 2 coaching interventions and reflection. Max 15 words per value.
 
 EVIDENCE: ${JSON.stringify(extractionOutput)}
 CORE: ${JSON.stringify(coreOutput)}
 
 Return ONLY:
-{"coaching_interventions":[{"technique_used":"","what_you_did":"You said: [quote]","immediate_effect":"","why_it_mattered":"","signal_strength":"high|medium|low","evidence_anchor":"","dna_tag":[],"consideration":null}],"what_stood_out":[{"signal_label":"","what_happened_client":"","where_you_were":"","why_it_matters":""}],"friction_points":{"points":[],"why_it_matters":"","transition_context":null},"if_stuck":{"scenario":"","explore":"","one_possible_direction":"","transition_context":null},"commitments":[{"text":"","priority":"","follow_up_question":""}]}`,
+{"coaching_interventions":[{"technique_used":"","what_you_did":"You said: [quote]","immediate_effect":"","why_it_mattered":"","signal_strength":"high|medium|low","evidence_anchor":"","dna_tag":[],"consideration":null}],"reflection_and_growth":{"what_stood_out_in_your_approach":"","what_seemed_effective":"","one_place_to_stay_curious":""},"what_stood_out":[{"signal_label":"","what_happened_client":"","where_you_were":"","why_it_matters":""}],"friction_points":{"points":[],"why_it_matters":"","transition_context":null},"if_stuck":{"scenario":"","explore":"","one_possible_direction":"","transition_context":null},"commitments":[{"text":"","priority":"","follow_up_question":""}]}`,
       'Pass 2b: Interventions'
     );
 
-    // ── Pass 2c: Mirror Supporting (patterns, reflection, curiosity, goals, frameworks, between_session) ─
+    // ── Pass 2c: Curiosity Edges only ───────────────────────────────────
     const pass2cOutput = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
-      1500,
+      800,
       MIRROR_RULES,
-      `Generate coaching mirror supporting content. Every field value under 20 words.
+      `Generate max 2 curiosity edges. Max 15 words per value.
+
+EVIDENCE: ${JSON.stringify(extractionOutput)}
+CORE: ${JSON.stringify(coreOutput)}
+
+Return ONLY:
+{"curiosity_edges":[{"curiosity_note":"","what_to_notice":"","why_this_stands_out":""}]}`,
+      'Pass 2c: Curiosity'
+    );
+
+    // ── Pass 2d: Patterns + Goals + Frameworks + Between-session ────────
+    const pass2dOutput = await callClaude(
+      ANTHROPIC_API_KEY,
+      'claude-sonnet-4-6',
+      800,
+      MIRROR_RULES,
+      `Generate max 2 patterns and supporting fields. Max 15 words per value.
 ${goalsContext}
 
 EVIDENCE: ${JSON.stringify(extractionOutput)}
 CORE: ${JSON.stringify(coreOutput)}
 
 Return ONLY:
-{"patterns_and_your_role":[{"pattern_name":"","what_client_did":"","your_role":"interrupted|reinforced|allowed","how_you_influenced_it":"","current_status":"emerging|disrupted|stabilizing|unchanged"}],"reflection_and_growth":{"what_stood_out_in_your_approach":"","what_seemed_effective":"","one_place_to_stay_curious":""},"curiosity_edges":[{"curiosity_note":"","what_to_notice":"","why_this_stands_out":""}],"goals":{"existing":[{"title":"","status":"","session_relevance":"","signal_reason":""}],"suggested":[{"title":"","description":"","suggested_target_date":""}]},"between_session":[{"title":"","invitation":"","why_it_matters":"","connection":""}],"frameworks":[{"name":"","presence_level":"","what_was_observed":"","what_it_suggests":"","build_on_this":"","mindful_of":""}]}`,
-      'Pass 2c: Mirror Supporting'
+{"patterns_and_your_role":[{"pattern_name":"","what_client_did":"","your_role":"interrupted|reinforced|allowed","how_you_influenced_it":"","current_status":"emerging|disrupted|stabilizing|unchanged"}],"goals":{"existing":[{"title":"","status":"","session_relevance":"","signal_reason":""}],"suggested":[{"title":"","description":"","suggested_target_date":""}]},"between_session":[{"title":"","invitation":"","why_it_matters":"","connection":""}],"frameworks":[{"name":"","presence_level":"","what_was_observed":"","what_it_suggests":"","build_on_this":"","mindful_of":""}]}`,
+      'Pass 2d: Patterns'
     );
 
-    // Merge 2a + 2b + 2c into one complete synthesis object
-    const synthesisOutput = { ...coreOutput, ...pass2bOutput, ...pass2cOutput };
+    // Merge 2a + 2b + 2c + 2d into one complete synthesis object
+    const synthesisOutput = { ...coreOutput, ...pass2bOutput, ...pass2cOutput, ...pass2dOutput };
 
     // ── Pass 3: Formatting (fault-tolerant — fall back to synthesis if this fails)
     // Pre-clean directive language via string replacement before AI pass

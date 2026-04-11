@@ -4851,10 +4851,10 @@ async function runPostSessionAnalysis(bookingId, clientEmail, sessionNotes, form
     + '<div style="font-size:0.78rem;color:var(--muted);line-height:1.5;margin-bottom:16px;">This usually takes 90\u2013120 seconds. Coach Clarity is running five passes to extract evidence, build intelligence, and surface your coaching mirror.</div>'
     + '<div id="psi-progress" style="font-size:0.82rem;color:var(--ink);line-height:1.8;text-align:left;max-width:380px;margin:0 auto;">'
     + '<div id="psi-step1" style="color:var(--gold);font-weight:600;">\u25B6 Extracting session evidence...</div>'
-    + '<div id="psi-step2" style="color:var(--muted);opacity:0.4;">\u25CB Building session intelligence...</div>'
+    + '<div id="psi-step2" style="color:var(--muted);opacity:0.4;">\u25CB Building session insights...</div>'
     + '<div id="psi-step3" style="color:var(--muted);opacity:0.4;">\u25CB Identifying coaching interventions...</div>'
     + '<div id="psi-step4" style="color:var(--muted);opacity:0.4;">\u25CB Building coaching mirror...</div>'
-    + '<div id="psi-step5" style="color:var(--muted);opacity:0.4;">\u25CB Refining language and tone...</div>'
+    + '<div id="psi-step5" style="color:var(--muted);opacity:0.4;">\u25CB Finalizing...</div>'
     + '</div></div>';
   // Animate progress steps (~18s intervals)
   var psiTimers = [];
@@ -4863,10 +4863,10 @@ async function runPostSessionAnalysis(bookingId, clientEmail, sessionNotes, form
     if (done) { done.innerHTML = '\u2713 ' + doneText; done.style.color = '#2d6a4f'; done.style.fontWeight = '400'; }
     if (next) { next.innerHTML = '\u25B6 ' + nextText; next.style.color = 'var(--gold)'; next.style.fontWeight = '600'; next.style.opacity = '1'; }
   }
-  psiTimers.push(setTimeout(function() { advanceStep('psi-step1', 'Evidence extracted', 'psi-step2', 'Building session intelligence...'); }, 18000));
-  psiTimers.push(setTimeout(function() { advanceStep('psi-step2', 'Intelligence built', 'psi-step3', 'Identifying coaching interventions...'); }, 36000));
+  psiTimers.push(setTimeout(function() { advanceStep('psi-step1', 'Evidence extracted', 'psi-step2', 'Building session insights...'); }, 18000));
+  psiTimers.push(setTimeout(function() { advanceStep('psi-step2', 'Insights built', 'psi-step3', 'Identifying coaching interventions...'); }, 36000));
   psiTimers.push(setTimeout(function() { advanceStep('psi-step3', 'Interventions identified', 'psi-step4', 'Building coaching mirror...'); }, 54000));
-  psiTimers.push(setTimeout(function() { advanceStep('psi-step4', 'Mirror built', 'psi-step5', 'Refining language and tone...'); }, 72000));
+  psiTimers.push(setTimeout(function() { advanceStep('psi-step4', 'Mirror built', 'psi-step5', 'Finalizing...'); }, 72000));
   try {
     var goalTitles = (existingGoals || []).filter(function(g) { return g.status !== 'completed'; }).map(function(g) { return g.title; });
     var res = await fetch('/api/generate-post-session-intelligence', {
