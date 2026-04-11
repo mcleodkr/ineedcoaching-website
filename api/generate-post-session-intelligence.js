@@ -109,6 +109,7 @@ export default async function handler(req, res) {
     const CONCISE = 'Every string value: 1-2 sentences max, under 40 words. Surface the signal, not the essay.';
     const JSON_ONLY = 'Return ONLY raw JSON. No markdown. No explanation. No preamble. Start with { and end with }.';
     const TONE = 'Address coach as "you". Never use: should, must, ask the client, do this. Use: you might explore, this may suggest, one possible direction.';
+    const CLARITY = 'CLARITY RULES: No sentence fragments. Replace "slow into" with "explore directly". Replace "under visibility pressure" with "when she is required to speak up or be publicly accountable". Replace "legitimacy fear" with "fear of not being taken seriously or seen as wrong". Replace "may hold" with "likely reflects". Replace "embody"/"embodied" with plain behavioral language. Every sentence must make sense read alone. No abstract psychological phrasing without immediate plain-language explanation. If a coach has to interpret meaning, rewrite the sentence.';
     const IDENTITY = 'You are Coach Clarity, a reflective thinking partner for coaches. Your role is to surface patterns and possibilities, not to instruct. Think WITH the coach, not FOR them. All language must be suggestive, not prescriptive.';
 
     // ── Pass 1: Extraction ──────────────────────────────────────────────
@@ -124,7 +125,7 @@ ${sessionContent}`,
     );
 
     // ── Pass 2a: Core Intelligence ──────────────────────────────────────
-    const synthesisSystem = `${IDENTITY} ${TONE} ${CONCISE} ${JSON_ONLY}`;
+    const synthesisSystem = `${IDENTITY} ${TONE} ${CONCISE} ${CLARITY} ${JSON_ONLY}`;
 
     const coreOutput = await callClaude(
       ANTHROPIC_API_KEY,
@@ -149,7 +150,7 @@ Return ONLY this JSON:
       ? '\nGoals: ' + existingGoals.join(', ')
       : '';
 
-    const MIRROR_RULES = `You are Coach Clarity, a reflective partner for professional coaches. Your job is to eliminate ambiguity and show the coach exactly what happened, what they did, why it mattered, and why it worked. CRITICAL RULE: Never describe the client in sections designated for the coach. If a section is about the coach's approach, every sentence must have "you" as the subject. HARD LIMIT: Maximum 2 items per array. Maximum 15 words per string value. Return ONLY raw JSON starting with { and ending with }. ${TONE}`;
+    const MIRROR_RULES = `You are Coach Clarity, a reflective partner for professional coaches. Your job is to eliminate ambiguity and show the coach exactly what happened, what they did, why it mattered, and why it worked. CRITICAL RULE: Never describe the client in sections designated for the coach. If a section is about the coach's approach, every sentence must have "you" as the subject. HARD LIMIT: Maximum 2 items per array. Maximum 15 words per string value. Return ONLY raw JSON starting with { and ending with }. ${TONE} ${CLARITY}`;
 
     // ── Pass 2b: Interventions + What Stood Out + Reflection ─────────────
     const pass2bOutput = await callClaude(
@@ -179,15 +180,15 @@ Return ONLY:
       `${MIRROR_RULES} Feedback style: ${fbStyle}. If reflective: lead with "There was an opening to...", "You might notice...". If direct: lead with "You stayed at the surface.", "You moved past a deeper opening.". Both: never shame, never say "you should have" or "you missed". Anchor in observable behavior. PLAIN LANGUAGE REQUIRED: Never use coaching jargon. Replace "slow into" with "stay with" or "explore more closely". Replace "under visibility pressure" with "in moments where she is being watched". Replace "legitimacy fear" with "fear of not being taken seriously". Every sentence must be complete and standalone. No fragments. No implied subjects. Each field value must make sense when read alone.`,
       `Generate max 2 curiosity edges and max 2 missed windows. Max 12 words per field. If no meaningful missed window exists return empty array. Every field must be a complete sentence with a clear subject.
 
-Scan for missed depth opportunities using 5 signal types. Each must meet 2+ criteria. Score: emotional_signal 1-3, pattern_relevance 1-3, depth_potential 1-3. Return top 2 by score.
-Signal types: EMOTIONAL_MISMATCH (emotion stronger than event), REPETITION_WITHOUT_MOVEMENT (same idea 2-3x without resolution), CHARGED_LANGUAGE (trapped/betrayed/invisible/stuck), BEHAVIORAL_CONTRADICTION (gap between stated and done), ENERGY_SHIFT (sudden relief/tension/tears/flatness).
+Scan for missed depth opportunities using 6 signal types. Each must meet 2+ criteria. Score: emotional_signal 1-3, pattern_relevance 1-3, depth_potential 1-3. Return top 2 by score.
+Signal types: EMOTIONAL_MISMATCH (emotion stronger than event), REPETITION_WITHOUT_MOVEMENT (same idea 2-3x without resolution), CHARGED_LANGUAGE (trapped/betrayed/invisible/stuck), BEHAVIORAL_CONTRADICTION (gap between stated and done), ENERGY_SHIFT (sudden relief/tension/tears/flatness), UNPROCESSED_COST (client names a pattern or realization without exploring what it has cost them emotionally — self-blame without feeling, ownership without grief, naming a loss without staying with it. Output what_was_underneath as the emotional cost not yet expressed).
 Strength: 3-4=Subtle opening, 5-6=Clear opening, 7-9=Strong opening.
 
 EVIDENCE: ${JSON.stringify(extractionOutput)}
 CORE: ${JSON.stringify(coreOutput)}
 
 Return ONLY:
-{"curiosity_edges":[{"curiosity_note":"","what_to_notice":"","why_this_stands_out":""}],"missed_windows":[{"signal_type":"emotional_mismatch|repetition_without_movement|charged_language|behavioral_contradiction|energy_shift","signal_strength":"Subtle opening|Clear opening|Strong opening","moment":"","what_was_underneath":"","what_you_did":"You...","what_was_possible":"","why_this_matters_for_your_work":"","how_to_catch_this_next_time":{"signal_to_watch_for":"","what_that_may_mean":"","one_possible_way_to_respond":"You might...","a_question_that_could_open_this_up":""}}]}`,
+{"curiosity_edges":[{"curiosity_note":"","what_to_notice":"","why_this_stands_out":""}],"missed_windows":[{"signal_type":"emotional_mismatch|repetition_without_movement|charged_language|behavioral_contradiction|energy_shift|unprocessed_cost","signal_strength":"Subtle opening|Clear opening|Strong opening","moment":"","what_was_underneath":"","what_you_did":"You...","what_was_possible":"","why_this_matters_for_your_work":"","how_to_catch_this_next_time":{"signal_to_watch_for":"","what_that_may_mean":"","one_possible_way_to_respond":"You might...","a_question_that_could_open_this_up":""}}]}`,
       'Pass 2c: Curiosity + Missed Windows'
     );
 

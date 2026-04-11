@@ -5516,12 +5516,12 @@ function renderCoachingMirror(a, container) {
       ciBody += '<div style="background:var(--cream);border-left:2px solid var(--gold);border-radius:0 8px 8px 0;padding:20px;margin-bottom:12px;">'
         + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;">'
         + '<span style="font-weight:700;font-size:0.9rem;color:var(--ink);">' + escapeHtml(c.technique_name || c.technique_used || '') + '</span>'
-        + '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:700;background:' + sc + ';color:#fff;">' + sl + '</span>'
+        + '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:700;background:' + sc + ';color:#fff;cursor:help;" title="' + ({HIGH:'This intervention directly shifted the client\'s thinking, emotion, or behavior in-session.',MEDIUM:'This intervention supported movement but was not the primary driver of change.',LOW:'This intervention was present but had minimal observable impact.'}[sl] || '') + '">' + sl + '</span>'
         + '</div>'
         + '<div style="font-size:0.88rem;color:var(--ink);line-height:1.75;margin-bottom:6px;">' + whatYouDid + '</div>'
         + (c.immediate_effect ? '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;margin-bottom:4px;"><span style="font-weight:700;color:var(--ink);">What this did:</span> ' + escapeHtml(c.immediate_effect) + '</div>' : '')
         + (c.why_it_mattered ? '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;margin-bottom:6px;"><span style="font-weight:700;color:var(--ink);">Why it mattered:</span> ' + escapeHtml(c.why_it_mattered) + '</div>' : '')
-        + (c.dna_tag && c.dna_tag.length ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">' + c.dna_tag.map(function(t) { return '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:600;background:var(--gold);color:#fff;">' + escapeHtml(t) + '</span>'; }).join('') + '</div>' : '')
+        + (c.dna_tag && c.dna_tag.length ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">' + c.dna_tag.map(function(t) { var dnaTooltips = {challenge:'Directly naming what the client may be avoiding or not seeing.',reflection:'Returning the client\'s own words or patterns to deepen awareness.',reframing:'Offering an alternative perspective on a situation or belief.','pattern-disruption':'Interrupting a habitual response to create space for new behavior.','identity-work':'Helping the client examine who they are becoming, not just what they are doing.','precision-questioning':'Asking a specific question that cuts through ambiguity.',silence:'Holding space without filling it, allowing the client to process.',validation:'Acknowledging the client\'s experience or emotion as real and significant.','strength-reframe':'Reframing a perceived weakness as an underused strength.','identity-safety':'Creating conditions where the client feels safe to be honest.'}; return '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:600;background:var(--gold);color:#fff;cursor:help;" title="' + escapeHtml(dnaTooltips[t] || t) + '">' + escapeHtml(t) + '</span>'; }).join('') + '</div>' : '')
         + (c.consideration ? '<details style="cursor:pointer;margin-top:6px;"><summary style="font-size:0.75rem;font-weight:600;color:var(--muted);cursor:pointer;">A place to stay curious</summary><div style="padding:6px 0 0 0;font-size:0.82rem;color:var(--muted);font-style:italic;line-height:1.5;">' + escapeHtml(c.consideration) + '</div></details>' : '')
         + (c.see_why_this_works ? '<details style="cursor:pointer;margin-top:8px;"><summary style="font-size:0.8rem;font-weight:600;color:var(--gold);font-style:italic;cursor:pointer;">\u2192 See why this works</summary>'
           + '<div style="padding:12px 16px;background:var(--cream);border-radius:6px;margin-top:6px;font-size:0.78rem;line-height:1.6;">'
@@ -5578,7 +5578,7 @@ function renderCoachingMirror(a, container) {
       h += '<div id="pm-reflection" style="border-left:2px solid var(--muted);background:var(--cream);border-radius:0 8px 8px 0;padding:20px 24px;margin-bottom:12px;">'
         + '<div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:6px;">Coach Clarity \u2192 For Your Development</div>'
         + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:700;color:var(--ink);margin-bottom:4px;">Coaching Reflection & Growth</div>'
-        + '<div style="font-size:0.75rem;color:var(--muted);font-style:italic;margin-bottom:16px;line-height:1.5;">Optional reflections on your approach. For your development, not for the client.</div>'
+        + ''
         + rgBody + '</div>';
     }
   }
@@ -5615,10 +5615,11 @@ function renderCoachingMirror(a, container) {
         mwBody += '<div style="margin-top:8px;"><a href="#" class="mw-direct-read" data-mw-idx="' + idx + '" style="font-size:0.75rem;color:var(--gold);font-style:italic;text-decoration:none;cursor:pointer;">See a direct read \u2192</a></div>'
           + '<div class="mw-direct-panel" data-mw-idx="' + idx + '" style="display:none;background:rgba(196,154,60,0.04);border-radius:8px;padding:14px 16px;margin-top:8px;">'
           + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);margin-bottom:6px;">Direct read:</div>'
-          + '<div style="font-size:0.82rem;color:var(--ink);line-height:1.5;">'
-          + (w.what_you_did ? escapeHtml(w.what_you_did) + ' ' : 'You stayed at the surface. ')
-          + (w.what_was_underneath ? 'Underneath, there may have been ' + escapeHtml(w.what_was_underneath).toLowerCase() + '. ' : '')
-          + (w.what_was_possible ? 'There was an opening to ' + escapeHtml(w.what_was_possible).toLowerCase() + '.' : '')
+          + '<div style="font-size:0.82rem;color:var(--ink);line-height:1.7;">'
+          + (w.moment ? '<div style="margin-bottom:4px;"><span style="font-weight:700;color:var(--ink);">What happened:</span> ' + escapeHtml(w.moment) + '</div>' : '')
+          + (w.what_you_did ? '<div style="margin-bottom:4px;"><span style="font-weight:700;color:var(--ink);">What you did:</span> ' + escapeHtml(w.what_you_did) + '</div>' : '')
+          + (w.what_was_possible ? '<div style="margin-bottom:4px;"><span style="font-weight:700;color:var(--ink);">What was available:</span> ' + escapeHtml(w.what_was_possible) + '</div>' : '')
+          + (w.why_this_matters_for_your_work ? '<div><span style="font-weight:700;color:var(--ink);">Why it matters:</span> ' + escapeHtml(w.why_this_matters_for_your_work) + '</div>' : '')
           + '</div>'
           + '<a href="#" class="mw-direct-close" data-mw-idx="' + idx + '" style="display:block;font-size:0.72rem;color:var(--muted);text-decoration:none;cursor:pointer;margin-top:6px;">Collapse</a>'
           + '</div>';
