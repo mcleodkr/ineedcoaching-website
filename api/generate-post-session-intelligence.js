@@ -89,7 +89,7 @@ export default async function handler(req, res) {
     // ── Pass 1: Extraction ──────────────────────────────────────────────
     const extractionOutput = await callClaude(
       ANTHROPIC_API_KEY,
-      'claude-sonnet-4-6-20250514',
+      'claude-sonnet-4-6',
       2000,
       'You are an evidence extraction engine. Extract only what is explicitly present. Do not interpret or infer. Return JSON only.',
       `Extract structured evidence from this coaching session transcript and notes.
@@ -114,7 +114,7 @@ ${sessionContent}`
 
     const synthesisOutput = await callClaude(
       ANTHROPIC_API_KEY,
-      'claude-sonnet-4-6-20250514',
+      'claude-sonnet-4-6',
       3000,
       `You are a senior coaching intelligence system. Interpret extracted session evidence into structured coaching insights. Address the coach as "you" throughout. Use only suggestive language. Never use: should, must, ask the client, do this. Always use: you might explore, this may suggest, one possible direction. Every insight must include why it matters. Return JSON only.`,
       `Using the extracted session evidence below, generate a structured coaching intelligence report.
