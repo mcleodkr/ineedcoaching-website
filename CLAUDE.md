@@ -1,0 +1,40 @@
+# ineedcoaching.org — Claude Code Rules
+
+## Design System
+- Colors: Navy #1a3a52 (primary), Gold #c49a3c (accent), Cream #f7f4ee (background), Dark green #1a2e1a (courses only)
+- Fonts: Cormorant Garamond (headlines, display), DM Sans 18px (body)
+- All UI must use these fonts — never Inter, Arial, or system fonts
+- Page background: #f7f5f1. Card backgrounds: #ffffff. Borders: #e8e4dc.
+- All text on dark backgrounds must be white or #f0f0f0 minimum — never dark grey on dark
+
+## UI/UX Standards (Pro Max)
+- Every UI component must be production-grade — not a skeleton, not a placeholder
+- Sidebar navigation over horizontal tab bars for dashboards with more than 5 items
+- Active nav state: gold left border + gold tinted background
+- Buttons must have visual hierarchy: gold filled = primary, navy outlined = secondary, muted = tertiary
+- All buttons: cursor pointer, transition all 0.15s ease, DM Sans 0.85rem
+- Cards: white background, 1px solid #e8e4dc border, 10px border-radius, subtle box-shadow
+- Section headers: Cormorant Garamond 1.15rem 600 navy, border-bottom 1px solid #e8e4dc
+- Tab bars: pill-in-bar pattern (background container, white active tab with shadow)
+- No component ships without hover states, loading states, and empty states
+
+## Architecture Rules
+- Never use Vercel CLI — always deploy via git push
+- Empty git commits for force redeploy: git commit --allow-empty
+- Supabase schema changes: generate SQL for manual execution in SQL Editor
+- Single-quote escaping in SQL: use '' not \'
+- emailRedirectTo always hardcoded to ineedcoaching.org in all 8 authenticated pages
+
+## Code Quality
+- Never break existing functionality when adding new features
+- All global variables must be declared at script top level
+- notesByBooking must always be globally accessible
+- Null guards on every array iteration in render functions
+- Every API response wrapped in try/catch with readable error messages
+
+## Tone and Language (AI outputs)
+- Never directive — always suggestive
+- Never say: should, must, ask her, do this, don't
+- Always say: you might explore, one possible direction, it may be worth
+- Coach Clarity is the AI identity — never say "the system" or "AI generated"
+- All coaching intelligence output must include why it matters
