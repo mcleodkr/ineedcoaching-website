@@ -143,35 +143,48 @@ Return ONLY this JSON:
       'Pass 2a: Core Intelligence'
     );
 
-    // ── Pass 2b: Supporting Intelligence ────────────────────────────────
+    // ── Pass 2b: Coaching Mirror Core ─────────────────────────────────
     const goalsContext = existingGoals && existingGoals.length
       ? '\nGoals: ' + existingGoals.join(', ')
       : '';
 
-    const pass2bSystem = `You are Coach Clarity, a reflective thinking partner for professional coaches. Your role is to surface exactly what the coach DID in this session. Every section must answer: where was the coach in this moment? If the coach is not explicitly visible in the output, the output is incomplete. COACH VISIBILITY RULE: Every insight must show the coach as an active presence with specific actions that produced specific results. ${TONE} ${CONCISE} ${JSON_ONLY}`;
+    const mirrorSystem = `You are Coach Clarity. Surface exactly what the coach DID. COACH VISIBILITY RULE: Every insight shows the coach as an active presence with specific actions producing specific results. CRITICAL: Every string value under 30 words. If you cannot fit all items, return fewer rather than truncating mid-JSON. ${TONE} ${JSON_ONLY}`;
 
-    const supportOutput = await callClaude(
+    const mirrorCoreOutput = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
       2500,
-      pass2bSystem,
-      `Generate SUPPORTING intelligence and Coaching Mirror content. Stay consistent with core insights.
-
-For friction_points and if_stuck, add optional transition_context (one sentence max, null if no natural connection).
+      mirrorSystem,
+      `Generate coaching mirror core content. Every intervention must be visible, named, quoted, explained.
 ${goalsContext}
 
 EVIDENCE: ${JSON.stringify(extractionOutput)}
 CORE: ${JSON.stringify(coreOutput)}
 
-FINAL CHECK: If a coach reading this still has to ask "What did I actually do?" the output is wrong. Every intervention must be visible, named, quoted, and explained.
-
 Return ONLY this JSON:
-{"friction_points":{"points":[],"why_it_matters":"","transition_context":null},"if_stuck":{"scenario":"","explore":"","one_possible_direction":"","transition_context":null},"goals":{"existing":[{"title":"","status":"","session_relevance":"","signal_reason":""}],"suggested":[{"title":"","description":"","suggested_target_date":""}]},"commitments":[{"text":"","priority":"","follow_up_question":""}],"between_session":[{"title":"","invitation":"","why_it_matters":"","connection":""}],"what_stood_out":[{"signal_label":"","what_happened_client":"","where_you_were":"starts with You","why_it_matters":""}],"coaching_interventions":[{"technique_used":"established terminology e.g. Reflective Mirroring","what_you_did":"must include You said: [verbatim quote]","immediate_effect":"","why_it_mattered":"","signal_strength":"high|medium|low","evidence_anchor":"specific transcript moment","dna_tag":["1-2 from: challenge,reflection,pattern-disruption,identity-work,reframing,precision-questioning,silence,validation"],"consideration":null}],"patterns_and_your_role":[{"pattern_name":"","what_client_did":"","your_role":"interrupted|reinforced|allowed","how_you_influenced_it":"starts with You","current_status":"emerging|disrupted|stabilizing|unchanged"}],"frameworks":[{"name":"","presence_level":"","what_was_observed":"","what_it_suggests":"","build_on_this":"","mindful_of":""}],"reflection_and_growth":{"what_stood_out_in_your_approach":"starts with You","what_seemed_effective":"specific mechanism","one_place_to_stay_curious":"starts with A place to stay curious:"},"curiosity_edges":[{"curiosity_note":"starts with A place to stay curious:","what_to_notice":"","why_this_stands_out":""}]}`,
-      'Pass 2b: Supporting Intelligence'
+{"friction_points":{"points":[],"why_it_matters":"","transition_context":null},"if_stuck":{"scenario":"","explore":"","one_possible_direction":"","transition_context":null},"goals":{"existing":[{"title":"","status":"","session_relevance":"","signal_reason":""}],"suggested":[{"title":"","description":"","suggested_target_date":""}]},"commitments":[{"text":"","priority":"","follow_up_question":""}],"between_session":[{"title":"","invitation":"","why_it_matters":"","connection":""}],"what_stood_out":[{"signal_label":"","what_happened_client":"","where_you_were":"starts with You","why_it_matters":""}],"coaching_interventions":[{"technique_used":"e.g. Reflective Mirroring","what_you_did":"include You said: [quote]","immediate_effect":"","why_it_mattered":"","signal_strength":"high|medium|low","evidence_anchor":"","dna_tag":[],"consideration":null}],"frameworks":[{"name":"","presence_level":"","what_was_observed":"","what_it_suggests":"","build_on_this":"","mindful_of":""}]}`,
+      'Pass 2b: Coaching Mirror Core'
     );
 
-    // Merge 2a + 2b into one complete synthesis object
-    const synthesisOutput = { ...coreOutput, ...supportOutput };
+    // ── Pass 2c: Coaching Mirror Supporting ─────────────────────────────
+    const mirrorSupportOutput = await callClaude(
+      ANTHROPIC_API_KEY,
+      'claude-sonnet-4-6',
+      2000,
+      mirrorSystem,
+      `Generate coaching mirror supporting content. Stay consistent with core and mirror insights. Every string value under 30 words.
+
+EVIDENCE: ${JSON.stringify(extractionOutput)}
+CORE: ${JSON.stringify(coreOutput)}
+MIRROR: ${JSON.stringify(mirrorCoreOutput)}
+
+Return ONLY this JSON:
+{"patterns_and_your_role":[{"pattern_name":"","what_client_did":"","your_role":"interrupted|reinforced|allowed","how_you_influenced_it":"starts with You","current_status":"emerging|disrupted|stabilizing|unchanged"}],"reflection_and_growth":{"what_stood_out_in_your_approach":"starts with You","what_seemed_effective":"specific mechanism","one_place_to_stay_curious":"starts with A place to stay curious:"},"curiosity_edges":[{"curiosity_note":"starts with A place to stay curious:","what_to_notice":"","why_this_stands_out":""}]}`,
+      'Pass 2c: Coaching Mirror Supporting'
+    );
+
+    // Merge 2a + 2b + 2c into one complete synthesis object
+    const synthesisOutput = { ...coreOutput, ...mirrorCoreOutput, ...mirrorSupportOutput };
 
     // ── Pass 3: Formatting (fault-tolerant — fall back to synthesis if this fails)
     // Pre-clean directive language via string replacement before AI pass
