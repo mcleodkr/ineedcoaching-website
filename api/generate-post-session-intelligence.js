@@ -148,23 +148,25 @@ Return ONLY this JSON:
       ? '\nGoals: ' + existingGoals.join(', ')
       : '';
 
-    const MIRROR_RULES = `You are Coach Clarity. HARD LIMIT: Maximum 2 items per array. Maximum 15 words per string value. If you exceed these limits the output will be rejected. Return incomplete items as null rather than truncating mid-string. Return ONLY raw JSON starting with { and ending with }. ${TONE}`;
+    const MIRROR_RULES = `You are Coach Clarity, a reflective partner for professional coaches. Your job is to eliminate ambiguity and show the coach exactly what happened, what they did, why it mattered, and why it worked. CRITICAL RULE: Never describe the client in sections designated for the coach. If a section is about the coach's approach, every sentence must have "you" as the subject. HARD LIMIT: Maximum 2 items per array. Maximum 15 words per string value. Return ONLY raw JSON starting with { and ending with }. ${TONE}`;
 
-    // ── Pass 2b: Interventions + Reflection ─────────────────────────────
+    // ── Pass 2b: Interventions + What Stood Out + Reflection ─────────────
     const pass2bOutput = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
       1800,
       MIRROR_RULES,
-      `Generate max 2 coaching interventions and reflection. Max 15 words per value.
+      `Generate max 2 interventions, max 2 what_stood_out items, and reflection. Max 15 words per value.
 
-Each intervention MUST include see_why_this_works with: mechanism ("[Concept] — one sentence"), model ("[Model] ([Originator]) — one sentence"), transfer ("Use when..."). Max 15 words each. Practical not academic.
+technique_name MUST use recognized categories: Confrontation, Reflective Listening, Cognitive Reframe, Immediacy, Silence, Strategic Questioning, Activation Prompt, Future Self — with parenthetical refinement. Example: "Confrontation (Authority Alignment)". Never invent categories.
+
+Each intervention includes see_why_this_works: mechanism ("[Concept] — sentence"), model ("[Model] ([Originator]) — sentence"), transfer ("Use when...").
 
 EVIDENCE: ${JSON.stringify(extractionOutput)}
 CORE: ${JSON.stringify(coreOutput)}
 
 Return ONLY:
-{"coaching_interventions":[{"technique_used":"","what_you_did":"You said: [quote]","immediate_effect":"","why_it_mattered":"","signal_strength":"high|medium|low","evidence_anchor":"","dna_tag":[],"consideration":null,"see_why_this_works":{"mechanism":"[Concept] — explanation","model":"[Model] ([Originator]) — explanation","transfer":"Use when..."}}],"reflection_and_growth":{"what_stood_out_in_your_approach":"","what_seemed_effective":"","one_place_to_stay_curious":""},"what_stood_out":[{"signal_label":"","what_happened_client":"","where_you_were":"","why_it_matters":""}],"friction_points":{"points":[],"why_it_matters":"","transition_context":null},"if_stuck":{"scenario":"","explore":"","one_possible_direction":"","transition_context":null},"commitments":[{"text":"","priority":"","follow_up_question":""}]}`,
+{"coaching_interventions":[{"technique_name":"Category (Refinement)","what_you_did":"You said: [quote]","immediate_effect":"","why_it_mattered":"","signal_strength":"high|medium|low","evidence_anchor":"","dna_tag":[],"consideration":null,"see_why_this_works":{"mechanism":"","model":"","transfer":"Use when..."}}],"what_stood_out":[{"title":"","what_happened_client":"","what_you_did":"You...","why_it_matters":"","your_impact":""}],"reflection_and_growth":{"what_stood_out_in_your_approach":"You...","what_seemed_effective":"","one_place_to_stay_curious":"You might stay curious about..."},"friction_points":{"points":[],"why_it_matters":"","transition_context":null},"if_stuck":{"scenario":"","explore":"","one_possible_direction":"","transition_context":null},"commitments":[{"text":"","priority":"","follow_up_question":""}]}`,
       'Pass 2b: Interventions'
     );
 
@@ -184,20 +186,20 @@ Return ONLY:
       'Pass 2c: Curiosity'
     );
 
-    // ── Pass 2d: Patterns + Goals + Frameworks + Between-session ────────
+    // ── Pass 2d: Patterns + Coach Tendencies + Goals + Frameworks ────────
     const pass2dOutput = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
       800,
       MIRROR_RULES,
-      `Generate max 2 patterns and supporting fields. Max 15 words per value.
+      `Generate max 2 patterns, max 2 coach tendencies, and supporting fields. Max 15 words per value. Coach tendency sections: every sentence must have "you" as subject. Zero client description in what_this_session_revealed.
 ${goalsContext}
 
 EVIDENCE: ${JSON.stringify(extractionOutput)}
 CORE: ${JSON.stringify(coreOutput)}
 
 Return ONLY:
-{"patterns_and_your_role":[{"pattern_name":"","what_client_did":"","your_role":"interrupted|reinforced|allowed","how_you_influenced_it":"","current_status":"emerging|disrupted|stabilizing|unchanged"}],"goals":{"existing":[{"title":"","status":"","session_relevance":"","signal_reason":""}],"suggested":[{"title":"","description":"","suggested_target_date":""}]},"between_session":[{"title":"","invitation":"","why_it_matters":"","connection":""}],"frameworks":[{"name":"","presence_level":"","what_was_observed":"","what_it_suggests":"","build_on_this":"","mindful_of":""}]}`,
+{"patterns_and_your_role":[{"pattern_name":"","what_client_did":"","status":"surfaced|interrupted|reinforced|stabilizing","what_this_means":"plain sentence explaining status","your_role":"You..."}],"what_this_session_revealed":[{"coach_pattern":"","what_you_tend_to_do":"You...","why_this_is_effective":"","where_to_stay_curious":"You might stay curious about..."}],"goals":{"existing":[{"title":"","status":"","session_relevance":"","signal_reason":""}],"suggested":[{"title":"","description":"","suggested_target_date":""}]},"between_session":[{"title":"","invitation":"","why_it_matters":"","connection":""}],"frameworks":[{"name":"","presence_level":"","what_was_observed":"","what_it_suggests":"","build_on_this":"","mindful_of":""}]}`,
       'Pass 2d: Patterns'
     );
 

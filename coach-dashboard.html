@@ -5392,6 +5392,7 @@ function renderCoachingMirror(a, container) {
     + '<a href="#pm-frameworks" class="pm-nav-link" data-section="pm-frameworks" style="' + pmLinkStyle + '">Approaches That Emerged</a>'
     + '<div style="' + pmGroupStyle + '">Your Coaching</div>'
     + '<a href="#pm-interventions" class="pm-nav-link" data-section="pm-interventions" style="' + pmLinkStyle + '">Your Interventions</a>'
+    + '<a href="#pm-tendencies" class="pm-nav-link" data-section="pm-tendencies" style="' + pmLinkStyle + '">Your Tendencies</a>'
     + '<a href="#pm-reflection" class="pm-nav-link" data-section="pm-reflection" style="' + pmLinkStyle + '">Reflection & Growth</a>'
     + '<a href="#pm-curiosity" class="pm-nav-link" data-section="pm-curiosity" style="' + pmLinkStyle + '">Stay Curious</a>'
     + '</nav>';
@@ -5404,11 +5405,18 @@ function renderCoachingMirror(a, container) {
     var wsBody = '';
     ws.forEach(function(s) {
       if (!s) return;
-      wsBody += '<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border);">'
-        + '<span style="display:inline-block;padding:3px 10px;border-radius:50px;font-size:0.68rem;font-weight:700;background:var(--ink);color:#fff;margin-bottom:8px;">' + escapeHtml(s.signal_label || '') + '</span>'
-        + '<div style="font-size:0.88rem;font-weight:600;color:var(--ink);line-height:1.5;margin-bottom:4px;">' + escapeHtml(s.what_happened_client || '') + '</div>'
-        + '<div style="font-size:0.85rem;color:var(--gold);font-style:italic;line-height:1.5;margin-bottom:4px;">' + escapeHtml(s.where_you_were || '') + '</div>'
-        + (s.why_it_matters ? '<div style="font-size:0.82rem;color:var(--muted);line-height:1.5;">' + escapeHtml(s.why_it_matters) + '</div>' : '')
+      // Compat: support both old (signal_label/where_you_were) and new (title/what_you_did/your_impact) schema
+      var wsTitle = s.title || s.signal_label || '';
+      var wsClient = s.what_happened_client || '';
+      var wsYouDid = s.what_you_did || s.where_you_were || '';
+      var wsWhy = s.why_it_matters || '';
+      var wsImpact = s.your_impact || '';
+      wsBody += '<div style="background:var(--cream);border-radius:8px;padding:14px 16px;margin-bottom:10px;">'
+        + '<div style="font-weight:700;font-size:0.88rem;color:var(--ink);margin-bottom:6px;">' + escapeHtml(wsTitle) + '</div>'
+        + (wsClient ? '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;line-height:1.5;margin-bottom:4px;">' + escapeHtml(wsClient) + '</div>' : '')
+        + (wsYouDid ? '<div style="font-size:0.85rem;color:var(--ink);line-height:1.5;margin-bottom:4px;">' + escapeHtml(wsYouDid).replace(/^You\b/, '<span style="color:var(--gold);font-weight:700;">You</span>') + '</div>' : '')
+        + (wsWhy ? '<div style="font-size:0.78rem;color:var(--ink);line-height:1.5;margin-bottom:4px;"><span style="font-weight:700;">Why this matters:</span> ' + escapeHtml(wsWhy) + '</div>' : '')
+        + (wsImpact ? '<div style="font-size:0.78rem;color:var(--gold);font-style:italic;line-height:1.5;"><span style="font-weight:700;color:var(--ink);">Your impact:</span> ' + escapeHtml(wsImpact) + '</div>' : '')
         + '</div>';
     });
     h += mirrorSection('pm-signals', 'What Stood Out in This Session', 'Observable moments and where you were in each one.', 'Coach Clarity \u2192 For You', wsBody);
@@ -5422,19 +5430,21 @@ function renderCoachingMirror(a, container) {
     var statusColors = { emerging: 'var(--gold)', disrupted: '#2d6a4f', stabilizing: '#b8860b', unchanged: 'var(--muted)' };
     par.forEach(function(p) {
       if (!p) return;
-      var rc = roleColors[p.your_role] || 'var(--muted)';
-      var rh = roleHelpers[p.your_role] || '';
+      // Compat: support both old (your_role as status) and new (status field + your_role as action)
+      var patStatus = p.status || p.your_role || '';
+      var rc = roleColors[patStatus] || 'var(--muted)';
+      var rh = p.what_this_means || roleHelpers[patStatus] || '';
       var stc = statusColors[p.current_status] || 'var(--muted)';
       var rolePillStyle = p.your_role === 'surfaced' ? 'background:none;border:1px solid var(--ink);color:var(--ink);' : 'background:' + rc + ';color:#fff;';
       parBody += '<div style="background:var(--cream);border-radius:8px;padding:14px 16px;margin-bottom:10px;">'
         + '<div style="font-weight:700;font-size:0.88rem;color:var(--ink);margin-bottom:6px;">' + escapeHtml(p.pattern_name || '') + '</div>'
         + '<div style="margin-bottom:6px;">'
-        + '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:700;text-transform:uppercase;' + rolePillStyle + '">' + escapeHtml(p.your_role || '') + '</span>'
+        + '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:700;text-transform:uppercase;' + rolePillStyle + '">' + escapeHtml(patStatus || '') + '</span>'
         + '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:600;background:var(--cream);border:1px solid ' + stc + ';color:' + stc + ';margin-left:6px;">' + escapeHtml(p.current_status || '') + '</span>'
         + (rh ? '<div style="font-size:0.78rem;color:var(--muted);font-style:italic;line-height:1.4;margin-top:4px;">' + rh + '</div>' : '')
         + '</div>'
         + (p.what_client_did ? '<div style="font-size:0.82rem;color:var(--muted);line-height:1.5;margin-bottom:4px;">' + escapeHtml(p.what_client_did) + '</div>' : '')
-        + (p.how_you_influenced_it ? '<div style="font-size:0.85rem;color:var(--ink);line-height:1.5;">' + escapeHtml(p.how_you_influenced_it) + '</div>' : '')
+        + (p.your_role || p.how_you_influenced_it ? '<div style="font-size:0.85rem;color:var(--ink);line-height:1.5;margin-top:4px;"><span style="font-weight:700;color:var(--ink);">Your role:</span> ' + escapeHtml(p.your_role || p.how_you_influenced_it || '') + '</div>' : '')
         + '</div>';
     });
     h += mirrorSection('pm-patterns', 'Patterns Observed \u2014 Your Role', 'How you interacted with the patterns that showed up in this session.', 'Coach Clarity \u2192 For You', parBody);
@@ -5470,7 +5480,7 @@ function renderCoachingMirror(a, container) {
         .replace(/You said:/g, '<span style="color:var(--gold);font-style:italic;font-weight:600;">You said:</span>');
       ciBody += '<div style="background:var(--cream);border-left:2px solid var(--gold);border-radius:0 8px 8px 0;padding:20px;margin-bottom:12px;">'
         + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;">'
-        + '<span style="font-weight:700;font-size:0.9rem;color:var(--ink);">' + escapeHtml(c.technique_used || '') + '</span>'
+        + '<span style="font-weight:700;font-size:0.9rem;color:var(--ink);">' + escapeHtml(c.technique_name || c.technique_used || '') + '</span>'
         + '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:700;background:' + sc + ';color:#fff;">' + sl + '</span>'
         + '</div>'
         + '<div style="font-size:0.88rem;color:var(--ink);line-height:1.75;margin-bottom:6px;">' + whatYouDid + '</div>'
@@ -5487,6 +5497,22 @@ function renderCoachingMirror(a, container) {
         + '</div>';
     });
     h += mirrorSection('pm-interventions', 'Your Coaching Interventions This Session', 'Coach Clarity identified these specific techniques from this session. Each is grounded in a moment from your transcript.', 'Coach Clarity \u2192 For You', ciBody);
+  }
+
+  // Coach tendencies (what_this_session_revealed)
+  var wsr = a.what_this_session_revealed || [];
+  if (wsr && wsr.length) {
+    var wsrBody = '';
+    wsr.forEach(function(t) {
+      if (!t) return;
+      wsrBody += '<div style="background:var(--cream);border-radius:8px;padding:14px 16px;margin-bottom:10px;">'
+        + '<div style="font-weight:700;font-size:0.88rem;color:var(--ink);margin-bottom:6px;">' + escapeHtml(t.coach_pattern || '') + '</div>'
+        + (t.what_you_tend_to_do ? '<div style="font-size:0.85rem;color:var(--ink);line-height:1.5;margin-bottom:4px;">' + escapeHtml(t.what_you_tend_to_do) + '</div>' : '')
+        + (t.why_this_is_effective ? '<div style="font-size:0.78rem;color:var(--ink);line-height:1.5;margin-bottom:4px;"><span style="font-weight:700;">Why this works:</span> ' + escapeHtml(t.why_this_is_effective) + '</div>' : '')
+        + (t.where_to_stay_curious ? '<div style="font-size:0.78rem;color:var(--gold);font-style:italic;line-height:1.5;"><span style="font-weight:700;color:var(--ink);">Where to stay curious:</span> ' + escapeHtml(t.where_to_stay_curious) + '</div>' : '')
+        + '</div>';
+    });
+    h += mirrorSection('pm-tendencies', 'What This Session Revealed About Your Coaching', 'Coach Clarity observed these tendencies in how you guided this session. Every item describes your coaching only.', 'Coach Clarity \u2192 For You', wsrBody);
   }
 
   // Stale data prompt if no new-schema sections exist
