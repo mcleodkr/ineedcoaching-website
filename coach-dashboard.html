@@ -33,7 +33,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 .login-card input[type="email"] { width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--ink); background: var(--cream); margin-bottom: 14px; transition: border-color 0.2s; }
 .login-card input[type="email"]:focus { outline: none; border-color: var(--gold); }
 .login-card input[type="email"]::placeholder { color: var(--muted); }
-.login-btn { width: 100%; padding: 14px 24px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+.login-btn { width: 100%; padding: 12px 24px; background: #c49a3c; color: #fff; border: none; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.92rem; font-weight: 500; cursor: pointer; transition: all 0.15s ease; }
 .login-btn:hover { background: var(--gold-hover); }
 .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .login-msg { font-size: 0.82rem; color: var(--gold); margin-top: 14px; min-height: 20px; }
@@ -103,13 +103,20 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 .pill-add-row { display: flex; gap: 8px; }
 .pill-add-row input { flex: 1; padding: 8px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; color: var(--ink); background: var(--cream); }
 .pill-add-row input:focus { outline: none; border-color: var(--gold); }
-.pill-add-btn { padding: 8px 16px; background: var(--ink); color: var(--cream); border: none; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
-.pill-add-btn:hover { background: var(--gold); }
+.pill-add-btn { padding: 9px 20px; background: var(--gold); color: #fff; border: none; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.15s ease; white-space: nowrap; }
+.pill-add-btn:hover { background: var(--gold-hover); }
 
-/* SAVE BUTTON */
-.save-btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 28px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.92rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
-.save-btn:hover { background: var(--gold-hover); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(196,154,60,0.3); }
-.save-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+/* BUTTON HIERARCHY */
+/* Primary: gold bg, white text */
+.btn-primary, .save-btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 20px; background: #c49a3c; color: #fff; border: none; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.15s ease; }
+.btn-primary:hover, .save-btn:hover { background: var(--gold-hover); }
+.btn-primary:disabled, .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+/* Secondary: navy outline */
+.btn-secondary { display: inline-flex; align-items: center; gap: 8px; padding: 9px 20px; background: transparent; color: #1a3a52; border: 1px solid #1a3a52; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.15s ease; }
+.btn-secondary:hover { background: #1a3a52; color: #fff; }
+/* Neutral/destructive: muted border */
+.btn-neutral { display: inline-flex; align-items: center; gap: 8px; padding: 9px 20px; background: transparent; color: #6b7280; border: 1px solid #e8e4dc; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.15s ease; }
+.btn-neutral:hover { border-color: #6b7280; }
 .save-msg { display: inline-block; font-size: 0.82rem; color: var(--forest); margin-left: 14px; opacity: 0; transition: opacity 0.3s; }
 .save-msg.show { opacity: 1; }
 
@@ -132,8 +139,8 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 /* ADD SERVICE FORM */
 .add-service-form { background: var(--cream); border: 1px solid var(--border); border-radius: var(--r); padding: 24px; margin-top: 14px; display: none; }
 .add-service-form.open { display: block; }
-.add-service-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; background: var(--ink); color: var(--cream); border: none; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: background 0.2s; margin-top: 14px; }
-.add-service-btn:hover { background: var(--gold); }
+.add-service-btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 20px; background: #c49a3c; color: #fff; border: none; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.15s ease; margin-top: 14px; }
+.add-service-btn:hover { background: var(--gold-hover); }
 .checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
 .checkbox-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--gold); }
 .checkbox-row label { font-size: 0.85rem; color: var(--ink); text-transform: none; letter-spacing: 0; font-weight: 500; }
@@ -146,7 +153,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 .bookings-table tr:last-child td { border-bottom: none; }
 .bookings-table tbody tr:nth-child(even) { background: var(--cream); }
 .bookings-filter-bar { display: flex; gap: 8px; margin-bottom: 16px; }
-.bookings-filter-btn { padding: 8px 18px; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 700; border: 1px solid var(--border); background: var(--white); color: var(--muted); cursor: pointer; transition: all 0.2s; }
+.bookings-filter-btn { padding: 7px 16px; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 500; border: 1px solid #e8e4dc; background: var(--white); color: #6b7280; cursor: pointer; transition: all 0.15s ease; }
 .bookings-filter-btn.active { background: var(--ink); color: var(--white); border-color: var(--ink); }
 .bookings-filter-btn:hover:not(.active) { border-color: var(--ink); color: var(--ink); }
 .booking-details-toggle { font-size: 0.78rem; color: var(--gold); cursor: pointer; border: none; background: none; font-weight: 600; padding: 0; }
@@ -184,15 +191,15 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 .status-completed { background: rgba(26,46,26,0.12); color: var(--ink); }
 
 /* ACTION BUTTONS */
-.action-btn { padding: 7px 16px; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 600; border: none; cursor: pointer; transition: all 0.15s ease; margin-right: 6px; }
-.action-confirm { background: var(--navy); color: #fff; }
-.action-confirm:hover { background: #0f2535; }
-.action-decline { background: #fff; color: #c0392b; border: 1px solid #c0392b; }
+.action-btn { padding: 9px 20px; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; border: none; cursor: pointer; transition: all 0.15s ease; margin-right: 6px; }
+.action-confirm { background: #c49a3c; color: #fff; }
+.action-confirm:hover { background: var(--gold-hover); }
+.action-decline { background: transparent; color: #c0392b; border: 1px solid #c0392b; }
 .action-decline:hover { background: #fdf2f2; }
-.action-approve { background: var(--forest); color: var(--white); }
-.action-approve:hover { background: #3a6c49; }
-.action-remove { background: var(--cream); color: var(--muted); border: 1px solid var(--border); }
-.action-remove:hover { border-color: var(--muted); }
+.action-approve { background: #c49a3c; color: #fff; }
+.action-approve:hover { background: var(--gold-hover); }
+.action-remove { background: transparent; color: #6b7280; border: 1px solid #e8e4dc; }
+.action-remove:hover { border-color: #6b7280; }
 
 /* TESTIMONIAL & REC CARDS */
 .review-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 28px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: box-shadow 0.2s; }
@@ -230,7 +237,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 .prop-badge-changes { background: #e67e22; color: #fff; border: 1.5px solid #e67e22; }
 .prop-date { font-size: 0.72rem; color: var(--muted); }
 .prop-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-.prop-btn { padding: 5px 14px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; font-family: inherit; cursor: pointer; text-decoration: none; display: inline-block; transition: all 0.15s; border: none; }
+.prop-btn { padding: 7px 16px; border-radius: 6px; font-size: 0.78rem; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; text-decoration: none; display: inline-block; transition: all 0.15s ease; border: none; }
 .prop-btn-edit { background: #c49a3c; color: #1a3a52; }
 .prop-btn-edit:hover { background: #d4a94c; }
 .prop-btn-view { background: #1a3a52; color: #fff; }
@@ -3216,8 +3223,8 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
         + '</div>'
         + '<div style="display:flex;gap:8px;align-items:center;">' + statusIcons
         + (s.zoom_link ? ' <a href="' + escapeHtml(s.zoom_link) + '" target="_blank" rel="noopener noreferrer" style="font-size:0.78rem;color:var(--gold);text-decoration:none;font-weight:600;">&#127909;</a>' : '')
-        + (isNextUpcoming ? ' <button class="gen-brief-inline-btn" data-client-email="' + escapeHtml(client.email) + '" data-booking-id="' + s.id + '" style="font-size:0.72rem;color:var(--gold);background:none;border:1px solid var(--gold);padding:4px 12px;border-radius:50px;cursor:pointer;font-weight:600;" title="Generate Pre-Session Brief">Prepare for this session \u2192</button>' : '')
-        + ' <button class="session-expand-btn" data-sid="' + s.id + '" style="font-size:0.75rem;color:var(--gold);background:none;border:1px solid var(--gold);padding:4px 12px;border-radius:50px;cursor:pointer;font-weight:600;">Open</button>'
+        + (isNextUpcoming ? ' <button class="gen-brief-inline-btn" data-client-email="' + escapeHtml(client.email) + '" data-booking-id="' + s.id + '" style="font-size:0.78rem;color:#1a3a52;background:transparent;border:1px solid #1a3a52;padding:5px 14px;border-radius:6px;cursor:pointer;font-weight:500;transition:all 0.15s ease" title="Generate Pre-Session Brief">Prepare for this session \u2192</button>' : '')
+        + ' <button class="session-expand-btn" data-sid="' + s.id + '" style="font-size:0.78rem;color:#1a3a52;background:transparent;border:1px solid #1a3a52;padding:5px 14px;border-radius:6px;cursor:pointer;font-weight:500;transition:all 0.15s ease">Open</button>'
         + '</div></div>';
 
       // Expandable session panel (hidden by default)
@@ -3249,7 +3256,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
       }
       html += '<div id="transcript-editor-' + s.id + '" style="' + (hasTranscript ? 'display:none;' : '') + '">'
         + '<textarea id="transcript-input-' + s.id + '" style="width:100%;padding:14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:var(--ink);background:var(--cream);min-height:180px;resize:vertical;" placeholder="Paste your session transcript from Zoom, Otter, Fireflies, or any recording tool.">' + escapeHtml(hasTranscript ? note.raw_transcript : '') + '</textarea>'
-        + '<button class="transcript-save-btn" data-sid="' + s.id + '" data-client-email="' + escapeHtml(client.email) + '" style="margin-top:10px;padding:10px 24px;background:var(--gold);color:#fff;border:none;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer;">Save Transcript</button>'
+        + '<button class="transcript-save-btn" data-sid="' + s.id + '" data-client-email="' + escapeHtml(client.email) + '" style="padding:9px 20px;background:#c49a3c;color:#fff;border:none;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:500;cursor:pointer;transition:all 0.15s ease;margin-top:10px;">Save Transcript</button>'
         + '</div></div>';
 
       // Tab 2: Session Notes
@@ -3281,7 +3288,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
           + '<div style="font-size:0.7rem;color:var(--muted);">Outcome \u2022 Scaling \u2022 Know-how \u2022 Action \u2022 Review</div></div>'
           + '</div>';
         if (hasTranscript) {
-          html += '<button class="gen-from-transcript-btn" data-sid="' + s.id + '" data-client-email="' + escapeHtml(client.email) + '" style="width:100%;padding:12px 24px;background:var(--gold);color:#fff;border:none;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.88rem;font-weight:700;cursor:pointer;margin-bottom:16px;">Generate Notes from Transcript</button>'
+          html += '<button class="gen-from-transcript-btn" data-sid="' + s.id + '" data-client-email="' + escapeHtml(client.email) + '" style="width:100%;padding:9px 20px;background:#c49a3c;color:#fff;border:none;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:500;cursor:pointer;transition:all 0.15s ease;margin-bottom:16px;">Generate Notes from Transcript</button>'
             + '<div id="gen-transcript-status-' + s.id + '" style="margin-bottom:12px;"></div>';
         }
       }
@@ -3308,7 +3315,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
         html += '<p style="font-size:0.85rem;color:var(--muted);font-style:italic;">Add a transcript or session notes first to unlock Coach Clarity analysis.</p>';
       }
       if (canAnalyze) {
-        html += '<button class="post-analysis-btn" data-booking-id="' + s.id + '" data-client-email="' + escapeHtml(client.email) + '" style="padding:10px 24px;background:var(--ink);color:var(--gold);border:none;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer;">' + (hasAnalysis ? 'Regenerate Analysis' : 'Run Post-Session Analysis') + '</button>';
+        html += '<button class="post-analysis-btn" data-booking-id="' + s.id + '" data-client-email="' + escapeHtml(client.email) + '" style="padding:9px 20px;background:#c49a3c;color:#fff;border:none;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:500;cursor:pointer;transition:all 0.15s ease">' + (hasAnalysis ? 'Regenerate Analysis' : 'Run Post-Session Analysis') + '</button>';
       }
       if (!hasAnalysis) {
         html += '<div id="post-analysis-' + s.id + '" data-tab-type="coach-clarity" style="margin-top:16px;"></div>';
@@ -3512,7 +3519,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
           // Ensure analysis button exists if data is available
           var existingBtn = analysisContainer.parentElement.querySelector('.post-analysis-btn');
           if (!existingBtn && hasData) {
-            var btnHtml = '<button class="post-analysis-btn" data-booking-id="' + sid + '" data-client-email="' + (noteData.client_email || client.email) + '" style="padding:10px 24px;background:var(--ink);color:var(--gold);border:none;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer;margin-top:12px;">' + (hasExisting ? 'Regenerate Analysis' : 'Run Post-Session Analysis') + '</button>';
+            var btnHtml = '<button class="post-analysis-btn" data-booking-id="' + sid + '" data-client-email="' + (noteData.client_email || client.email) + '" style="padding:9px 20px;background:#c49a3c;color:#fff;border:none;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:500;cursor:pointer;transition:all 0.15s ease;margin-top:12px;">' + (hasExisting ? 'Regenerate Analysis' : 'Run Post-Session Analysis') + '</button>';
             analysisContainer.insertAdjacentHTML('afterend', btnHtml);
             // Wire the new button
             var newBtn = analysisContainer.parentElement.querySelector('.post-analysis-btn');
