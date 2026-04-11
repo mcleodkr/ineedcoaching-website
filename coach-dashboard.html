@@ -5323,15 +5323,27 @@ function renderPostSessionAnalysis(a, container) {
 }
 
 function renderCoachingMirror(a, container) {
+  // Top-level null guard
+  if (!a) {
+    container.innerHTML = '<div style="border:2px solid var(--gold);border-radius:var(--r);padding:24px 28px;margin-bottom:16px;text-align:center;">'
+      + '<div style="font-size:0.88rem;color:var(--ink);line-height:1.6;">This analysis was generated before Coach Clarity\u2019s Coaching Mirror was updated. Regenerate Analysis on the Coach Clarity tab to see your coaching interventions, techniques, and mirror reflection.</div></div>';
+    return;
+  }
   var ws = a.what_stood_out || a.coaching_signals || null;
   var ci = a.coaching_interventions || null;
   var par = a.patterns_and_your_role || null;
   var fw = a.frameworks || a.frameworks_detected || null;
   var rg = a.reflection_and_growth || a.coaching_reflection || null;
   var ce = a.curiosity_edges || [];
+  // Filter null items from all arrays
+  if (ws && Array.isArray(ws)) ws = ws.filter(function(x) { return x != null; });
+  if (ci && Array.isArray(ci)) ci = ci.filter(function(x) { return x != null; });
+  if (par && Array.isArray(par)) par = par.filter(function(x) { return x != null; });
+  if (fw && Array.isArray(fw)) fw = fw.filter(function(x) { return x != null; });
+  if (Array.isArray(ce)) ce = ce.filter(function(x) { return x != null; });
   // Compat: old coaching_signals format
   if (!a.what_stood_out && a.coaching_signals) {
-    ws = (a.coaching_signals || []).map(function(s) {
+    ws = (a.coaching_signals || []).filter(function(x) { return x != null; }).map(function(s) {
       return { signal_label: s.type || s.signal_type || '', what_happened_client: s.description || s.observation || '', where_you_were: s.implication || s.coach_move || '', why_it_matters: '' };
     });
   }
@@ -5379,6 +5391,7 @@ function renderCoachingMirror(a, container) {
   if (ws && ws.length) {
     var wsBody = '';
     ws.forEach(function(s) {
+      if (!s) return;
       wsBody += '<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border);">'
         + '<span style="display:inline-block;padding:3px 10px;border-radius:50px;font-size:0.68rem;font-weight:700;background:var(--ink);color:#fff;margin-bottom:8px;">' + escapeHtml(s.signal_label || '') + '</span>'
         + '<div style="font-size:0.88rem;font-weight:600;color:var(--ink);line-height:1.5;margin-bottom:4px;">' + escapeHtml(s.what_happened_client || '') + '</div>'
@@ -5395,6 +5408,7 @@ function renderCoachingMirror(a, container) {
     var roleColors = { interrupted: '#2d6a4f', reinforced: '#b8860b', allowed: 'var(--muted)' };
     var statusColors = { emerging: 'var(--gold)', disrupted: '#2d6a4f', stabilizing: '#b8860b', unchanged: 'var(--muted)' };
     par.forEach(function(p) {
+      if (!p) return;
       var rc = roleColors[p.your_role] || 'var(--muted)';
       var stc = statusColors[p.current_status] || 'var(--muted)';
       parBody += '<div style="background:var(--cream);border-radius:8px;padding:14px 16px;margin-bottom:10px;">'
@@ -5432,6 +5446,7 @@ function renderCoachingMirror(a, container) {
     var strengthColors = { high: '#2d6a4f', medium: 'var(--gold)', low: 'var(--muted)' };
     var strengthLabels = { high: 'HIGH', medium: 'MEDIUM', low: 'LOW' };
     ci.forEach(function(c) {
+      if (!c) return;
       var sc = strengthColors[c.signal_strength] || 'var(--muted)';
       var sl = strengthLabels[c.signal_strength] || '';
       // Format what_you_did with gold italic for "You said:" portion
@@ -5489,6 +5504,7 @@ function renderCoachingMirror(a, container) {
   if (ce && ce.length) {
     var ceBody = '';
     ce.forEach(function(c) {
+      if (!c) return;
       ceBody += '<div style="background:var(--cream);border-left:2px solid var(--muted);border-radius:0 8px 8px 0;padding:16px 20px;margin-bottom:12px;">'
         + '<div style="font-size:0.82rem;color:var(--ink);line-height:1.6;margin-bottom:8px;"><span style="font-weight:700;color:var(--ink);">A place to stay curious:</span> ' + escapeHtml(c.curiosity_note || '') + '</div>'
         + '<div style="font-size:0.82rem;color:var(--ink);line-height:1.6;margin-bottom:8px;"><span style="font-weight:700;color:var(--ink);">What to notice:</span> ' + escapeHtml(c.what_to_notice || '') + '</div>'
