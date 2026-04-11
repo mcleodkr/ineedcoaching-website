@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Coach Dashboard | ineedcoaching.org</title>
 <meta name="description" content="Manage your coaching profile, bookings, testimonials, and recommendations on ineedcoaching.org">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
 <style>
 :root {
   --ink: #1a3a52;
   --forest: #4a7c59;
-  --cream: #f7f4ee;
+  --cream: #f7f5f1;
   --white: #ffffff;
   --gold: #c49a3c;
   --gold-hover: #a87d1f;
@@ -22,21 +22,21 @@
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
-body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); color: var(--ink); min-height: 100vh; }
+body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink); min-height: 100vh; line-height: 1.6; -webkit-font-smoothing: antialiased; }
 
 /* LOGIN SCREEN */
 .login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; background: var(--cream); }
 .login-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 48px 40px; max-width: 440px; width: 100%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.06); }
-.login-card h1 { font-family: 'Playfair Display', serif; font-size: 1.8rem; color: var(--ink); margin-bottom: 10px; }
+.login-card h1 { font-family: 'Cormorant Garamond', serif; font-size: 2rem; font-weight: 600; color: var(--ink); margin-bottom: 10px; letter-spacing: -0.02em; }
 .login-card .login-sub { font-size: 0.92rem; color: var(--muted); margin-bottom: 28px; line-height: 1.6; }
-.login-card input[type="email"] { width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; color: var(--ink); background: var(--cream); margin-bottom: 14px; transition: border-color 0.2s; }
+.login-card input[type="email"] { width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--ink); background: var(--cream); margin-bottom: 14px; transition: border-color 0.2s; }
 .login-card input[type="email"]:focus { outline: none; border-color: var(--gold); }
 .login-card input[type="email"]::placeholder { color: var(--muted); }
-.login-btn { width: 100%; padding: 14px 24px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+.login-btn { width: 100%; padding: 14px 24px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
 .login-btn:hover { background: var(--gold-hover); }
 .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .login-msg { font-size: 0.82rem; color: var(--gold); margin-top: 14px; min-height: 20px; }
-.login-logo { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; color: var(--ink); margin-bottom: 24px; }
+.login-logo { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; font-weight: 700; color: var(--ink); margin-bottom: 24px; }
 .login-logo .logo-i { color: var(--gold); font-style: italic; }
 .login-logo .logo-coaching { color: var(--gold); font-style: italic; }
 
@@ -45,35 +45,35 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 
 /* TOP NAV */
 .top-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; align-items: center; justify-content: space-between; padding: 14px 52px; background: var(--ink); border-bottom: 1px solid rgba(255,255,255,0.1); }
-.logo { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--cream); text-decoration: none; }
+.logo { font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; font-weight: 600; color: var(--cream); text-decoration: none; letter-spacing: -0.01em; }
 .logo .logo-i { color: var(--gold); font-style: italic; }
 .logo .logo-coaching { color: var(--gold); font-style: italic; }
 .nav-right { display: flex; align-items: center; gap: 18px; }
 .nav-coach-name { font-size: 0.85rem; font-weight: 600; color: var(--cream); }
 .nav-profile-link { font-size: 0.78rem; font-weight: 700; color: var(--gold); text-decoration: none; transition: color 0.2s; }
 .nav-profile-link:hover { color: #d4a94c; }
-.sign-out-btn { background: none; border: 1.5px solid rgba(255,255,255,0.2); color: var(--cream); padding: 7px 18px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.sign-out-btn { background: none; border: 1.5px solid rgba(255,255,255,0.2); color: var(--cream); padding: 7px 18px; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
 .sign-out-btn:hover { border-color: var(--gold); color: var(--gold); }
 
 /* TABS */
-.tab-bar { position: fixed; top: 55px; left: 0; right: 0; z-index: 299; background: var(--white); border-bottom: 1px solid var(--border); display: flex; padding: 0 52px; }
-.tab-btn { padding: 14px 24px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; font-weight: 700; color: var(--muted); background: none; border: none; border-bottom: 2.5px solid transparent; cursor: pointer; transition: all 0.2s; }
+.tab-bar { display: none; }
+.tab-btn { padding: 14px 24px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 700; color: var(--muted); background: none; border: none; border-bottom: 2.5px solid transparent; cursor: pointer; transition: all 0.2s; }
 .tab-btn:hover { color: var(--ink); }
 .tab-btn.active { color: var(--ink); border-bottom-color: var(--gold); }
 
 /* CONTENT */
-.dash-content { max-width: 900px; margin: 0 auto; padding: 130px 40px 80px; }
+.dash-content { max-width: 900px; margin: 0 auto; padding: 80px 40px 80px; }
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
 
 /* FORM STYLES */
-.form-section { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 32px; margin-bottom: 24px; }
-.form-section-title { font-family: 'Playfair Display', serif; font-size: 1.15rem; color: var(--ink); margin-bottom: 20px; }
+.form-section { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 36px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.form-section-title { font-family: 'Cormorant Garamond', serif; font-size: 1.25rem; font-weight: 600; color: var(--ink); margin-bottom: 20px; letter-spacing: -0.01em; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
 .form-group { margin-bottom: 16px; }
 .form-group.full { grid-column: 1 / -1; }
 .form-group label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--ink); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
-.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.92rem; color: var(--ink); background: var(--cream); transition: border-color 0.2s; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.92rem; color: var(--ink); background: var(--cream); transition: border-color 0.2s; }
 .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--gold); }
 .form-group textarea { min-height: 120px; resize: vertical; }
 .form-group textarea::placeholder, .form-group input::placeholder { color: var(--muted); }
@@ -82,7 +82,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 /* PHOTO SECTION */
 .photo-section { display: flex; align-items: center; gap: 24px; margin-bottom: 24px; }
 .photo-preview { width: 100px; height: 100px; border-radius: var(--r); object-fit: cover; border: 1px solid var(--border); }
-.photo-initials { width: 100px; height: 100px; border-radius: var(--r); background: var(--ink); display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-size: 2.2rem; font-weight: 900; color: var(--gold); }
+.photo-initials { width: 100px; height: 100px; border-radius: var(--r); background: var(--ink); display: flex; align-items: center; justify-content: center; font-family: 'Cormorant Garamond', serif; font-size: 2.2rem; font-weight: 900; color: var(--gold); }
 .photo-upload-area { flex: 1; }
 .photo-upload-area label.upload-label { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: var(--white); border: 1.5px solid var(--border); border-radius: var(--r-sm); font-size: 0.85rem; font-weight: 600; color: var(--ink); cursor: pointer; transition: all 0.2s; }
 .photo-upload-area label.upload-label:hover { border-color: var(--gold); }
@@ -95,13 +95,13 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .pill .pill-remove { background: none; border: none; color: var(--gold); font-size: 1rem; cursor: pointer; line-height: 1; padding: 0; margin-left: 2px; opacity: 0.7; transition: opacity 0.2s; }
 .pill .pill-remove:hover { opacity: 1; }
 .pill-add-row { display: flex; gap: 8px; }
-.pill-add-row input { flex: 1; padding: 8px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; color: var(--ink); background: var(--cream); }
+.pill-add-row input { flex: 1; padding: 8px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; color: var(--ink); background: var(--cream); }
 .pill-add-row input:focus { outline: none; border-color: var(--gold); }
-.pill-add-btn { padding: 8px 16px; background: var(--ink); color: var(--cream); border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+.pill-add-btn { padding: 8px 16px; background: var(--ink); color: var(--cream); border: none; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
 .pill-add-btn:hover { background: var(--gold); }
 
 /* SAVE BUTTON */
-.save-btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 32px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.save-btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 32px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
 .save-btn:hover { background: var(--gold-hover); }
 .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .save-msg { display: inline-block; font-size: 0.82rem; color: var(--forest); margin-left: 14px; opacity: 0; transition: opacity 0.3s; }
@@ -110,10 +110,10 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 /* SERVICES LIST */
 .service-item { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 24px; margin-bottom: 14px; }
 .service-item-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.service-item h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--ink); }
+.service-item h3 { font-family: 'Cormorant Garamond', serif; font-size: 1.05rem; color: var(--ink); }
 .service-item p { font-size: 0.88rem; color: var(--muted); line-height: 1.6; margin-bottom: 8px; }
 .service-item-meta { display: flex; align-items: center; gap: 16px; font-size: 0.82rem; color: var(--muted); }
-.service-item-meta .price { font-weight: 700; color: var(--gold); font-family: 'Playfair Display', serif; font-size: 1rem; }
+.service-item-meta .price { font-weight: 700; color: var(--gold); font-family: 'Cormorant Garamond', serif; font-size: 1rem; }
 
 /* TOGGLE SWITCH */
 .toggle-switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
@@ -126,7 +126,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 /* ADD SERVICE FORM */
 .add-service-form { background: var(--cream); border: 1px solid var(--border); border-radius: var(--r); padding: 24px; margin-top: 14px; display: none; }
 .add-service-form.open { display: block; }
-.add-service-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; background: var(--ink); color: var(--cream); border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: background 0.2s; margin-top: 14px; }
+.add-service-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; background: var(--ink); color: var(--cream); border: none; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: background 0.2s; margin-top: 14px; }
 .add-service-btn:hover { background: var(--gold); }
 .checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
 .checkbox-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--gold); }
@@ -140,7 +140,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .bookings-table tr:last-child td { border-bottom: none; }
 .bookings-table tbody tr:nth-child(even) { background: var(--cream); }
 .bookings-filter-bar { display: flex; gap: 8px; margin-bottom: 16px; }
-.bookings-filter-btn { padding: 8px 18px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 700; border: 1px solid var(--border); background: var(--white); color: var(--muted); cursor: pointer; transition: all 0.2s; }
+.bookings-filter-btn { padding: 8px 18px; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 700; border: 1px solid var(--border); background: var(--white); color: var(--muted); cursor: pointer; transition: all 0.2s; }
 .bookings-filter-btn.active { background: var(--ink); color: var(--white); border-color: var(--ink); }
 .bookings-filter-btn:hover:not(.active) { border-color: var(--ink); color: var(--ink); }
 .booking-details-toggle { font-size: 0.78rem; color: var(--gold); cursor: pointer; border: none; background: none; font-weight: 600; padding: 0; }
@@ -151,9 +151,9 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .booking-zoom-btn { font-size: 0.75rem; color: var(--gold); cursor: pointer; border: 1px solid var(--gold); background: none; font-weight: 700; padding: 4px 10px; border-radius: 50px; transition: all 0.2s; margin-top: 6px; display: inline-block; }
 .booking-zoom-btn:hover { background: var(--gold); color: #fff; }
 .booking-zoom-input-wrap { display: flex; gap: 6px; margin-top: 6px; align-items: center; }
-.booking-zoom-input-wrap input { padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; flex: 1; min-width: 160px; }
+.booking-zoom-input-wrap input { padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.78rem; flex: 1; min-width: 160px; }
 .booking-zoom-input-wrap input:focus { outline: none; border-color: var(--gold); }
-.booking-zoom-input-wrap button { padding: 6px 14px; background: var(--gold); color: #fff; border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.75rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.booking-zoom-input-wrap button { padding: 6px 14px; background: var(--gold); color: #fff; border: none; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.75rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
 .booking-zoom-link { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; color: var(--gold); text-decoration: none; font-weight: 600; margin-top: 6px; cursor: pointer; }
 .booking-zoom-link:hover { text-decoration: underline; }
 
@@ -161,12 +161,12 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .preview-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 500; align-items: center; justify-content: center; }
 .preview-overlay.open { display: flex; }
 .preview-modal { background: var(--white); border-radius: var(--r); padding: 40px; max-width: 560px; width: 90%; max-height: 85vh; overflow-y: auto; position: relative; }
-.preview-modal h2 { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--ink); margin-bottom: 6px; }
+.preview-modal h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; color: var(--ink); margin-bottom: 6px; }
 .preview-modal .preview-subtitle { font-size: 0.85rem; color: var(--muted); margin-bottom: 28px; }
 .preview-modal .preview-close { position: absolute; top: 14px; right: 18px; background: none; border: none; font-size: 1.4rem; color: var(--muted); cursor: pointer; }
 .preview-modal .form-group { margin-bottom: 20px; }
 .preview-modal .form-group label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--ink); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
-.preview-modal input[type="text"], .preview-modal textarea { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; color: var(--ink); background: var(--cream); }
+.preview-modal input[type="text"], .preview-modal textarea { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--ink); background: var(--cream); }
 .preview-modal textarea { min-height: 80px; resize: vertical; }
 .preview-modal input:focus, .preview-modal textarea:focus { outline: none; border-color: var(--gold); }
 
@@ -178,7 +178,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .status-completed { background: rgba(26,46,26,0.12); color: var(--ink); }
 
 /* ACTION BUTTONS */
-.action-btn { padding: 6px 14px; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; margin-right: 6px; }
+.action-btn { padding: 6px 14px; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; margin-right: 6px; }
 .action-confirm { background: #1a3a52; color: #fff; }
 .action-confirm:hover { background: #153045; }
 .action-decline { background: #fff; color: #c0392b; border: 1px solid #c0392b; }
@@ -189,7 +189,8 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .action-remove:hover { border-color: var(--muted); }
 
 /* TESTIMONIAL & REC CARDS */
-.review-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 28px; margin-bottom: 16px; }
+.review-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 28px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: box-shadow 0.2s; }
+.review-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
 .review-card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
 .review-card-author { font-weight: 700; font-size: 0.92rem; color: var(--ink); }
 .review-card-title { font-size: 0.82rem; color: var(--muted); }
@@ -208,12 +209,12 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .prop-card { display: grid; grid-template-columns: 1fr auto auto; gap: 20px; align-items: center; background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; cursor: pointer; transition: box-shadow 0.2s, transform 0.2s; }
 .prop-card:hover { box-shadow: 0 8px 28px rgba(26,58,82,0.10); transform: translateY(-1px); }
 .prop-left { min-width: 0; }
-.prop-company { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prop-company { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .prop-contact { font-size: 0.78rem; color: var(--muted); margin-bottom: 6px; }
 .prop-service { font-size: 0.82rem; color: var(--ink); font-weight: 600; }
 .prop-notes { font-size: 0.75rem; font-style: italic; color: #e67e22; margin-top: 6px; line-height: 1.4; }
 .prop-center { text-align: center; padding: 0 12px; }
-.prop-amount { font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 900; color: var(--gold); line-height: 1; }
+.prop-amount { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 900; color: var(--gold); line-height: 1; }
 .prop-amount-label { font-size: 0.6rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
 .prop-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; min-width: 110px; }
 .prop-badge { display: inline-block; padding: 5px 14px; border-radius: 50px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
@@ -242,16 +243,16 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .draft-article-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 28px; margin-bottom: 16px; transition: border-color 0.2s; }
 .draft-article-card:hover { border-color: var(--gold); }
 .draft-article-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
-.draft-article-title { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--ink); flex: 1; }
+.draft-article-title { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; color: var(--ink); flex: 1; }
 .draft-article-meta { font-size: 0.75rem; color: var(--muted); margin-bottom: 14px; }
 .draft-article-preview { font-size: 0.88rem; color: var(--ink); line-height: 1.7; max-height: 120px; overflow: hidden; margin-bottom: 16px; }
 .draft-article-preview.expanded { max-height: none; }
 .draft-article-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .draft-edit-form { display: none; margin-top: 16px; }
 .draft-edit-form.open { display: block; }
-.draft-edit-form input { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.92rem; color: var(--ink); background: var(--cream); margin-bottom: 12px; }
+.draft-edit-form input { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.92rem; color: var(--ink); background: var(--cream); margin-bottom: 12px; }
 .draft-edit-form input:focus { outline: none; border-color: var(--gold); }
-.draft-edit-form textarea { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.88rem; color: var(--ink); background: var(--cream); min-height: 300px; line-height: 1.7; resize: vertical; }
+.draft-edit-form textarea { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.88rem; color: var(--ink); background: var(--cream); min-height: 300px; line-height: 1.7; resize: vertical; }
 .draft-edit-form textarea:focus { outline: none; border-color: var(--gold); }
 .draft-edit-actions { display: flex; gap: 8px; margin-top: 12px; }
 
@@ -261,7 +262,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 
 /* NO PROFILE STATE */
 .no-profile { text-align: center; padding: 80px 24px; }
-.no-profile h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--ink); margin-bottom: 12px; }
+.no-profile h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; color: var(--ink); margin-bottom: 12px; }
 .no-profile p { color: var(--muted); font-size: 0.95rem; }
 .no-profile a { color: var(--gold); }
 
@@ -310,28 +311,28 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .msg-client-bubble .msg-sender { color: var(--muted); }
 .msg-client-bubble .msg-time { color: var(--muted); }
 .reply-area { display: flex; gap: 10px; }
-.reply-area textarea { flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.88rem; color: var(--ink); background: var(--cream); resize: none; min-height: 44px; max-height: 100px; }
+.reply-area textarea { flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.88rem; color: var(--ink); background: var(--cream); resize: none; min-height: 44px; max-height: 100px; }
 .reply-area textarea:focus { outline: none; border-color: var(--gold); }
-.reply-btn { padding: 10px 20px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+.reply-btn { padding: 10px 20px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
 .reply-btn:hover { background: var(--gold-hover); }
 .reply-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* GOALS */
 .goal-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 24px; margin-bottom: 14px; }
-.goal-card h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--ink); margin-bottom: 6px; }
+.goal-card h3 { font-family: 'Cormorant Garamond', serif; font-size: 1.05rem; color: var(--ink); margin-bottom: 6px; }
 .goal-card p { font-size: 0.88rem; color: var(--muted); line-height: 1.6; margin-bottom: 6px; }
 .goal-card-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
-.goal-status-select { padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.82rem; color: var(--ink); background: var(--cream); cursor: pointer; }
+.goal-status-select { padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.82rem; color: var(--ink); background: var(--cream); cursor: pointer; }
 .goal-status-select:focus { outline: none; border-color: var(--gold); }
-.goal-delete-btn { padding: 6px 14px; background: none; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.78rem; font-weight: 700; color: var(--muted); cursor: pointer; transition: all 0.2s; }
+.goal-delete-btn { padding: 6px 14px; background: none; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 700; color: var(--muted); cursor: pointer; transition: all 0.2s; }
 .goal-delete-btn:hover { border-color: #c44; color: #c44; }
-.add-goal-form { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 28px; margin-bottom: 24px; }
-.add-goal-form h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--ink); margin-bottom: 18px; }
+.add-goal-form { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 32px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.add-goal-form h3 { font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; font-weight: 600; color: var(--ink); margin-bottom: 18px; }
 
 /* COURSES TAB */
 /* COURSE BUILDER — premium design */
 .cb-header { background: #1a3a52; border-radius: 12px 12px 0 0; padding: 24px 28px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0; }
-.cb-header-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; font-weight: 900; color: #fff; }
+.cb-header-title { font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; font-weight: 900; color: #fff; }
 .cb-header-sub { font-size: 0.82rem; color: rgba(255,255,255,0.6); margin-top: 2px; }
 .cb-header-status { font-size: 0.72rem; color: #c49a3c; font-weight: 600; }
 .cb-body { background: #fff; border: 1px solid #e0ddd5; border-top: none; border-radius: 0 0 12px 12px; padding: 28px; }
@@ -345,12 +346,12 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .cb-step-label.active { color: #1a3a52; }
 .cb-step-line { position: absolute; top: 16px; left: 0; right: 0; height: 2px; background: #e0ddd5; z-index: 0; }
 .cb-section { border-left: 3px solid #c49a3c; padding-left: 20px; margin-bottom: 28px; }
-.cb-section-title { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 700; color: #1a3a52; margin-bottom: 16px; }
+.cb-section-title { font-family: 'Cormorant Garamond', serif; font-size: 1rem; font-weight: 700; color: #1a3a52; margin-bottom: 16px; }
 .cb-field { margin-bottom: 16px; }
 .cb-label { display: block; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #8a8a9a; margin-bottom: 6px; }
-.cb-input { width: 100%; padding: 11px 14px; border: 1.5px solid #e0ddd5; border-radius: 8px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem; color: #1a3a52; background: #fff; outline: none; transition: all 0.2s; }
+.cb-input { width: 100%; padding: 11px 14px; border: 1.5px solid #e0ddd5; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: #1a3a52; background: #fff; outline: none; transition: all 0.2s; }
 .cb-input:focus { border-color: #c49a3c; box-shadow: 0 0 0 3px rgba(196,154,60,0.12); }
-.cb-textarea { width: 100%; padding: 11px 14px; border: 1.5px solid #e0ddd5; border-radius: 8px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem; color: #1a3a52; background: #fff; outline: none; min-height: 100px; resize: vertical; transition: all 0.2s; }
+.cb-textarea { width: 100%; padding: 11px 14px; border: 1.5px solid #e0ddd5; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: #1a3a52; background: #fff; outline: none; min-height: 100px; resize: vertical; transition: all 0.2s; }
 .cb-textarea:focus { border-color: #c49a3c; box-shadow: 0 0 0 3px rgba(196,154,60,0.12); }
 .cb-type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .cb-type-card { padding: 14px 16px; border: 2px solid #e0ddd5; border-radius: 10px; cursor: pointer; background: #fff; transition: all 0.15s; }
@@ -390,7 +391,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .cb-mod-card:hover { box-shadow: 0 4px 16px rgba(26,58,82,0.06); }
 .cb-mod-header { display: flex; align-items: center; gap: 14px; padding: 16px 20px; cursor: pointer; transition: background 0.15s; }
 .cb-mod-header:hover { background: #faf3e0; }
-.cb-mod-num { width: 36px; height: 36px; border-radius: 50%; background: #1a3a52; display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-size: 0.9rem; font-weight: 900; color: #c49a3c; flex-shrink: 0; }
+.cb-mod-num { width: 36px; height: 36px; border-radius: 50%; background: #1a3a52; display: flex; align-items: center; justify-content: center; font-family: 'Cormorant Garamond', serif; font-size: 0.9rem; font-weight: 900; color: #c49a3c; flex-shrink: 0; }
 .cb-mod-title-row { flex: 1; min-width: 0; }
 .cb-mod-title { font-weight: 700; font-size: 0.95rem; color: #1a3a52; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cb-mod-meta { font-size: 0.72rem; color: #8a8a9a; margin-top: 2px; }
@@ -406,36 +407,36 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .cb-lesson-tab:hover:not(.active) { border-color: #8a8a9a; }
 .course-mgmt-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 24px; margin-bottom: 14px; }
 .course-mgmt-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
-.course-mgmt-header h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--ink); }
+.course-mgmt-header h3 { font-family: 'Cormorant Garamond', serif; font-size: 1.05rem; color: var(--ink); }
 .course-mgmt-header .course-badges { display: flex; gap: 6px; align-items: center; }
 .course-badge { display: inline-block; padding: 4px 12px; border-radius: 50px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
 .badge-active { background: rgba(74,124,89,0.15); color: var(--forest); }
 .badge-draft { background: rgba(107,107,96,0.12); color: var(--muted); }
 .badge-format { background: rgba(196,154,60,0.15); color: var(--gold); }
 .course-mgmt-meta { font-size: 0.85rem; color: var(--muted); margin-bottom: 12px; }
-.manage-btn { padding: 8px 18px; background: var(--ink); color: var(--cream); border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+.manage-btn { padding: 8px 18px; background: var(--ink); color: var(--cream); border: none; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
 .manage-btn:hover { background: var(--gold); }
 .lesson-builder { display: none; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px; }
 .lesson-builder.open { display: block; }
 .lesson-builder-item { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: var(--cream); border: 1px solid var(--border); border-radius: var(--r-sm); margin-bottom: 8px; }
 .lesson-builder-item .lb-title { flex: 1; font-size: 0.88rem; font-weight: 600; color: var(--ink); }
 .lesson-builder-item .lb-video-icon { color: var(--gold); font-size: 0.8rem; }
-.lb-btn { padding: 5px 12px; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.75rem; font-weight: 700; cursor: pointer; border: 1px solid var(--border); background: var(--white); color: var(--muted); transition: all 0.2s; }
+.lb-btn { padding: 5px 12px; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.75rem; font-weight: 700; cursor: pointer; border: 1px solid var(--border); background: var(--white); color: var(--muted); transition: all 0.2s; }
 .lb-btn:hover { border-color: var(--gold); color: var(--gold); }
 .lb-btn-danger:hover { border-color: #c44; color: #c44; }
 .add-lesson-form { background: var(--cream); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 18px; margin-top: 12px; }
 .add-lesson-form .form-group { margin-bottom: 12px; }
 .add-lesson-form .form-group label { display: block; font-size: 0.75rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
-.add-lesson-form .form-group input, .add-lesson-form .form-group textarea { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.88rem; color: var(--ink); background: var(--white); }
+.add-lesson-form .form-group input, .add-lesson-form .form-group textarea { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.88rem; color: var(--ink); background: var(--white); }
 .add-lesson-form .form-group input:focus, .add-lesson-form .form-group textarea:focus { outline: none; border-color: var(--gold); }
 .add-lesson-form .form-group textarea { min-height: 80px; resize: vertical; }
 .cert-template-row { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
 .cert-template-row label { font-size: 0.78rem; font-weight: 700; color: var(--ink); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
-.cert-template-row select { padding: 8px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; color: var(--ink); background: var(--cream); }
+.cert-template-row select { padding: 8px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; color: var(--ink); background: var(--cream); }
 .cert-template-row select:focus { outline: none; border-color: var(--gold); }
 .create-course-form { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 28px; margin-bottom: 24px; display: none; }
 .create-course-form.open { display: block; }
-.create-course-form h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--ink); margin-bottom: 18px; }
+.create-course-form h3 { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; color: var(--ink); margin-bottom: 18px; }
 .learn-items-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
 .learn-item { display: flex; align-items: center; gap: 8px; }
 .learn-item span { flex: 1; font-size: 0.85rem; color: var(--ink); }
@@ -473,7 +474,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 
   <!-- TOP NAV -->
   <nav style="position:fixed;top:0;left:0;right:0;z-index:300;display:flex;align-items:center;justify-content:space-between;padding:14px 52px;background:rgba(26,58,82,0.95);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,0.1);">
-    <a href="/" style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:#f7f4ee;text-decoration:none;"><span style="color:#c49a3c;font-style:italic;">i</span>need<span style="color:#c49a3c;font-style:italic;">coaching</span>.org</a>
+    <a href="/" style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:700;color:#f7f4ee;text-decoration:none;"><span style="color:#c49a3c;font-style:italic;">i</span>need<span style="color:#c49a3c;font-style:italic;">coaching</span>.org</a>
     <div style="display:flex;align-items:center;gap:22px;">
       <a href="/coaches.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Coaches</a>
       <a href="/sessions.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Sessions</a>
@@ -706,7 +707,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
     <!-- TESTIMONIALS TAB -->
     <div id="tab-testimonials" class="tab-panel">
       <div class="form-section" style="margin-bottom:24px;">
-        <h2 class="form-section-title" style="font-family:'Cormorant Garamond','Playfair Display',serif;">Request a Testimonial</h2>
+        <h2 class="form-section-title" style="font-family:'Cormorant Garamond','Cormorant Garamond',serif;">Request a Testimonial</h2>
         <p style="font-size:0.88rem;color:var(--muted);margin-bottom:16px;">Send a personalized request to a client. They'll receive an email with a link to share their experience.</p>
         <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;max-width:700px;">
           <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;">
@@ -736,15 +737,15 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
     <!-- RECOMMENDATIONS TAB -->
     <div id="tab-recommendations" class="tab-panel">
       <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:24px;">
-        <button class="recs-subtab active" data-recs-subtab="professional" style="padding:12px 24px;font-family:'Cabinet Grotesk',sans-serif;font-size:0.85rem;font-weight:700;color:var(--ink);background:none;border:none;border-bottom:2.5px solid var(--gold);cursor:pointer;margin-bottom:-2px;">Professional Recommendations</button>
-        <button class="recs-subtab" data-recs-subtab="refer" style="padding:12px 24px;font-family:'Cabinet Grotesk',sans-serif;font-size:0.85rem;font-weight:700;color:var(--muted);background:none;border:none;border-bottom:2.5px solid transparent;cursor:pointer;margin-bottom:-2px;">Refer a Coach</button>
-        <button class="recs-subtab" data-recs-subtab="links" style="padding:12px 24px;font-family:'Cabinet Grotesk',sans-serif;font-size:0.85rem;font-weight:700;color:var(--muted);background:none;border:none;border-bottom:2.5px solid transparent;cursor:pointer;margin-bottom:-2px;">Client Referral Links</button>
+        <button class="recs-subtab active" data-recs-subtab="professional" style="padding:12px 24px;font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:700;color:var(--ink);background:none;border:none;border-bottom:2.5px solid var(--gold);cursor:pointer;margin-bottom:-2px;">Professional Recommendations</button>
+        <button class="recs-subtab" data-recs-subtab="refer" style="padding:12px 24px;font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:700;color:var(--muted);background:none;border:none;border-bottom:2.5px solid transparent;cursor:pointer;margin-bottom:-2px;">Refer a Coach</button>
+        <button class="recs-subtab" data-recs-subtab="links" style="padding:12px 24px;font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:700;color:var(--muted);background:none;border:none;border-bottom:2.5px solid transparent;cursor:pointer;margin-bottom:-2px;">Client Referral Links</button>
       </div>
 
       <!-- Professional Recommendations sub-tab -->
       <div id="recs-subtab-professional">
         <div class="form-section" style="margin-bottom:24px;">
-          <h2 class="form-section-title" style="font-family:'Cormorant Garamond','Playfair Display',serif;">Request a Recommendation</h2>
+          <h2 class="form-section-title" style="font-family:'Cormorant Garamond','Cormorant Garamond',serif;">Request a Recommendation</h2>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:700px;">
             <div class="form-group" style="margin-bottom:0;"><label for="req-rec-email">Email</label><input type="email" id="req-rec-email" placeholder="colleague@company.com"></div>
             <div class="form-group" style="margin-bottom:0;"><label for="req-rec-name">Name</label><input type="text" id="req-rec-name" placeholder="Full name"></div>
@@ -765,7 +766,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 
       <!-- Refer a Coach sub-tab -->
       <div id="recs-subtab-refer" style="display:none;">
-        <div class="form-section"><h2 class="form-section-title" style="font-family:'Cormorant Garamond','Playfair Display',serif;">Refer a Fellow Coach</h2>
+        <div class="form-section"><h2 class="form-section-title" style="font-family:'Cormorant Garamond','Cormorant Garamond',serif;">Refer a Fellow Coach</h2>
           <p style="font-size:0.88rem;color:var(--muted);margin-bottom:16px;">Recommend a colleague to the coaching community.</p>
           <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;max-width:700px;">
             <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;"><label for="refer-coach-select">Coach</label><select id="refer-coach-select"><option value="">Select a coach...</option></select></div>
@@ -782,7 +783,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 
       <!-- Client Referral Links sub-tab -->
       <div id="recs-subtab-links" style="display:none;">
-        <div class="form-section"><h2 class="form-section-title" style="font-family:'Cormorant Garamond','Playfair Display',serif;">Client Referral Links</h2>
+        <div class="form-section"><h2 class="form-section-title" style="font-family:'Cormorant Garamond','Cormorant Garamond',serif;">Client Referral Links</h2>
           <p style="font-size:0.88rem;color:var(--muted);margin-bottom:16px;">Generate trackable referral links for your clients to share.</p>
           <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;max-width:700px;">
             <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;"><label for="reflink-client">Client</label><select id="reflink-client"><option value="">Select a client...</option></select></div>
@@ -867,8 +868,8 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
     <div id="tab-intake" class="tab-panel">
       <!-- SUB-TABS -->
       <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:24px;">
-        <button class="forms-subtab active" data-forms-subtab="intake" style="padding:12px 24px;font-family:'Cabinet Grotesk',sans-serif;font-size:0.85rem;font-weight:700;color:var(--ink);background:none;border:none;border-bottom:2.5px solid var(--gold);cursor:pointer;margin-bottom:-2px;">Intake Forms</button>
-        <button class="forms-subtab" data-forms-subtab="checkin" style="padding:12px 24px;font-family:'Cabinet Grotesk',sans-serif;font-size:0.85rem;font-weight:700;color:var(--muted);background:none;border:none;border-bottom:2.5px solid transparent;cursor:pointer;margin-bottom:-2px;">Pre-Session Check-ins</button>
+        <button class="forms-subtab active" data-forms-subtab="intake" style="padding:12px 24px;font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:700;color:var(--ink);background:none;border:none;border-bottom:2.5px solid var(--gold);cursor:pointer;margin-bottom:-2px;">Intake Forms</button>
+        <button class="forms-subtab" data-forms-subtab="checkin" style="padding:12px 24px;font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:700;color:var(--muted);background:none;border:none;border-bottom:2.5px solid transparent;cursor:pointer;margin-bottom:-2px;">Pre-Session Check-ins</button>
       </div>
 
       <!-- INTAKE SUB-TAB -->
@@ -919,7 +920,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
         <div id="intake-questions-list" style="margin-bottom:20px;"></div>
 
         <div id="intake-add-form" style="background:var(--cream);border:1px solid var(--border);border-radius:var(--r);padding:24px;margin-bottom:16px;">
-          <h3 style="font-family:'Playfair Display',serif;font-size:1rem;color:var(--ink);margin-bottom:14px;">Add Question</h3>
+          <h3 style="font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--ink);margin-bottom:14px;">Add Question</h3>
           <div class="form-group">
             <label for="iq-text">Question Text</label>
             <input type="text" id="iq-text" placeholder="What are your coaching goals?">
@@ -1006,7 +1007,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
           <div id="checkin-questions-list" style="margin-bottom:20px;"></div>
 
           <div id="checkin-add-form" style="background:var(--cream);border:1px solid var(--border);border-radius:var(--r);padding:24px;margin-bottom:16px;">
-            <h3 style="font-family:'Playfair Display',serif;font-size:1rem;color:var(--ink);margin-bottom:14px;">Add Question</h3>
+            <h3 style="font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--ink);margin-bottom:14px;">Add Question</h3>
             <div class="form-group">
               <label for="cq-text">Question Text</label>
               <input type="text" id="cq-text" placeholder="What is your goal for today's session?">
