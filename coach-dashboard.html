@@ -524,6 +524,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
     <button class="tab-btn" data-tab="clients">Clients</button>
     <button class="tab-btn" data-tab="bookings">Bookings</button>
     <button class="tab-btn" data-tab="messages" id="tab-btn-messages">Messages</button>
+    <button class="tab-btn" data-tab="goals">Goals</button>
     <div class="dash-group">Your Work</div>
     <button class="tab-btn" data-tab="coach-dna">Coach DNA</button>
     <button class="tab-btn" data-tab="articles">Draft Articles</button>
@@ -532,7 +533,6 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
     <button class="tab-btn" data-tab="proposals">Proposals</button>
     <button class="tab-btn" data-tab="scheduling">Scheduling</button>
     <button class="tab-btn" data-tab="intake">Forms</button>
-    <button class="tab-btn" data-tab="goals">Goals</button>
     <div class="dash-group">Profile</div>
     <button class="tab-btn active" data-tab="profile">Profile</button>
     <button class="tab-btn" data-tab="testimonials">Testimonials</button>
@@ -2046,21 +2046,21 @@ async function loadTestimonials() {
 
     // Submitted — needs review
     if (submitted.length) {
-      html += '<div class="form-section" style="margin-bottom:24px;"><h3 style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.1rem;color:var(--ink);margin-bottom:16px;">Needs Review (' + submitted.length + ')</h3>';
+      html += '<div class="form-section" style="margin-bottom:24px;"><h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;color:var(--ink);margin-bottom:16px;">Needs Review (' + submitted.length + ')</h3>';
       submitted.forEach(function(t) { html += renderTestimonialCard(t); });
       html += '</div>';
     }
 
     // Approved — live on profile
     if (approved.length) {
-      html += '<div class="form-section" style="margin-bottom:24px;"><h3 style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.1rem;color:var(--ink);margin-bottom:16px;">Approved & Live (' + approved.length + ')</h3>';
+      html += '<div class="form-section" style="margin-bottom:24px;"><h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;color:var(--ink);margin-bottom:16px;">Approved & Live (' + approved.length + ')</h3>';
       approved.forEach(function(t) { html += renderTestimonialCard(t); });
       html += '</div>';
     }
 
     // Pending — waiting for client
     if (pending.length) {
-      html += '<div class="form-section"><h3 style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.1rem;color:var(--ink);margin-bottom:16px;">Awaiting Response (' + pending.length + ')</h3>';
+      html += '<div class="form-section"><h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;color:var(--ink);margin-bottom:16px;">Awaiting Response (' + pending.length + ')</h3>';
       pending.forEach(function(t) {
         html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">'
           + '<div><span style="font-weight:600;font-size:0.88rem;color:var(--ink);">' + escapeHtml(t.client_email || t.client_name || 'Unknown') + '</span>'
@@ -3077,7 +3077,7 @@ function renderClientsList(filter) {
 
   var html = '<div class="form-section">'
     + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">'
-    + '<div><h2 class="form-section-title" style="margin-bottom:4px;font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;">My Clients</h2>'
+    + '<div><h2 class="form-section-title" style="margin-bottom:4px;font-family:\'Cormorant Garamond\',serif;">My Clients</h2>'
     + '<span style="font-size:0.82rem;color:var(--muted);">' + clientsData.length + ' client' + (clientsData.length !== 1 ? 's' : '') + '</span></div>'
     + '<input type="text" id="clients-search" placeholder="Search by name or email..." value="' + escapeHtml(filter) + '" style="padding:10px 16px;border:1px solid var(--border);border-radius:50px;font-family:\'DM Sans\',\'Cabinet Grotesk\',sans-serif;font-size:0.85rem;color:var(--ink);background:var(--cream);min-width:240px;transition:border-color 0.2s;" onfocus="this.style.borderColor=\'var(--gold)\'" onblur="this.style.borderColor=\'var(--border)\'">'
     + '</div>';
@@ -3094,7 +3094,7 @@ function renderClientsList(filter) {
       html += '<div style="background:var(--white);border:1px solid var(--border);border-left:4px solid var(--gold);border-radius:var(--r);padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.04);transition:transform 0.2s,box-shadow 0.2s;cursor:default;" onmouseenter="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 6px 20px rgba(0,0,0,0.08)\'" onmouseleave="this.style.transform=\'\';this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.04)\'">'
         + '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;">'
         + '<div>'
-        + '<div style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-weight:700;font-size:1.1rem;color:var(--ink);margin-bottom:2px;">' + escapeHtml(c.name || c.email) + '</div>'
+        + '<div style="font-family:\'Cormorant Garamond\',serif;font-weight:700;font-size:1.1rem;color:var(--ink);margin-bottom:2px;">' + escapeHtml(c.name || c.email) + '</div>'
         + '<div style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(c.email) + '</div>'
         + (c.phone ? '<div style="font-size:0.75rem;color:var(--muted);">' + escapeHtml(c.phone) + '</div>' : '')
         + '</div>'
@@ -3174,8 +3174,8 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
   // Back button + Header
   html += '<div style="margin-bottom:24px;">'
     + '<button id="back-to-clients" style="background:none;border:none;cursor:pointer;font-size:0.85rem;font-weight:700;color:var(--gold);margin-bottom:16px;display:flex;align-items:center;gap:6px;">&larr; Back to Clients</button>'
-    + '<div style="background:var(--ink);border-radius:var(--r);padding:28px 32px;">'
-    + '<div style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.5rem;font-weight:700;color:var(--cream);margin-bottom:4px;">' + escapeHtml(client.name || client.email) + '</div>'
+    + '<div style="background:linear-gradient(135deg,#1a3a52 0%,#0f2535 100%);border-left:4px solid #c49a3c;border-radius:var(--r);padding:28px 32px;">'
+    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:600;color:#fff;margin-bottom:4px;">' + escapeHtml(client.name || client.email) + '</div>'
     + '<div style="font-size:0.85rem;color:rgba(247,244,238,0.6);">' + escapeHtml(client.email) + (client.phone ? ' &bull; ' + escapeHtml(client.phone) : '') + '</div>'
     + '<div style="font-size:0.8rem;color:rgba(247,244,238,0.5);margin-top:6px;">Client since ' + escapeHtml(firstStr) + ' &bull; ' + client.sessions.length + ' session' + (client.sessions.length !== 1 ? 's' : '') + '</div>'
     + '</div></div>';
@@ -3183,7 +3183,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
   // Section 1: Sessions
   html += '<div class="form-section" style="margin-bottom:24px;">'
     + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">'
-    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.15rem;margin-bottom:0;">Sessions</h2>'
+    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;margin-bottom:0;">Sessions</h2>'
     + ''
     + '</div>'
     + '<div id="pre-session-brief-container" style="margin-bottom:16px;"></div>';
@@ -3339,7 +3339,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
 
   // Section 2: Intake Responses
   html += '<div class="form-section" style="margin-bottom:24px;">'
-    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.15rem;">Intake Responses</h2>';
+    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;">Intake Responses</h2>';
   if (!intakeResponses.length) {
     html += '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;">No intake form submitted yet</p>';
   } else {
@@ -3361,7 +3361,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
 
   // Section 3: Check-in History
   html += '<div class="form-section" style="margin-bottom:24px;">'
-    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.15rem;">Pre-Session Check-ins</h2>';
+    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;">Pre-Session Check-ins</h2>';
   if (!checkinResponses.length) {
     html += '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;">No check-ins yet</p>';
   } else {
@@ -3383,7 +3383,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
 
   // Section 4: Goals
   html += '<div class="form-section" style="margin-bottom:24px;">'
-    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.15rem;">Goals</h2>';
+    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;">Goals</h2>';
   if (!goals.length) {
     html += '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;">No goals set yet</p>';
   } else {
@@ -3413,7 +3413,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
 
   // Section 5: Messages
   html += '<div class="form-section" style="margin-bottom:24px;">'
-    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.15rem;">Messages</h2>';
+    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;">Messages</h2>';
   if (!messages.length) {
     html += '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;">No messages yet</p>';
   } else {
@@ -3437,7 +3437,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
   // Section 6: Send Check-in
   if (checkinForms.length) {
     html += '<div class="form-section">'
-      + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.15rem;">Send Check-in</h2>'
+      + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;">Send Check-in</h2>'
       + '<div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">'
       + '<div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;"><label for="client-checkin-form">Check-in Form</label>'
       + '<select id="client-checkin-form"><option value="">Select a form...</option>';
@@ -3453,7 +3453,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
 
   // Section 7: Request Testimonial
   html += '<div class="form-section">'
-    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.15rem;">Request Testimonial</h2>'
+    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;">Request Testimonial</h2>'
     + '<p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">Ask this client to share their experience working with you.</p>'
     + '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">'
     + '<button class="save-btn" id="client-request-testimonial-btn" data-client-email="' + escapeHtml(client.email) + '" data-client-name="' + escapeHtml(client.name) + '" style="padding:10px 24px;font-size:0.82rem;background:none;border:2px solid var(--gold);color:var(--gold);">Request Testimonial</button>'
@@ -3784,7 +3784,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
 
       // Step 1: Choose format
       panel.innerHTML = '<div style="margin-bottom:16px;">'
-        + '<div style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.1rem;font-weight:700;color:var(--ink);margin-bottom:4px;">Process Session Notes</div>'
+        + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:700;color:var(--ink);margin-bottom:4px;">Process Session Notes</div>'
         + '<div style="font-size:0.82rem;color:var(--muted);margin-bottom:16px;">Choose a coaching framework to structure your notes.</div>'
         + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">'
         // GROW
@@ -6152,7 +6152,7 @@ async function loadDashCourses() {
 function renderCourseList() {
   var content = $('courses-content');
   var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">'
-    + '<div style="font-family:Playfair Display,serif;font-size:1.2rem;font-weight:700;color:var(--ink);">Your Courses</div>'
+    + '<div style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:700;color:var(--ink);">Your Courses</div>'
     + '<a href="#" onclick="event.preventDefault();openCourseBuilder(null)" class="prop-new">+ Create New Course</a>'
     + '</div>';
 
@@ -6172,7 +6172,7 @@ function renderCourseList() {
       var initial = (c.title || 'C').charAt(0).toUpperCase();
 
       html += '<div class="prop-card" onclick="openCourseBuilder(\'' + c.id + '\')" style="grid-template-columns:auto 1fr auto auto;">'
-        + '<div style="width:48px;height:48px;border-radius:50%;background:#1a3a52;display:flex;align-items:center;justify-content:center;font-family:Playfair Display,serif;font-size:1.2rem;font-weight:900;color:#c49a3c;flex-shrink:0;">' + escapeHtml(initial) + '</div>'
+        + '<div style="width:48px;height:48px;border-radius:50%;background:#1a3a52;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:900;color:#c49a3c;flex-shrink:0;">' + escapeHtml(initial) + '</div>'
         + '<div class="prop-left">'
         + '<div class="prop-company">' + escapeHtml(c.title || 'Untitled') + '</div>'
         + '<div class="prop-contact">' + escapeHtml(typeLabel) + '</div>'
@@ -7763,7 +7763,7 @@ async function loadDashArticles() {
     var html = '';
 
     html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">'
-      + '<h3 style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.1rem;color:var(--ink);margin:0;">Drafts (' + drafts.length + ')</h3>'
+      + '<h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;color:var(--ink);margin:0;">Drafts (' + drafts.length + ')</h3>'
       + '<button class="save-btn" id="generate-article-btn" style="background:var(--gold);font-size:0.78rem;padding:8px 18px;">Generate an Article</button>'
       + '</div>';
     html += '<span id="generate-article-msg" style="display:block;margin-bottom:12px;font-size:0.82rem;color:var(--muted);"></span>';
@@ -7774,7 +7774,7 @@ async function loadDashArticles() {
     }
 
     if (published.length > 0) {
-      html += '<h3 style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;font-size:1.1rem;color:var(--ink);margin:28px 0 16px;">Published (' + published.length + ')</h3>';
+      html += '<h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;color:var(--ink);margin:28px 0 16px;">Published (' + published.length + ')</h3>';
       published.forEach(function(a) { html += renderArticleCard(a, true); });
     }
 
@@ -7809,7 +7809,7 @@ function renderArticleCard(a, isPublished) {
 
   return '<div class="draft-article-card" id="article-card-' + a.id + '">'
     + '<div class="draft-article-header">'
-    + '<div class="draft-article-title" style="font-family:\'Cormorant Garamond\',\'Playfair Display\',serif;">' + escapeHtml(a.title) + '</div>'
+    + '<div class="draft-article-title" style="font-family:\'Cormorant Garamond\',serif;">' + escapeHtml(a.title) + '</div>'
     + statusPill
     + '</div>'
     + '<div class="draft-article-meta">' + escapeHtml(date) + ' &middot; <span style="background:rgba(196,154,60,0.12);color:var(--gold);padding:2px 8px;border-radius:50px;font-size:0.72rem;font-weight:700;">' + wordCount + ' words</span>' + (a.meta_description ? ' &middot; ' + escapeHtml(a.meta_description) : '') + '</div>'
