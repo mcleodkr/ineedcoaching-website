@@ -3461,7 +3461,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
                 var notes = nd.notes || '';
                 var input = transcript && notes ? 'TRANSCRIPT:\n' + transcript + '\n\nSTRUCTURED NOTES:\n' + notes : (transcript || notes);
                 if (!input) return;
-                runPostSessionAnalysis(sid, client.email, input, nd.format || 'general', $('post-analysis-' + sid));
+                runPostSessionAnalysis(sid, client.email, input, nd.format || 'general', $('post-analysis-' + sid), goals);
                 updateSessionProgress(sid, 3, true);
               });
             }
@@ -3890,7 +3890,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
       }
       if (!sessionInput) { return; }
       var fmt = (noteData && noteData.format) || 'general';
-      runPostSessionAnalysis(bid, this.dataset.clientEmail, sessionInput, fmt, $('post-analysis-' + bid));
+      runPostSessionAnalysis(bid, this.dataset.clientEmail, sessionInput, fmt, $('post-analysis-' + bid), goals);
     });
   });
 
@@ -4803,13 +4803,15 @@ function renderPreSessionBrief(b, container) {
 }
 
 // --- Post-Session Analysis ---
-async function runPostSessionAnalysis(bookingId, clientEmail, sessionNotes, format, container) {
+async function runPostSessionAnalysis(bookingId, clientEmail, sessionNotes, format, container, existingGoals) {
   container.innerHTML = ciSpinner('Analyzing your session...');
   container.style.display = '';
+  container.dataset.clientEmail = clientEmail;
   try {
+    var goalTitles = (existingGoals || []).filter(function(g) { return g.status !== 'completed'; }).map(function(g) { return g.title; });
     var res = await fetch('/api/post-session-analysis', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ coachId: coachProfile.id, clientEmail: clientEmail, bookingId: bookingId, sessionNotes: sessionNotes, format: format })
+      body: JSON.stringify({ coachId: coachProfile.id, clientEmail: clientEmail, bookingId: bookingId, sessionNotes: sessionNotes, format: format, existingGoals: goalTitles })
     });
     var analysis = await res.json();
     if (!res.ok) throw new Error(analysis.error || 'Failed');
@@ -4957,7 +4959,30 @@ function renderPostSessionAnalysis(a, container) {
       + '</div>';
   }
 
-  // 9. Client Commitments
+  // 9. Goal Review
+  if (a.goal_review && a.goal_review.length) {
+    var grHtml = '<div style="font-size:0.78rem;color:var(--muted);font-style:italic;margin-bottom:12px;line-height:1.5;">Based on this session, here is how existing goals may be connecting</div>';
+    var statusColors = { progressed: '#2d6a4f', stalled: '#b8860b', needs_revision: 'var(--gold)', completed: 'var(--ink)' };
+    a.goal_review.forEach(function(g) {
+      var sc = statusColors[g.status_signal] || 'var(--muted)';
+      grHtml += '<div style="background:var(--cream);border-radius:8px;padding:14px 16px;margin-bottom:10px;">'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+        + '<span style="font-size:0.88rem;font-weight:700;color:var(--ink);">' + escapeHtml(g.goal_title) + '</span>'
+        + '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.65rem;font-weight:700;background:' + sc + ';color:#fff;">' + escapeHtml(g.status_signal) + '</span>'
+        + '</div>'
+        + (g.session_relevance ? '<div style="font-size:0.82rem;color:var(--ink);line-height:1.5;margin-bottom:4px;">' + escapeHtml(g.session_relevance) + '</div>' : '')
+        + (g.signal_reason ? '<div style="font-size:0.82rem;color:var(--muted);line-height:1.5;"><span style="font-weight:600;">What the session revealed:</span> ' + escapeHtml(g.signal_reason) + '</div>' : '')
+        + '</div>';
+    });
+    h += ciCard('Goals \u2014 Where Things Stand', grHtml);
+  } else {
+    h += '<div style="background:var(--cream);border-radius:8px;padding:16px 20px;margin-bottom:12px;">'
+      + '<div style="font-size:0.82rem;font-weight:600;color:var(--ink);margin-bottom:6px;">Goals \u2014 Where Things Stand</div>'
+      + '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;line-height:1.5;">No active goals on file. You might consider adding one below based on what emerged.</div>'
+      + '</div>';
+  }
+
+  // 10. Client Commitments
   if (a.client_commitments && a.client_commitments.length) {
     var cmHtml = '';
     var strengthColors = { High: '#2d6a4f', Medium: '#c49a3c', Low: '#b8860b' };
@@ -4976,7 +5001,24 @@ function renderPostSessionAnalysis(a, container) {
     h += ciCard('Client Commitments', cmHtml);
   }
 
-  // 10. Coaching Signals
+  // 11. Between-Session Practices
+  if (a.between_session_practices && a.between_session_practices.length) {
+    var bspHtml = '<div style="font-size:0.78rem;color:var(--muted);font-style:italic;margin-bottom:14px;line-height:1.5;">Based on what emerged in this session, here are a few directions you might consider exploring with this client between now and the next session. These are suggestions \u2014 adjust, combine, or set aside as you see fit.</div>';
+    a.between_session_practices.forEach(function(p) {
+      bspHtml += '<div style="background:var(--cream);border-radius:8px;padding:16px;margin-bottom:10px;">'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">'
+        + '<span style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:700;color:var(--ink);">' + escapeHtml(p.title) + '</span>'
+        + (p.connection ? '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.65rem;font-weight:700;background:var(--gold);color:#fff;">' + escapeHtml(p.connection) + '</span>' : '')
+        + '</div>'
+        + '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;margin-bottom:8px;">' + escapeHtml(p.invitation) + '</div>'
+        + (p.why_this_may_matter ? '<details style="cursor:pointer;margin-bottom:8px;"><summary style="font-size:0.75rem;font-weight:600;color:var(--gold);cursor:pointer;">Why this may matter</summary><div style="padding:6px 0 0 0;font-size:0.82rem;color:var(--muted);line-height:1.5;">' + escapeHtml(p.why_this_may_matter) + '</div></details>' : '')
+        + '<button class="bsp-add-goal-btn" data-practice-title="' + escapeHtml(p.title) + '" style="padding:6px 14px;background:none;border:1px solid var(--gold);border-radius:6px;font-size:0.75rem;font-weight:600;color:var(--gold);cursor:pointer;font-family:\'DM Sans\',sans-serif;">+ Add as Client Goal</button>'
+        + '</div>';
+    });
+    h += ciCard('Between-Session Practices', bspHtml);
+  }
+
+  // 12. Coaching Signals
   if (a.coaching_signals && a.coaching_signals.length) {
     var sigHtml = '';
     a.coaching_signals.forEach(function(s) {
@@ -4989,18 +5031,25 @@ function renderPostSessionAnalysis(a, container) {
     h += ciCard('Coaching Signals', sigHtml);
   }
 
-  // 11. Frameworks Detected
+  // 13. Frameworks Detected
   if (a.frameworks_detected && a.frameworks_detected.length) {
     var fwHtml = '';
     a.frameworks_detected.forEach(function(f) {
-      fwHtml += '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;">'
+      fwHtml += '<div style="background:var(--cream);border-radius:8px;padding:16px;margin-bottom:10px;">'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+        + '<span style="font-weight:600;font-size:0.88rem;color:var(--ink);">' + escapeHtml(f.name) + '</span>'
         + frameworkBadge(f.presence_level)
-        + '<div><div style="font-weight:600;font-size:0.88rem;color:var(--ink);">' + escapeHtml(f.name) + '</div>'
-        + '<div style="font-size:0.82rem;color:var(--muted);margin-bottom:4px;">' + escapeHtml(f.description || '') + '</div>'
-        + (f.leverage_note ? '<div style="font-size:0.8rem;color:var(--muted);font-style:italic;margin-bottom:4px;">' + escapeHtml(f.leverage_note) + '</div>' : '')
-        + (f.use_next_time ? '<div style="margin-bottom:3px;"><span style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);">Use Next Time \u2192</span> <span style="font-size:0.8rem;color:var(--ink);">' + escapeHtml(f.use_next_time) + '</span></div>' : '')
-        + (f.be_careful_of ? '<div><span style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#b8860b;">Be Careful Of \u2192</span> <span style="font-size:0.8rem;color:var(--muted);">' + escapeHtml(f.be_careful_of) + '</span></div>' : '')
-        + '</div></div>';
+        + '</div>'
+        + '<div style="font-size:0.82rem;color:var(--muted);margin-bottom:6px;line-height:1.5;"><span style="font-weight:600;color:var(--ink);">What the system noticed:</span> ' + escapeHtml(f.description || '') + '</div>'
+        + (f.leverage_note ? '<div style="font-size:0.82rem;color:var(--muted);line-height:1.5;margin-bottom:8px;"><span style="font-weight:600;color:var(--ink);">What this may suggest:</span> ' + escapeHtml(f.leverage_note) + '</div>' : '')
+        + '<details style="cursor:pointer;"><summary style="font-size:0.75rem;font-weight:600;color:var(--gold);cursor:pointer;">Reflect on this framework</summary>'
+        + '<div style="padding:8px 0 0 0;font-size:0.82rem;color:var(--muted);line-height:1.6;">'
+        + (f.use_next_time ? '<div style="margin-bottom:6px;"><span style="font-weight:600;color:var(--ink);">One way you might build on this:</span> ' + escapeHtml(f.use_next_time) + '</div>' : '')
+        + (f.use_next_time_why ? '<div style="margin-bottom:6px;"><span style="font-weight:600;color:var(--muted);">Why this may matter:</span> ' + escapeHtml(f.use_next_time_why) + '</div>' : '')
+        + (f.be_careful_of ? '<div style="margin-bottom:6px;"><span style="font-weight:600;color:#b8860b;">Something to be mindful of:</span> ' + escapeHtml(f.be_careful_of) + '</div>' : '')
+        + (f.be_careful_of_why ? '<div><span style="font-weight:600;color:var(--muted);">Why this may matter:</span> ' + escapeHtml(f.be_careful_of_why) + '</div>' : '')
+        + '</div></details>'
+        + '</div>';
     });
     fwHtml += '<div style="margin-top:8px;"><a href="#" onclick="document.querySelector(\'[data-tab=coach-dna]\').click();return false;" style="font-size:0.82rem;color:var(--gold);font-weight:600;text-decoration:none;">These approaches have been logged to your Coach DNA \u2192</a></div>';
     h += ciCard('Frameworks Detected', fwHtml);
@@ -5030,6 +5079,24 @@ function renderPostSessionAnalysis(a, container) {
   }
 
   container.innerHTML = h;
+
+  // Wire "Add as Client Goal" buttons for between-session practices
+  container.querySelectorAll('.bsp-add-goal-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var title = this.dataset.practiceTitle;
+      var clientGoalTitle = $('client-goal-title');
+      if (clientGoalTitle) {
+        clientGoalTitle.value = title;
+        clientGoalTitle.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        clientGoalTitle.focus();
+        this.textContent = '\u2713 Pre-filled below';
+        this.disabled = true;
+        this.style.background = '#2d6a4f';
+        this.style.color = '#fff';
+        this.style.borderColor = '#2d6a4f';
+      }
+    });
+  });
 }
 
 // --- Coach DNA ---

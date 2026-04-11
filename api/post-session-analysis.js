@@ -15,7 +15,7 @@ export default async function handler(req, res) {
 
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const { coachId, clientEmail, bookingId, format, useTranscript } = body;
+    const { coachId, clientEmail, bookingId, format, useTranscript, existingGoals } = body;
     let { sessionNotes } = body;
 
     const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
@@ -57,11 +57,13 @@ export default async function handler(req, res) {
   "if_stuck": { "scenario": "under 15 words", "pivot": "under 20 words", "in_session_move": "specific live exercise worth trying, under 20 words" },
   "coaching_signals": [{ "signal_type": "Forward Momentum|Resistance|Values Clarity|Goal Ambivalence|Identity Shift|Strength Recognition|Accountability Gap", "observation": "short, behavioral", "coach_move": "a specific approach you may want to explore, written as a full sentence suggestion addressed to you" }],
   "client_commitments": [{ "title": string, "due_date_suggested": "YYYY-MM-DD or null", "commitment_strength": "High|Medium|Low", "risk": "under 15 words", "accountability_question": "precise, uncomfortable" }],
-  "frameworks_detected": [{ "name": string, "presence_level": "Primary|Secondary|Incidental", "description": string, "evidence": string, "leverage_note": "under 15 words", "use_next_time": "under 15 words", "be_careful_of": "under 15 words" }],
+  "frameworks_detected": [{ "name": string, "presence_level": "Primary|Secondary|Incidental", "description": "what you noticed about how this framework appeared in the session, 1-2 sentences as a reflective observation", "leverage_note": "what this may suggest about the client or your approach, 1 sentence reflective observation", "use_next_time": "one reflective sentence starting with 'You might consider...' on how to build on this framework", "use_next_time_why": "one sentence on why building on this may matter", "be_careful_of": "one reflective sentence on something to be mindful of with this framework", "be_careful_of_why": "one sentence on why this caution is worth considering" }],
+  "goal_review": [{ "goal_title": "exact title of the existing goal", "session_relevance": "one sentence on how this goal connected to what was discussed", "status_signal": "progressed|stalled|needs_revision|completed", "signal_reason": "one sentence explaining why you see this status" }],
+  "between_session_practices": [{ "title": "short name for the practice", "invitation": "one sentence starting with 'You might invite...' or 'You might suggest...' — never 'assign' or 'give'", "why_this_may_matter": "one sentence connecting this practice to the session's identity shift or pattern", "connection": "which breakthrough or pattern this practice addresses, e.g. 'The Relief Seeker' or 'Breakthrough Moment'" }],
   "coach_dna_update": { "patterns_observed": ["max 2 bullets, under 12 words each"], "suggestion": "under 15 words" },
   "session_in_one_line": "[Client] shifted from [X] to [Y] by [mechanism]. One sentence only."
 }`,
-        messages: [{ role: 'user', content: `Analyze this ${format || 'coaching'} session:\n\n${sessionNotes}` }]
+        messages: [{ role: 'user', content: `Analyze this ${format || 'coaching'} session:\n\n${sessionNotes}${existingGoals && existingGoals.length ? '\n\nExisting client goals:\n' + existingGoals.map((g, i) => (i + 1) + '. ' + g).join('\n') : ''}` }]
       })
     });
 
