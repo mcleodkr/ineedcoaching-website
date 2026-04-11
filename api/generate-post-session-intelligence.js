@@ -9,7 +9,7 @@
  * @param {string} userMessage
  * @returns {Promise<object>}
  */
-async function callClaude(apiKey, model, maxTokens, system, userMessage) {
+async function callClaude(apiKey, model, maxTokens, system, userMessage, passName) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -26,13 +26,20 @@ async function callClaude(apiKey, model, maxTokens, system, userMessage) {
   });
 
   if (!res.ok) {
-    throw new Error(`Claude API error: ${res.status}`);
+    throw new Error(`Claude API error in ${passName || 'unknown'}: ${res.status}`);
   }
 
   const data = await res.json();
-  const text = data.content?.[0]?.text || '';
-  const match = text.match(/\{[\s\S]*\}/);
-  return match ? JSON.parse(match[0]) : JSON.parse(text);
+  let text = data.content?.[0]?.text || '';
+  // Strip markdown code fences if present
+  text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+  try {
+    const match = text.match(/\{[\s\S]*\}/);
+    return match ? JSON.parse(match[0]) : JSON.parse(text);
+  } catch (e) {
+    console.error(`[${passName || 'callClaude'}] JSON parse failed. Raw response:`, text.substring(0, 2000));
+    throw new Error(`JSON parse error in ${passName || 'unknown'}: ${e.message}`);
+  }
 }
 
 export default async function handler(req, res) {
@@ -104,7 +111,8 @@ Return a JSON object with these fields:
 - "mentioned_goals": array of any goals explicitly mentioned or discussed
 
 TRANSCRIPT AND NOTES:
-${sessionContent}`
+${sessionContent}`,
+      'Pass 1: Extraction'
     );
 
     // ── Pass 2: Synthesis ───────────────────────────────────────────────
@@ -115,7 +123,7 @@ ${sessionContent}`
     const synthesisOutput = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
-      3000,
+      4000,
       `You are a senior coaching intelligence system. Interpret extracted session evidence into structured coaching insights. Address the coach as "you" throughout. Use only suggestive language. Never use: should, must, ask the client, do this. Always use: you might explore, this may suggest, one possible direction. Every insight must include why it matters. Return JSON only.`,
       `Using the extracted session evidence below, generate a structured coaching intelligence report.
 ${goalsContext}
@@ -145,19 +153,27 @@ Return a JSON object with this exact structure:
 }
 
 For coaching_reflection: set to null unless ALL of these are true: session has 10+ meaningful exchanges, session is not logistical, has no crisis language, and coach presence is meaningful. When generated, use this structure:
-{ "session_type": "growth"|"processing"|"crisis_adjacent", "what_stood_out": {"observation":"", "why_it_matters":""}, "what_seemed_effective": {"observation":"", "why_it_matters":""}|null, "one_thing_to_consider": {"suggestion":"", "why_it_matters":"", "use_with_care":""}|null }`
+{ "session_type": "growth"|"processing"|"crisis_adjacent", "what_stood_out": {"observation":"", "why_it_matters":""}, "what_seemed_effective": {"observation":"", "why_it_matters":""}|null, "one_thing_to_consider": {"suggestion":"", "why_it_matters":"", "use_with_care":""}|null }`,
+      'Pass 2: Synthesis'
     );
 
-    // ── Pass 3: Formatting ──────────────────────────────────────────────
-    const formattedOutput = await callClaude(
-      ANTHROPIC_API_KEY,
-      'claude-haiku-4-5-20251001',
-      2000,
-      `You are a UX writer for a coaching intelligence platform. Review the structured JSON and correct any remaining directive language. Find every instance of: should, must, do not, don't, ask her/him/them, you need to, have to — and rewrite as suggestive alternatives (you might explore, it may be worth considering, one possible approach). Also verify every section has a non-empty why_it_matters field. Return the corrected JSON only with identical structure.`,
-      `Review and correct the following coaching intelligence JSON. Replace any directive language with suggestive alternatives. Ensure all why_it_matters fields are populated. Return the corrected JSON only.
+    // ── Pass 3: Formatting (fault-tolerant — fall back to synthesis if this fails)
+    let formattedOutput;
+    try {
+      formattedOutput = await callClaude(
+        ANTHROPIC_API_KEY,
+        'claude-haiku-4-5-20251001',
+        2000,
+        `You are a UX writer for a coaching intelligence platform. Review the structured JSON and correct any remaining directive language. Find every instance of: should, must, do not, don't, ask her/him/them, you need to, have to — and rewrite as suggestive alternatives (you might explore, it may be worth considering, one possible approach). Also verify every section has a non-empty why_it_matters field. Return the corrected JSON only with identical structure.`,
+        `Review and correct the following coaching intelligence JSON. Replace any directive language with suggestive alternatives. Ensure all why_it_matters fields are populated. Return the corrected JSON only.
 
-${JSON.stringify(synthesisOutput, null, 2)}`
-    );
+${JSON.stringify(synthesisOutput, null, 2)}`,
+        'Pass 3: Formatting'
+      );
+    } catch (e) {
+      console.error('[Pass 3: Formatting] Failed, falling back to synthesis output:', e.message);
+      formattedOutput = synthesisOutput;
+    }
 
     // ── Save results to Supabase ────────────────────────────────────────
     if (bookingId) {
