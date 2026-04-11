@@ -158,11 +158,13 @@ Return ONLY this JSON:
       MIRROR_RULES,
       `Generate max 2 coaching interventions and reflection. Max 15 words per value.
 
+Each intervention MUST include see_why_this_works with: mechanism ("[Concept] — one sentence"), model ("[Model] ([Originator]) — one sentence"), transfer ("Use when..."). Max 15 words each. Practical not academic.
+
 EVIDENCE: ${JSON.stringify(extractionOutput)}
 CORE: ${JSON.stringify(coreOutput)}
 
 Return ONLY:
-{"coaching_interventions":[{"technique_used":"","what_you_did":"You said: [quote]","immediate_effect":"","why_it_mattered":"","signal_strength":"high|medium|low","evidence_anchor":"","dna_tag":[],"consideration":null}],"reflection_and_growth":{"what_stood_out_in_your_approach":"","what_seemed_effective":"","one_place_to_stay_curious":""},"what_stood_out":[{"signal_label":"","what_happened_client":"","where_you_were":"","why_it_matters":""}],"friction_points":{"points":[],"why_it_matters":"","transition_context":null},"if_stuck":{"scenario":"","explore":"","one_possible_direction":"","transition_context":null},"commitments":[{"text":"","priority":"","follow_up_question":""}]}`,
+{"coaching_interventions":[{"technique_used":"","what_you_did":"You said: [quote]","immediate_effect":"","why_it_mattered":"","signal_strength":"high|medium|low","evidence_anchor":"","dna_tag":[],"consideration":null,"see_why_this_works":{"mechanism":"[Concept] — explanation","model":"[Model] ([Originator]) — explanation","transfer":"Use when..."}}],"reflection_and_growth":{"what_stood_out_in_your_approach":"","what_seemed_effective":"","one_place_to_stay_curious":""},"what_stood_out":[{"signal_label":"","what_happened_client":"","where_you_were":"","why_it_matters":""}],"friction_points":{"points":[],"why_it_matters":"","transition_context":null},"if_stuck":{"scenario":"","explore":"","one_possible_direction":"","transition_context":null},"commitments":[{"text":"","priority":"","follow_up_question":""}]}`,
       'Pass 2b: Interventions'
     );
 

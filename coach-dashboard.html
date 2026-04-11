@@ -5417,17 +5417,21 @@ function renderCoachingMirror(a, container) {
   // 2. Patterns and Your Role
   if (par && par.length) {
     var parBody = '';
-    var roleColors = { interrupted: '#2d6a4f', reinforced: '#b8860b', allowed: 'var(--muted)' };
+    var roleColors = { interrupted: '#2d6a4f', reinforced: '#b8860b', allowed: 'var(--muted)', disrupted: 'var(--gold)', surfaced: 'var(--ink)' };
+    var roleHelpers = { interrupted: 'You actively shifted this pattern during the session.', reinforced: 'This pattern continued or strengthened during this session.', allowed: 'The pattern was present but not directly addressed.', disrupted: 'The pattern became visible and began to loosen. Not yet fully shifted.', surfaced: 'The pattern was named and made visible for the first time.' };
     var statusColors = { emerging: 'var(--gold)', disrupted: '#2d6a4f', stabilizing: '#b8860b', unchanged: 'var(--muted)' };
     par.forEach(function(p) {
       if (!p) return;
       var rc = roleColors[p.your_role] || 'var(--muted)';
+      var rh = roleHelpers[p.your_role] || '';
       var stc = statusColors[p.current_status] || 'var(--muted)';
+      var rolePillStyle = p.your_role === 'surfaced' ? 'background:none;border:1px solid var(--ink);color:var(--ink);' : 'background:' + rc + ';color:#fff;';
       parBody += '<div style="background:var(--cream);border-radius:8px;padding:14px 16px;margin-bottom:10px;">'
-        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">'
-        + '<span style="font-weight:700;font-size:0.88rem;color:var(--ink);">' + escapeHtml(p.pattern_name || '') + '</span>'
-        + '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:700;background:' + rc + ';color:#fff;text-transform:uppercase;">' + escapeHtml(p.your_role || '') + '</span>'
-        + '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:600;background:var(--cream);border:1px solid ' + stc + ';color:' + stc + ';">' + escapeHtml(p.current_status || '') + '</span>'
+        + '<div style="font-weight:700;font-size:0.88rem;color:var(--ink);margin-bottom:6px;">' + escapeHtml(p.pattern_name || '') + '</div>'
+        + '<div style="margin-bottom:6px;">'
+        + '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:700;text-transform:uppercase;' + rolePillStyle + '">' + escapeHtml(p.your_role || '') + '</span>'
+        + '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:600;background:var(--cream);border:1px solid ' + stc + ';color:' + stc + ';margin-left:6px;">' + escapeHtml(p.current_status || '') + '</span>'
+        + (rh ? '<div style="font-size:0.78rem;color:var(--muted);font-style:italic;line-height:1.4;margin-top:4px;">' + rh + '</div>' : '')
         + '</div>'
         + (p.what_client_did ? '<div style="font-size:0.82rem;color:var(--muted);line-height:1.5;margin-bottom:4px;">' + escapeHtml(p.what_client_did) + '</div>' : '')
         + (p.how_you_influenced_it ? '<div style="font-size:0.85rem;color:var(--ink);line-height:1.5;">' + escapeHtml(p.how_you_influenced_it) + '</div>' : '')
@@ -5474,6 +5478,12 @@ function renderCoachingMirror(a, container) {
         + (c.why_it_mattered ? '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;margin-bottom:6px;"><span style="font-weight:700;color:var(--ink);">Why it mattered:</span> ' + escapeHtml(c.why_it_mattered) + '</div>' : '')
         + (c.dna_tag && c.dna_tag.length ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">' + c.dna_tag.map(function(t) { return '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:600;background:var(--gold);color:#fff;">' + escapeHtml(t) + '</span>'; }).join('') + '</div>' : '')
         + (c.consideration ? '<details style="cursor:pointer;margin-top:6px;"><summary style="font-size:0.75rem;font-weight:600;color:var(--muted);cursor:pointer;">A place to stay curious</summary><div style="padding:6px 0 0 0;font-size:0.82rem;color:var(--muted);font-style:italic;line-height:1.5;">' + escapeHtml(c.consideration) + '</div></details>' : '')
+        + (c.see_why_this_works ? '<details style="cursor:pointer;margin-top:8px;"><summary style="font-size:0.8rem;font-weight:600;color:var(--gold);font-style:italic;cursor:pointer;">\u2192 See why this works</summary>'
+          + '<div style="padding:12px 16px;background:var(--cream);border-radius:6px;margin-top:6px;font-size:0.78rem;line-height:1.6;">'
+          + (c.see_why_this_works.mechanism ? '<div style="margin-bottom:4px;"><span style="font-weight:700;color:var(--ink);">Mechanism:</span> <span style="color:var(--muted);">' + escapeHtml(c.see_why_this_works.mechanism) + '</span></div>' : '')
+          + (c.see_why_this_works.model ? '<div style="margin-bottom:4px;"><span style="font-weight:700;color:var(--ink);">Model:</span> <span style="color:var(--muted);">' + escapeHtml(c.see_why_this_works.model) + '</span></div>' : '')
+          + (c.see_why_this_works.transfer ? '<div><span style="font-weight:700;color:var(--ink);">Transfer:</span> <span style="color:var(--gold);font-style:italic;">' + escapeHtml(c.see_why_this_works.transfer) + '</span></div>' : '')
+          + '</div></details>' : '')
         + '</div>';
     });
     h += mirrorSection('pm-interventions', 'Your Coaching Interventions This Session', 'Coach Clarity identified these specific techniques from this session. Each is grounded in a moment from your transcript.', 'Coach Clarity \u2192 For You', ciBody);
