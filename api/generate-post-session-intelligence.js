@@ -156,13 +156,17 @@ Return ONLY this JSON:
       `Generate SUPPORTING intelligence. Stay consistent with core insights. ${CONCISE}
 
 For friction_points and if_stuck, add optional transition_context (one sentence max, under 20 words, null if no natural connection). friction_points: start with "The most likely place this progress could stall..."; if_stuck: start with "If that stalling happens...".
+
+For coach_dna.patterns: generate 3-5 coaching tendencies. Each MUST be a single readable paragraph with three parts: (1) You said: a direct verbatim quote from the coach. (2) What this did: the observable effect on the client. (3) Why it worked: the underlying mechanism. Anchor every tendency in a specific real moment. Never use abstract labels like "used language mirroring."
+
+For curiosity_edges: generate 2-3 non-directive developmental reflections. Each has: curiosity_note (starts with "A place to stay curious:" tied to a specific session moment), what_to_notice (observable signals for next session), why_this_stands_out (one sentence connecting to transcript). NEVER use "you should", "wait for", "name the", "do this", "avoid this". Every item starts from observation and invites attention.
 ${goalsContext}
 
 EVIDENCE: ${JSON.stringify(extractionOutput)}
 CORE: ${JSON.stringify(coreOutput)}
 
 Return ONLY this JSON:
-{"friction_points":{"points":[],"why_it_matters":"","transition_context":null},"if_stuck":{"scenario":"","explore":"","one_possible_direction":"","transition_context":null},"goals":{"existing":[{"title":"","status":"","session_relevance":"","signal_reason":""}],"suggested":[{"title":"","description":"","suggested_target_date":""}]},"commitments":[{"text":"","priority":"","follow_up_question":""}],"between_session":[{"title":"","invitation":"","why_it_matters":"","connection":""}],"coaching_signals":[{"type":"","description":"","implication":""}],"frameworks":[{"name":"","presence_level":"","what_was_observed":"","what_it_suggests":"","build_on_this":"","mindful_of":""}],"coach_dna":{"patterns":[],"why_it_matters":""}}`,
+{"friction_points":{"points":[],"why_it_matters":"","transition_context":null},"if_stuck":{"scenario":"","explore":"","one_possible_direction":"","transition_context":null},"goals":{"existing":[{"title":"","status":"","session_relevance":"","signal_reason":""}],"suggested":[{"title":"","description":"","suggested_target_date":""}]},"commitments":[{"text":"","priority":"","follow_up_question":""}],"between_session":[{"title":"","invitation":"","why_it_matters":"","connection":""}],"coaching_signals":[{"type":"","description":"","implication":""}],"frameworks":[{"name":"","presence_level":"","what_was_observed":"","what_it_suggests":"","build_on_this":"","mindful_of":""}],"coach_dna":{"patterns":["each pattern is a single readable paragraph with three parts: You said: (verbatim coach quote from transcript), What this did: (observable client effect), Why it worked: (underlying mechanism). Anchor every tendency in a specific real moment from the transcript. Never use abstract labels."],"why_it_matters":""},"curiosity_edges":[{"curiosity_note":"starts with A place to stay curious: then a grounded observation about a live edge in the coach approach tied to this session","what_to_notice":"specific observable signals to watch in next session","why_this_stands_out":"one sentence connecting back to transcript"}]}`,
       'Pass 2b: Supporting Intelligence'
     );
 

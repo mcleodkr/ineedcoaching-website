@@ -3198,6 +3198,8 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
         + '<span style="font-size:0.75rem;font-weight:700;color:' + (hasNotes ? 'var(--gold)' : 'var(--muted)') + ';">\u2461 Notes ' + (hasNotes ? '\u2713' : '') + '</span>'
         + '<span style="color:var(--border);font-size:0.7rem;">\u2192</span>'
         + '<span style="font-size:0.75rem;font-weight:700;color:' + (hasAnalysis ? 'var(--gold)' : 'var(--muted)') + ';">\u2462 Coach Clarity ' + (hasAnalysis ? '\u2713' : '') + '</span>'
+        + '<span style="color:var(--border);font-size:0.7rem;">\u2192</span>'
+        + '<span style="font-size:0.75rem;font-weight:700;color:' + (hasAnalysis ? 'var(--gold)' : 'var(--muted)') + ';">\u2463 Coaching Mirror ' + (hasAnalysis ? '\u2713' : '') + '</span>'
         + '</div>';
       // Tab bar
       html += '<div style="display:flex;border-bottom:1px solid var(--border);overflow-x:auto;">'
@@ -4937,7 +4939,7 @@ function renderPostSessionAnalysis(a, container) {
 
   // Intro banner
   h += '<div style="background:var(--ink);border-radius:var(--r);padding:12px 24px;margin-bottom:16px;">'
-    + '<div style="font-size:0.78rem;color:var(--cream);line-height:1.5;">Coach Clarity is your reflective thinking partner \u2014 it surfaces patterns and possibilities so you can think more clearly, not follow a script.</div>'
+    + '<div style="font-size:0.78rem;color:var(--cream);line-height:1.5;">Coach Clarity is your reflective thinking partner. Specific to this client, this session, this moment in their work.</div>'
     + '</div>';
 
   // Two-column layout: sidebar + main
@@ -5040,7 +5042,7 @@ function renderPostSessionAnalysis(a, container) {
       + '<div style="font-size:0.85rem;color:var(--ink);margin-bottom:6px;line-height:1.5;"><span style="font-weight:600;color:var(--gold);">What you might pay attention to next session:</span> ' + escapeHtml(pt.next_session_watch || '') + '</div>'
       + (pt.next_session_why ? '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;line-height:1.5;"><span style="font-weight:600;">Why this matters:</span> ' + escapeHtml(pt.next_session_why) + '</div>' : '')
       + '</div>';
-    h += psCard('Recurring Pattern to Watch', 'A pattern this client tends to fall into under specific conditions \u2014 understanding it helps you anticipate and respond', 'Observed', ptBody, {id:'pattern'});
+    h += psCard('Recurring Pattern to Watch', 'A pattern this client tends to fall into under specific conditions. Understanding it helps you anticipate and respond', 'Observed', ptBody, {id:'pattern'});
   }
 
   // Emotional anchor — between pattern and strategic direction
@@ -5058,7 +5060,7 @@ function renderPostSessionAnalysis(a, container) {
       + (sd.what_it_may_reveal ? '<div style="margin-bottom:6px;"><span style="font-weight:600;color:var(--ink);">What it may reveal:</span> ' + escapeHtml(sd.what_it_may_reveal) + '</div>' : '')
       + (sd.use_with_awareness ? '<div><span style="font-weight:600;color:#b8860b;">Use with awareness:</span> ' + escapeHtml(sd.use_with_awareness) + '</div>' : '')
       + '</div></details>';
-    h += psCard('A Direction You Might Explore', 'One possible way to work with what emerged \u2014 adjust or set aside based on your judgment', 'Coach Clarity \u2192 For You', sdBody, {id:'strategic'});
+    h += psCard('A Direction You Might Explore', 'One possible way to work with what emerged. Adjust or set aside based on your judgment', 'Coach Clarity \u2192 For You', sdBody, {id:'strategic'});
   }
 
   // 5. Early Cues
@@ -5093,7 +5095,7 @@ function renderPostSessionAnalysis(a, container) {
       if (ns.if_shift.why_it_matters) nsBody += '<div style="margin-top:6px;"><span style="font-weight:600;color:var(--muted);">Why this matters:</span> ' + escapeHtml(ns.if_shift.why_it_matters) + '</div>';
       nsBody += '</div></details></div>';
     }
-    h += psCard('One Way to Approach the Next Session', 'One possible direction, not a prescription \u2014 your judgment takes precedence', 'Coach Clarity \u2192 For You', nsBody, {id:'next-session'});
+    h += psCard('One Way to Approach the Next Session', 'One possible direction, not a prescription. Your judgment takes precedence', 'Coach Clarity \u2192 For You', nsBody, {id:'next-session'});
   }
 
   // 8. Friction Points
@@ -5171,12 +5173,12 @@ function renderPostSessionAnalysis(a, container) {
         + (c.follow_up_question ? '<div style="background:var(--ink);border-radius:6px;padding:10px 14px;margin-top:6px;"><div style="font-size:0.7rem;font-weight:600;color:var(--gold);margin-bottom:4px;">A question you might explore with them:</div><div style="font-size:0.82rem;color:var(--cream);line-height:1.5;font-style:italic;">\u201c' + escapeHtml(c.follow_up_question || c.accountability_question || '') + '\u201d</div></div>' : '')
         + '</div>';
     });
-    h += psCard('Client-Stated Commitments', 'Specific agreements this client expressed or agreed to during this session \u2014 not Coach Clarity suggestions', 'Observed', cmBody, {id:'commitments'});
+    h += psCard('Client-Stated Commitments', 'Specific agreements this client expressed during this session. These are not Coach Clarity suggestions', 'Observed', cmBody, {id:'commitments'});
   }
 
   // 12. Between-Session Practices
   if (bs && bs.length) {
-    var bsBody = '<div style="font-size:0.78rem;color:var(--muted);font-style:italic;margin-bottom:14px;line-height:1.5;">Coach Clarity has surfaced these between-session directions based on what emerged. They have not been discussed with the client yet \u2014 offer, adapt, or set aside as you see fit.</div>';
+    var bsBody = '<div style="font-size:0.78rem;color:var(--muted);font-style:italic;margin-bottom:14px;line-height:1.5;">Coach Clarity has surfaced these between-session directions based on what emerged. They have not been discussed with the client yet. Offer, adapt, or set aside as you see fit.</div>';
     bs.forEach(function(p, idx) {
       var whyField = p.why_it_matters || p.why_this_may_matter || '';
       bsBody += '<div style="background:var(--cream);border-radius:8px;padding:16px;margin-bottom:10px;">'
@@ -5189,7 +5191,7 @@ function renderPostSessionAnalysis(a, container) {
         + '<button class="bsp-add-goal-btn" data-practice-title="' + escapeHtml(p.title || '') + '" data-practice-desc="' + escapeHtml(p.invitation || '') + '" style="padding:6px 14px;background:none;border:1px solid var(--gold);border-radius:6px;font-size:0.75rem;font-weight:600;color:var(--gold);cursor:pointer;font-family:\'DM Sans\',sans-serif;">+ Add as Client Goal</button>'
         + '</div>';
     });
-    h += psCard('Optional Between-Session Practices', 'Coach Clarity has surfaced these between-session directions based on what emerged. They have not been discussed with the client yet \u2014 offer, adapt, or set aside as you see fit', 'Coach Clarity \u2192 For You', bsBody, {id:'between-session'});
+    h += psCard('Optional Between-Session Practices', 'Coach Clarity has surfaced these between-session directions based on what emerged. They have not been discussed with the client yet. Offer, adapt, or set aside as you see fit', 'Coach Clarity \u2192 For You', bsBody, {id:'between-session'});
   }
 
 
@@ -5331,7 +5333,7 @@ function renderCoachingMirror(a, container) {
   // Intro banner
   h += '<div style="background:var(--ink);border-radius:var(--r);padding:24px 28px;margin-bottom:16px;">'
     + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:700;color:var(--cream);line-height:1.5;">Every session reveals something about the client. This one also revealed something about you.</div>'
-    + '<div style="font-size:0.82rem;color:var(--cream);opacity:0.8;line-height:1.6;margin-top:10px;">Most coaches never get to hear it \u2014 there is no one else who witnessed what happened in that room. Coach Clarity offers this mirror so that changes \u2014 a private space to process how you showed up, deepen your awareness, strengthen your craft, and grow into the fullness of what you\u2019re already capable of.</div>'
+    + '<div style="font-size:0.82rem;color:var(--cream);opacity:0.8;line-height:1.6;margin-top:10px;">Most coaches never get to hear it. There is no one else who witnessed what happened in that room. Coach Clarity offers this mirror so that changes. This is your private space to process how you showed up, deepen your awareness, strengthen your craft, and grow into the fullness of what you\u2019re already capable of.</div>'
     + '</div>';
 
   // Two-column: sidebar + content
@@ -5347,6 +5349,7 @@ function renderCoachingMirror(a, container) {
     + '<a href="#pm-frameworks" class="pm-nav-link" data-section="pm-frameworks" style="' + pmLinkStyle + '">Approaches That Emerged</a>'
     + '<a href="#pm-dna" class="pm-nav-link" data-section="pm-dna" style="' + pmLinkStyle + '">Your Tendencies</a>'
     + '<a href="#pm-reflection" class="pm-nav-link" data-section="pm-reflection" style="' + pmLinkStyle + '">Reflection & Growth</a>'
+    + '<a href="#pm-curiosity" class="pm-nav-link" data-section="pm-curiosity" style="' + pmLinkStyle + '">Stay Curious</a>'
     + '</nav>';
 
   h += '<style>@media(max-width:768px){.pm-sidebar{display:none!important}}</style>';
@@ -5387,21 +5390,31 @@ function renderCoachingMirror(a, container) {
       + '<div style="padding:16px 20px;border-bottom:1px solid var(--border);position:relative;">'
       + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold);position:absolute;top:16px;right:20px;">Coach Clarity \u2192 For You</div>'
       + '<div style="padding-right:120px;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:700;color:var(--ink);">What This Session Revealed About Your Coaching</div>'
-      + '<div style="font-size:0.75rem;color:var(--muted);font-style:italic;line-height:1.4;margin-top:3px;">Patterns in how you guided this session \u2014 surfaced by Coach Clarity so you can use them more intentionally</div></div>'
+      + '<div style="font-size:0.75rem;color:var(--muted);font-style:italic;line-height:1.4;margin-top:3px;">Patterns in how you guided this session. Surfaced by Coach Clarity so you can use them more intentionally</div></div>'
       + '</div><div style="padding:16px 20px;">' + fwBody + '</div></div>';
   }
 
-  // 3. Your Coaching Tendencies
+  // 3. Your Coaching Tendencies — evidence-based paragraphs
   if (cd) {
     var cdPatterns = cd.patterns || cd.patterns_observed || [];
     var cdWhy = cd.why_it_matters || cd.suggestion || '';
-    h += '<div id="pm-dna" style="background:var(--ink);border-radius:8px;padding:20px;margin-bottom:12px;position:relative;">'
+    h += '<div id="pm-dna" style="border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);position:relative;">'
+      + '<div style="padding:16px 20px;border-bottom:1px solid var(--border);position:relative;">'
       + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold);position:absolute;top:16px;right:20px;">Coach Clarity \u2192 For You</div>'
-      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:700;color:var(--cream);margin-bottom:4px;">Your Coaching Tendencies This Session</div>'
-      + '<div style="font-size:0.75rem;color:var(--cream);opacity:0.6;font-style:italic;margin-bottom:12px;">Trends in how you tend to coach this client</div>';
-    cdPatterns.forEach(function(p) { h += '<div style="font-size:0.88rem;color:var(--cream);line-height:1.6;margin-bottom:6px;padding-left:16px;position:relative;"><span style="position:absolute;left:0;color:var(--gold);">\u2022</span>' + escapeHtml(p) + '</div>'; });
-    if (cdWhy) h += '<div style="font-size:0.85rem;color:var(--gold);font-style:italic;margin-top:10px;line-height:1.5;">' + escapeHtml(cdWhy) + '</div>';
-    h += '</div>';
+      + '<div style="padding-right:120px;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:700;color:var(--ink);">Your Coaching Tendencies This Session</div>'
+      + '<div style="font-size:0.75rem;color:var(--muted);font-style:italic;line-height:1.4;margin-top:3px;">What Coach Clarity observed in how you showed up. Each tendency is grounded in a specific moment from this session.</div></div>'
+      + '</div><div style="padding:16px 20px;">';
+    cdPatterns.forEach(function(p) {
+      // Render as paragraph card with gold left border
+      // Highlight "You said:" in gold italic, "What this did:" and "Why it worked:" in navy bold
+      var formatted = escapeHtml(p)
+        .replace(/You said:/g, '<span style="color:var(--gold);font-style:italic;font-weight:600;">You said:</span>')
+        .replace(/What this did:/g, '<span style="color:var(--ink);font-weight:700;">What this did:</span>')
+        .replace(/Why it worked:/g, '<span style="color:var(--ink);font-weight:700;">Why it worked:</span>');
+      h += '<div style="background:var(--cream);border-left:2px solid var(--gold);border-radius:0 8px 8px 0;padding:16px 20px;margin-bottom:12px;font-size:0.88rem;color:var(--ink);line-height:1.75;">' + formatted + '</div>';
+    });
+    if (cdWhy) h += '<div style="font-size:0.85rem;color:var(--muted);font-style:italic;line-height:1.5;margin-top:4px;">' + escapeHtml(cdWhy) + '</div>';
+    h += '</div></div>';
   }
 
   // 4. Coaching Reflection & Growth
@@ -5410,7 +5423,7 @@ function renderCoachingMirror(a, container) {
     h += '<div id="pm-reflection" style="border-left:2px solid var(--muted);background:var(--cream);border-radius:0 8px 8px 0;padding:20px 24px;margin-bottom:12px;position:relative;">'
       + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);position:absolute;top:16px;right:20px;">Coach Clarity \u2192 For Your Development</div>'
       + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:700;color:var(--ink);margin-bottom:4px;">Coaching Reflection & Growth</div>'
-      + '<div style="font-size:0.75rem;color:var(--muted);font-style:italic;margin-bottom:16px;line-height:1.5;">Optional reflections on your approach \u2014 for your development, not for the client.</div>';
+      + '<div style="font-size:0.75rem;color:var(--muted);font-style:italic;margin-bottom:16px;line-height:1.5;">Optional reflections on your approach. For your development, not for the client.</div>';
     if (cr.what_stood_out) {
       h += '<div style="margin-bottom:14px;"><div style="font-size:0.82rem;font-weight:600;color:var(--ink);margin-bottom:4px;">What stood out in your approach</div>'
         + '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;margin-bottom:4px;">' + escapeHtml(cr.what_stood_out.observation || '') + '</div>'
@@ -5430,6 +5443,25 @@ function renderCoachingMirror(a, container) {
         + '</div></details></div>';
     }
     h += '</div>';
+  }
+
+  // 5. Where to Stay Curious
+  var ce = a.curiosity_edges || [];
+  if (ce.length) {
+    h += '<div id="pm-curiosity" style="border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);position:relative;">'
+      + '<div style="padding:16px 20px;border-bottom:1px solid var(--border);position:relative;">'
+      + '<div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--gold);position:absolute;top:16px;right:20px;">Coach Clarity \u2192 For Your Development</div>'
+      + '<div style="padding-right:160px;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:700;color:var(--ink);">Where to Stay Curious</div>'
+      + '<div style="font-size:0.75rem;color:var(--muted);font-style:italic;line-height:1.4;margin-top:3px;">Coach Clarity surfaces these edges not as corrections but as live questions worth holding.</div></div>'
+      + '</div><div style="padding:16px 20px;">';
+    ce.forEach(function(c) {
+      h += '<div style="background:var(--cream);border-left:2px solid var(--muted);border-radius:0 8px 8px 0;padding:16px 20px;margin-bottom:12px;">'
+        + '<div style="font-size:0.82rem;color:var(--ink);line-height:1.6;margin-bottom:8px;"><span style="font-weight:700;color:var(--ink);">A place to stay curious:</span> ' + escapeHtml(c.curiosity_note || '') + '</div>'
+        + '<div style="font-size:0.82rem;color:var(--ink);line-height:1.6;margin-bottom:8px;"><span style="font-weight:700;color:var(--ink);">What to notice:</span> ' + escapeHtml(c.what_to_notice || '') + '</div>'
+        + '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;line-height:1.6;"><span style="font-weight:600;">Why this stands out:</span> ' + escapeHtml(c.why_this_stands_out || '') + '</div>'
+        + '</div>';
+    });
+    h += '</div></div>';
   }
 
   // Link to Coach DNA tab
