@@ -4944,28 +4944,34 @@ function renderPostSessionAnalysis(a, container) {
   h += '<div style="display:flex;gap:24px;align-items:flex-start;">';
 
   // Sticky sidebar nav (desktop)
+  var navLinkStyle = 'display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:10px 16px;border-left:2px solid transparent;cursor:pointer;font-weight:500;transition:all 0.15s ease;';
+  var groupStyle = 'font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);padding:16px 16px 6px;cursor:default;';
   h += '<nav class="psi-sidebar" style="width:180px;flex-shrink:0;position:sticky;top:20px;max-height:calc(100vh - 40px);overflow-y:auto;background:var(--white);border-right:1px solid var(--border);padding:16px 0;">'
     + '<div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);padding:0 16px;margin-bottom:12px;">In This Analysis</div>'
-    + '<div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--muted);padding:12px 16px 4px;">Session Intelligence</div>'
-    + '<a href="#psi-key-insights" class="psi-nav-link" data-section="psi-key-insights" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Key Insights</a>'
-    + '<a href="#psi-core-focus" class="psi-nav-link" data-section="psi-core-focus" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Core Focus</a>'
-    + '<a href="#psi-breakthrough" class="psi-nav-link" data-section="psi-breakthrough" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">What Shifted</a>'
-    + '<a href="#psi-pattern" class="psi-nav-link" data-section="psi-pattern" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Recurring Pattern</a>'
-    + '<div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--muted);padding:12px 16px 4px;">Next Session</div>'
-    + '<a href="#psi-strategic" class="psi-nav-link" data-section="psi-strategic" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Strategic Direction</a>'
-    + '<a href="#psi-early-cues" class="psi-nav-link" data-section="psi-early-cues" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Early Cues</a>'
-    + '<a href="#psi-opening" class="psi-nav-link" data-section="psi-opening" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Opening Question</a>'
-    + '<a href="#psi-next-session" class="psi-nav-link" data-section="psi-next-session" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Next Session</a>'
-    + '<div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--muted);padding:12px 16px 4px;">Client</div>'
-    + '<a href="#psi-friction" class="psi-nav-link" data-section="psi-friction" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Friction Points</a>'
-    + '<a href="#psi-if-stuck" class="psi-nav-link" data-section="psi-if-stuck" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">If Stuck</a>'
-    + '<a href="#psi-goals" class="psi-nav-link" data-section="psi-goals" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Goals</a>'
-    + '<a href="#psi-commitments" class="psi-nav-link" data-section="psi-commitments" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Commitments</a>'
-    + '<a href="#psi-between-session" class="psi-nav-link" data-section="psi-between-session" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Between-Session</a>'
+    + '<div style="' + groupStyle + '">Session Intelligence</div>'
+    + '<a href="#psi-key-insights" class="psi-nav-link" data-section="psi-key-insights" style="' + navLinkStyle + '">Key Insights</a>'
+    + '<a href="#psi-core-focus" class="psi-nav-link" data-section="psi-core-focus" style="' + navLinkStyle + '">Core Focus</a>'
+    + '<a href="#psi-breakthrough" class="psi-nav-link" data-section="psi-breakthrough" style="' + navLinkStyle + '">What Shifted</a>'
+    + '<a href="#psi-pattern" class="psi-nav-link" data-section="psi-pattern" style="' + navLinkStyle + '">Recurring Pattern</a>'
+    + '<div style="' + groupStyle + '">Next Session</div>'
+    + '<a href="#psi-strategic" class="psi-nav-link" data-section="psi-strategic" style="' + navLinkStyle + '">Strategic Direction</a>'
+    + '<a href="#psi-early-cues" class="psi-nav-link" data-section="psi-early-cues" style="' + navLinkStyle + '">Early Cues</a>'
+    + '<a href="#psi-opening" class="psi-nav-link" data-section="psi-opening" style="' + navLinkStyle + '">Opening Question</a>'
+    + '<a href="#psi-next-session" class="psi-nav-link" data-section="psi-next-session" style="' + navLinkStyle + '">Next Session</a>'
+    + '<div style="' + groupStyle + '">Client</div>'
+    + '<a href="#psi-friction" class="psi-nav-link" data-section="psi-friction" style="' + navLinkStyle + '">Friction Points</a>'
+    + '<a href="#psi-if-stuck" class="psi-nav-link" data-section="psi-if-stuck" style="' + navLinkStyle + '">If Stuck</a>'
+    + '<a href="#psi-goals" class="psi-nav-link" data-section="psi-goals" style="' + navLinkStyle + '">Goals</a>'
+    + '<a href="#psi-commitments" class="psi-nav-link" data-section="psi-commitments" style="' + navLinkStyle + '">Commitments</a>'
+    + '<a href="#psi-between-session" class="psi-nav-link" data-section="psi-between-session" style="' + navLinkStyle + '">Between-Session</a>'
     + '</nav>';
 
   // Mobile pill nav (hidden on desktop, shown <768px via inline media query below)
-  h += '<style>@media(max-width:768px){.psi-sidebar{display:none!important}.psi-mobile-nav{display:flex!important}}</style>';
+  h += '<style>'
+    + '.psi-nav-link:hover{color:var(--ink)!important;border-left-color:rgba(196,154,60,0.4)!important;background:rgba(196,154,60,0.06)!important}'
+    + '.psi-nav-link.psi-active{color:var(--ink)!important;font-weight:700!important;border-left-color:var(--gold)!important;background:rgba(196,154,60,0.06)!important}'
+    + '@media(max-width:768px){.psi-sidebar{display:none!important}.psi-mobile-nav{display:flex!important}}'
+    + '</style>';
   h += '<div class="psi-mobile-nav" style="display:none;overflow-x:auto;gap:8px;padding:8px 0;margin-bottom:12px;white-space:nowrap;width:100%;">';
   ['Session Intelligence', 'Next Session', 'Client'].forEach(function(group, i) {
     var targets = [['psi-key-insights'],['psi-strategic'],['psi-goals']];
@@ -5207,7 +5213,7 @@ function renderPostSessionAnalysis(a, container) {
     var observer = new IntersectionObserver(function(entries) {
       entries.forEach(function(entry) {
         var link = container.querySelector('.psi-nav-link[data-section="' + entry.target.id + '"]');
-        if (link) { link.style.color = entry.isIntersecting ? 'var(--ink)' : 'var(--muted)'; link.style.fontWeight = entry.isIntersecting ? '600' : '400'; link.style.borderLeftColor = entry.isIntersecting ? 'var(--gold)' : 'transparent'; link.style.background = entry.isIntersecting ? 'rgba(196,154,60,0.06)' : 'none'; }
+        if (link) { if (entry.isIntersecting) { link.classList.add('psi-active'); } else { link.classList.remove('psi-active'); } }
       });
     }, { rootMargin: '-20% 0px -70% 0px' });
     container.querySelectorAll('[id^="psi-"]').forEach(function(el) { observer.observe(el); });
