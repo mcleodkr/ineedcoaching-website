@@ -3489,7 +3489,6 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
                 var input = transcript && notes ? 'TRANSCRIPT:\n' + transcript + '\n\nSTRUCTURED NOTES:\n' + notes : (transcript || notes);
                 if (!input) return;
                 runPostSessionAnalysis(sid, client.email, input, nd.format || 'general', $('post-analysis-' + sid), goals);
-                updateSessionProgress(sid, 3, true);
               });
             }
           }
@@ -3503,7 +3502,8 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
         var mirrorContainer = $('coaching-mirror-' + sid);
         var noteData = notesByBooking[sid];
         var hasExisting = noteData && noteData.post_session_analysis;
-        if (mirrorContainer && hasExisting && !mirrorContainer.innerHTML.trim()) {
+        console.log('[Coaching Mirror] Tab opened for sid:', sid, 'hasData:', !!hasExisting, 'container:', !!mirrorContainer);
+        if (mirrorContainer && hasExisting) {
           renderCoachingMirror(noteData.post_session_analysis, mirrorContainer);
         }
       }
@@ -4901,10 +4901,20 @@ async function runPostSessionAnalysis(bookingId, clientEmail, sessionNotes, form
     var analysis = await res.json();
     if (!res.ok) throw new Error(analysis.error || 'Failed');
     renderPostSessionAnalysis(analysis, container);
+    // Save analysis to notesByBooking so tabs can access it
+    if (!notesByBooking) notesByBooking = {};
+    if (!notesByBooking[bookingId]) notesByBooking[bookingId] = {};
+    notesByBooking[bookingId].post_session_analysis = analysis;
     // Also render Coaching Mirror if container exists
     var mirrorId = container.id ? container.id.replace('post-analysis-', 'coaching-mirror-') : null;
     var mirrorEl = mirrorId ? $(mirrorId) : null;
     if (mirrorEl) renderCoachingMirror(analysis, mirrorEl);
+    // Update button label to Regenerate
+    var analysisBtn = container.parentElement ? container.parentElement.querySelector('.post-analysis-btn') : null;
+    if (analysisBtn) analysisBtn.textContent = 'Regenerate Analysis';
+    // Update progress indicators ③ and ④
+    updateSessionProgress(bookingId, 3, true);
+    updateSessionProgress(bookingId, 4, true);
   } catch(e) {
     psiTimers.forEach(function(t) { clearTimeout(t); });
     container.innerHTML = '<div style="color:#c44;font-size:0.88rem;">Error: ' + escapeHtml(e.message) + '</div>';
