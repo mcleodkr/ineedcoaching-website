@@ -1,5 +1,14 @@
 {
   "functions": {
+    "api/post-session-analysis.js": {
+      "maxDuration": 120
+    },
+    "api/generate-pre-session-brief.js": {
+      "maxDuration": 120
+    },
+    "api/generate-coach-dna.js": {
+      "maxDuration": 120
+    },
     "api/*.js": {
       "maxDuration": 30
     }
