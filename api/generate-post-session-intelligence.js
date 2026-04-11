@@ -132,10 +132,14 @@ ${sessionContent}`,
       synthesisSystem,
       `Generate CORE intelligence from this evidence. ${CONCISE}
 
+Each section must include a transition_context field — one sentence max — that connects this section to the previous one. This creates a reasoning chain. Examples: strategic_direction: "Because this pattern showed up in this specific way..." early_cues: "If this pattern is still active next session, you may notice it through..." next_session: "Given what shifted and what remains fragile..."
+
+Also generate emotional_anchor: one sentence capturing the human stakes of what happened — not clinical, not analytical, but the real weight of what this client is carrying or moving through.
+
 EVIDENCE: ${JSON.stringify(extractionOutput)}
 
 Return ONLY this JSON:
-{"key_insights":["what client is doing or avoiding, max 20 words","what shifted this session if anything, max 20 words","what matters most to watch next session, max 20 words"],"core_focus":{"summary":"","why_it_matters":""},"breakthrough":{"client_quote":"","what_changed":"","why_it_matters":"","reinforcement_suggestion":""},"pattern":{"name":"","description":"","trigger":"","behavior":"","timeline":{"past":"","present":"","future_risk":""},"next_session_watch":"","next_session_why":""},"strategic_direction":{"suggestion":"","why_it_matters":"","what_it_may_reveal":"","use_with_awareness":""},"early_cues":{"signals":[],"why_it_matters":""},"opening_question":{"question":"","why_start_here":""},"next_session":{"focus":"","listen_for":"","explore":"","if_shift":{"options":[],"why_it_matters":""}},"session_in_one_line":""}`,
+{"key_insights":["what client is doing or avoiding, max 20 words","what shifted this session if anything, max 20 words","what matters most to watch next session, max 20 words"],"core_focus":{"summary":"","why_it_matters":"","transition_context":""},"breakthrough":{"client_quote":"","what_changed":"","why_it_matters":"","reinforcement_suggestion":"","transition_context":""},"pattern":{"name":"","description":"","trigger":"","behavior":"","timeline":{"past":"","present":"","future_risk":""},"next_session_watch":"","next_session_why":"","transition_context":""},"emotional_anchor":"one sentence — the human stakes, not clinical","strategic_direction":{"suggestion":"","why_it_matters":"","what_it_may_reveal":"","use_with_awareness":"","transition_context":""},"early_cues":{"signals":[],"why_it_matters":"","transition_context":""},"opening_question":{"question":"","why_start_here":"","transition_context":""},"next_session":{"focus":"","listen_for":"","explore":"","if_shift":{"options":[],"why_it_matters":""},"transition_context":""},"session_in_one_line":""}`,
       'Pass 2a: Core Intelligence'
     );
 
