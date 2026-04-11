@@ -176,8 +176,8 @@ Return ONLY:
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
       1500,
-      `${MIRROR_RULES} Feedback style: ${fbStyle}. If reflective: lead with "There was an opening to...", "You might notice...". If direct: lead with "You stayed at the surface.", "You moved past a deeper opening.". Both: never shame, never say "you should have" or "you missed". Anchor in observable behavior.`,
-      `Generate max 2 curiosity edges and max 2 missed windows. Max 12 words per field. If no meaningful missed window exists return empty array.
+      `${MIRROR_RULES} Feedback style: ${fbStyle}. If reflective: lead with "There was an opening to...", "You might notice...". If direct: lead with "You stayed at the surface.", "You moved past a deeper opening.". Both: never shame, never say "you should have" or "you missed". Anchor in observable behavior. PLAIN LANGUAGE REQUIRED: Never use coaching jargon. Replace "slow into" with "stay with" or "explore more closely". Replace "under visibility pressure" with "in moments where she is being watched". Replace "legitimacy fear" with "fear of not being taken seriously". Every sentence must be complete and standalone. No fragments. No implied subjects. Each field value must make sense when read alone.`,
+      `Generate max 2 curiosity edges and max 2 missed windows. Max 12 words per field. If no meaningful missed window exists return empty array. Every field must be a complete sentence with a clear subject.
 
 Scan for missed depth opportunities using 5 signal types. Each must meet 2+ criteria. Score: emotional_signal 1-3, pattern_relevance 1-3, depth_potential 1-3. Return top 2 by score.
 Signal types: EMOTIONAL_MISMATCH (emotion stronger than event), REPETITION_WITHOUT_MOVEMENT (same idea 2-3x without resolution), CHARGED_LANGUAGE (trapped/betrayed/invisible/stuck), BEHAVIORAL_CONTRADICTION (gap between stated and done), ENERGY_SHIFT (sudden relief/tension/tears/flatness).

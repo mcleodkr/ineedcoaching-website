@@ -5615,7 +5615,11 @@ function renderCoachingMirror(a, container) {
         mwBody += '<div style="margin-top:8px;"><a href="#" class="mw-direct-read" data-mw-idx="' + idx + '" style="font-size:0.75rem;color:var(--gold);font-style:italic;text-decoration:none;cursor:pointer;">See a direct read \u2192</a></div>'
           + '<div class="mw-direct-panel" data-mw-idx="' + idx + '" style="display:none;background:rgba(196,154,60,0.04);border-radius:8px;padding:14px 16px;margin-top:8px;">'
           + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);margin-bottom:6px;">Direct read:</div>'
-          + '<div style="font-size:0.82rem;color:var(--ink);line-height:1.5;">You stayed at the surface. ' + escapeHtml(w.what_was_underneath || '') + ' was available and was not explored. ' + escapeHtml(w.what_was_possible || '') + '</div>'
+          + '<div style="font-size:0.82rem;color:var(--ink);line-height:1.5;">'
+          + (w.what_you_did ? escapeHtml(w.what_you_did) + ' ' : 'You stayed at the surface. ')
+          + (w.what_was_underneath ? 'Underneath, there may have been ' + escapeHtml(w.what_was_underneath).toLowerCase() + '. ' : '')
+          + (w.what_was_possible ? 'There was an opening to ' + escapeHtml(w.what_was_possible).toLowerCase() + '.' : '')
+          + '</div>'
           + '<a href="#" class="mw-direct-close" data-mw-idx="' + idx + '" style="display:block;font-size:0.72rem;color:var(--muted);text-decoration:none;cursor:pointer;margin-top:6px;">Collapse</a>'
           + '</div>';
         mwBody += '<div style="font-size:0.72rem;color:var(--muted);font-style:italic;margin-top:8px;">Not every opening needs to be taken. This simply makes it visible.</div>';
