@@ -186,25 +186,32 @@ Return ONLY:
       'Pass 2c: Curiosity'
     );
 
-    // ── Pass 2d: Patterns + Coach Tendencies + Goals + Frameworks ────────
-    const pass2dOutput = await callClaude(
-      ANTHROPIC_API_KEY,
-      'claude-sonnet-4-6',
-      800,
-      MIRROR_RULES,
-      `Generate max 2 patterns, max 2 coach tendencies, and supporting fields. Max 15 words per value. Coach tendency sections: every sentence must have "you" as subject. Zero client description in what_this_session_revealed.
+    // ── Pass 2d: Patterns + Goals + Frameworks (fault-tolerant) ────────
+    let pass2dOutput = {};
+    try {
+      pass2dOutput = await callClaude(
+        ANTHROPIC_API_KEY,
+        'claude-sonnet-4-6',
+        600,
+        `${MIRROR_RULES} Return ONLY 2 patterns maximum. Every field must be under 12 words. Start with { end with }. No markdown.`,
+        `Generate max 2 patterns and goals. Every field under 12 words.
 ${goalsContext}
 
 EVIDENCE: ${JSON.stringify(extractionOutput)}
 CORE: ${JSON.stringify(coreOutput)}
 
 Return ONLY:
-{"patterns_and_your_role":[{"pattern_name":"","what_client_did":"","status":"surfaced|interrupted|reinforced|stabilizing","what_this_means":"plain sentence explaining status","your_role":"You..."}],"what_this_session_revealed":[{"coach_pattern":"","what_you_tend_to_do":"You...","why_this_is_effective":"","where_to_stay_curious":"You might stay curious about..."}],"goals":{"existing":[{"title":"","status":"","session_relevance":"","signal_reason":""}],"suggested":[{"title":"","description":"","suggested_target_date":""}]},"between_session":[{"title":"","invitation":"","why_it_matters":"","connection":""}],"frameworks":[{"name":"","presence_level":"","what_was_observed":"","what_it_suggests":"","build_on_this":"","mindful_of":""}]}`,
-      'Pass 2d: Patterns'
-    );
+{"patterns_and_your_role":[{"pattern_name":"","what_client_did":"","status":"surfaced|interrupted|reinforced|stabilizing","what_this_means":"","your_role":"You..."}],"what_this_session_revealed":[{"coach_pattern":"","what_you_tend_to_do":"You...","why_this_is_effective":"","where_to_stay_curious":""}],"goals":{"existing":[{"title":"","status":"","session_relevance":""}],"suggested":[{"title":"","description":""}]},"between_session":[{"title":"","invitation":"","why_it_matters":""}],"frameworks":[{"name":"","presence_level":"","what_was_observed":""}]}`,
+        'Pass 2d: Patterns'
+      );
+    } catch (e) {
+      console.error('[Pass 2d] Failed, continuing with empty patterns:', e.message);
+      pass2dOutput = { patterns_and_your_role: [], what_this_session_revealed: [], goals: { existing: [], suggested: [] }, between_session: [], frameworks: [] };
+    }
 
     // Merge 2a + 2b + 2c + 2d into one complete synthesis object
     const synthesisOutput = { ...coreOutput, ...pass2bOutput, ...pass2cOutput, ...pass2dOutput };
+    synthesisOutput.patterns_and_your_role = synthesisOutput.patterns_and_your_role || [];
 
     // ── Pass 3: Formatting (fault-tolerant — fall back to synthesis if this fails)
     // Pre-clean directive language via string replacement before AI pass
