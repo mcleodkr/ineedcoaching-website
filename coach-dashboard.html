@@ -1266,39 +1266,44 @@ function safeHTML(id, html) { var el = $(id); if (el) el.innerHTML = html; }
 /* ================================================
    AUTH: LOGIN FORM
    ================================================ */
-$('login-form').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  var email = $('login-email').value.trim();
-  if (!email) return;
-  var btn = $('login-submit');
-  var msg = $('login-msg');
-  btn.disabled = true;
-  btn.textContent = 'Sending...';
-  msg.textContent = '';
-  try {
-    var res = await fetch(SUPABASE_URL + '/auth/v1/magiclink', {
-      method: 'POST',
-      headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email,
-        redirect_to: 'https://www.ineedcoaching.org/coach-dashboard.html'
-      })
-    });
-    if (res.ok || res.status === 200) {
-      msg.textContent = 'Check your email \u2014 your link is waiting.';
-      msg.style.color = 'var(--forest)';
-    } else {
-      var data = await res.json();
-      msg.textContent = data.msg || data.error_description || 'Something went wrong. Try again.';
+// Attach login form handler — wrapped in DOMContentLoaded safety
+(function attachLoginForm() {
+  var form = $('login-form');
+  if (!form) { document.addEventListener('DOMContentLoaded', attachLoginForm); return; }
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    var email = $('login-email').value.trim();
+    if (!email) return;
+    var btn = $('login-submit');
+    var msg = $('login-msg');
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    msg.textContent = '';
+    try {
+      var res = await fetch(SUPABASE_URL + '/auth/v1/magiclink', {
+        method: 'POST',
+        headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email,
+          redirect_to: 'https://www.ineedcoaching.org/coach-dashboard.html'
+        })
+      });
+      if (res.ok || res.status === 200) {
+        msg.textContent = 'Check your email \u2014 your link is waiting.';
+        msg.style.color = 'var(--forest)';
+      } else {
+        var data = await res.json();
+        msg.textContent = data.msg || data.error_description || 'Something went wrong. Try again.';
+        msg.style.color = '#c44';
+      }
+    } catch (err) {
+      msg.textContent = 'Network error. Please try again.';
       msg.style.color = '#c44';
     }
-  } catch (err) {
-    msg.textContent = 'Network error. Please try again.';
-    msg.style.color = '#c44';
-  }
-  btn.disabled = false;
-  btn.textContent = 'Send magic link';
-});
+    btn.disabled = false;
+    btn.textContent = 'Send magic link';
+  });
+})();
 
 /* ================================================
    AUTH: VERIFY TOKEN & LOAD DASHBOARD
