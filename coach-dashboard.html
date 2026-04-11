@@ -9,15 +9,16 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
 <style>
 :root {
-  --ink: #1a3a52;
+  --ink: #1a2e3b;
+  --navy: #1a3a52;
   --forest: #4a7c59;
   --cream: #f7f5f1;
   --white: #ffffff;
   --gold: #c49a3c;
   --gold-hover: #a87d1f;
-  --muted: #6b6b60;
-  --border: #e0ddd5;
-  --r: 14px;
+  --muted: #6b7280;
+  --border: #e8e4dc;
+  --r: 10px;
   --r-sm: 8px;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -55,11 +56,16 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 .sign-out-btn { background: none; border: 1.5px solid rgba(255,255,255,0.2); color: var(--cream); padding: 7px 18px; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
 .sign-out-btn:hover { border-color: var(--gold); color: var(--gold); }
 
-/* TABS */
+/* TABS — dashboard sidebar handles main nav, .tab-bar hidden */
 .tab-bar { display: none; }
-.tab-btn { padding: 14px 24px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 700; color: var(--muted); background: none; border: none; border-bottom: 2.5px solid transparent; cursor: pointer; transition: all 0.2s; }
+/* Session inner tabs (pill style) */
+.stab { padding: 8px 16px; font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 500; color: var(--muted); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.15s ease; border-radius: 0; }
+.stab:hover { color: var(--ink); }
+.stab.active { color: var(--navy); font-weight: 600; background: var(--white); border-bottom-color: var(--gold); box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+/* Legacy .tab-btn for sidebar */
+.tab-btn { padding: 14px 24px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; color: var(--muted); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.15s ease; }
 .tab-btn:hover { color: var(--ink); }
-.tab-btn.active { color: var(--ink); border-bottom-color: var(--gold); }
+.tab-btn.active { color: var(--navy); border-bottom-color: var(--gold); font-weight: 500; }
 
 /* CONTENT */
 .dash-content { max-width: 900px; margin: 0 auto; padding: 80px 40px 80px; }
@@ -67,8 +73,8 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 .tab-panel.active { display: block; }
 
 /* FORM STYLES */
-.form-section { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 36px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
-.form-section-title { font-family: 'Cormorant Garamond', serif; font-size: 1.25rem; font-weight: 600; color: var(--ink); margin-bottom: 20px; letter-spacing: -0.01em; }
+.form-section { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 32px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+.form-section-title { font-family: 'Cormorant Garamond', serif; font-size: 1.15rem; font-weight: 600; color: var(--navy); margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
 .form-group { margin-bottom: 16px; }
 .form-group.full { grid-column: 1 / -1; }
@@ -101,9 +107,9 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 .pill-add-btn:hover { background: var(--gold); }
 
 /* SAVE BUTTON */
-.save-btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 32px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
-.save-btn:hover { background: var(--gold-hover); }
-.save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.save-btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 28px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.92rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
+.save-btn:hover { background: var(--gold-hover); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(196,154,60,0.3); }
+.save-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 .save-msg { display: inline-block; font-size: 0.82rem; color: var(--forest); margin-left: 14px; opacity: 0; transition: opacity 0.3s; }
 .save-msg.show { opacity: 1; }
 
@@ -178,9 +184,9 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 .status-completed { background: rgba(26,46,26,0.12); color: var(--ink); }
 
 /* ACTION BUTTONS */
-.action-btn { padding: 6px 14px; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; margin-right: 6px; }
-.action-confirm { background: #1a3a52; color: #fff; }
-.action-confirm:hover { background: #153045; }
+.action-btn { padding: 7px 16px; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 600; border: none; cursor: pointer; transition: all 0.15s ease; margin-right: 6px; }
+.action-confirm { background: var(--navy); color: #fff; }
+.action-confirm:hover { background: #0f2535; }
 .action-decline { background: #fff; color: #c0392b; border: 1px solid #c0392b; }
 .action-decline:hover { background: #fdf2f2; }
 .action-approve { background: var(--forest); color: var(--white); }
@@ -491,10 +497,10 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
   <!-- DASHBOARD SIDEBAR + MOBILE NAV -->
   <style>
     .dash-sidebar { width:220px; flex-shrink:0; position:sticky; top:80px; max-height:calc(100vh - 100px); overflow-y:auto; background:var(--white); border-right:1px solid var(--border); padding:16px 0; }
-    .dash-sidebar .dash-group { font-size:0.62rem; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold); padding:14px 16px 4px; cursor:default; pointer-events:none; }
-    .dash-sidebar .tab-btn { display:block; width:100%; text-align:left; padding:9px 18px; font-size:0.82rem; color:var(--muted); background:none; border:none; border-left:2.5px solid transparent; cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:500; transition:all 0.15s ease; }
-    .dash-sidebar .tab-btn:hover { border-left-color:rgba(196,154,60,0.5); color:var(--ink); background:rgba(196,154,60,0.04); }
-    .dash-sidebar .tab-btn.active { border-left-color:var(--gold); color:var(--ink); font-weight:600; background:rgba(196,154,60,0.07); }
+    .dash-sidebar .dash-group { font-size:0.62rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--gold); padding:16px 18px 6px; cursor:default; pointer-events:none; }
+    .dash-sidebar .tab-btn { display:block; width:100%; text-align:left; padding:10px 18px; font-size:0.85rem; color:var(--muted); background:none; border:none; border-left:3px solid transparent; cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:400; transition:all 0.15s ease; }
+    .dash-sidebar .tab-btn:hover { border-left-color:rgba(196,154,60,0.4); color:var(--ink); background:rgba(196,154,60,0.04); }
+    .dash-sidebar .tab-btn.active { border-left-color:var(--gold); color:#1a3a52; font-weight:500; background:rgba(196,154,60,0.08); }
     .dash-mobile-nav { display:none; overflow-x:auto; gap:8px; padding:8px 16px; white-space:nowrap; border-bottom:1px solid var(--border); }
     .dash-mobile-nav a { display:inline-block; padding:6px 14px; border-radius:50px; font-size:0.75rem; font-weight:600; color:var(--muted); background:var(--cream); text-decoration:none; white-space:nowrap; }
     @media(max-width:768px) { .dash-sidebar { display:none!important; } .dash-mobile-nav { display:flex!important; } .dash-layout { flex-direction:column!important; } }
@@ -3201,10 +3207,10 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
         + (hasNotes ? '<span style="font-size:0.7rem;color:#2d6a4f;" title="Notes saved">\u2713N</span> ' : '')
         + (hasAnalysis ? '<span style="font-size:0.7rem;color:#2d6a4f;" title="Analysis complete">\u2713A</span>' : '');
 
-      html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:0;margin-bottom:12px;overflow:hidden;">';
+      html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:10px;padding:0;margin-bottom:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.03);">';
       // Session header
       html += '<div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">'
-        + '<div><span style="font-weight:700;font-size:0.9rem;color:var(--ink);">' + escapeHtml(dateStr) + '</span>'
+        + '<div><span style="font-family:\'Cormorant Garamond\',serif;font-weight:600;font-size:1rem;color:var(--navy);">' + escapeHtml(dateStr) + '</span>'
         + (timeStr ? '<span style="font-size:0.82rem;color:var(--muted);margin-left:8px;">' + escapeHtml(timeStr) + '</span>' : '')
         + (svcName ? '<span style="font-size:0.82rem;color:var(--muted);margin-left:12px;">' + escapeHtml(svcName) + '</span>' : '')
         + '</div>'
@@ -3226,12 +3232,12 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
         + '<span style="color:var(--border);font-size:0.7rem;">\u2192</span>'
         + '<span style="font-size:0.75rem;font-weight:700;color:' + (hasAnalysis ? 'var(--gold)' : 'var(--muted)') + ';">\u2463 Coaching Mirror ' + (hasAnalysis ? '\u2713' : '') + '</span>'
         + '</div>';
-      // Tab bar
-      html += '<div style="display:flex;border-bottom:1px solid var(--border);overflow-x:auto;">'
-        + '<button class="stab active" data-sid="' + s.id + '" data-stab="transcript" style="flex:1;padding:10px 16px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:700;color:var(--ink);background:none;border:none;border-bottom:2.5px solid var(--gold);cursor:pointer;white-space:nowrap;">Transcript</button>'
-        + '<button class="stab" data-sid="' + s.id + '" data-stab="notes" style="flex:1;padding:10px 16px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:700;color:var(--muted);background:none;border:none;border-bottom:2.5px solid transparent;cursor:pointer;white-space:nowrap;">Session Notes</button>'
-        + '<button class="stab" data-sid="' + s.id + '" data-stab="coach-clarity" style="flex:1;padding:10px 16px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:700;color:var(--muted);background:none;border:none;border-bottom:2.5px solid transparent;cursor:pointer;white-space:nowrap;">Coach Clarity</button>'
-        + '<button class="stab" data-sid="' + s.id + '" data-stab="coaching-mirror" style="flex:1;padding:10px 16px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:700;color:var(--muted);background:none;border:none;border-bottom:2.5px solid transparent;cursor:pointer;white-space:nowrap;">Coaching Mirror</button>'
+      // Tab bar (pill style)
+      html += '<div style="display:flex;background:#f5f3ef;border-radius:8px;padding:4px;margin:0 16px 0;overflow-x:auto;gap:2px;">'
+        + '<button class="stab active" data-sid="' + s.id + '" data-stab="transcript" style="flex:1;padding:8px 14px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;color:var(--navy);background:var(--white);border:none;border-radius:6px;cursor:pointer;white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,0.04);transition:all 0.15s ease;">Transcript</button>'
+        + '<button class="stab" data-sid="' + s.id + '" data-stab="notes" style="flex:1;padding:8px 14px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;color:var(--muted);background:none;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all 0.15s ease;">Session Notes</button>'
+        + '<button class="stab" data-sid="' + s.id + '" data-stab="coach-clarity" style="flex:1;padding:8px 14px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;color:var(--muted);background:none;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all 0.15s ease;">Coach Clarity</button>'
+        + '<button class="stab" data-sid="' + s.id + '" data-stab="coaching-mirror" style="flex:1;padding:8px 14px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;color:var(--muted);background:none;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all 0.15s ease;">Coaching Mirror</button>'
         + '</div>';
 
       // Tab 1: Transcript
@@ -3471,15 +3477,19 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
     btn.addEventListener('click', function() {
       var sid = this.dataset.sid;
       var tab = this.dataset.stab;
-      // Toggle active tab style
+      // Toggle active tab style (pill style)
       document.querySelectorAll('.stab[data-sid="' + sid + '"]').forEach(function(b) {
         b.classList.remove('active');
         b.style.color = 'var(--muted)';
-        b.style.borderBottomColor = 'transparent';
+        b.style.background = 'none';
+        b.style.boxShadow = 'none';
+        b.style.fontWeight = '500';
       });
       this.classList.add('active');
-      this.style.color = 'var(--ink)';
-      this.style.borderBottomColor = 'var(--gold)';
+      this.style.color = 'var(--navy, #1a3a52)';
+      this.style.background = 'var(--white)';
+      this.style.boxShadow = '0 1px 2px rgba(0,0,0,0.04)';
+      this.style.fontWeight = '500';
       // Toggle panels
       document.querySelectorAll('.stab-panel[data-sid="' + sid + '"]').forEach(function(p) { p.style.display = 'none'; });
       var target = $('stab-' + tab + '-' + sid);
