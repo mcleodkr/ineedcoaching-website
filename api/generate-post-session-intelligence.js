@@ -10,6 +10,7 @@
  * @returns {Promise<object>}
  */
 async function callClaude(apiKey, model, maxTokens, system, userMessage, passName) {
+  console.log(`[${passName}] Using model: ${model}`);
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -26,19 +27,29 @@ async function callClaude(apiKey, model, maxTokens, system, userMessage, passNam
   });
 
   if (!res.ok) {
-    throw new Error(`Claude API error in ${passName || 'unknown'}: ${res.status}`);
+    const errBody = await res.text();
+    console.error(`[${passName}] Claude API error ${res.status}:`, errBody.substring(0, 1000));
+    throw new Error(`${passName} Claude API error ${res.status}: ${errBody.substring(0, 200)}`);
   }
 
-  const data = await res.json();
-  let text = data.content?.[0]?.text || '';
-  // Strip markdown code fences if present
-  text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+  let rawText;
   try {
-    const match = text.match(/\{[\s\S]*\}/);
-    return match ? JSON.parse(match[0]) : JSON.parse(text);
+    const data = await res.json();
+    rawText = data.content?.[0]?.text || '';
   } catch (e) {
-    console.error(`[${passName || 'callClaude'}] JSON parse failed. Raw response:`, text.substring(0, 2000));
-    throw new Error(`JSON parse error in ${passName || 'unknown'}: ${e.message}`);
+    const fallback = await res.text().catch(() => 'Could not read response');
+    console.error(`[${passName}] Response was not valid JSON. Raw:`, fallback.substring(0, 1000));
+    throw new Error(`${passName}: API response was not valid JSON`);
+  }
+
+  // Strip markdown code fences if present
+  rawText = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+  try {
+    const match = rawText.match(/\{[\s\S]*\}/);
+    return match ? JSON.parse(match[0]) : JSON.parse(rawText);
+  } catch (e) {
+    console.error(`[${passName}] JSON parse failed. Raw response:`, rawText.substring(0, 2000));
+    throw new Error(`${passName} JSON parse error: ${e.message}`);
   }
 }
 
