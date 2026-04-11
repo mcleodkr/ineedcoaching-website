@@ -4888,6 +4888,7 @@ async function runPostSessionAnalysis(bookingId, clientEmail, sessionNotes, form
 }
 
 function renderPostSessionAnalysis(a, container) {
+  try {
   // Helper: section card with title, subtitle, for-label, and optional id/collapsed
   function psCard(title, subtitle, forLabel, body, opts) {
     opts = opts || {};
@@ -4999,6 +5000,7 @@ function renderPostSessionAnalysis(a, container) {
       + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:700;color:var(--ink);margin-bottom:4px;">Coach Clarity \u2014 Key Insights</div>'
       + '<div style="font-size:0.75rem;color:var(--muted);font-style:italic;margin-bottom:12px;">The most important signals from this session at a glance</div>';
     ki.forEach(function(insight) {
+      if (!insight) return;
       h += '<div style="font-size:0.88rem;color:var(--ink);line-height:1.6;margin-bottom:6px;padding-left:16px;position:relative;"><span style="position:absolute;left:0;color:var(--gold);">\u2022</span>' + escapeHtml(insight) + '</div>';
     });
     h += '</div>';
@@ -5067,7 +5069,7 @@ function renderPostSessionAnalysis(a, container) {
   h += renderTransition(ec);
   if (ec && ec.signals && ec.signals.length) {
     var ecBody = '';
-    ec.signals.forEach(function(s) { ecBody += '<div style="font-size:0.85rem;color:var(--ink);line-height:1.5;margin-bottom:6px;padding-left:16px;position:relative;"><span style="position:absolute;left:0;color:var(--gold);">\u2022</span>' + escapeHtml(s) + '</div>'; });
+    ec.signals.forEach(function(s) { if (!s) return; ecBody += '<div style="font-size:0.85rem;color:var(--ink);line-height:1.5;margin-bottom:6px;padding-left:16px;position:relative;"><span style="position:absolute;left:0;color:var(--gold);">\u2022</span>' + escapeHtml(s) + '</div>'; });
     if (ec.why_it_matters) ecBody += '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;line-height:1.5;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);"><span style="font-weight:600;">Why this matters:</span> ' + escapeHtml(ec.why_it_matters) + '</div>';
     h += psCard('What to Listen for Early', 'Signals in the first few minutes that can reveal whether the previous session\u2019s shift is holding', 'Coach Clarity \u2192 For You', ecBody, {id:'early-cues'});
   }
@@ -5091,7 +5093,7 @@ function renderPostSessionAnalysis(a, container) {
     if (ns.if_shift) {
       nsBody += '<div style="padding-top:12px;border-top:1px solid var(--border);"><div style="font-size:0.88rem;font-weight:600;color:var(--ink);margin-bottom:8px;">If the session shifts\u2026</div>'
         + '<details style="cursor:pointer;"><summary style="font-size:0.75rem;font-weight:600;color:var(--gold);cursor:pointer;">Why this matters & what to watch for</summary><div style="padding:8px 0 0 0;font-size:0.85rem;color:var(--ink);line-height:1.6;">';
-      if (ns.if_shift.options) ns.if_shift.options.forEach(function(o) { nsBody += '<div style="margin-bottom:4px;">' + escapeHtml(o) + '</div>'; });
+      if (ns.if_shift.options) ns.if_shift.options.forEach(function(o) { if (!o) return; nsBody += '<div style="margin-bottom:4px;">' + escapeHtml(o) + '</div>'; });
       if (ns.if_shift.why_it_matters) nsBody += '<div style="margin-top:6px;"><span style="font-weight:600;color:var(--muted);">Why this matters:</span> ' + escapeHtml(ns.if_shift.why_it_matters) + '</div>';
       nsBody += '</div></details></div>';
     }
@@ -5102,7 +5104,7 @@ function renderPostSessionAnalysis(a, container) {
   h += renderTransition(fp);
   if (fp && fp.points && fp.points.length) {
     var fpBody = '';
-    fp.points.forEach(function(p) { fpBody += '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;margin-bottom:4px;padding-left:16px;position:relative;"><span style="position:absolute;left:0;color:#b8860b;">\u2022</span>' + escapeHtml(p) + '</div>'; });
+    fp.points.forEach(function(p) { if (!p) return; fpBody += '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;margin-bottom:4px;padding-left:16px;position:relative;"><span style="position:absolute;left:0;color:#b8860b;">\u2022</span>' + escapeHtml(p) + '</div>'; });
     if (fp.why_it_matters) fpBody += '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;line-height:1.5;margin-top:8px;"><span style="font-weight:600;">Why this matters:</span> ' + escapeHtml(fp.why_it_matters) + '</div>';
     h += psCard('Where the Client May Get Stuck', 'Likely friction points worth anticipating before they arrive', 'Observed', fpBody, {id:'friction'});
   }
@@ -5121,7 +5123,8 @@ function renderPostSessionAnalysis(a, container) {
   goalsBody += '<div class="live-goals-slot" style="margin-bottom:12px;"></div>';
   if (goals && goals.existing && goals.existing.length) {
     var statusColors = { progressed: '#2d6a4f', stalled: '#b8860b', needs_revision: 'var(--gold)', completed: 'var(--ink)' };
-    goals.existing.forEach(function(g) {
+    goals.existing.filter(function(x) { return !!x; }).forEach(function(g) {
+      if (!g) return;
       var sc = statusColors[g.status] || statusColors[g.status_signal] || 'var(--muted)';
       var st = g.status || g.status_signal || '';
       goalsBody += '<div style="background:var(--cream);border-radius:8px;padding:14px 16px;margin-bottom:10px;">'
@@ -5137,7 +5140,8 @@ function renderPostSessionAnalysis(a, container) {
   // Compat: also render old goal_review if present and goals.existing is not
   if (a.goal_review && a.goal_review.length && (!goals || !goals.existing || !goals.existing.length)) {
     var statusColors2 = { progressed: '#2d6a4f', stalled: '#b8860b', needs_revision: 'var(--gold)', completed: 'var(--ink)' };
-    a.goal_review.forEach(function(g) {
+    a.goal_review.filter(function(x) { return !!x; }).forEach(function(g) {
+      if (!g) return;
       var sc = statusColors2[g.status_signal] || 'var(--muted)';
       goalsBody += '<div style="background:var(--cream);border-radius:8px;padding:14px 16px;margin-bottom:10px;">'
         + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:0.88rem;font-weight:700;color:var(--ink);">' + escapeHtml(g.goal_title) + '</span>'
@@ -5150,7 +5154,8 @@ function renderPostSessionAnalysis(a, container) {
   // Suggested goals
   if (goals && goals.suggested && goals.suggested.length) {
     goalsBody += '<div style="font-size:0.82rem;font-weight:600;color:var(--ink);margin:16px 0 10px;border-top:1px solid var(--border);padding-top:14px;">Goals you might consider adding based on this session</div>';
-    goals.suggested.forEach(function(sg, idx) {
+    goals.suggested.filter(function(x) { return !!x; }).forEach(function(sg, idx) {
+      if (!sg) return;
       goalsBody += '<div class="suggested-goal-card" data-sg-idx="' + idx + '" style="background:var(--cream);border-radius:8px;padding:14px 16px;margin-bottom:10px;">'
         + '<div style="font-size:0.88rem;font-weight:700;color:var(--ink);margin-bottom:4px;">' + escapeHtml(sg.title || '') + '</div>'
         + (sg.description ? '<div style="font-size:0.82rem;color:var(--muted);line-height:1.5;margin-bottom:4px;">' + escapeHtml(sg.description) + '</div>' : '')
@@ -5167,6 +5172,7 @@ function renderPostSessionAnalysis(a, container) {
   if (cm && cm.length) {
     var cmBody = '';
     cm.forEach(function(c) {
+      if (!c) return;
       cmBody += '<div style="background:var(--cream);border-radius:8px;padding:14px 16px;margin-bottom:10px;">'
         + '<div style="font-size:0.88rem;font-weight:700;color:var(--ink);margin-bottom:4px;">' + escapeHtml(c.text || c.title || '') + '</div>'
         + (c.priority ? '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.65rem;font-weight:700;background:var(--gold);color:#fff;margin-bottom:6px;">' + escapeHtml(c.priority) + '</span>' : '')
@@ -5180,6 +5186,7 @@ function renderPostSessionAnalysis(a, container) {
   if (bs && bs.length) {
     var bsBody = '<div style="font-size:0.78rem;color:var(--muted);font-style:italic;margin-bottom:14px;line-height:1.5;">Coach Clarity has surfaced these between-session directions based on what emerged. They have not been discussed with the client yet. Offer, adapt, or set aside as you see fit.</div>';
     bs.forEach(function(p, idx) {
+      if (!p) return;
       var whyField = p.why_it_matters || p.why_this_may_matter || '';
       bsBody += '<div style="background:var(--cream);border-radius:8px;padding:16px;margin-bottom:10px;">'
         + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">'
@@ -5245,6 +5252,7 @@ function renderPostSessionAnalysis(a, container) {
           var statusLabels = { not_started: 'NOT STARTED', in_progress: 'IN PROGRESS', completed: 'COMPLETED' };
           var statusColors = { not_started: 'var(--muted)', in_progress: 'var(--gold)', completed: '#2d6a4f' };
           liveGoals.forEach(function(g) {
+            if (!g) return;
             var sc = statusColors[g.status] || 'var(--muted)';
             var sl = statusLabels[g.status] || g.status;
             gh += '<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;">'
@@ -5320,6 +5328,10 @@ function renderPostSessionAnalysis(a, container) {
       } catch(e) { self.textContent = 'Error'; self.disabled = false; }
     });
   });
+  } catch(renderErr) {
+    console.error('[renderPostSessionAnalysis] Render error:', renderErr);
+    container.innerHTML = '<div style="color:#c44;font-size:0.88rem;padding:16px;">Error rendering analysis: ' + escapeHtml(renderErr.message) + '. Try regenerating the analysis.</div>';
+  }
 }
 
 function renderCoachingMirror(a, container) {
