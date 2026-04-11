@@ -3563,11 +3563,24 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
           notesByBooking[sid].structured_notes = result.notes;
           updateSessionProgress(sid, 2, true);
           if (statusEl) statusEl.innerHTML = '<span style="color:#2d6a4f;font-weight:600;">\u2713 ' + format.toUpperCase() + ' notes generated from transcript</span>';
-          // Show notes in display area
-          var notesDisplay = $('notes-display-' + sid);
-          if (notesDisplay) { notesDisplay.textContent = plainNotes; notesDisplay.style.display = ''; }
+          // Populate textarea and show editor so coach can review/edit immediately
+          var notesInput = $('notes-input-' + sid);
+          if (notesInput) notesInput.value = plainNotes;
           var notesEditor = $('notes-editor-' + sid);
-          if (notesEditor) notesEditor.style.display = 'none';
+          if (notesEditor) {
+            // Add success message above textarea
+            var existingMsg = notesEditor.querySelector('.gen-success-msg');
+            if (existingMsg) existingMsg.remove();
+            var successMsg = document.createElement('div');
+            successMsg.className = 'gen-success-msg';
+            successMsg.style.cssText = 'color:#2d6a4f;font-size:0.85rem;font-weight:600;margin-bottom:10px;';
+            successMsg.textContent = '\u2713 ' + format.toUpperCase() + ' notes generated';
+            notesEditor.insertBefore(successMsg, notesEditor.firstChild);
+            notesEditor.style.display = '';
+          }
+          // Hide the static display if it exists (re-generation case)
+          var notesDisplay = $('notes-display-' + sid);
+          if (notesDisplay) notesDisplay.style.display = 'none';
           if (genBtn) { genBtn.textContent = '\u2713 Generated'; genBtn.style.background = '#2d6a4f'; }
         } catch(e) {
           if (statusEl) statusEl.innerHTML = '<span style="color:#c44;">' + escapeHtml(e.message) + '</span>';
