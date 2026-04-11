@@ -132,9 +132,9 @@ ${sessionContent}`,
       synthesisSystem,
       `Generate CORE intelligence from this evidence. ${CONCISE}
 
-Each section must include a transition_context field — one sentence max — that connects this section to the previous one. This creates a reasoning chain. Examples: strategic_direction: "Because this pattern showed up in this specific way..." early_cues: "If this pattern is still active next session, you may notice it through..." next_session: "Given what shifted and what remains fragile..."
+For these fields, add an optional transition_context string — one sentence max, under 20 words, connecting this section to what came before. Return null if no natural connection exists. Use these starters: strategic_direction: "Because this pattern showed up..." or "Given what emerged..."; early_cues: "If this pattern is still active..."; next_session: "Given what shifted and what remains fragile..."; friction_points: "The most likely place this progress could stall..."; if_stuck: "If that stalling happens...".
 
-Also generate emotional_anchor: one sentence capturing the human stakes of what happened — not clinical, not analytical, but the real weight of what this client is carrying or moving through.
+Also generate emotional_anchor — one sentence under 20 words capturing the human stakes of this session. Not clinical. Not mechanical. The real weight of what this client is carrying. Return null if nothing meaningful. Examples: "This is not a skill gap — it is a permission shift that has not fully stabilized yet." "Eight months of private certainty is now a public test."
 
 EVIDENCE: ${JSON.stringify(extractionOutput)}
 
@@ -153,13 +153,16 @@ Return ONLY this JSON:
       'claude-sonnet-4-6',
       2000,
       synthesisSystem,
-      `Generate SUPPORTING intelligence. Stay consistent with core insights. ${CONCISE}${goalsContext}
+      `Generate SUPPORTING intelligence. Stay consistent with core insights. ${CONCISE}
+
+For friction_points and if_stuck, add optional transition_context (one sentence max, under 20 words, null if no natural connection). friction_points: start with "The most likely place this progress could stall..."; if_stuck: start with "If that stalling happens...".
+${goalsContext}
 
 EVIDENCE: ${JSON.stringify(extractionOutput)}
 CORE: ${JSON.stringify(coreOutput)}
 
 Return ONLY this JSON:
-{"friction_points":{"points":[],"why_it_matters":""},"if_stuck":{"scenario":"","explore":"","one_possible_direction":""},"goals":{"existing":[{"title":"","status":"","session_relevance":"","signal_reason":""}],"suggested":[{"title":"","description":"","suggested_target_date":""}]},"commitments":[{"text":"","priority":"","follow_up_question":""}],"between_session":[{"title":"","invitation":"","why_it_matters":"","connection":""}],"coaching_signals":[{"type":"","description":"","implication":""}],"frameworks":[{"name":"","presence_level":"","what_was_observed":"","what_it_suggests":"","build_on_this":"","mindful_of":""}],"coach_dna":{"patterns":[],"why_it_matters":""}}`,
+{"friction_points":{"points":[],"why_it_matters":"","transition_context":null},"if_stuck":{"scenario":"","explore":"","one_possible_direction":"","transition_context":null},"goals":{"existing":[{"title":"","status":"","session_relevance":"","signal_reason":""}],"suggested":[{"title":"","description":"","suggested_target_date":""}]},"commitments":[{"text":"","priority":"","follow_up_question":""}],"between_session":[{"title":"","invitation":"","why_it_matters":"","connection":""}],"coaching_signals":[{"type":"","description":"","implication":""}],"frameworks":[{"name":"","presence_level":"","what_was_observed":"","what_it_suggests":"","build_on_this":"","mindful_of":""}],"coach_dna":{"patterns":[],"why_it_matters":""}}`,
       'Pass 2b: Supporting Intelligence'
     );
 

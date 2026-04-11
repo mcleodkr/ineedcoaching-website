@@ -3197,7 +3197,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
         + '<span style="color:var(--border);font-size:0.7rem;">\u2192</span>'
         + '<span style="font-size:0.75rem;font-weight:700;color:' + (hasNotes ? 'var(--gold)' : 'var(--muted)') + ';">\u2461 Notes ' + (hasNotes ? '\u2713' : '') + '</span>'
         + '<span style="color:var(--border);font-size:0.7rem;">\u2192</span>'
-        + '<span style="font-size:0.75rem;font-weight:700;color:' + (hasAnalysis ? 'var(--gold)' : 'var(--muted)') + ';">\u2462 Analysis ' + (hasAnalysis ? '\u2713' : '') + '</span>'
+        + '<span style="font-size:0.75rem;font-weight:700;color:' + (hasAnalysis ? 'var(--gold)' : 'var(--muted)') + ';">\u2462 Coach Clarity ' + (hasAnalysis ? '\u2713' : '') + '</span>'
         + '</div>';
       // Tab bar
       html += '<div style="display:flex;border-bottom:1px solid var(--border);overflow-x:auto;">'
@@ -4944,8 +4944,8 @@ function renderPostSessionAnalysis(a, container) {
   h += '<div style="display:flex;gap:24px;align-items:flex-start;">';
 
   // Sticky sidebar nav (desktop)
-  var navLinkStyle = 'display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:10px 16px;border-left:2px solid transparent;cursor:pointer;font-weight:500;transition:all 0.15s ease;';
-  var groupStyle = 'font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);padding:16px 16px 6px;cursor:default;';
+  var navLinkStyle = 'display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:9px 16px;border-left:2.5px solid transparent;cursor:pointer;font-weight:500;transition:all 0.15s ease;';
+  var groupStyle = 'display:block;font-size:0.6rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);padding:14px 16px 5px;cursor:default;pointer-events:none;';
   h += '<nav class="psi-sidebar" style="width:180px;flex-shrink:0;position:sticky;top:20px;max-height:calc(100vh - 40px);overflow-y:auto;background:var(--white);border-right:1px solid var(--border);padding:16px 0;">'
     + '<div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);padding:0 16px;margin-bottom:12px;">In This Analysis</div>'
     + '<div style="' + groupStyle + '">Session Intelligence</div>'
@@ -4968,8 +4968,8 @@ function renderPostSessionAnalysis(a, container) {
 
   // Mobile pill nav (hidden on desktop, shown <768px via inline media query below)
   h += '<style>'
-    + '.psi-nav-link:hover{color:var(--ink)!important;border-left-color:rgba(196,154,60,0.4)!important;background:rgba(196,154,60,0.06)!important}'
-    + '.psi-nav-link.psi-active{color:var(--ink)!important;font-weight:700!important;border-left-color:var(--gold)!important;background:rgba(196,154,60,0.06)!important}'
+    + '.psi-nav-link:hover,.pm-nav-link:hover{color:var(--ink)!important;border-left-color:rgba(196,154,60,0.5)!important;background:rgba(196,154,60,0.04)!important}'
+    + '.psi-nav-link.psi-active,.pm-nav-link.pm-active{color:var(--ink)!important;font-weight:700!important;border-left-color:var(--gold)!important;background:rgba(196,154,60,0.06)!important}'
     + '@media(max-width:768px){.psi-sidebar{display:none!important}.psi-mobile-nav{display:flex!important}}'
     + '</style>';
   h += '<div class="psi-mobile-nav" style="display:none;overflow-x:auto;gap:8px;padding:8px 0;margin-bottom:12px;white-space:nowrap;width:100%;">';
@@ -5045,7 +5045,7 @@ function renderPostSessionAnalysis(a, container) {
 
   // Emotional anchor — between pattern and strategic direction
   if (a.emotional_anchor) {
-    h += '<div style="text-align:center;padding:16px 32px;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-style:italic;color:var(--ink);line-height:1.5;">' + escapeHtml(a.emotional_anchor) + '</div></div>';
+    h += '<div style="font-family:\'Cormorant Garamond\',serif;font-style:italic;font-size:1.1rem;color:var(--ink);text-align:center;padding:24px 48px;line-height:1.6;">' + escapeHtml(a.emotional_anchor) + '</div>';
   }
 
   // 4. Strategic Direction
@@ -5338,12 +5338,15 @@ function renderCoachingMirror(a, container) {
   h += '<div style="display:flex;gap:24px;align-items:flex-start;">';
 
   // Sidebar
+  var pmLinkStyle = 'display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:9px 16px;border-left:2.5px solid transparent;cursor:pointer;font-weight:500;transition:all 0.15s ease;';
+  var pmGroupStyle = 'display:block;font-size:0.6rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);padding:14px 16px 5px;cursor:default;pointer-events:none;';
   h += '<nav class="psi-sidebar" style="width:180px;flex-shrink:0;position:sticky;top:20px;max-height:calc(100vh - 40px);overflow-y:auto;background:var(--white);border-right:1px solid var(--border);padding:16px 0;">'
-    + '<div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);padding:0 16px;margin-bottom:12px;">Your Coaching Mirror</div>'
-    + '<a href="#pm-signals" class="pm-nav-link" data-section="pm-signals" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">What Stood Out</a>'
-    + '<a href="#pm-frameworks" class="pm-nav-link" data-section="pm-frameworks" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Approaches That Emerged</a>'
-    + '<a href="#pm-dna" class="pm-nav-link" data-section="pm-dna" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Your Tendencies</a>'
-    + '<a href="#pm-reflection" class="pm-nav-link" data-section="pm-reflection" style="display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:6px 16px;border-left:2px solid transparent;transition:all 0.15s;">Reflection & Growth</a>'
+    + '<div style="font-size:0.6rem;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);padding:0 16px;margin-bottom:12px;">Your Coaching Mirror</div>'
+    + '<div style="' + pmGroupStyle + '">Your Coaching Mirror</div>'
+    + '<a href="#pm-signals" class="pm-nav-link" data-section="pm-signals" style="' + pmLinkStyle + '">What Stood Out</a>'
+    + '<a href="#pm-frameworks" class="pm-nav-link" data-section="pm-frameworks" style="' + pmLinkStyle + '">Approaches That Emerged</a>'
+    + '<a href="#pm-dna" class="pm-nav-link" data-section="pm-dna" style="' + pmLinkStyle + '">Your Tendencies</a>'
+    + '<a href="#pm-reflection" class="pm-nav-link" data-section="pm-reflection" style="' + pmLinkStyle + '">Reflection & Growth</a>'
     + '</nav>';
 
   h += '<style>@media(max-width:768px){.pm-sidebar{display:none!important}}</style>';
@@ -5445,12 +5448,7 @@ function renderCoachingMirror(a, container) {
     var observer = new IntersectionObserver(function(entries) {
       entries.forEach(function(entry) {
         var link = container.querySelector('.pm-nav-link[data-section="' + entry.target.id + '"]');
-        if (link) {
-          link.style.color = entry.isIntersecting ? 'var(--ink)' : 'var(--muted)';
-          link.style.fontWeight = entry.isIntersecting ? '600' : '400';
-          link.style.borderLeftColor = entry.isIntersecting ? 'var(--gold)' : 'transparent';
-          link.style.background = entry.isIntersecting ? 'rgba(196,154,60,0.06)' : 'none';
-        }
+        if (link) { if (entry.isIntersecting) { link.classList.add('pm-active'); } else { link.classList.remove('pm-active'); } }
       });
     }, { rootMargin: '-20% 0px -70% 0px' });
     container.querySelectorAll('[id^="pm-"]').forEach(function(el) { observer.observe(el); });
