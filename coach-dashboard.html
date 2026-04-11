@@ -5078,6 +5078,44 @@ function renderPostSessionAnalysis(a, container) {
     h += '<div style="font-size:0.88rem;color:var(--muted);font-style:italic;line-height:1.6;padding:12px 0;border-top:1px solid var(--border);margin-top:8px;">' + escapeHtml(oneLine) + '</div>';
   }
 
+  // 14. Coaching Reflection & Growth (conditional — null means render nothing)
+  if (a.coaching_reflection) {
+    var cr = a.coaching_reflection;
+    h += '<div style="border-left:2px solid var(--muted);background:var(--cream);border-radius:0 8px 8px 0;padding:20px 24px;margin-bottom:12px;margin-top:16px;">'
+      + '<div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:6px;">FOR YOUR DEVELOPMENT</div>'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:700;color:var(--ink);margin-bottom:6px;">Coaching Reflection & Growth</div>'
+      + '<div style="font-size:0.78rem;color:var(--muted);font-style:italic;margin-bottom:16px;line-height:1.5;">These reflections are optional and intended to support your thinking. Use what fits your style and set aside what does not.</div>';
+    // What stood out
+    if (cr.what_stood_out) {
+      h += '<div style="margin-bottom:14px;">'
+        + '<div style="font-size:0.82rem;font-weight:600;color:var(--ink);margin-bottom:4px;">What stood out in your approach</div>'
+        + '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;margin-bottom:4px;">' + escapeHtml(cr.what_stood_out.observation || '') + '</div>'
+        + (cr.what_stood_out.why_this_may_matter ? '<div style="font-size:0.78rem;color:var(--muted);line-height:1.5;"><span style="font-weight:600;">Why this may matter:</span> ' + escapeHtml(cr.what_stood_out.why_this_may_matter) + '</div>' : '')
+        + '</div>';
+    }
+    // What seemed effective (growth only)
+    if (cr.what_seemed_effective && cr.session_type === 'growth') {
+      h += '<div style="margin-bottom:14px;">'
+        + '<div style="font-size:0.82rem;font-weight:600;color:var(--ink);margin-bottom:4px;">What seemed to be effective</div>'
+        + '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;margin-bottom:4px;">' + escapeHtml(cr.what_seemed_effective.observation || '') + '</div>'
+        + (cr.what_seemed_effective.why_this_may_matter ? '<div style="font-size:0.78rem;color:var(--muted);line-height:1.5;"><span style="font-weight:600;">Why this may matter:</span> ' + escapeHtml(cr.what_seemed_effective.why_this_may_matter) + '</div>' : '')
+        + '</div>';
+    }
+    // One thing to consider (growth only)
+    if (cr.one_thing_to_consider && cr.session_type === 'growth') {
+      h += '<div style="margin-bottom:8px;">'
+        + '<div style="font-size:0.82rem;font-weight:600;color:var(--ink);margin-bottom:4px;">One thing you might consider</div>'
+        + '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;margin-bottom:6px;">' + escapeHtml(cr.one_thing_to_consider.suggestion || '') + '</div>'
+        + '<details style="cursor:pointer;"><summary style="font-size:0.75rem;font-weight:600;color:var(--muted);cursor:pointer;">Why this may matter</summary>'
+        + '<div style="padding:6px 0 0 0;font-size:0.82rem;color:var(--muted);line-height:1.6;">'
+        + (cr.one_thing_to_consider.why_this_may_matter ? '<div style="margin-bottom:4px;">' + escapeHtml(cr.one_thing_to_consider.why_this_may_matter) + '</div>' : '')
+        + (cr.one_thing_to_consider.use_with_care ? '<div><span style="font-weight:600;color:#b8860b;">Use with care:</span> ' + escapeHtml(cr.one_thing_to_consider.use_with_care) + '</div>' : '')
+        + '</div></details>'
+        + '</div>';
+    }
+    h += '</div>';
+  }
+
   container.innerHTML = h;
 
   // Wire "Add as Client Goal" buttons for between-session practices
