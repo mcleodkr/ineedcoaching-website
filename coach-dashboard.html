@@ -1115,6 +1115,7 @@ const TOKEN_KEY = 'sb_access_token';
 let currentToken = null;
 let currentUser = null;
 let coachProfile = null;
+var notesByBooking = {};
 
 /* ================================================
    HELPERS
@@ -3140,7 +3141,7 @@ async function openClientDetail(email) {
     var sessionNotes = results[4] || [];
     var checkinForms = results[5] || [];
 
-    var notesByBooking = {};
+    notesByBooking = {};
     sessionNotes.forEach(function(n) { notesByBooking[n.booking_id] = n; });
 
     renderClientDetail(client, goals, intakeResponses, checkinResponses, messages, notesByBooking, checkinForms);
