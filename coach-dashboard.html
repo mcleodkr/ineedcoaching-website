@@ -3576,8 +3576,25 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
         var statusEl = $('gen-transcript-status-' + sid);
         var genBtn = panel.querySelector('.gen-from-transcript-btn');
         if (genBtn) { genBtn.disabled = true; genBtn.textContent = 'Generating ' + format.toUpperCase() + ' notes...'; }
-        if (statusEl) statusEl.textContent = 'Claude is structuring your ' + format.toUpperCase() + ' notes from transcript...';
-        if (!await ensureToken()) { if (statusEl) statusEl.innerHTML = '<span style="color:#c44;">Session expired. Please refresh.</span>'; return; }
+        if (statusEl) statusEl.textContent = '';
+        // Show loading state in notes editor area
+        var notesEditor = $('notes-editor-' + sid);
+        var notesInput = $('notes-input-' + sid);
+        var savedTextareaValue = notesInput ? notesInput.value : '';
+        if (notesEditor) {
+          notesEditor.style.display = '';
+          var existingLoader = notesEditor.querySelector('.gen-loading-state');
+          if (existingLoader) existingLoader.remove();
+          var loader = document.createElement('div');
+          loader.className = 'gen-loading-state';
+          loader.style.cssText = 'text-align:center;padding:24px 16px;';
+          loader.innerHTML = '<div class="loading-spinner" style="margin:0 auto 12px;width:24px;height:24px;"></div>'
+            + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;font-weight:600;color:var(--gold);font-style:italic;">Generating ' + escapeHtml(format.toUpperCase()) + ' notes from your transcript...</div>'
+            + '<div style="font-size:0.75rem;color:var(--muted);margin-top:6px;">This usually takes 10\u201315 seconds.</div>';
+          notesEditor.insertBefore(loader, notesEditor.firstChild);
+          if (notesInput) notesInput.style.display = 'none';
+        }
+        if (!await ensureToken()) { if (statusEl) statusEl.innerHTML = '<span style="color:#c44;">Session expired. Please refresh.</span>'; if (notesInput) notesInput.style.display = ''; var ld = notesEditor ? notesEditor.querySelector('.gen-loading-state') : null; if (ld) ld.remove(); return; }
         try {
           var res = await fetch('/api/process-session', {
             method: 'POST',
@@ -3599,26 +3616,33 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
           notesByBooking[sid].structured_notes = result.notes;
           updateSessionProgress(sid, 2, true);
           if (statusEl) statusEl.innerHTML = '<span style="color:#2d6a4f;font-weight:600;">\u2713 ' + format.toUpperCase() + ' notes generated from transcript</span>';
-          // Populate textarea and show editor so coach can review/edit immediately
-          var notesInput = $('notes-input-' + sid);
-          if (notesInput) notesInput.value = plainNotes;
-          var notesEditor = $('notes-editor-' + sid);
-          if (notesEditor) {
+          // Remove loading state and populate textarea
+          var loadingEl = $('notes-editor-' + sid) ? $('notes-editor-' + sid).querySelector('.gen-loading-state') : null;
+          if (loadingEl) loadingEl.remove();
+          var notesInput2 = $('notes-input-' + sid);
+          if (notesInput2) { notesInput2.value = plainNotes; notesInput2.style.display = ''; }
+          var notesEditor2 = $('notes-editor-' + sid);
+          if (notesEditor2) {
             // Add success message above textarea
-            var existingMsg = notesEditor.querySelector('.gen-success-msg');
+            var existingMsg = notesEditor2.querySelector('.gen-success-msg');
             if (existingMsg) existingMsg.remove();
             var successMsg = document.createElement('div');
             successMsg.className = 'gen-success-msg';
             successMsg.style.cssText = 'color:#2d6a4f;font-size:0.85rem;font-weight:600;margin-bottom:10px;';
             successMsg.textContent = '\u2713 ' + format.toUpperCase() + ' notes generated';
-            notesEditor.insertBefore(successMsg, notesEditor.firstChild);
-            notesEditor.style.display = '';
+            notesEditor2.insertBefore(successMsg, notesEditor2.firstChild);
+            notesEditor2.style.display = '';
           }
           // Hide the static display if it exists (re-generation case)
           var notesDisplay = $('notes-display-' + sid);
           if (notesDisplay) notesDisplay.style.display = 'none';
           if (genBtn) { genBtn.textContent = '\u2713 Generated'; genBtn.style.background = '#2d6a4f'; }
         } catch(e) {
+          // Remove loading state and restore textarea
+          var errLoader = $('notes-editor-' + sid) ? $('notes-editor-' + sid).querySelector('.gen-loading-state') : null;
+          if (errLoader) errLoader.remove();
+          var errInput = $('notes-input-' + sid);
+          if (errInput) { errInput.style.display = ''; errInput.value = savedTextareaValue; }
           if (statusEl) statusEl.innerHTML = '<span style="color:#c44;">' + escapeHtml(e.message) + '</span>';
           if (genBtn) { genBtn.disabled = false; genBtn.textContent = 'Generate Notes from Transcript'; }
         }
