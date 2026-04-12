@@ -900,12 +900,35 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       font-weight: 500 !important;
     }
 
-    /* Status dot — hide. (CSS alone cannot inject a dynamic initial letter,
-       so the dot is removed for a cleaner read. See notes for the HTML-side
-       avatar upgrade.) */
-    #clients-list-view div[title="Active"],
-    #clients-list-view div[title="Inactive"] {
-      display: none !important;
+    /* Initial avatar — 36px circle, warm stone bg, navy letterform.
+       Replaces the old status dot. The initial comes from a data-initial
+       attribute set in renderClientsList. An outer ring encodes the
+       active/inactive state in a subtle way without a separate dot. */
+    #clients-list-view .client-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #f0ece6;
+      flex-shrink: 0;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1a3a52;
+      line-height: 1;
+      letter-spacing: 0;
+      position: relative;
+    }
+    #clients-list-view .client-avatar::before {
+      content: attr(data-initial);
+      display: block;
+    }
+    /* Active client gets a subtle gold ring; inactive stays stone */
+    #clients-list-view .client-avatar[data-active="1"] {
+      box-shadow: 0 0 0 1.5px #c49a3c;
     }
 
     /* "View Client" button — navy, full width, editorial letter-spacing */
@@ -3525,6 +3548,8 @@ function renderClientsList(filter) {
       var lastStr = c.lastSession ? new Date(c.lastSession).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
       var sixtyDaysAgo = new Date(); sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
       var isActive = c.lastSession && new Date(c.lastSession) > sixtyDaysAgo;
+      var initialSource = (c.name || c.email || '?').trim();
+      var initial = initialSource.charAt(0).toUpperCase() || '?';
 
       html += '<div style="background:var(--white);border:1px solid var(--border);border-left:4px solid var(--gold);border-radius:var(--r);padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.04);transition:transform 0.2s,box-shadow 0.2s;cursor:default;" onmouseenter="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 6px 20px rgba(0,0,0,0.08)\'" onmouseleave="this.style.transform=\'\';this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.04)\'">'
         + '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;">'
@@ -3533,7 +3558,7 @@ function renderClientsList(filter) {
         + '<div style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(c.email) + '</div>'
         + (c.phone ? '<div style="font-size:0.75rem;color:var(--muted);">' + escapeHtml(c.phone) + '</div>' : '')
         + '</div>'
-        + '<div style="width:10px;height:10px;border-radius:50%;background:' + (isActive ? '#2d6a4f' : 'var(--border)') + ';flex-shrink:0;margin-top:6px;" title="' + (isActive ? 'Active' : 'Inactive') + '"></div>'
+        + '<div class="client-avatar" data-initial="' + escapeHtml(initial) + '" data-active="' + (isActive ? '1' : '0') + '" title="' + (isActive ? 'Active' : 'Inactive') + '"></div>'
         + '</div>'
         + '<div style="display:flex;gap:16px;align-items:center;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border);">'
         + '<div style="font-size:0.78rem;color:var(--muted);"><span style="font-weight:700;color:var(--ink);">' + c.sessions.length + '</span> session' + (c.sessions.length !== 1 ? 's' : '') + '</div>'
