@@ -6172,7 +6172,7 @@ function renderCourseList() {
       var initial = (c.title || 'C').charAt(0).toUpperCase();
 
       html += '<div class="prop-card" onclick="openCourseBuilder(\'' + c.id + '\')" style="grid-template-columns:auto 1fr auto auto;">'
-        + '<div style="width:48px;height:48px;border-radius:50%;background:#1a3a52;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:900;color:#c49a3c;flex-shrink:0;">' + escapeHtml(initial) + '</div>'
+        + '<div style="width:48px;height:48px;border-radius:50%;background:#1a3a52;display:flex;align-items:center;justify-content:center;font-family:\'Cormorant Garamond\',serif;font-size:1.2rem;font-weight:900;color:#c49a3c;flex-shrink:0;">' + escapeHtml(initial) + '</div>'
         + '<div class="prop-left">'
         + '<div class="prop-company">' + escapeHtml(c.title || 'Untitled') + '</div>'
         + '<div class="prop-contact">' + escapeHtml(typeLabel) + '</div>'
