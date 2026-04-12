@@ -5921,6 +5921,28 @@ function renderCoachingMirror(a, container) {
     return html;
   }
 
+  // Plain-language definitions of common DNA tags.
+  // Each definition describes the CLIENT behavioral pattern the tag tracks —
+  // not the coaching technique itself. Missing tags fall back to a generic line.
+  var dnaTagDefinitions = {
+    'fear-of-abandonment': 'Client organizes behavior around fear of being left or rejected',
+    'self-blame-interruption': 'Client interrupted their own self-blame pattern in this moment',
+    'visibility-avoidance': 'Client is avoiding being fully seen or publicly accountable',
+    'strategic-withholding': 'Client holds back opinions or positions to manage others\' reactions',
+    'permission-waiting': 'Client defers action until external validation is received',
+    'behavioral-contradiction': 'Client states a value but describes behavior that contradicts it',
+    'identity-reframe': 'Client\'s sense of self shifted from fixed flaw to adaptive pattern',
+    'strength-redirection': 'A capability is being misapplied — not absent, just misdirected',
+    'perception-management': 'Client shapes behavior around how they are perceived by others',
+    'fear-driven-commitment': 'Client makes commitments motivated by fear rather than genuine desire',
+    'behavioral-transfer': 'Insight is being converted into a specific behavioral practice',
+    'self-forgiveness': 'Client is working toward releasing self-blame or shame',
+    'unprocessed-cost': 'Client named a loss or cost but has not yet felt its full weight'
+  };
+  function lookupDnaTagDef(t) {
+    return dnaTagDefinitions[t] || 'Client behavioral pattern detected in this session \u2014 tracked across sessions to build your Coach DNA.';
+  }
+
   // Helper: render the "Understand & Apply This Move" panel (formerly "See why this works").
   // Handles both the new object-shape transfer and the legacy string-shape for backward compat.
   function renderSeeWhy(swt) {
@@ -6109,11 +6131,12 @@ function renderCoachingMirror(a, container) {
         + (c.immediate_effect ? '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;margin-bottom:4px;"><span style="font-weight:700;color:var(--ink);">What this did:</span> ' + escapeHtml(c.immediate_effect) + '</div>' : '')
         + (c.why_it_mattered ? '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;margin-bottom:6px;"><span style="font-weight:700;color:var(--ink);">Why it mattered:</span> ' + escapeHtml(c.why_it_mattered) + '</div>' : '')
         + (c.dna_tag && c.dna_tag.length ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">' + c.dna_tag.map(function(t) {
-            var tipMsg = 'Coaching technique detected \u2014 ' + t + '. This signal is being tracked across sessions to build your Coach DNA pattern profile.';
+            var def = lookupDnaTagDef(t);
             return '<span class="dna-tag-pill" style="padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:600;background:var(--gold);color:#fff;cursor:help;">'
               + escapeHtml(t)
-              + '<span class="dna-tag-tooltip" style="position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#fdf9f1;border:1px solid #edeae4;border-radius:4px;padding:8px 12px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:400;color:#1a3a52;max-width:240px;min-width:200px;white-space:normal;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.08);line-height:1.5;pointer-events:none;text-transform:none;letter-spacing:normal;">'
-              + escapeHtml(tipMsg)
+              + '<span class="dna-tag-tooltip" style="position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#fdf9f1;border:1px solid #edeae4;border-radius:4px;padding:10px 12px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:400;color:#1a3a52;max-width:240px;min-width:200px;white-space:normal;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.08);line-height:1.5;pointer-events:none;text-transform:none;letter-spacing:normal;">'
+              + '<div>' + escapeHtml(def) + '</div>'
+              + '<div style="font-size:0.68rem;color:#9a9490;font-style:italic;margin-top:6px;padding-top:6px;border-top:1px solid #edeae4;">Tracked in your Coach DNA</div>'
               + '</span></span>';
           }).join('') + '</div>' : '')
         + (c.consideration ? '<details style="cursor:pointer;margin-top:6px;"><summary style="font-size:0.75rem;font-weight:600;color:var(--muted);cursor:pointer;">A place to stay curious</summary><div style="padding:6px 0 0 0;font-size:0.82rem;color:var(--muted);font-style:italic;line-height:1.5;">' + escapeHtml(c.consideration) + '</div></details>' : '')
