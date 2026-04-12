@@ -953,6 +953,21 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       box-shadow: none !important;
     }
 
+    /* DNA TAG TOOLTIP — Coaching Mirror intervention pills.
+       The pill is the hover target; its child tooltip is hidden by default
+       and revealed on hover. Positioning is set inline on the tooltip element. */
+    .dna-tag-pill {
+      position: relative;
+      display: inline-block;
+    }
+    .dna-tag-pill .dna-tag-tooltip {
+      display: none;
+    }
+    .dna-tag-pill:hover .dna-tag-tooltip,
+    .dna-tag-pill:focus-within .dna-tag-tooltip {
+      display: block;
+    }
+
     /* MOBILE TIGHTENING */
     @media (max-width: 768px) {
       .dashboard > nav:first-of-type { padding: 10px 18px !important; }
@@ -6028,7 +6043,14 @@ function renderCoachingMirror(a, container) {
         + '<div style="font-size:0.88rem;color:var(--ink);line-height:1.75;margin-bottom:6px;">' + whatYouDid + '</div>'
         + (c.immediate_effect ? '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;margin-bottom:4px;"><span style="font-weight:700;color:var(--ink);">What this did:</span> ' + escapeHtml(c.immediate_effect) + '</div>' : '')
         + (c.why_it_mattered ? '<div style="font-size:0.85rem;color:var(--ink);line-height:1.6;margin-bottom:6px;"><span style="font-weight:700;color:var(--ink);">Why it mattered:</span> ' + escapeHtml(c.why_it_mattered) + '</div>' : '')
-        + (c.dna_tag && c.dna_tag.length ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">' + c.dna_tag.map(function(t) { var dnaTooltips = {challenge:'Directly naming what the client may be avoiding or not seeing.',reflection:'Returning the client\'s own words or patterns to deepen awareness.',reframing:'Offering an alternative perspective on a situation or belief.','pattern-disruption':'Interrupting a habitual response to create space for new behavior.','identity-work':'Helping the client examine who they are becoming, not just what they are doing.','precision-questioning':'Asking a specific question that cuts through ambiguity.',silence:'Holding space without filling it, allowing the client to process.',validation:'Acknowledging the client\'s experience or emotion as real and significant.','strength-reframe':'Reframing a perceived weakness as an underused strength.','identity-safety':'Creating conditions where the client feels safe to be honest.'}; return '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:600;background:var(--gold);color:#fff;cursor:help;" title="' + escapeHtml(dnaTooltips[t] || t) + '">' + escapeHtml(t) + '</span>'; }).join('') + '</div>' : '')
+        + (c.dna_tag && c.dna_tag.length ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">' + c.dna_tag.map(function(t) {
+            var tipMsg = 'Coaching technique detected \u2014 ' + t + '. This signal is being tracked across sessions to build your Coach DNA pattern profile.';
+            return '<span class="dna-tag-pill" style="padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:600;background:var(--gold);color:#fff;cursor:help;">'
+              + escapeHtml(t)
+              + '<span class="dna-tag-tooltip" style="position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#fdf9f1;border:1px solid #edeae4;border-radius:4px;padding:8px 12px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:400;color:#1a3a52;max-width:240px;min-width:200px;white-space:normal;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.08);line-height:1.5;pointer-events:none;text-transform:none;letter-spacing:normal;">'
+              + escapeHtml(tipMsg)
+              + '</span></span>';
+          }).join('') + '</div>' : '')
         + (c.consideration ? '<details style="cursor:pointer;margin-top:6px;"><summary style="font-size:0.75rem;font-weight:600;color:var(--muted);cursor:pointer;">A place to stay curious</summary><div style="padding:6px 0 0 0;font-size:0.82rem;color:var(--muted);font-style:italic;line-height:1.5;">' + escapeHtml(c.consideration) + '</div></details>' : '')
         + (c.see_why_this_works ? '<details style="cursor:pointer;margin-top:8px;"><summary style="font-size:0.8rem;font-weight:600;color:var(--gold);font-style:italic;cursor:pointer;">\u2192 See why this works</summary>'
           + '<div style="padding:12px 16px;background:var(--cream);border-radius:6px;margin-top:6px;font-size:0.78rem;line-height:1.6;">'
@@ -6126,7 +6148,6 @@ function renderCoachingMirror(a, container) {
           + (w.moment ? '<div style="margin-bottom:4px;"><span style="font-weight:700;color:var(--ink);">What happened:</span> ' + escapeHtml(w.moment) + '</div>' : '')
           + (w.what_you_did ? '<div style="margin-bottom:4px;"><span style="font-weight:700;color:var(--ink);">What you did:</span> ' + escapeHtml(w.what_you_did) + '</div>' : '')
           + (w.what_was_possible ? '<div style="margin-bottom:4px;"><span style="font-weight:700;color:var(--ink);">What was available:</span> ' + escapeHtml(w.what_was_possible) + '</div>' : '')
-          + (w.why_this_matters_for_your_work ? '<div><span style="font-weight:700;color:var(--ink);">Why it matters:</span> ' + escapeHtml(w.why_this_matters_for_your_work) + '</div>' : '')
           + '</div>'
           + '<a href="#" class="mw-direct-close" data-mw-idx="' + idx + '" style="display:block;font-size:0.72rem;color:var(--muted);text-decoration:none;cursor:pointer;margin-top:6px;">Collapse</a>'
           + '</div>';
@@ -6200,6 +6221,11 @@ function renderCoachingMirror(a, container) {
 
   h += '</div>'; // main column
   h += '</div>'; // two-column layout
+
+  // Second-person normalization — the Mirror always speaks directly to the coach.
+  // Replaces any "Coach <lowercase>" start-of-phrase (coach-as-subject) with "You".
+  // Preserves proper nouns like "Coach Clarity" and "Coach DNA" (uppercase next char).
+  h = h.replace(/\bCoach (?=[a-z])/g, 'You ');
 
   container.innerHTML = h;
 
