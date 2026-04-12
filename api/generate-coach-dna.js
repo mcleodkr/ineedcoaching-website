@@ -1,8 +1,8 @@
 // POST { coachId }
-// Generates Coach DNA from accumulated Coaching Mirror outputs
-// Pass 1: Aggregate mirror data across sessions
-// Pass 2: Derive patterns with frequency + trajectory
-// Pass 3: Format output
+// Identity-level Coach DNA derived from accumulated Coaching Mirror outputs.
+// Produces 10 sections: decision model, intervention sequence, pattern activation map,
+// technique profile, bias profile, client response signature, growth edges,
+// blind spots, missed leverage moments, evolution signal.
 
 async function callClaude(apiKey, model, maxTokens, system, userMessage, passName) {
   console.log(`[DNA ${passName}] model: ${model}`);
@@ -46,7 +46,6 @@ export default async function handler(req, res) {
 
     const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
-    // Fetch sessions with Mirror outputs
     const notesRes = await fetch(
       `${SUPABASE_URL}/rest/v1/coach_session_notes?coach_id=eq.${coachId}&post_session_analysis=not.is.null&select=post_session_analysis,client_email,created_at&order=created_at.desc&limit=20`,
       { headers }
@@ -57,26 +56,51 @@ export default async function handler(req, res) {
       return res.status(200).json({ locked: true, session_count: notes ? notes.length : 0, needed: 5 });
     }
 
-    // Aggregate Mirror data across sessions
+    // Aggregate Mirror outputs into identity-relevant signals per session
     const mirrorData = notes.map((n, idx) => {
       const m = n.post_session_analysis || {};
+      const interventions = Array.isArray(m.coaching_interventions) ? m.coaching_interventions : [];
+      const missed = Array.isArray(m.missed_windows) ? m.missed_windows : [];
+      const stood = Array.isArray(m.what_stood_out) ? m.what_stood_out : [];
+      const revealed = Array.isArray(m.what_this_session_revealed) ? m.what_this_session_revealed : [];
       return {
         session_index: idx + 1,
         client_email: n.client_email,
         created_at: n.created_at,
-        // Techniques used
-        techniques: (m.coaching_interventions || []).map(i => i.technique_name).filter(Boolean),
-        // What stood out
-        what_stood_out: (m.what_stood_out || []).map(w => w.title).filter(Boolean),
-        // Missed windows signal types
-        missed_window_signals: (m.missed_windows || []).map(w => w.signal_type).filter(Boolean),
-        missed_window_moments: (m.missed_windows || []).map(w => w.moment).filter(Boolean),
-        // What session revealed about coach
-        coach_patterns: (m.what_this_session_revealed || []).map(p => p.coach_pattern).filter(Boolean),
-        coach_tendencies: (m.what_this_session_revealed || []).map(p => p.what_you_tend_to_do).filter(Boolean),
-        // Frameworks
-        frameworks: (m.frameworks || []).map(f => f.name).filter(Boolean),
-        // Reflection
+        coach_moves: interventions
+          .map((i) => ({
+            move_type: i.technique_name || '',
+            evidence: i.what_you_did || '',
+            immediate_effect: i.immediate_effect || '',
+            why_mattered: i.why_it_mattered || '',
+            signal_strength: i.signal_strength || '',
+          }))
+          .filter((mv) => mv.move_type),
+        sequence_of_moves: interventions.map((i) => i.technique_name).filter(Boolean),
+        triggers: missed
+          .map((w) => ({
+            signal_type: w.signal_type || '',
+            moment: w.moment || '',
+            strength: w.signal_strength || '',
+          }))
+          .filter((t) => t.signal_type || t.moment),
+        client_responses: stood
+          .map((s) => ({
+            title: s.title || '',
+            client_did: s.what_happened_client || '',
+            your_impact: s.your_impact || '',
+          }))
+          .filter((c) => c.title || c.client_did),
+        missed_opportunities: missed.map((w) => ({
+          signal_type: w.signal_type || '',
+          signal_strength: w.signal_strength || '',
+          moment: w.moment || '',
+          underneath: w.what_was_underneath || '',
+          what_was_possible: w.what_was_possible || '',
+          why_matters: w.why_this_matters_for_your_work || '',
+        })),
+        coach_patterns: revealed.map((p) => p.coach_pattern).filter(Boolean),
+        coach_tendencies: revealed.map((p) => p.what_you_tend_to_do).filter(Boolean),
         what_effective: m.reflection_and_growth?.what_seemed_effective || null,
         stay_curious: m.reflection_and_growth?.one_place_to_stay_curious || null,
       };
@@ -87,116 +111,151 @@ export default async function handler(req, res) {
     const coaches = await coachRes.json();
     const coach = coaches?.[0] || {};
 
-    const SYSTEM = `You are Coach Clarity, a coaching intelligence system that builds pattern-level identity profiles for coaches.
+    const SYSTEM = `You are Coach Clarity, an identity-level intelligence system that builds pattern-level Coach DNA profiles.
 
-CRITICAL RULES:
-- Every insight must be traceable to at least 2 sessions
-- Use frequency counts and trajectory to ground every claim
-- Never use clinical language (CBT, DBT, ACT, diagnosis, treatment, pathology)
-- Use coaching-safe language only: values clarification, pattern awareness, emotional regulation strategy, behavioral reframing, strategic questioning
-- Trajectory: Increasing (more frequent in recent sessions), Stable (consistent), Decreasing (less recent), Emerging (appeared in last 2 sessions only), Underutilized (appeared 1-2 times total)
-- Add this note at top of techniques section: "This reflects what you actually did — not what you intended to do."
-- DNA must derive ONLY from Mirror outputs, not from stated intentions
-- Never say "you should" — always "you tend to", "you consistently", "across sessions you"
-- Return ONLY valid JSON`;
+IDENTITY-LEVEL THINKING:
+- Surface the COACH as a decision-maker, not a style label. DNA is how this coach thinks under pressure.
+- Every insight must be traceable to at least 2 sessions. Use frequency counts and trajectory to ground every claim.
+- Distinguish what the coach actually DID from what they intended to do. Use only Mirror outputs, never stated intentions.
+- Trajectory values: "Increasing" (more frequent recently), "Stable" (consistent across sessions), "Decreasing" (less recent), "Emerging" (appeared in last 2 sessions only), "Underutilized" (appeared 1-2 times total).
+- Frequency format: "X of last Y sessions".
 
-    const dnaOutput = await callClaude(
-      ANTHROPIC_API_KEY,
-      'claude-sonnet-4-6',
-      3000,
-      SYSTEM,
-      `Analyze ${notes.length} sessions across ${new Set(notes.map(n => n.client_email).filter(Boolean)).size} clients and generate a Coach DNA profile.
+LANGUAGE RULES:
+- Never clinical (no CBT, DBT, ACT, diagnosis, pathology).
+- Use coaching-safe language only: pattern awareness, emotional regulation strategy, strategic questioning, behavioral reframing, values clarification.
+- Never "you should". Use "you tend to", "across sessions you", "you consistently".
+- No em dashes in JSON string values.
+
+Return ONLY raw JSON. Start with { end with }. No markdown. No preamble.`;
+
+    const USER = `Analyze ${notes.length} sessions across ${new Set(notes.map((n) => n.client_email).filter(Boolean)).size} clients and generate a full Coach DNA profile.
 
 Coach specialties: ${JSON.stringify(coach.specialties || [])}
 Coach headline: ${coach.headline || 'Not set'}
 
-MIRROR DATA (aggregated from ${notes.length} sessions):
-${JSON.stringify(mirrorData, null, 2)}
+MIRROR DATA (aggregated from ${notes.length} sessions, most recent first):
+${JSON.stringify(mirrorData)}
 
-Generate a complete Coach DNA profile. Every pattern must appear in 2+ sessions to be included.
+Derive these 10 sections. Every pattern must appear in 2+ sessions. For evolution_signal compare earliest third of sessions to most recent third.
 
 Return ONLY this JSON:
 {
   "session_count": number,
   "client_count": number,
-  "framework_distribution": [
+  "coaching_decision_model": [
     {
-      "name": string,
-      "percentage": number,
-      "description": string,
-      "seen_when": string,
+      "trigger": "when [observable client state or moment]",
+      "default_response": "you tend to [specific coach move]",
+      "rationale": "why this pairing appears recurrent",
       "frequency": "X of last Y sessions",
       "trajectory": "Increasing|Stable|Decreasing|Emerging|Underutilized"
     }
   ],
-  "techniques_and_strategies": {
-    "note": "This reflects what you actually did — not what you intended to do.",
-    "techniques": [
-      {
-        "name": string,
-        "definition": string,
-        "frequency": "X of last Y sessions",
-        "trajectory": "Increasing|Stable|Decreasing|Emerging|Underutilized",
-        "observed_when": string
-      }
+  "default_intervention_sequence": {
+    "description": "one sentence summary of your typical flow",
+    "typical_sequence": ["step 1 move", "step 2 move", "step 3 move"],
+    "variations": [
+      { "when": "condition", "sequence": ["alt step 1", "alt step 2"] }
     ]
   },
-  "what_is_working": [
+  "pattern_activation_map": [
     {
-      "capability": string,
-      "example": string,
-      "why_it_works": string,
+      "pattern_name": "short name",
+      "trigger": "what activates this pattern in clients you work with",
+      "typical_response": "how you tend to meet it",
       "frequency": "X of last Y sessions",
-      "trajectory": string
+      "trajectory": "..."
+    }
+  ],
+  "technique_profile": [
+    {
+      "technique": "technique name",
+      "definition": "one sentence plain language",
+      "frequency": "X of last Y sessions",
+      "trajectory": "...",
+      "observed_when": "the situation where it tends to show up"
+    }
+  ],
+  "bias_profile": [
+    {
+      "bias": "e.g. speed over depth, cognition over emotion, action over staying",
+      "description": "what this bias does in your coaching",
+      "evidence": "observable pattern from sessions",
+      "trajectory": "..."
+    }
+  ],
+  "client_response_signature": [
+    {
+      "response_type": "how clients tend to move when you coach",
+      "description": "what this looks like",
+      "frequency": "X of last Y sessions"
     }
   ],
   "growth_edges": [
     {
-      "pattern": string,
-      "what_you_tend_to_do": string,
-      "what_is_missing": string,
-      "example_from_sessions": string,
-      "what_to_try": string,
+      "pattern": "short name",
+      "what_you_tend_to_do": "observable tendency",
+      "what_is_missing": "what would deepen this",
+      "what_to_try": "one concrete next move",
       "frequency": "X of last Y sessions",
-      "trajectory": string
+      "trajectory": "..."
     }
   ],
-  "recurring_blind_spots": [
+  "blind_spots": [
     {
-      "pattern_name": string,
-      "description": string,
-      "where_it_shows_up": string,
-      "why_it_matters": string,
+      "pattern_name": "short name",
+      "description": "what this pattern is",
+      "where_it_shows_up": "situation",
+      "impact": "what it costs the work",
       "frequency": "X of last Y sessions",
-      "trajectory": string,
-      "derived_from": "missed_windows"
+      "trajectory": "..."
     }
   ],
-  "where_to_stay_curious": [
+  "missed_leverage_moments": [
     {
-      "tension": string,
-      "not_a_correction": true
+      "moment": "what happened",
+      "signal": "emotional or behavioral cue present",
+      "why_high_leverage": "what was possible that did not happen",
+      "frequency": "X of last Y sessions"
     }
-  ]
-}`,
-      'Pattern Analysis'
+  ],
+  "evolution_signal": {
+    "first_third_summary": "what you did in the earliest sessions",
+    "last_third_summary": "what you tend to do now",
+    "trajectory_summary": "one sentence naming the shift",
+    "emerging_strengths": ["string"],
+    "fading_habits": ["string"]
+  }
+}`;
+
+    const dnaOutput = await callClaude(
+      ANTHROPIC_API_KEY,
+      'claude-sonnet-4-6',
+      4000,
+      SYSTEM,
+      USER,
+      'Identity Analysis'
     );
 
-    // Upsert to coach_dna_profiles
     const existRes = await fetch(`${SUPABASE_URL}/rest/v1/coach_dna_profiles?coach_id=eq.${coachId}&select=id`, { headers });
     const existing = await existRes.json();
 
     const dnaPayload = {
       coach_id: coachId,
-      framework_distribution: dnaOutput.framework_distribution,
+      framework_distribution: dnaOutput.pattern_activation_map || [],
       signal_patterns: {
-        what_works: dnaOutput.what_is_working,
-        techniques: dnaOutput.techniques_and_strategies,
-        growth_edges: dnaOutput.growth_edges,
-        recurring_blind_spots: dnaOutput.recurring_blind_spots,
-        where_to_stay_curious: dnaOutput.where_to_stay_curious,
+        coaching_decision_model: dnaOutput.coaching_decision_model || [],
+        default_intervention_sequence: dnaOutput.default_intervention_sequence || null,
+        pattern_activation_map: dnaOutput.pattern_activation_map || [],
+        technique_profile: dnaOutput.technique_profile || [],
+        bias_profile: dnaOutput.bias_profile || [],
+        client_response_signature: dnaOutput.client_response_signature || [],
+        growth_edges: dnaOutput.growth_edges || [],
+        blind_spots: dnaOutput.blind_spots || [],
+        missed_leverage_moments: dnaOutput.missed_leverage_moments || [],
+        evolution_signal: dnaOutput.evolution_signal || null,
       },
-      growth_edges: dnaOutput.growth_edges,
+      growth_edges: dnaOutput.growth_edges || [],
       last_analyzed: new Date().toISOString(),
       session_count: dnaOutput.session_count || notes.length,
     };
