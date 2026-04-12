@@ -4065,7 +4065,9 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
       html += '<div style="background:#fdf9f1;border:1px solid #edeae4;border-radius:6px;padding:14px 16px;margin-bottom:10px;">'
         + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.875rem;color:#1a3a52;line-height:1.55;margin-bottom:6px;">' + escapeHtml(op.text) + '</div>'
         + (op.what_this_cost ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#c49a3c;margin-top:8px;margin-bottom:2px;">What was left on the table:</div>'
-            + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-style:italic;color:#5a5560;line-height:1.55;margin-bottom:6px;">' + escapeHtml(op.what_this_cost) + '</div>' : '')
+            + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-style:italic;color:#5a5560;line-height:1.55;margin-bottom:6px;">' + escapeHtml(op.what_this_cost) + '</div>'
+            + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#c49a3c;margin-top:6px;margin-bottom:2px;">Why this mattered:</div>'
+            + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-style:italic;color:#5a5560;line-height:1.55;margin-bottom:6px;">Staying with this moment could have opened something the client was not yet able to reach on their own.</div>' : '')
         + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#9a9490;">' + escapeHtml(op.date) + '</div>'
         + '</div>';
     });
