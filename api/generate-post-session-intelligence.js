@@ -171,6 +171,7 @@ see_why_this_works.mechanism — 3-4 sentences, paragraph depth:
 - Name what the coach did in THIS session (reference the actual transcript moment).
 - Explain why that specific move shifts the client psychologically.
 - Stay grounded in the actual transcript. No generic theory.
+- End the mechanism explanation with a precise statement of what specifically shifted in the client as a result of this move — not just that something changed, but what changed and why it matters for this client's pattern.
 
 see_why_this_works.model — 3-4 sentences, paragraph depth:
 - Name the underlying theory in plain practitioner language.
