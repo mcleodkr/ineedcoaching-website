@@ -5897,6 +5897,68 @@ function renderCoachingMirror(a, container) {
       + '<div style="font-size:0.88rem;color:var(--ink);line-height:1.6;">This analysis was generated before Coach Clarity\u2019s Coaching Mirror was updated. Regenerate Analysis on the Coach Clarity tab to see your coaching interventions, techniques, and mirror reflection.</div></div>';
     return;
   }
+
+  // Helper: render "Another way to work this moment" subsection.
+  // Used by both the intervention see_why_this_works block and by new-shape missed windows.
+  function renderAlt(alt) {
+    if (!alt || !alt.name) return '';
+    var whyField = alt.why_it_fits_this_moment || alt.why_it_fits_here || '';
+    var html = '<div style="background:#fdf9f1;border:1px solid #edeae4;border-radius:6px;padding:14px 16px;margin-top:12px;">'
+      + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#c49a3c;margin-bottom:8px;">Another way to work this moment</div>'
+      + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.9rem;font-weight:700;color:#1a3a52;margin-bottom:6px;">' + escapeHtml(alt.name) + '</div>'
+      + (alt.what_it_is ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#5a5560;line-height:1.65;margin-bottom:8px;">' + escapeHtml(alt.what_it_is) + '</div>' : '')
+      + (whyField ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#5a5560;line-height:1.6;margin-bottom:8px;"><span style="font-weight:600;color:#1a3a52;">Why this fits:</span> ' + escapeHtml(whyField) + '</div>' : '');
+    if (Array.isArray(alt.example_lines) && alt.example_lines.length) {
+      alt.example_lines.forEach(function(line) {
+        if (!line) return;
+        html += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:0.98rem;font-style:italic;color:#1a3a52;line-height:1.55;padding:4px 0 4px 10px;border-left:2px solid #c49a3c;margin-top:4px;">\u201C' + escapeHtml(line) + '\u201D</div>';
+      });
+    }
+    html += '</div>';
+    return html;
+  }
+
+  // Helper: render the "Understand & Apply This Move" panel (formerly "See why this works").
+  // Handles both the new object-shape transfer and the legacy string-shape for backward compat.
+  function renderSeeWhy(swt) {
+    if (!swt) return '';
+    var html = '<details style="cursor:pointer;margin-top:8px;"><summary style="font-size:0.82rem;font-weight:600;color:var(--gold);font-style:italic;cursor:pointer;">\u2192 Understand & Apply This Move</summary>'
+      + '<div style="padding:16px 18px;background:var(--cream);border-radius:6px;margin-top:6px;font-size:0.85rem;line-height:1.7;">';
+    if (swt.mechanism) {
+      html += '<div style="margin-bottom:12px;"><div style="font-weight:700;color:var(--ink);margin-bottom:4px;">Mechanism</div><div style="color:#3d3d3d;">' + escapeHtml(swt.mechanism) + '</div></div>';
+    }
+    if (swt.model) {
+      html += '<div style="margin-bottom:12px;"><div style="font-weight:700;color:var(--ink);margin-bottom:4px;">Model</div><div style="color:#3d3d3d;">' + escapeHtml(swt.model) + '</div></div>';
+    }
+    var t = swt.transfer;
+    if (t) {
+      if (typeof t === 'string') {
+        // Legacy string shape
+        html += '<div style="margin-top:8px;"><span style="font-weight:700;color:var(--ink);">Transfer:</span> <span style="color:var(--gold);font-style:italic;">' + escapeHtml(t) + '</span></div>';
+      } else {
+        html += '<div style="margin-top:8px;"><div style="font-weight:700;color:var(--ink);margin-bottom:6px;">Transfer</div>';
+        if (Array.isArray(t.when_to_use) && t.when_to_use.length) {
+          html += '<div style="font-weight:600;color:#1a3a52;font-size:0.8rem;margin-bottom:4px;">When to use</div><ul style="margin:0 0 10px 18px;padding:0;color:#3d3d3d;">';
+          t.when_to_use.forEach(function(cue) {
+            if (cue) html += '<li style="margin-bottom:4px;line-height:1.5;">' + escapeHtml(cue) + '</li>';
+          });
+          html += '</ul>';
+        }
+        if (Array.isArray(t.what_it_sounds_like) && t.what_it_sounds_like.length) {
+          html += '<div style="font-weight:600;color:#1a3a52;font-size:0.8rem;margin:8px 0 4px;">What it sounds like</div>';
+          t.what_it_sounds_like.forEach(function(line) {
+            if (line) html += '<div style="color:var(--gold);font-style:italic;margin-bottom:4px;padding:4px 0 4px 10px;border-left:2px solid #c49a3c;line-height:1.55;">\u201C' + escapeHtml(line) + '\u201D</div>';
+          });
+        }
+        html += '</div>';
+        if (t.alternative_intervention) {
+          html += renderAlt(t.alternative_intervention);
+        }
+      }
+    }
+    html += '</div></details>';
+    return html;
+  }
   var ws = a.what_stood_out || a.coaching_signals || null;
   var ci = a.coaching_interventions || null;
   var par = a.patterns_and_your_role || null;
@@ -6052,12 +6114,7 @@ function renderCoachingMirror(a, container) {
               + '</span></span>';
           }).join('') + '</div>' : '')
         + (c.consideration ? '<details style="cursor:pointer;margin-top:6px;"><summary style="font-size:0.75rem;font-weight:600;color:var(--muted);cursor:pointer;">A place to stay curious</summary><div style="padding:6px 0 0 0;font-size:0.82rem;color:var(--muted);font-style:italic;line-height:1.5;">' + escapeHtml(c.consideration) + '</div></details>' : '')
-        + (c.see_why_this_works ? '<details style="cursor:pointer;margin-top:8px;"><summary style="font-size:0.8rem;font-weight:600;color:var(--gold);font-style:italic;cursor:pointer;">\u2192 See why this works</summary>'
-          + '<div style="padding:12px 16px;background:var(--cream);border-radius:6px;margin-top:6px;font-size:0.78rem;line-height:1.6;">'
-          + (c.see_why_this_works.mechanism ? '<div style="margin-bottom:4px;"><span style="font-weight:700;color:var(--ink);">Mechanism:</span> <span style="color:var(--muted);">' + escapeHtml(c.see_why_this_works.mechanism) + '</span></div>' : '')
-          + (c.see_why_this_works.model ? '<div style="margin-bottom:4px;"><span style="font-weight:700;color:var(--ink);">Model:</span> <span style="color:var(--muted);">' + escapeHtml(c.see_why_this_works.model) + '</span></div>' : '')
-          + (c.see_why_this_works.transfer ? '<div><span style="font-weight:700;color:var(--ink);">Transfer:</span> <span style="color:var(--gold);font-style:italic;">' + escapeHtml(c.see_why_this_works.transfer) + '</span></div>' : '')
-          + '</div></details>' : '')
+        + renderSeeWhy(c.see_why_this_works)
         + '</div>';
     });
     h += mirrorSection('pm-interventions', 'Your Coaching Interventions This Session', 'Coach Clarity identified these specific techniques from this session. Each is grounded in a moment from your transcript.', 'Coach Clarity \u2192 For You', ciBody);
@@ -6155,6 +6212,9 @@ function renderCoachingMirror(a, container) {
               + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:0.95rem;font-style:italic;color:#1a3a52;line-height:1.55;">' + escapeHtml(w.what_that_might_sound_like) + '</div>'
               + '</div>';
           }
+
+          // Alternative intervention (shared subsection, same treatment as interventions)
+          mwBody += renderAlt(w.alternative_intervention);
 
           mwBody += '</div>';
           return;

@@ -156,19 +156,42 @@ Return ONLY this JSON:
     const pass2bOutput = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
-      1800,
+      2500,
       MIRROR_RULES,
-      `Generate max 2 interventions, max 2 what_stood_out items, and reflection. Max 15 words per value.
+      `Generate max 2 interventions, max 2 what_stood_out items, and reflection.
+
+WORD LIMITS: 15 words max per field EXCEPT see_why_this_works fields. The see_why_this_works block overrides the 15-word cap — treat those as applied teaching, not glossary entries.
 
 technique_name MUST use recognized categories: Confrontation, Reflective Listening, Cognitive Reframe, Immediacy, Silence, Strategic Questioning, Activation Prompt, Future Self — with parenthetical refinement. Example: "Confrontation (Authority Alignment)". Never invent categories.
 
-Each intervention includes see_why_this_works: mechanism ("[Concept] — sentence"), model ("[Model] ([Originator]) — sentence"), transfer ("Use when...").
+Each intervention includes a see_why_this_works block with real teaching depth. No glossary text. No surface labels.
+
+see_why_this_works.mechanism — 3-4 sentences, paragraph depth:
+- Explain what the intervention is in practice, not in theory.
+- Name what the coach did in THIS session (reference the actual transcript moment).
+- Explain why that specific move shifts the client psychologically.
+- Stay grounded in the actual transcript. No generic theory.
+
+see_why_this_works.model — 3-4 sentences, paragraph depth:
+- Name the underlying theory in plain practitioner language.
+- Connect the theory directly to what happened in this session.
+- Assume the coach is unfamiliar with the term and needs it taught, not name-dropped.
+- No textbook abstraction. Concrete, applied, session-grounded.
+
+see_why_this_works.transfer — 3-part structure:
+- when_to_use: array of 2-3 short cues (each a brief phrase describing a live session signal — e.g., "When a client loops on blame without ownership")
+- what_it_sounds_like: array of 1-2 realistic lines a coach could actually say in-session (full utterances, up to ~25 words each)
+- alternative_intervention: an object OR null. Only include if there is strong session-based justification for a real alternative. Prefer null over a generic suggestion. When included:
+  - name: the intervention name
+  - what_it_is: 2-3 sentences explaining the move in applied terms
+  - why_it_fits_this_moment: 1-2 sentences anchored in the exact transcript moment
+  - example_lines: array of 1-2 realistic coach utterances
 
 EVIDENCE: ${JSON.stringify(extractionOutput)}
 CORE: ${JSON.stringify(coreOutput)}
 
 Return ONLY:
-{"coaching_interventions":[{"technique_name":"Category (Refinement)","what_you_did":"You said: [quote]","immediate_effect":"","why_it_mattered":"","signal_strength":"high|medium|low","evidence_anchor":"","dna_tag":[],"consideration":null,"see_why_this_works":{"mechanism":"","model":"","transfer":"Use when..."}}],"what_stood_out":[{"title":"","what_happened_client":"","what_you_did":"You...","why_it_matters":"","your_impact":""}],"reflection_and_growth":{"what_stood_out_in_your_approach":"You...","what_seemed_effective":"","one_place_to_stay_curious":"You might stay curious about..."},"friction_points":{"points":[],"why_it_matters":"","transition_context":null},"if_stuck":{"scenario":"","explore":"","one_possible_direction":"","transition_context":null},"commitments":[{"text":"","priority":"","follow_up_question":""}]}`,
+{"coaching_interventions":[{"technique_name":"Category (Refinement)","what_you_did":"You said: [quote]","immediate_effect":"","why_it_mattered":"","signal_strength":"high|medium|low","evidence_anchor":"","dna_tag":[],"consideration":null,"see_why_this_works":{"mechanism":"","model":"","transfer":{"when_to_use":[],"what_it_sounds_like":[],"alternative_intervention":null}}}],"what_stood_out":[{"title":"","what_happened_client":"","what_you_did":"You...","why_it_matters":"","your_impact":""}],"reflection_and_growth":{"what_stood_out_in_your_approach":"You...","what_seemed_effective":"","one_place_to_stay_curious":"You might stay curious about..."},"friction_points":{"points":[],"why_it_matters":"","transition_context":null},"if_stuck":{"scenario":"","explore":"","one_possible_direction":"","transition_context":null},"commitments":[{"text":"","priority":"","follow_up_question":""}]}`,
       'Pass 2b: Interventions'
     );
 
@@ -191,6 +214,12 @@ For each missed window:
 4. what_this_cost — precise description of what did not fully develop — emotional, behavioral, or insight-level. Be specific, not generic
 5. if_you_stayed — what was available in that exact moment if the coach had stayed with it. Grounded in the specific situation, not general coaching wisdom
 6. what_that_might_sound_like — optional, 1-2 example lines that extend the moment naturally. Should feel like a continuation, not a correction. Set to null if forced.
+7. alternative_intervention — OPTIONAL. Only include if there is strong session-based justification for a real alternative move at this moment. Prefer null over a generic coaching suggestion. When included, use language that teaches the coach the move. Fields:
+   - name: intervention name
+   - what_it_is: 2-3 sentences explaining the move in applied terms
+   - why_it_fits_here: 1-2 sentences anchored in the exact moment from the transcript
+   - example_lines: array of 1-2 realistic coach utterances
+   Set the whole alternative_intervention object to null when no strong alternative exists.
 
 Also populate verbatim_evidence with the exact client_quote and coach_response that anchors this missed window. Use empty strings only if no verbatim material exists.
 
@@ -210,7 +239,7 @@ EVIDENCE: ${JSON.stringify(extractionOutput)}
 CORE: ${JSON.stringify(coreOutput)}
 
 Return ONLY:
-{"curiosity_edges":[{"curiosity_note":"","what_to_notice":"","why_this_stands_out":""}],"missed_windows":[{"signal_type":"emotional_mismatch|repetition_without_movement|charged_language|behavioral_contradiction|energy_shift|unprocessed_cost","signal_strength":"Subtle opening|Clear opening|Strong opening","what_opened":"","what_you_did":"You...","verbatim_evidence":{"client_quote":"","coach_response":""},"what_that_did":"","what_this_cost":"","if_you_stayed":"","what_that_might_sound_like":null}]}`,
+{"curiosity_edges":[{"curiosity_note":"","what_to_notice":"","why_this_stands_out":""}],"missed_windows":[{"signal_type":"emotional_mismatch|repetition_without_movement|charged_language|behavioral_contradiction|energy_shift|unprocessed_cost","signal_strength":"Subtle opening|Clear opening|Strong opening","what_opened":"","what_you_did":"You...","verbatim_evidence":{"client_quote":"","coach_response":""},"what_that_did":"","what_this_cost":"","if_you_stayed":"","what_that_might_sound_like":null,"alternative_intervention":null}]}`,
       'Pass 2c: Curiosity + Missed Windows'
     );
 
