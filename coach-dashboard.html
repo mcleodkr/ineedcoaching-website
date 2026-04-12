@@ -4474,7 +4474,11 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
         } else if (!labNote || (!labNote.raw_transcript && !labNote.post_session_analysis)) {
           labContainer.innerHTML = '<div style="text-align:center;padding:48px 24px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#9a9490;">Coach Clarity needs session notes or a transcript to generate the Approach Lab. Run Coach Clarity analysis first.</div>';
         } else {
-          labContainer.innerHTML = '<div style="text-align:center;padding:48px 24px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#9a9490;">Coach Clarity is exploring alternative approaches for this session...</div>';
+          labContainer.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;gap:16px;">'
+            + '<div class="loading-spinner"></div>'
+            + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#9a9490;">Coach Clarity is exploring alternative approaches...</div>'
+            + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.75rem;color:#b8b0a4;">This takes about 20 seconds</div>'
+            + '</div>';
           (async function() {
             try {
               var labRes = await fetch('/api/generate-approach-lab', {
@@ -6145,6 +6149,7 @@ function renderPostSessionAnalysis(a, container) {
   // 10. Goals
   // Live goals will be fetched after render
   console.log('[Coach Clarity] goals data:', a.goals);
+  console.log('[Coach Clarity] goals full object:', JSON.stringify(a.goals));
   var goalsBody = '';
   goalsBody += '<div class="live-goals-slot" style="margin-bottom:12px;"></div>';
   if (goals && goals.existing && goals.existing.length) {
@@ -6179,8 +6184,22 @@ function renderPostSessionAnalysis(a, container) {
   }
   // Suggested goals — always render when present, independent of existing goals.
   // Source from a.goals directly (goals var is derived from a.goals at top of function).
-  var suggestedSource = (a.goals && Array.isArray(a.goals.suggested)) ? a.goals.suggested
-    : ((goals && Array.isArray(goals.suggested)) ? goals.suggested : []);
+  // Handle three possible shapes: array at .suggested, array at .suggested_goals,
+  // or an object whose values are goal items.
+  var suggestedSource = [];
+  if (a.goals) {
+    if (Array.isArray(a.goals.suggested) && a.goals.suggested.length) {
+      suggestedSource = a.goals.suggested;
+    } else if (Array.isArray(a.goals.suggested_goals) && a.goals.suggested_goals.length) {
+      suggestedSource = a.goals.suggested_goals;
+    } else if (a.goals.suggested && typeof a.goals.suggested === 'object') {
+      suggestedSource = Object.values(a.goals.suggested);
+    }
+  }
+  if (!suggestedSource.length && goals) {
+    if (Array.isArray(goals.suggested) && goals.suggested.length) suggestedSource = goals.suggested;
+    else if (Array.isArray(goals.suggested_goals) && goals.suggested_goals.length) suggestedSource = goals.suggested_goals;
+  }
   // Permissive filter — accept any object. Some Mirror outputs use title/description,
   // others may use goal/desc/text. Pull whichever field is present at render time.
   var suggestedGoals = suggestedSource.filter(function(x) { return !!x && typeof x === 'object'; });
