@@ -94,7 +94,7 @@ export default async function handler(req, res) {
     // STEP 3 — Build context
     const fullTranscript = note.raw_transcript || '';
     const transcript = fullTranscript.length > 6000 ? fullTranscript.substring(0, 6000) : fullTranscript;
-    const transcriptForPass1 = transcript.length > 2000 ? transcript.substring(0, 2000) : transcript;
+    const transcriptForPass1 = transcript.length > 1500 ? transcript.substring(0, 1500) : transcript;
     const psa = note.post_session_analysis || {};
     const interventions = Array.isArray(psa.coaching_interventions) ? psa.coaching_interventions : [];
     const missedWindows = Array.isArray(psa.missed_windows) ? psa.missed_windows : [];
@@ -117,7 +117,7 @@ export default async function handler(req, res) {
     }
 
     // STEP 4a — PASS 1: Moment Selection
-    const PASS1_SYSTEM = `You are Coach Clarity. Select 3-4 key moments from this session. A key moment is where the client revealed something important, showed hesitation or contradiction, the coach made a move that shaped direction, or the moment could have gone deeper. Return ONLY a JSON array of moment objects.`;
+    const PASS1_SYSTEM = `You are Coach Clarity. Select up to 3 key moments from this session. A key moment is where the client revealed something important, showed hesitation or contradiction, the coach made a move that shaped direction, or the moment could have gone deeper. Return ONLY a JSON array. Maximum 3 items. Keep each field under 15 words. Complete the array even if brief.`;
 
     const PASS1_USER = `Session transcript:
 ${transcriptForPass1}
@@ -126,13 +126,13 @@ Coach interventions: ${JSON.stringify(interventions)}
 Missed windows: ${JSON.stringify(missedWindows)}
 Client quotes: ${JSON.stringify(clientQuotes)}
 
-Select 3-4 key moments. Return ONLY:
-[{ "title": "short specific title", "what_happened": "one sentence", "client_quote": "verbatim or near-verbatim", "coach_move": "what coach did", "moment_type": "revelation|hesitation|contradiction|emotional_weight|coaching_move" }]`;
+Select up to 3 key moments. Maximum 3. Each field under 15 words. Return ONLY:
+[{ "title": "short title", "what_happened": "one sentence", "client_quote": "short quote", "coach_move": "what coach did", "moment_type": "revelation|hesitation|contradiction|emotional_weight|coaching_move" }]`;
 
     const pass1Output = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
-      400,
+      300,
       PASS1_SYSTEM,
       PASS1_USER,
       'Pass 1 Moment Selection'
