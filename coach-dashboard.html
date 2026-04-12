@@ -1595,6 +1595,38 @@ let currentUser = null;
 let coachProfile = null;
 var notesByBooking = {};
 
+// ===================================================================
+// DNA TAG DEFINITIONS — shared between the Coaching Mirror (per-session
+// intervention tags) and the Client Pattern Map (aggregated behavioral
+// tendencies). Each entry describes the CLIENT behavioral pattern the
+// tag tracks — NOT the coaching technique itself. Missing tags fall back
+// to a generic coaching-language line via lookupDnaTagDef().
+// Do not add clinical or diagnostic framing here — coaching language only.
+// ===================================================================
+var dnaTagDefinitions = {
+  'fear-of-abandonment': 'Client organizes behavior around fear of being left or rejected',
+  'self-blame-interruption': 'Client interrupted their own self-blame pattern in this moment',
+  'visibility-avoidance': 'Client is avoiding being fully seen or publicly accountable',
+  'strategic-withholding': 'Client holds back opinions or positions to manage others\' reactions',
+  'permission-waiting': 'Client defers action until external validation is received',
+  'behavioral-contradiction': 'Client states a value but describes behavior that contradicts it',
+  'identity-reframe': 'Client\'s sense of self shifted from fixed flaw to adaptive pattern',
+  'identity-shift': 'Client\'s sense of self is actively shifting in this session',
+  'pattern-disruption': 'An established behavioral pattern was interrupted in this session',
+  'evidence-anchoring': 'Client reconnected to concrete proof of their own capability',
+  'evidence-based-reframe': 'A belief shifted based on the client\'s own track record',
+  'self-efficacy-building': 'Client\'s confidence in their own ability noticeably increased',
+  'strength-redirection': 'A capability is being misapplied \u2014 not absent, just misdirected',
+  'perception-management': 'Client shapes behavior around how they are perceived by others',
+  'fear-driven-commitment': 'Client makes commitments motivated by fear rather than genuine desire',
+  'behavioral-transfer': 'Insight is being converted into a specific behavioral practice',
+  'self-forgiveness': 'Client is working toward releasing self-blame or shame',
+  'unprocessed-cost': 'Client named a loss or cost but has not yet felt its full weight'
+};
+function lookupDnaTagDef(t) {
+  return dnaTagDefinitions[t] || 'Client behavioral pattern detected in this session \u2014 tracked across sessions to build your Coach DNA.';
+}
+
 /* ================================================
    HELPERS
    ================================================ */
@@ -3910,8 +3942,17 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
     return '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;border-bottom:1px solid #edeae4;padding-bottom:10px;margin-bottom:16px;margin-top:26px;">' + title + '</div>';
   };
   var pmPill = function(text, count) {
+    // Reuses the shared .dna-tag-pill tooltip CSS from the override style block
+    // so Pattern Map pills hover like Mirror pills. Definition pulled from
+    // the script-top-level dnaTagDefinitions / lookupDnaTagDef pair.
     var countHtml = count ? '<span style="margin-left:6px;font-weight:700;opacity:0.85;">\u00d7' + count + '</span>' : '';
-    return '<span style="display:inline-block;padding:4px 12px;border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.72rem;font-weight:600;background:#c49a3c;color:#ffffff;margin-right:6px;margin-bottom:6px;">' + escapeHtml(text) + countHtml + '</span>';
+    var def = lookupDnaTagDef(text);
+    return '<span class="dna-tag-pill" style="padding:4px 12px;border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.72rem;font-weight:600;background:#c49a3c;color:#ffffff;margin-right:6px;margin-bottom:6px;cursor:help;">'
+      + escapeHtml(text) + countHtml
+      + '<span class="dna-tag-tooltip" style="position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#fdf9f1;border:1px solid #edeae4;border-radius:4px;padding:10px 12px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:400;color:#1a3a52;max-width:240px;min-width:200px;white-space:normal;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.08);line-height:1.5;pointer-events:none;text-transform:none;letter-spacing:normal;">'
+      + '<div>' + escapeHtml(def) + '</div>'
+      + '<div style="font-size:0.68rem;color:#9a9490;font-style:italic;margin-top:6px;padding-top:6px;border-top:1px solid #edeae4;">Tracked in your Coach DNA</div>'
+      + '</span></span>';
   };
 
   // Section 1.5: Pattern Map
@@ -6155,27 +6196,8 @@ function renderCoachingMirror(a, container) {
     return html;
   }
 
-  // Plain-language definitions of common DNA tags.
-  // Each definition describes the CLIENT behavioral pattern the tag tracks —
-  // not the coaching technique itself. Missing tags fall back to a generic line.
-  var dnaTagDefinitions = {
-    'fear-of-abandonment': 'Client organizes behavior around fear of being left or rejected',
-    'self-blame-interruption': 'Client interrupted their own self-blame pattern in this moment',
-    'visibility-avoidance': 'Client is avoiding being fully seen or publicly accountable',
-    'strategic-withholding': 'Client holds back opinions or positions to manage others\' reactions',
-    'permission-waiting': 'Client defers action until external validation is received',
-    'behavioral-contradiction': 'Client states a value but describes behavior that contradicts it',
-    'identity-reframe': 'Client\'s sense of self shifted from fixed flaw to adaptive pattern',
-    'strength-redirection': 'A capability is being misapplied — not absent, just misdirected',
-    'perception-management': 'Client shapes behavior around how they are perceived by others',
-    'fear-driven-commitment': 'Client makes commitments motivated by fear rather than genuine desire',
-    'behavioral-transfer': 'Insight is being converted into a specific behavioral practice',
-    'self-forgiveness': 'Client is working toward releasing self-blame or shame',
-    'unprocessed-cost': 'Client named a loss or cost but has not yet felt its full weight'
-  };
-  function lookupDnaTagDef(t) {
-    return dnaTagDefinitions[t] || 'Client behavioral pattern detected in this session \u2014 tracked across sessions to build your Coach DNA.';
-  }
+  // dnaTagDefinitions + lookupDnaTagDef are hoisted to the top of the script block
+  // so the Mirror and the Client Pattern Map share a single source of truth.
 
   // Helper: render the "Understand & Apply This Move" panel (formerly "See why this works").
   // Handles both the new object-shape transfer and the legacy string-shape for backward compat.
