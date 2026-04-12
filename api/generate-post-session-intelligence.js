@@ -271,11 +271,13 @@ Return ONLY:
     synthesisOutput.patterns_and_your_role = synthesisOutput.patterns_and_your_role || [];
 
     // ── Pass 3: Formatting (fault-tolerant — fall back to synthesis if this fails)
-    // Pre-clean directive language via string replacement before AI pass
+    // Pre-clean directive language via string replacement before AI pass.
+    // These target coach-facing instructions only. The former "don't" / "do not"
+    // replacements were removed because they corrupted verbatim client quotes
+    // (e.g. "I know it's me" / "I don't want that anymore"). Pass 3 still
+    // handles directive language via the AI pass with full context awareness.
     let preCleaned = JSON.stringify(synthesisOutput);
     const replacements = [
-      [/\bDon't\b/g, 'You might consider not'], [/\bdon't\b/g, 'you might consider not'],
-      [/\bDo not\b/g, 'It may be worth avoiding'], [/\bdo not\b/g, 'it may be worth avoiding'],
       [/\bmust\b/gi, 'may want to'], [/\byou should\b/gi, 'you might'],
       [/\bask her\b/gi, 'you might explore with them'], [/\bask him\b/gi, 'you might explore with them'],
       [/\bask them\b/gi, 'you might explore with them'],
