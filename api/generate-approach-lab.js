@@ -91,26 +91,22 @@ export default async function handler(req, res) {
       }
     }
 
-    // STEP 3 — Build context
-    const fullTranscript = note.raw_transcript || '';
-    const transcript = fullTranscript.length > 6000 ? fullTranscript.substring(0, 6000) : fullTranscript;
+    // STEP 3 — Build structured context (no raw transcript)
     const psa = note.post_session_analysis || {};
     const interventions = Array.isArray(psa.coaching_interventions) ? psa.coaching_interventions : [];
     const missedWindows = Array.isArray(psa.missed_windows) ? psa.missed_windows : [];
     const extraction = note.extraction_data || {};
-    const clientQuotes = Array.isArray(extraction.client_quotes) ? extraction.client_quotes.slice(0, 8) : [];
 
-    // Structured-only Pass 1 inputs — no raw transcript. Trimmed to essentials.
-    const pass1Quotes = Array.isArray(extraction.client_quotes) ? extraction.client_quotes.slice(0, 5) : [];
-    const pass1Themes = Array.isArray(extraction.themes) ? extraction.themes.slice(0, 3) : [];
-    const pass1Interventions = interventions.slice(0, 3).map(function(i) {
+    const inputQuotes = Array.isArray(extraction.client_quotes) ? extraction.client_quotes.slice(0, 5) : [];
+    const inputThemes = Array.isArray(extraction.themes) ? extraction.themes.slice(0, 3) : [];
+    const inputInterventions = interventions.slice(0, 3).map(function(i) {
       return { technique_name: i?.technique_name || '', what_you_did: i?.what_you_did || '' };
     });
-    const pass1MissedWindows = missedWindows.slice(0, 2).map(function(w) {
+    const inputMissedWindows = missedWindows.slice(0, 2).map(function(w) {
       return { what_opened: w?.what_opened || '', moment: w?.moment || '' };
     });
 
-    // Summarize client patterns for pass 2 prompt (keeps token cost bounded)
+    // Summarize client patterns (keeps token cost bounded)
     let patternsSummary;
     if (clientPatterns) {
       const corePatterns = Array.isArray(clientPatterns.core_patterns) ? clientPatterns.core_patterns.slice(0, 5) : [];
@@ -125,30 +121,8 @@ export default async function handler(req, res) {
       patternsSummary = 'Pattern Map not yet generated';
     }
 
-    // STEP 4a — PASS 1: Moment Selection
-    const PASS1_SYSTEM = `You are Coach Clarity. Select up to 2 key moments from this session. A key moment is where the client revealed something important, showed hesitation or contradiction, the coach made a move that shaped direction, or the moment could have gone deeper. Return ONLY a JSON array. Maximum 2 items. Keep each field under 15 words. Complete the array even if brief.`;
-
-    const PASS1_USER = `Session signals (no transcript):
-
-Client quotes: ${JSON.stringify(pass1Quotes)}
-Themes: ${JSON.stringify(pass1Themes)}
-Coach interventions: ${JSON.stringify(pass1Interventions)}
-Missed windows: ${JSON.stringify(pass1MissedWindows)}
-
-Select up to 2 key moments from these signals. Maximum 2. Each field under 15 words. Return ONLY:
-[{ "title": "short title", "what_happened": "one sentence", "client_quote": "short quote", "coach_move": "what coach did", "moment_type": "revelation|hesitation|contradiction|emotional_weight|coaching_move" }]`;
-
-    const pass1Output = await callClaude(
-      ANTHROPIC_API_KEY,
-      'claude-sonnet-4-6',
-      400,
-      PASS1_SYSTEM,
-      PASS1_USER,
-      'Pass 1 Moment Selection'
-    );
-
-    // STEP 4b — PASS 2: Approach Lab Generation
-    const PASS2_SYSTEM = `CRITICAL: You must return complete valid JSON. If you are running low on tokens, reduce dialogue turns to 4 minimum rather than leaving JSON incomplete. Never truncate mid-structure. The JSON must close properly.
+    // STEP 4 — SINGLE PASS: Select moments AND generate Approach Lab in one call
+    const LAB_SYSTEM = `CRITICAL: You must return complete valid JSON. If you are running low on tokens, reduce dialogue turns to 4 minimum rather than leaving JSON incomplete. Never truncate mid-structure. The JSON must close properly.
 
 You are Coach Clarity, an applied coaching intelligence system.
 
@@ -162,15 +136,19 @@ Translate all approaches into coaching-relevant language. Explain approaches in 
 
 Tone: practical, grounded, non-clinical, focused on clarity and movement.
 
-Be concise where instructed. Complete the JSON structure even if content is brief.
-
 Dialogue format: The "dialogue" field is a single plain-text string (not an array). Format each line as "COACH: ..." or "CLIENT: ..." separated by \\n. Include 2-3 PAUSE annotations on their own lines formatted as "[PAUSE — WHAT THE COACH IS DOING: ...]" or "[PAUSE — WHY THIS MATTERS: ...]" separated by blank lines. Each approach dialogue must be 4-6 turns minimum. Show how the approach STAYS inside its lens over multiple exchanges. Do not rush to resolution. Language must be natural and conversational.
 
 Return ONLY valid JSON. No markdown. Start with { end with }.`;
 
-    const PASS2_USER = `Generate an Approach Lab for this coaching session.
+    const LAB_USER = `Select 2 key moments from the session data and generate the Approach Lab for each.
 
-KEY MOMENTS SELECTED: ${JSON.stringify(pass1Output)}
+A key moment is where the client revealed something important, showed hesitation or contradiction, the coach made a move that shaped direction, or the moment could have gone deeper.
+
+SESSION DATA (structured, no transcript):
+Client quotes: ${JSON.stringify(inputQuotes)}
+Themes: ${JSON.stringify(inputThemes)}
+Coach interventions: ${JSON.stringify(inputInterventions)}
+Missed windows: ${JSON.stringify(inputMissedWindows)}
 
 CLIENT PATTERNS (from Pattern Map): ${patternsSummary}
 
@@ -184,6 +162,7 @@ Relational/Exploratory: Client-Led Exploration, Relational Pattern Awareness
 APPROACH SELECTION RULE: Select the approach that best fits each moment. Prioritize fit over variety. Repeating a category is acceptable.
 
 REQUIREMENTS:
+- Exactly 2 moments
 - 4-6 dialogue turns per moment minimum (alternating coach/client)
 - 2-3 pause annotations interleaved mid-dialogue teaching the move in real time
 - your_approach_summary must be concrete, 2-3 sentences, grounded in what the coach actually did in this session (not abstract)
@@ -208,9 +187,7 @@ For each moment return:
 }
 
 Full schema:
-{
-  "moments": [ ...per-moment objects above... ]
-}
+{ "moments": [ ...per-moment objects above... ] }
 
 GUARDRAILS:
 - Do not generate generic coaching scripts
@@ -222,17 +199,17 @@ GUARDRAILS:
 - 4-6 dialogue turns per moment minimum, with 2-3 pause annotations
 - bridge is per-moment only, never global`;
 
-    const pass2Output = await callClaude(
+    const labOutput = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
-      3000,
-      PASS2_SYSTEM,
-      PASS2_USER,
-      'Pass 2 Approach Lab'
+      2500,
+      LAB_SYSTEM,
+      LAB_USER,
+      'Single Pass Approach Lab'
     );
 
     return res.status(200).json({
-      moments: Array.isArray(pass2Output.moments) ? pass2Output.moments : [],
+      moments: Array.isArray(labOutput.moments) ? labOutput.moments : [],
     });
   } catch (e) {
     console.error('[generate-approach-lab] Error:', e);
