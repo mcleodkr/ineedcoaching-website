@@ -164,7 +164,7 @@ Tone: practical, grounded, non-clinical, focused on clarity and movement.
 
 Be concise where instructed. Complete the JSON structure even if content is brief.
 
-Dialogue requirements: Each approach dialogue must be 4-6 turns minimum. Show how the approach STAYS inside its lens over multiple exchanges. Include 2-3 PAUSE annotations inside the dialogue to teach the move in real time. Do not rush to resolution. Language must be natural and conversational.
+Dialogue format: The "dialogue" field is a single plain-text string (not an array). Format each line as "COACH: ..." or "CLIENT: ..." separated by \\n. Include 2-3 PAUSE annotations on their own lines formatted as "[PAUSE — WHAT THE COACH IS DOING: ...]" or "[PAUSE — WHY THIS MATTERS: ...]" separated by blank lines. Each approach dialogue must be 4-6 turns minimum. Show how the approach STAYS inside its lens over multiple exchanges. Do not rush to resolution. Language must be natural and conversational.
 
 Return ONLY valid JSON. No markdown. Start with { end with }.`;
 
@@ -196,12 +196,7 @@ For each moment return:
   "approach_name": "",
   "approach_lens": "cognitive|emotional|action|identity|relational",
   "your_approach_summary": "2-3 sentences, concrete, what the coach actually did in this moment",
-  "dialogue_with_teaching": [
-    { "type": "line", "speaker": "coach", "text": "" },
-    { "type": "line", "speaker": "client", "text": "" },
-    { "type": "pause", "label": "WHAT THE COACH IS DOING", "text": "1-2 sentence teaching note" },
-    { "type": "line", "speaker": "coach", "text": "" }
-  ],
+  "dialogue": "COACH: [line]\\nCLIENT: [line]\\n\\n[PAUSE — WHAT THE COACH IS DOING: 1-2 sentence teaching note]\\n\\nCOACH: [line]\\nCLIENT: [line]\\n\\n[PAUSE — WHY THIS MATTERS: 1-2 sentence teaching note]\\n\\nCOACH: [line]\\nCLIENT: [line]",
   "the_move": "1-2 sentences naming the specific coaching move being demonstrated",
   "what_this_approach_is_doing": "3-4 sentences plain language",
   "what_it_is_trying_to_shift": "what change it attempts — no certainty implied",
@@ -230,7 +225,7 @@ GUARDRAILS:
     const pass2Output = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
-      2500,
+      3000,
       PASS2_SYSTEM,
       PASS2_USER,
       'Pass 2 Approach Lab'

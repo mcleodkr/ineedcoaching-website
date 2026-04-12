@@ -6516,8 +6516,15 @@ function renderApproachLab(data, container) {
     if (!m) return;
     var color = lensColor(m.approach_lens);
     var yourApproach = m.your_approach_summary || '';
-    var dialogue = Array.isArray(m.dialogue_with_teaching) ? m.dialogue_with_teaching : [];
-    var firstCoachLines = dialogue.filter(function(x) { return x && x.type === 'line' && (x.speaker || '').toLowerCase() === 'coach'; }).slice(0, 2);
+    var dialogueStr = typeof m.dialogue === 'string' ? m.dialogue : '';
+    var dialogueLines = dialogueStr ? dialogueStr.split('\n') : [];
+    var firstCoachLines = [];
+    for (var dli = 0; dli < dialogueLines.length && firstCoachLines.length < 2; dli++) {
+      var dlRaw = dialogueLines[dli].trim();
+      if (dlRaw.toUpperCase().indexOf('COACH:') === 0) {
+        firstCoachLines.push(dlRaw.substring(6).trim());
+      }
+    }
 
     html += '<div style="background:#ffffff;border:1px solid #edeae4;border-radius:8px;padding:22px 26px;margin-bottom:20px;">';
 
@@ -6552,7 +6559,7 @@ function renderApproachLab(data, container) {
     html += '<div style="' + labelStyle + 'color:#c49a3c;margin-bottom:6px;">Alternative approach</div>';
     if (firstCoachLines.length) {
       firstCoachLines.forEach(function(l) {
-        html += '<div style="' + bodyStyle + 'font-size:0.85rem;font-style:italic;color:#1a3a52;line-height:1.6;margin-bottom:4px;">\u201C' + escapeHtml(l.text || '') + '\u201D</div>';
+        html += '<div style="' + bodyStyle + 'font-size:0.85rem;font-style:italic;color:#1a3a52;line-height:1.6;margin-bottom:4px;">\u201C' + escapeHtml(l) + '\u201D</div>';
       });
     } else {
       html += '<div style="' + bodyStyle + 'font-size:0.82rem;font-style:italic;color:#9a9490;">\u2014</div>';
@@ -6560,27 +6567,49 @@ function renderApproachLab(data, container) {
     html += '</div>';
     html += '</div>';
 
-    // ── Dialogue with teaching ──
-    if (dialogue.length) {
+    // ── Dialogue with teaching (parsed from flat string) ──
+    if (dialogueStr) {
       html += '<div style="' + labelStyle + 'color:#9a9490;margin-bottom:10px;">How this approach unfolds:</div>';
       html += '<div style="margin-bottom:20px;">';
-      dialogue.forEach(function(item) {
-        if (!item) return;
-        if (item.type === 'pause') {
+      dialogueLines.forEach(function(rawLine) {
+        var line = (rawLine || '').trim();
+        if (!line) {
+          html += '<div style="height:6px;"></div>';
+          return;
+        }
+        var upper = line.toUpperCase();
+        if (upper.indexOf('[PAUSE') === 0) {
+          // Strip leading [ and trailing ]
+          var inner = line.replace(/^\[/, '').replace(/\]$/, '');
+          // Expected: "PAUSE — LABEL: text" (em dash or hyphen)
+          var m1 = inner.match(/^PAUSE\s*[\u2014\-:]\s*([^:]+?):\s*(.+)$/i);
+          var pauseLabel = 'Pause';
+          var pauseText = inner;
+          if (m1) {
+            pauseLabel = m1[1].trim();
+            pauseText = m1[2].trim();
+          } else {
+            var m2 = inner.match(/^PAUSE[\s\u2014\-:]+(.+)$/i);
+            if (m2) pauseText = m2[1].trim();
+          }
           html += '<div style="background:#fdf9f1;border-left:2px solid #c49a3c;padding:12px 16px;margin:10px 0;">';
-          html += '<div style="' + labelStyle + 'color:#c49a3c;margin-bottom:4px;">' + escapeHtml(item.label || 'Pause') + '</div>';
-          html += '<div style="' + bodyStyle + 'font-size:0.8rem;font-style:italic;color:#1a3a52;line-height:1.6;">' + escapeHtml(item.text || '') + '</div>';
+          html += '<div style="' + labelStyle + 'color:#c49a3c;margin-bottom:4px;">' + escapeHtml(pauseLabel) + '</div>';
+          html += '<div style="' + bodyStyle + 'font-size:0.8rem;font-style:italic;color:#1a3a52;line-height:1.6;">' + escapeHtml(pauseText) + '</div>';
           html += '</div>';
-        } else if (item.type === 'line') {
-          var speaker = (item.speaker || 'coach').toLowerCase();
-          var label = speaker === 'client' ? 'Client' : 'Coach';
-          var lineStyle = speaker === 'client'
-            ? bodyStyle + 'font-size:0.875rem;font-style:italic;color:#5a5560;line-height:1.6;'
-            : bodyStyle + 'font-size:0.875rem;color:#1a3a52;line-height:1.6;';
+        } else if (upper.indexOf('COACH:') === 0) {
+          var cText = line.substring(6).trim();
           html += '<div style="margin-bottom:10px;">';
-          html += '<div style="' + bodyStyle + 'font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9a9490;margin-bottom:2px;">' + label + ':</div>';
-          html += '<div style="' + lineStyle + '">' + escapeHtml(item.text || '') + '</div>';
+          html += '<div style="' + bodyStyle + 'font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9a9490;margin-bottom:2px;">Coach:</div>';
+          html += '<div style="' + bodyStyle + 'font-size:0.875rem;color:#1a3a52;line-height:1.6;">' + escapeHtml(cText) + '</div>';
           html += '</div>';
+        } else if (upper.indexOf('CLIENT:') === 0) {
+          var clText = line.substring(7).trim();
+          html += '<div style="margin-bottom:10px;">';
+          html += '<div style="' + bodyStyle + 'font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9a9490;margin-bottom:2px;">Client:</div>';
+          html += '<div style="' + bodyStyle + 'font-size:0.875rem;font-style:italic;color:#5a5560;line-height:1.6;">' + escapeHtml(clText) + '</div>';
+          html += '</div>';
+        } else {
+          html += '<div style="' + bodyStyle + 'font-size:0.85rem;color:#5a5560;line-height:1.6;margin-bottom:8px;">' + escapeHtml(line) + '</div>';
         }
       });
       html += '</div>';
