@@ -6289,7 +6289,16 @@ function renderCoachDNA(profile, sessionCount) {
     return '<h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;margin-bottom:14px;border-bottom:1px solid #edeae4;padding-bottom:10px;">' + title + '</h3>';
   };
 
-  var html = '';
+  var lastDate = profile.last_analyzed ? new Date(profile.last_analyzed).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Never';
+  var displayCount = profile.session_count || sessionCount || 0;
+
+  var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">'
+    + '<div>'
+    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:700;color:#1a3a52;">Your Coach DNA</div>'
+    + '<div style="font-size:0.82rem;color:#9a9490;">' + displayCount + ' sessions analyzed \u00b7 Last updated ' + escapeHtml(lastDate) + '</div>'
+    + '</div>'
+    + '<button id="regen-dna-btn" style="padding:8px 18px;background:#c49a3c;color:#fff;border:none;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;transition:background 0.15s ease;">Regenerate DNA</button>'
+    + '</div>';
 
   // 1. Coaching Decision Model
   if (decisionModel.length) {
@@ -6487,6 +6496,48 @@ function renderCoachDNA(profile, sessionCount) {
 
   var container = $('dna-content');
   if (container) container.innerHTML = html;
+
+  // Wire Regenerate DNA button
+  var regenBtn = $('regen-dna-btn');
+  if (regenBtn) {
+    regenBtn.addEventListener('click', async function() {
+      this.disabled = true;
+      this.textContent = 'Regenerating...';
+      this.style.opacity = '0.6';
+      this.style.cursor = 'wait';
+      if (container) container.innerHTML = ciSpinner('Reanalyzing your coaching patterns...');
+      try {
+        var res = await fetch('/api/generate-coach-dna', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ coachId: coachProfile.id })
+        });
+        var dna = await res.json();
+        if (!res.ok) throw new Error(dna.error || 'Failed');
+        if (dna.locked) { loadCoachDNA(); return; }
+        renderCoachDNA({
+          framework_distribution: dna.pattern_activation_map || dna.framework_distribution,
+          signal_patterns: {
+            coaching_decision_model: dna.coaching_decision_model,
+            default_intervention_sequence: dna.default_intervention_sequence,
+            pattern_activation_map: dna.pattern_activation_map,
+            technique_profile: dna.technique_profile,
+            bias_profile: dna.bias_profile,
+            client_response_signature: dna.client_response_signature,
+            growth_edges: dna.growth_edges,
+            blind_spots: dna.blind_spots,
+            missed_leverage_moments: dna.missed_leverage_moments,
+            evolution_signal: dna.evolution_signal
+          },
+          growth_edges: dna.growth_edges,
+          session_count: dna.session_count,
+          last_analyzed: new Date().toISOString()
+        }, sessionCount);
+      } catch (e) {
+        if (container) container.innerHTML = '<div style="color:#c44;padding:24px;">Error regenerating DNA: ' + escapeHtml(e.message) + '</div>';
+      }
+    });
+  }
 }
 
 /* ================================================
