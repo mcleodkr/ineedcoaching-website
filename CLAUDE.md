@@ -38,3 +38,10 @@
 - Always say: you might explore, one possible direction, it may be worth
 - Coach Clarity is the AI identity — never say "the system" or "AI generated"
 - All coaching intelligence output must include why it matters
+
+## Intelligence Architecture (DO NOT DRIFT FROM THIS)
+- Mirror (generate-post-session-intelligence.js) = per-session learning. What happened, what you did, what you missed.
+- DNA (generate-coach-dna.js) = pattern-level identity. Derived ONLY from Mirror outputs, never from raw transcripts.
+- Approach Lab = future build. Not yet implemented.
+- Mirror teaches what happened. DNA teaches who the coach is becoming. Approach Lab teaches how they could evolve.
+- DNA requires post_session_analysis field from coach_session_notes. Never analyze frameworks_detected arrays directly.
