@@ -520,7 +520,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
        ========================================================= */
 
     :root {
-      --sidebar-width: 200px;
+      --sidebar-width: 196px;
     }
 
     /* TOP NAV — 52px, navy, DM Sans 0.82rem. Inline styles require !important. */
@@ -540,7 +540,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       font-weight: 500 !important;
       letter-spacing: 0.01em !important;
       text-transform: none !important;
-      color: #d4cfc8 !important;
+      color: #c8c0b4 !important;
     }
     .dashboard > nav:first-of-type a.logo {
       font-family: 'Cormorant Garamond', serif !important;
@@ -561,7 +561,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       padding: 6px 14px;
       border: 1px solid rgba(255,255,255,0.18);
       border-radius: 4px;
-      color: #d4cfc8;
+      color: #c8c0b4;
       background: transparent;
     }
     .dashboard > nav:first-of-type .sign-out-btn:hover {
@@ -572,7 +572,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
     /* LAYOUT — lift the sticky offset so sidebar + content clear the 52px nav */
     .dash-layout { padding-top: 52px; }
 
-    /* SIDEBAR — 200px, white, flat right border, disciplined rhythm */
+    /* SIDEBAR — 196px, white, warm stone divider, editorial rhythm */
     .dash-sidebar {
       width: var(--sidebar-width);
       flex-shrink: 0;
@@ -581,18 +581,18 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       height: calc(100vh - 52px);
       overflow-y: auto;
       background: #ffffff;
-      border-right: 1px solid #edeae4;
+      border-right: 1px solid #ebe7e0;
       padding: 24px 0;
     }
     .dash-sidebar .dash-group,
     .dash-group {
       font-family: 'DM Sans', sans-serif;
-      font-size: 0.68rem;
+      font-size: 0.65rem;
       font-weight: 700;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
-      color: #a09a8e;
-      padding: 20px 16px 6px;
+      color: #b8b0a4;
+      padding: 24px 20px 8px;
       cursor: default;
       pointer-events: none;
     }
@@ -600,36 +600,36 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       display: block;
       width: 100%;
       text-align: left;
-      padding: 8px 16px;
+      padding: 9px 20px;
       font-family: 'DM Sans', sans-serif;
       font-size: 0.875rem;
       font-weight: 400;
-      color: #5a5560;
+      color: #6b6560;
       background: none;
       border: none;
       border-left: 2px solid transparent;
       cursor: pointer;
-      transition: all 0.12s ease;
+      transition: background 0.12s ease, color 0.12s ease, border-left-color 0.12s ease;
       line-height: 1.4;
     }
     .dash-sidebar .tab-btn:hover {
-      background: #f9f7f4;
+      background: #faf8f4;
       color: #1a3a52;
-      border-left-color: #e0d5be;
+      border-left: 2px solid transparent;
     }
     .dash-sidebar .tab-btn.active {
-      background: #fdf8ee;
+      background: #fdf9f1;
       color: #1a3a52;
       font-weight: 500;
-      border-left-color: #c49a3c;
+      border-left: 2px solid #c49a3c;
     }
 
-    /* MAIN CONTENT AREA */
+    /* MAIN CONTENT AREA — warm cream canvas */
     .dash-content {
       max-width: none;
       margin: 0;
-      padding: 32px 36px;
-      background: #f4f2ee;
+      padding: 36px 40px;
+      background: #f7f4ef;
     }
 
     /* CARDS — tight radius, minimal shadow, no decorative colored shadows */
@@ -774,11 +774,168 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
     /* STATUS PILLS */
     .status-pill { border-radius: 4px; font-weight: 600; }
 
+    /* =========================================================
+       CLIENTS TAB — EDITORIAL LUXURY
+       Overrides inline styles from renderClientsList (line ~3317).
+       Inline style attrs require !important.
+       ========================================================= */
+
+    /* Outer wrapper — strip the generic .form-section chrome on this tab */
+    #tab-clients .form-section {
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      margin-bottom: 0 !important;
+    }
+
+    /* "My Clients" header — generous, no rule underneath */
+    #tab-clients .form-section-title {
+      font-family: 'Cormorant Garamond', serif !important;
+      font-size: 2rem !important;
+      font-weight: 600 !important;
+      color: #1a3a52 !important;
+      border-bottom: none !important;
+      padding-bottom: 0 !important;
+      margin-bottom: 4px !important;
+      letter-spacing: -0.01em !important;
+    }
+    /* Subtitle "N clients" — small, stone grey */
+    #tab-clients .form-section-title + span,
+    #tab-clients .form-section > div:first-child span {
+      font-family: 'DM Sans', sans-serif !important;
+      font-size: 0.8rem !important;
+      color: #b8b0a4 !important;
+      font-weight: 400 !important;
+    }
+    /* The header + search row */
+    #tab-clients .form-section > div:first-child {
+      margin-bottom: 28px !important;
+      align-items: flex-end !important;
+    }
+
+    /* Search box — flat, gold focus */
+    #tab-clients #clients-search {
+      border: 1px solid #ede9e1 !important;
+      border-radius: 4px !important;
+      padding: 9px 14px !important;
+      font-family: 'DM Sans', sans-serif !important;
+      font-size: 0.85rem !important;
+      color: #1a3a52 !important;
+      background: #ffffff !important;
+      box-shadow: none !important;
+      min-width: 240px !important;
+      transition: border-color 0.15s ease !important;
+    }
+    #tab-clients #clients-search:focus {
+      border-color: #c49a3c !important;
+      outline: none !important;
+      box-shadow: none !important;
+    }
+    #tab-clients #clients-search::placeholder {
+      color: #b8b0a4 !important;
+    }
+
+    /* CARD GRID — 280px min, 16px gap */
+    #clients-list-view > .form-section > div[style*="grid-template-columns"],
+    #clients-list-view div[style*="grid-template-columns"] {
+      display: grid !important;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+      gap: 16px !important;
+    }
+
+    /* CLIENT CARD — strip gold left border, flatten, lift corners */
+    #clients-list-view div:has(> button[data-view-client]) {
+      background: #ffffff !important;
+      border: 1px solid #ede9e1 !important;
+      border-left: 1px solid #ede9e1 !important;
+      border-radius: 8px !important;
+      padding: 24px !important;
+      box-shadow: none !important;
+      transform: none !important;
+      transition: border-color 0.15s ease !important;
+    }
+    #clients-list-view div:has(> button[data-view-client]):hover {
+      border-color: #d8d2c6 !important;
+      box-shadow: none !important;
+      transform: none !important;
+    }
+
+    /* Client name (first Cormorant-styled div inside the card) */
+    #clients-list-view div:has(> button[data-view-client]) div[style*="Cormorant Garamond"] {
+      font-family: 'Cormorant Garamond', serif !important;
+      font-size: 1.25rem !important;
+      font-weight: 600 !important;
+      color: #1a3a52 !important;
+      margin-bottom: 4px !important;
+      line-height: 1.25 !important;
+    }
+
+    /* Email + phone lines — small stone grey */
+    #clients-list-view div:has(> button[data-view-client]) div[style*="0.78rem"],
+    #clients-list-view div:has(> button[data-view-client]) div[style*="0.75rem"] {
+      font-family: 'DM Sans', sans-serif !important;
+      font-size: 0.78rem !important;
+      color: #9a9490 !important;
+      margin-top: 2px !important;
+    }
+
+    /* Session count / last-seen line — top hairline, stone grey */
+    #clients-list-view div:has(> button[data-view-client]) > div:nth-child(2) {
+      border-bottom: none !important;
+      border-top: 1px solid #f0ece6 !important;
+      padding-top: 12px !important;
+      padding-bottom: 0 !important;
+      margin-top: 12px !important;
+      margin-bottom: 0 !important;
+      gap: 16px !important;
+    }
+    #clients-list-view div:has(> button[data-view-client]) > div:nth-child(2) div {
+      font-family: 'DM Sans', sans-serif !important;
+      font-size: 0.78rem !important;
+      color: #9a9490 !important;
+    }
+    #clients-list-view div:has(> button[data-view-client]) > div:nth-child(2) span {
+      color: #1a3a52 !important;
+      font-weight: 500 !important;
+    }
+
+    /* Status dot — hide. (CSS alone cannot inject a dynamic initial letter,
+       so the dot is removed for a cleaner read. See notes for the HTML-side
+       avatar upgrade.) */
+    #clients-list-view div[title="Active"],
+    #clients-list-view div[title="Inactive"] {
+      display: none !important;
+    }
+
+    /* "View Client" button — navy, full width, editorial letter-spacing */
+    #clients-list-view button[data-view-client] {
+      width: 100% !important;
+      background: #1a3a52 !important;
+      color: #ffffff !important;
+      border: none !important;
+      border-radius: 4px !important;
+      padding: 9px 0 !important;
+      font-family: 'DM Sans', sans-serif !important;
+      font-size: 0.8rem !important;
+      font-weight: 500 !important;
+      letter-spacing: 0.03em !important;
+      margin-top: 16px !important;
+      box-shadow: none !important;
+      transition: background 0.15s ease !important;
+      cursor: pointer !important;
+    }
+    #clients-list-view button[data-view-client]:hover {
+      background: #254e6b !important;
+      box-shadow: none !important;
+    }
+
     /* MOBILE TIGHTENING */
     @media (max-width: 768px) {
       .dashboard > nav:first-of-type { padding: 10px 18px !important; }
       .dash-content { padding: 24px 18px; }
       .dash-layout { padding-top: 52px; }
+      #tab-clients .form-section-title { font-size: 1.6rem !important; }
     }
   </style>
   <div class="dash-mobile-nav">
