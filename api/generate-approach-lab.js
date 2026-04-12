@@ -228,7 +228,7 @@ GUARDRAILS:
     const pass2Output = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
-      5000,
+      2500,
       PASS2_SYSTEM,
       PASS2_USER,
       'Pass 2 Approach Lab'
