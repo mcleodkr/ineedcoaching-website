@@ -178,17 +178,39 @@ Return ONLY:
       'claude-sonnet-4-6',
       1500,
       `${MIRROR_RULES} Feedback style: ${fbStyle}. If reflective: lead with "There was an opening to...", "You might notice...". If direct: lead with "You stayed at the surface.", "You moved past a deeper opening.". Both: never shame, never say "you should have" or "you missed". Anchor in observable behavior. PLAIN LANGUAGE REQUIRED: Never use coaching jargon. Replace "slow into" with "stay with" or "explore more closely". Replace "under visibility pressure" with "in moments where she is being watched". Replace "legitimacy fear" with "fear of not being taken seriously". Every sentence must be complete and standalone. No fragments. No implied subjects. Each field value must make sense when read alone.`,
-      `Generate max 2 curiosity edges and max 2 missed windows. Max 12 words per field. If no meaningful missed window exists return empty array. Every field must be a complete sentence with a clear subject.
+      `Generate max 2 curiosity edges and max 2 missed windows. If no meaningful missed window exists return empty array. Every field must be a complete sentence with a clear subject.
 
-Scan for missed depth opportunities using 6 signal types. Each must meet 2+ criteria. Score: emotional_signal 1-3, pattern_relevance 1-3, depth_potential 1-3. Return top 2 by score.
-Signal types: EMOTIONAL_MISMATCH (emotion stronger than event), REPETITION_WITHOUT_MOVEMENT (same idea 2-3x without resolution), CHARGED_LANGUAGE (trapped/betrayed/invisible/stuck), BEHAVIORAL_CONTRADICTION (gap between stated and done), ENERGY_SHIFT (sudden relief/tension/tears/flatness), UNPROCESSED_COST (client names a pattern or realization without exploring what it has cost them emotionally — self-blame without feeling, ownership without grief, naming a loss without staying with it. Output what_was_underneath as the emotional cost not yet expressed).
-Strength: 3-4=Subtle opening, 5-6=Clear opening, 7-9=Strong opening.
+Curiosity edges: each is a live question worth holding, not a correction. Max 12 words per field.
+
+Missed windows: each must follow this exact 6-part structure. No generic advice. No instructional tone. Stay grounded in the exact session moment.
+
+For each missed window:
+1. what_opened — one sentence describing the moment that surfaced (what the client said or did that created the opening)
+2. what_you_did — what the coach did in that moment, written in second person ("You..."). Must include a verbatim or near-verbatim client quote and coach response where possible
+3. what_that_did — one sentence describing how the coach's move shifted or closed the moment
+4. what_this_cost — precise description of what did not fully develop — emotional, behavioral, or insight-level. Be specific, not generic
+5. if_you_stayed — what was available in that exact moment if the coach had stayed with it. Grounded in the specific situation, not general coaching wisdom
+6. what_that_might_sound_like — optional, 1-2 example lines that extend the moment naturally. Should feel like a continuation, not a correction. Set to null if forced.
+
+Also populate verbatim_evidence with the exact client_quote and coach_response that anchors this missed window. Use empty strings only if no verbatim material exists.
+
+Signal metadata (not displayed to coach — used for DNA tagging):
+- signal_type: emotional_mismatch|repetition_without_movement|charged_language|behavioral_contradiction|energy_shift|unprocessed_cost
+  - EMOTIONAL_MISMATCH: emotion stronger than event
+  - REPETITION_WITHOUT_MOVEMENT: same idea 2-3x without resolution
+  - CHARGED_LANGUAGE: trapped/betrayed/invisible/stuck
+  - BEHAVIORAL_CONTRADICTION: gap between stated and done
+  - ENERGY_SHIFT: sudden relief/tension/tears/flatness
+  - UNPROCESSED_COST: client names a pattern or realization without exploring its emotional cost
+- signal_strength: Subtle opening|Clear opening|Strong opening
+
+Score each candidate: emotional_signal 1-3, pattern_relevance 1-3, depth_potential 1-3. Each must meet 2+ criteria. Return top 2 by score. Strength: 3-4=Subtle opening, 5-6=Clear opening, 7-9=Strong opening.
 
 EVIDENCE: ${JSON.stringify(extractionOutput)}
 CORE: ${JSON.stringify(coreOutput)}
 
 Return ONLY:
-{"curiosity_edges":[{"curiosity_note":"","what_to_notice":"","why_this_stands_out":""}],"missed_windows":[{"signal_type":"emotional_mismatch|repetition_without_movement|charged_language|behavioral_contradiction|energy_shift|unprocessed_cost","signal_strength":"Subtle opening|Clear opening|Strong opening","moment":"","what_was_underneath":"","what_you_did":"You...","what_was_possible":"","why_this_matters_for_your_work":"","how_to_catch_this_next_time":{"signal_to_watch_for":"","what_that_may_mean":"","one_possible_way_to_respond":"You might...","a_question_that_could_open_this_up":""}}]}`,
+{"curiosity_edges":[{"curiosity_note":"","what_to_notice":"","why_this_stands_out":""}],"missed_windows":[{"signal_type":"emotional_mismatch|repetition_without_movement|charged_language|behavioral_contradiction|energy_shift|unprocessed_cost","signal_strength":"Subtle opening|Clear opening|Strong opening","what_opened":"","what_you_did":"You...","verbatim_evidence":{"client_quote":"","coach_response":""},"what_that_did":"","what_this_cost":"","if_you_stayed":"","what_that_might_sound_like":null}]}`,
       'Pass 2c: Curiosity + Missed Windows'
     );
 

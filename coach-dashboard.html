@@ -6121,6 +6121,46 @@ function renderCoachingMirror(a, container) {
       var strengthColors = { 'Subtle opening': 'var(--muted)', 'Clear opening': 'var(--gold)', 'Strong opening': '#b8860b' };
       mw.forEach(function(w, idx) {
         if (!w) return;
+
+        // NEW 6-part shape (what_opened present) vs. legacy shape (moment)
+        if (w.what_opened) {
+          mwBody += '<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:18px 22px;margin-bottom:14px;">'
+            // Card title — what_opened
+            + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:700;color:#1a3a52;line-height:1.35;margin-bottom:14px;">' + escapeHtml(w.what_opened) + '</div>'
+            // What you did
+            + (w.what_you_did ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#1a3a52;line-height:1.55;margin-bottom:10px;"><span style="font-weight:600;">What you did:</span> ' + escapeHtml(w.what_you_did) + '</div>' : '');
+
+          // Verbatim evidence block — gold quote style, matches DNA manifestations
+          var ve = w.verbatim_evidence || {};
+          if (ve.client_quote || ve.coach_response) {
+            mwBody += '<div style="margin:10px 0 12px;">';
+            if (ve.client_quote) {
+              mwBody += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9a9490;margin-bottom:4px;">CLIENT:</div>'
+                + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-style:italic;color:#1a3a52;line-height:1.55;background:#fdf9f1;border-left:2px solid #c49a3c;padding:8px 12px;margin-bottom:8px;">' + escapeHtml(ve.client_quote) + '</div>';
+            }
+            if (ve.coach_response) {
+              mwBody += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9a9490;margin-bottom:4px;">COACH:</div>'
+                + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-style:italic;color:#1a3a52;line-height:1.55;background:#fdf9f1;border-left:2px solid #c49a3c;padding:8px 12px;">' + escapeHtml(ve.coach_response) + '</div>';
+            }
+            mwBody += '</div>';
+          }
+
+          mwBody += (w.what_that_did ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#5a5560;font-style:italic;line-height:1.55;margin-bottom:8px;"><span style="font-weight:600;color:#1a3a52;font-style:normal;">What that did:</span> ' + escapeHtml(w.what_that_did) + '</div>' : '')
+            + (w.what_this_cost ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#B8654A;line-height:1.55;margin-bottom:8px;"><span style="font-weight:600;">What this cost:</span> ' + escapeHtml(w.what_this_cost) + '</div>' : '')
+            + (w.if_you_stayed ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#1a3a52;line-height:1.55;margin-bottom:8px;"><span style="font-weight:600;">If you stayed with it:</span> ' + escapeHtml(w.if_you_stayed) + '</div>' : '');
+
+          if (w.what_that_might_sound_like) {
+            mwBody += '<div style="background:#fdf9f1;border-radius:6px;padding:12px 14px;margin-top:10px;">'
+              + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#c49a3c;margin-bottom:6px;">What that might sound like:</div>'
+              + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:0.95rem;font-style:italic;color:#1a3a52;line-height:1.55;">' + escapeHtml(w.what_that_might_sound_like) + '</div>'
+              + '</div>';
+          }
+
+          mwBody += '</div>';
+          return;
+        }
+
+        // LEGACY shape (backward compat for older sessions)
         var stc = strengthColors[w.signal_strength] || 'var(--muted)';
         mwBody += '<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin-bottom:12px;position:relative;">'
           + '<div style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:700;background:' + stc + ';color:#fff;position:absolute;top:16px;right:16px;">' + escapeHtml(w.signal_strength || '') + '</div>'
