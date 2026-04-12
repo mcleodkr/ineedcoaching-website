@@ -6244,7 +6244,7 @@ async function loadCoachDNA() {
       if (dna.locked) {
         loadCoachDNA(); return;
       }
-      renderCoachDNA({ framework_distribution: dna.framework_distribution, signal_patterns: { what_works: dna.what_appears_to_be_working }, growth_edges: dna.growth_edges, session_count: dna.session_count, last_analyzed: new Date().toISOString() }, sessionCount);
+      renderCoachDNA({ framework_distribution: dna.framework_distribution, signal_patterns: { what_works: dna.what_is_working, techniques: dna.techniques_and_strategies, growth_edges: dna.growth_edges, recurring_blind_spots: dna.recurring_blind_spots, where_to_stay_curious: dna.where_to_stay_curious }, growth_edges: dna.growth_edges, session_count: dna.session_count, last_analyzed: new Date().toISOString() }, sessionCount);
     }
   } catch(e) {
     $('dna-content').innerHTML = '<div style="color:#c44;padding:24px;">Error loading Coach DNA: ' + escapeHtml(e.message) + '</div>';
@@ -6254,87 +6254,145 @@ async function loadCoachDNA() {
 function renderCoachDNA(profile, sessionCount) {
   var fw = Array.isArray(profile.framework_distribution) ? profile.framework_distribution : [];
   var works = (profile.signal_patterns && profile.signal_patterns.what_works) || [];
-  var edges = Array.isArray(profile.growth_edges) ? profile.growth_edges : [];
-  var lastDate = profile.last_analyzed ? new Date(profile.last_analyzed).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Never';
+  var techniques = (profile.signal_patterns && profile.signal_patterns.techniques) || null;
+  var edges = (profile.signal_patterns && profile.signal_patterns.growth_edges) || (Array.isArray(profile.growth_edges) ? profile.growth_edges : []);
+  var blindSpots = (profile.signal_patterns && profile.signal_patterns.recurring_blind_spots) || [];
+  var curious = (profile.signal_patterns && profile.signal_patterns.where_to_stay_curious) || [];
 
-  var h = '<div style="padding:8px 0;">';
-  h += CI_LABEL;
-  h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">'
-    + '<div><div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:700;color:var(--ink);">Your Coach DNA</div>'
-    + '<div style="font-size:0.82rem;color:var(--muted);">' + (profile.session_count || sessionCount || 0) + ' sessions analyzed \u00b7 Last updated ' + escapeHtml(lastDate) + '</div></div>'
-    + '<div style="display:flex;gap:10px;">'
-    + '<button id="regen-dna-btn" style="padding:8px 18px;background:var(--gold);color:#fff;border:none;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;">Regenerate DNA</button>'
-    + '</div></div>';
+  var trajectoryColor = function(t) {
+    if (!t) return '#9a9490';
+    t = t.toLowerCase();
+    if (t === 'increasing') return '#2d6a4f';
+    if (t === 'stable') return '#1a3a52';
+    if (t === 'decreasing') return '#c44';
+    if (t === 'emerging') return '#c49a3c';
+    if (t === 'underutilized') return '#9a9490';
+    return '#9a9490';
+  };
+
+  var trajectoryBadge = function(t) {
+    if (!t) return '';
+    return '<span style="font-size:0.68rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:' + trajectoryColor(t) + ';background:rgba(0,0,0,0.04);padding:2px 7px;border-radius:3px;margin-left:8px;">' + t + '</span>';
+  };
+
+  var freqBadge = function(f) {
+    if (!f) return '';
+    return '<span style="font-size:0.72rem;color:#9a9490;margin-left:6px;">' + f + '</span>';
+  };
+
+  var html = '';
 
   // Framework Distribution
   if (fw.length) {
-    h += '<div style="margin-bottom:28px;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:700;color:var(--ink);margin-bottom:16px;">Framework Distribution</div>';
-    var maxPct = Math.max.apply(null, fw.map(function(f) { return f.percentage || 0; }));
+    var maxPct = Math.max.apply(null, fw.map(function(f){ return f.percentage || 0; }));
+    html += '<div style="margin-bottom:32px;">';
+    html += '<h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;margin-bottom:16px;border-bottom:1px solid #edeae4;padding-bottom:10px;">Framework Distribution</h3>';
     fw.forEach(function(f) {
-      var barW = maxPct > 0 ? Math.round((f.percentage / maxPct) * 100) : 0;
-      h += '<details style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin-bottom:8px;">'
-        + '<summary style="cursor:pointer;display:flex;align-items:center;gap:12px;">'
-        + '<div style="flex:1;min-width:0;">'
-        + '<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-weight:700;font-size:0.88rem;color:var(--ink);">' + escapeHtml(f.name) + '</span><span style="font-size:0.82rem;font-weight:700;color:var(--gold);">' + (f.percentage || 0) + '%</span></div>'
-        + '<div style="background:var(--cream);border-radius:50px;height:8px;overflow:hidden;"><div style="background:var(--ink);height:100%;border-radius:50px;width:' + barW + '%;transition:width 0.5s;"></div></div>'
-        + '</div></summary>'
-        + '<div style="margin-top:12px;font-size:0.85rem;color:var(--muted);line-height:1.6;">' + escapeHtml(f.description || '') + '</div>'
-        + (f.evidence_excerpts && f.evidence_excerpts.length ? '<div style="margin-top:8px;">' + f.evidence_excerpts.map(function(e) { return '<div style="font-size:0.8rem;color:var(--muted);font-style:italic;padding:4px 0;">"' + escapeHtml(e) + '"</div>'; }).join('') + '</div>' : '')
-        + '</details>';
+      html += '<details style="margin-bottom:12px;border:1px solid #edeae4;border-radius:6px;overflow:hidden;">';
+      html += '<summary style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;list-style:none;background:#fff;">';
+      html += '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.9rem;font-weight:500;color:#1a3a52;">' + escapeHtml(f.name || '') + trajectoryBadge(f.trajectory) + '</span>';
+      html += '<span style="font-size:0.82rem;font-weight:600;color:#c49a3c;">' + (f.percentage || 0) + '%' + freqBadge(f.frequency) + '</span>';
+      html += '</summary>';
+      html += '<div style="padding:0 16px 14px;background:#fdfbf8;">';
+      var barPct = maxPct > 0 ? Math.round((f.percentage / maxPct) * 100) : 0;
+      html += '<div style="height:4px;background:#f0ece6;border-radius:2px;margin-bottom:12px;"><div style="height:4px;width:' + barPct + '%;background:#c49a3c;border-radius:2px;"></div></div>';
+      if (f.description) html += '<p style="font-size:0.82rem;color:#5a5560;margin-bottom:6px;">' + escapeHtml(f.description) + '</p>';
+      if (f.seen_when) html += '<p style="font-size:0.78rem;color:#9a9490;font-style:italic;">Seen when: ' + escapeHtml(f.seen_when) + '</p>';
+      html += '</div></details>';
     });
-    h += '</div>';
+    html += '</div>';
   }
 
-  // What appears to be working
-  if (works.length) {
-    h += '<div style="margin-bottom:28px;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:700;color:var(--ink);margin-bottom:16px;">What Appears to Be Working</div>'
-      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;">';
-    works.forEach(function(w) {
-      h += '<details style="background:var(--white);border:1px solid var(--border);border-left:4px solid #2d6a4f;border-radius:8px;padding:20px;">'
-        + '<summary style="cursor:pointer;font-weight:700;font-size:0.88rem;color:var(--ink);">' + escapeHtml(w.observation) + '</summary>'
-        + '<div style="margin-top:10px;font-size:0.82rem;color:var(--muted);line-height:1.6;">' + escapeHtml(w.evidence || '') + '</div></details>';
+  // Techniques & Strategies
+  if (techniques && techniques.techniques && techniques.techniques.length) {
+    html += '<div style="margin-bottom:32px;">';
+    html += '<h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;margin-bottom:6px;border-bottom:1px solid #edeae4;padding-bottom:10px;">Techniques & Strategies</h3>';
+    html += '<p style="font-size:0.78rem;color:#9a9490;font-style:italic;margin-bottom:14px;">' + escapeHtml(techniques.note || 'This reflects what you actually did \u2014 not what you intended to do.') + '</p>';
+    techniques.techniques.forEach(function(t) {
+      html += '<details style="margin-bottom:10px;border:1px solid #edeae4;border-radius:6px;overflow:hidden;">';
+      html += '<summary style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;list-style:none;background:#fff;">';
+      html += '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.875rem;font-weight:500;color:#1a3a52;">' + escapeHtml(t.name || '') + trajectoryBadge(t.trajectory) + '</span>';
+      html += '<span style="font-size:0.72rem;color:#9a9490;">' + escapeHtml(t.frequency || '') + '</span>';
+      html += '</summary>';
+      html += '<div style="padding:0 16px 14px;background:#fdfbf8;">';
+      if (t.definition) html += '<p style="font-size:0.82rem;color:#5a5560;margin-bottom:6px;">' + escapeHtml(t.definition) + '</p>';
+      if (t.observed_when) html += '<p style="font-size:0.78rem;color:#9a9490;font-style:italic;">Observed when: ' + escapeHtml(t.observed_when) + '</p>';
+      html += '</div></details>';
     });
-    h += '</div></div>';
+    html += '</div>';
+  }
+
+  // What Is Working
+  if (works.length) {
+    html += '<div style="margin-bottom:32px;">';
+    html += '<h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;margin-bottom:16px;border-bottom:1px solid #edeae4;padding-bottom:10px;">What Is Working</h3>';
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;">';
+    works.forEach(function(w) {
+      html += '<div style="background:#fff;border:1px solid #edeae4;border-left:3px solid #2d6a4f;border-radius:6px;padding:16px;">';
+      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.875rem;font-weight:600;color:#1a3a52;margin-bottom:6px;">' + escapeHtml(w.capability || w.observation || '') + trajectoryBadge(w.trajectory) + '</div>';
+      if (w.example || w.evidence) html += '<p style="font-size:0.8rem;color:#5a5560;margin-bottom:6px;">' + escapeHtml(w.example || w.evidence || '') + '</p>';
+      if (w.why_it_works || w.why_it_matters) html += '<p style="font-size:0.76rem;color:#9a9490;font-style:italic;">' + escapeHtml(w.why_it_works || w.why_it_matters || '') + '</p>';
+      if (w.frequency) html += '<p style="font-size:0.72rem;color:#9a9490;margin-top:8px;">' + escapeHtml(w.frequency) + '</p>';
+      html += '</div>';
+    });
+    html += '</div></div>';
   }
 
   // Growth Edges
   if (edges.length) {
-    h += '<div style="margin-bottom:28px;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:700;color:var(--ink);margin-bottom:16px;">Growth Edges</div>'
-      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;">';
+    html += '<div style="margin-bottom:32px;">';
+    html += '<h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;margin-bottom:16px;border-bottom:1px solid #edeae4;padding-bottom:10px;">Growth Edges</h3>';
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;">';
     edges.forEach(function(e) {
-      h += '<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:20px;">'
-        + '<div style="font-weight:700;font-size:0.88rem;color:var(--ink);margin-bottom:6px;">' + escapeHtml(e.framework) + '</div>'
-        + '<div style="font-size:0.82rem;color:var(--muted);line-height:1.6;margin-bottom:8px;">' + escapeHtml(e.reason || '') + '</div>'
-        + '<span style="display:inline-block;padding:3px 10px;border-radius:50px;font-size:0.68rem;font-weight:700;background:rgba(26,58,82,0.08);color:var(--ink);">' + escapeHtml(e.icf_competency || '') + '</span>'
-        + '</div>';
+      html += '<div style="background:#fff;border:1px solid #edeae4;border-left:3px solid #c49a3c;border-radius:6px;padding:16px;">';
+      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.875rem;font-weight:600;color:#1a3a52;margin-bottom:8px;">' + escapeHtml(e.pattern || e.framework || '') + trajectoryBadge(e.trajectory) + '</div>';
+      if (e.what_you_tend_to_do || e.reason) html += '<p style="font-size:0.8rem;color:#5a5560;margin-bottom:6px;"><strong>What you tend to do:</strong> ' + escapeHtml(e.what_you_tend_to_do || e.reason || '') + '</p>';
+      if (e.what_is_missing) html += '<p style="font-size:0.8rem;color:#5a5560;margin-bottom:6px;"><strong>What is missing:</strong> ' + escapeHtml(e.what_is_missing) + '</p>';
+      if (e.what_to_try) html += '<p style="font-size:0.8rem;color:#2d6a4f;margin-bottom:6px;"><strong>What to try:</strong> ' + escapeHtml(e.what_to_try) + '</p>';
+      if (e.frequency) html += '<p style="font-size:0.72rem;color:#9a9490;margin-top:8px;">' + escapeHtml(e.frequency) + '</p>';
+      if (e.icf_competency) html += '<span style="font-size:0.68rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#9a9490;background:#f0ece6;padding:2px 7px;border-radius:3px;">' + escapeHtml(e.icf_competency) + '</span>';
+      html += '</div>';
     });
-    h += '</div></div>';
+    html += '</div></div>';
   }
 
-  // Disclaimer
-  h += '<div style="font-size:0.75rem;color:var(--muted);line-height:1.5;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);font-style:italic;">'
-    + 'This is a reflective tool generated from your documentation patterns. It is not a credential assessment or performance evaluation.'
-    + '</div>';
+  // Recurring Blind Spots
+  if (blindSpots.length) {
+    html += '<div style="margin-bottom:32px;">';
+    html += '<h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;margin-bottom:6px;border-bottom:1px solid #edeae4;padding-bottom:10px;">Recurring Blind Spots</h3>';
+    html += '<p style="font-size:0.78rem;color:#9a9490;font-style:italic;margin-bottom:14px;">Derived from missed moments across sessions.</p>';
+    blindSpots.forEach(function(b) {
+      html += '<details style="margin-bottom:10px;border:1px solid #edeae4;border-left:3px solid #c44;border-radius:6px;overflow:hidden;">';
+      html += '<summary style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;list-style:none;background:#fff;">';
+      html += '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.875rem;font-weight:500;color:#1a3a52;">' + escapeHtml(b.pattern_name || '') + trajectoryBadge(b.trajectory) + '</span>';
+      html += '<span style="font-size:0.72rem;color:#9a9490;">' + escapeHtml(b.frequency || '') + '</span>';
+      html += '</summary>';
+      html += '<div style="padding:0 16px 14px;background:#fdfbf8;">';
+      if (b.description) html += '<p style="font-size:0.82rem;color:#5a5560;margin-bottom:6px;">' + escapeHtml(b.description) + '</p>';
+      if (b.where_it_shows_up) html += '<p style="font-size:0.8rem;color:#5a5560;margin-bottom:6px;"><strong>Where it shows up:</strong> ' + escapeHtml(b.where_it_shows_up) + '</p>';
+      if (b.why_it_matters) html += '<p style="font-size:0.78rem;color:#9a9490;font-style:italic;">' + escapeHtml(b.why_it_matters) + '</p>';
+      html += '</div></details>';
+    });
+    html += '</div>';
+  }
 
-  h += '</div>';
-  $('dna-content').innerHTML = h;
+  // Where to Stay Curious
+  if (curious.length) {
+    html += '<div style="margin-bottom:32px;">';
+    html += '<h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;margin-bottom:16px;border-bottom:1px solid #edeae4;padding-bottom:10px;">Where to Stay Curious</h3>';
+    curious.forEach(function(c) {
+      html += '<div style="padding:14px 16px;border-left:2px solid #c49a3c;background:#fdf9f1;border-radius:0 6px 6px 0;margin-bottom:10px;">';
+      html += '<p style="font-size:0.875rem;color:#1a3a52;font-style:italic;">' + escapeHtml(c.tension || c) + '</p>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
 
-  // Wire regenerate
-  $('regen-dna-btn').addEventListener('click', async function() {
-    this.disabled = true; this.textContent = 'Regenerating...';
-    $('dna-content').innerHTML = ciSpinner('Reanalyzing your coaching patterns...');
-    try {
-      var res = await fetch('/api/generate-coach-dna', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ coachId: coachProfile.id })
-      });
-      var dna = await res.json();
-      if (!res.ok) throw new Error(dna.error || 'Failed');
-      loadCoachDNA();
-    } catch(e) {
-      $('dna-content').innerHTML = '<div style="color:#c44;padding:24px;">Error: ' + escapeHtml(e.message) + '</div>';
-    }
-  });
+  // Footer note
+  html += '<p style="font-size:0.72rem;color:#b8b0a4;font-style:italic;margin-top:8px;">This is a reflective tool generated from your documentation patterns. It is not a credential assessment or performance evaluation.</p>';
+
+  var container = $('dna-content');
+  if (container) container.innerHTML = html;
 }
 
 /* ================================================
