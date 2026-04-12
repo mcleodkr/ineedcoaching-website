@@ -3861,13 +3861,9 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
       html += '</div>';
       html += '</div>';
 
-      // Tab 5: Approach Lab — placeholder, unlocks after Coaching Mirror is complete
-      html += '<div id="stab-approach-lab-' + s.id + '" class="stab-panel" data-sid="' + s.id + '" style="padding:20px;display:none;">'
-        + '<div style="max-width:640px;margin:0 auto;padding:48px 24px;text-align:center;">'
-        + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:600;color:#1a3a52;margin-bottom:10px;letter-spacing:-0.005em;">Approach Lab</div>'
-        + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#9a9490;line-height:1.6;margin-bottom:18px;">Explore how this session could unfold through a different coaching lens.</div>'
-        + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#b8b0a4;">Coming soon \u2014 available after Coaching Mirror is complete.</div>'
-        + '</div>'
+      // Tab 5: Approach Lab — populated on tab open via /api/generate-approach-lab
+      html += '<div id="stab-approach-lab-' + s.id + '" class="stab-panel" data-sid="' + s.id + '" data-client-email="' + escapeHtml(client.email) + '" style="padding:20px;display:none;">'
+        + '<div id="approach-lab-' + s.id + '"></div>'
         + '</div>';
 
       html += '</div>'; // session-panel
@@ -4462,6 +4458,42 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
         console.log('[Coaching Mirror] Tab opened for sid:', sid, 'hasData:', !!hasExisting, 'container:', !!mirrorContainer);
         if (mirrorContainer && hasExisting) {
           renderCoachingMirror(noteData.post_session_analysis, mirrorContainer);
+        }
+      }
+      // Dynamically populate Approach Lab tab on open
+      if (tab === 'approach-lab') {
+        var labContainer = $('approach-lab-' + sid);
+        var labPanel = $('stab-approach-lab-' + sid);
+        var labClientEmail = labPanel && labPanel.dataset ? labPanel.dataset.clientEmail : '';
+        var labNote = notesByBooking[sid];
+        // Cache result on notesByBooking so switching tabs does not re-fetch
+        if (labNote && labNote._approachLab) {
+          renderApproachLab(labNote._approachLab, labContainer);
+        } else if (!labContainer) {
+          // container missing — nothing to do
+        } else if (!labNote || (!labNote.raw_transcript && !labNote.post_session_analysis)) {
+          labContainer.innerHTML = '<div style="text-align:center;padding:48px 24px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#9a9490;">Coach Clarity needs session notes or a transcript to generate the Approach Lab. Run Coach Clarity analysis first.</div>';
+        } else {
+          labContainer.innerHTML = '<div style="text-align:center;padding:48px 24px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#9a9490;">Coach Clarity is exploring alternative approaches for this session...</div>';
+          (async function() {
+            try {
+              var labRes = await fetch('/api/generate-approach-lab', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ coachId: coachProfile.id, clientEmail: labClientEmail, bookingId: sid })
+              });
+              var labData = await labRes.json();
+              if (!labRes.ok || labData.error) {
+                labContainer.innerHTML = '<div style="text-align:center;padding:48px 24px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#9a9490;">' + escapeHtml(labData.error || 'Coach Clarity needs session notes or a transcript to generate the Approach Lab. Run Coach Clarity analysis first.') + '</div>';
+                return;
+              }
+              if (!notesByBooking[sid]) notesByBooking[sid] = {};
+              notesByBooking[sid]._approachLab = labData;
+              renderApproachLab(labData, labContainer);
+            } catch (e) {
+              labContainer.innerHTML = '<div style="text-align:center;padding:48px 24px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#c44;">Approach Lab failed: ' + escapeHtml(e.message) + '</div>';
+            }
+          })();
         }
       }
     });
@@ -6331,6 +6363,116 @@ function renderPostSessionAnalysis(a, container) {
     console.error('[renderPostSessionAnalysis] Render error:', renderErr);
     container.innerHTML = '<div style="color:#c44;font-size:0.88rem;padding:16px;">Error rendering analysis: ' + escapeHtml(renderErr.message) + '. Try regenerating the analysis.</div>';
   }
+}
+
+function renderApproachLab(data, container) {
+  if (!container) return;
+  if (!data || (!Array.isArray(data.moments) && !data.bridge_to_your_style)) {
+    container.innerHTML = '<div style="text-align:center;padding:48px 24px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#9a9490;">Coach Clarity needs session notes or a transcript to generate the Approach Lab. Run Coach Clarity analysis first.</div>';
+    return;
+  }
+  var moments = Array.isArray(data.moments) ? data.moments : [];
+  var bridge = data.bridge_to_your_style || { where_you_already_align: [], where_this_expands_your_range: [] };
+
+  var lensColor = function(lens) {
+    var l = (lens || '').toLowerCase();
+    if (l === 'cognitive') return '#3a6b8a';
+    if (l === 'emotional') return '#B8654A';
+    if (l === 'action') return '#2d6a4f';
+    if (l === 'identity') return '#7b5ea7';
+    if (l === 'relational') return '#c49a3c';
+    return '#9a9490';
+  };
+
+  var html = '';
+  // Header + subtitle
+  html += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:600;color:#1a3a52;letter-spacing:-0.005em;margin-bottom:6px;">Approach Lab</div>';
+  html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#9a9490;margin-bottom:24px;">How this session could have unfolded through a different coaching lens.</div>';
+
+  // Moments
+  moments.forEach(function(m) {
+    if (!m) return;
+    var color = lensColor(m.approach_lens);
+    html += '<div style="background:#ffffff;border:1px solid #edeae4;border-radius:8px;padding:20px 24px;margin-bottom:16px;">';
+    // Moment title
+    html += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;border-bottom:1px solid #edeae4;padding-bottom:8px;margin-bottom:14px;">' + escapeHtml(m.title || '') + '</div>';
+    // What you did
+    if (m.what_you_did) {
+      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9a9490;margin-bottom:4px;">What you did:</div>';
+      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#5a5560;line-height:1.6;margin-bottom:14px;">' + escapeHtml(m.what_you_did) + '</div>';
+    }
+    // Approach lens badge
+    if (m.approach_name) {
+      html += '<div style="margin-bottom:12px;">';
+      html += '<span style="display:inline-block;padding:5px 14px;background:' + color + ';color:#ffffff;border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.72rem;font-weight:600;letter-spacing:0.02em;">' + escapeHtml(m.approach_name) + '</span>';
+      html += '</div>';
+    }
+    // What this approach does differently
+    if (m.what_this_approach_does_differently) {
+      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9a9490;margin-bottom:4px;">What this approach would do differently:</div>';
+      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#1a3a52;line-height:1.6;margin-bottom:14px;">' + escapeHtml(m.what_this_approach_does_differently) + '</div>';
+    }
+    // Dialogue
+    if (Array.isArray(m.what_it_would_sound_like) && m.what_it_would_sound_like.length) {
+      html += '<div style="background:#fdf9f1;border-left:2px solid #c49a3c;padding:12px 16px;margin-bottom:14px;">';
+      m.what_it_would_sound_like.forEach(function(line) {
+        if (!line || !line.line) return;
+        var speaker = (line.speaker || 'coach').toLowerCase();
+        var label = speaker === 'client' ? 'CLIENT' : 'COACH';
+        var lineStyle = speaker === 'client'
+          ? 'font-family:\'DM Sans\',sans-serif;font-size:0.875rem;font-style:italic;color:#5a5560;line-height:1.55;'
+          : 'font-family:\'DM Sans\',sans-serif;font-size:0.875rem;color:#1a3a52;line-height:1.55;';
+        html += '<div style="margin-bottom:8px;">';
+        html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9a9490;margin-bottom:2px;">' + label + '</div>';
+        html += '<div style="' + lineStyle + '">' + escapeHtml(line.line) + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+    // Why this shift matters
+    if (m.why_this_shift_matters_for_this_client) {
+      html += '<div style="border-left:2px solid #edeae4;padding-left:12px;margin-top:8px;">';
+      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9a9490;margin-bottom:4px;">Why this shift matters for this client:</div>';
+      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#5a5560;line-height:1.6;">' + escapeHtml(m.why_this_shift_matters_for_this_client) + '</div>';
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+
+  // Bridge to Your Style
+  var align = Array.isArray(bridge.where_you_already_align) ? bridge.where_you_already_align : [];
+  var expand = Array.isArray(bridge.where_this_expands_your_range) ? bridge.where_this_expands_your_range : [];
+  if (align.length || expand.length) {
+    html += '<div style="margin-top:28px;padding-top:20px;border-top:1px solid #edeae4;">';
+    html += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;margin-bottom:16px;">Bridge to Your Style</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;">';
+    // Left: align
+    html += '<div>';
+    html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#2d6a4f;margin-bottom:8px;">Where you already align</div>';
+    if (align.length) {
+      html += '<ul style="margin:0;padding-left:18px;">';
+      align.forEach(function(item) { html += '<li style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#2d6a4f;line-height:1.55;margin-bottom:6px;">' + escapeHtml(item || '') + '</li>'; });
+      html += '</ul>';
+    } else {
+      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#9a9490;">No alignment points surfaced.</div>';
+    }
+    html += '</div>';
+    // Right: expand
+    html += '<div>';
+    html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#1a3a52;margin-bottom:8px;">Where this expands your range</div>';
+    if (expand.length) {
+      html += '<ul style="margin:0;padding-left:18px;">';
+      expand.forEach(function(item) { html += '<li style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#1a3a52;line-height:1.55;margin-bottom:6px;">' + escapeHtml(item || '') + '</li>'; });
+      html += '</ul>';
+    } else {
+      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#9a9490;">No expansion points surfaced.</div>';
+    }
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+  }
+
+  container.innerHTML = html;
 }
 
 function renderCoachingMirror(a, container) {
