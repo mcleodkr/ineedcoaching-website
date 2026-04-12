@@ -512,6 +512,254 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
     .dash-mobile-nav a { display:inline-block; padding:6px 14px; border-radius:50px; font-size:0.75rem; font-weight:600; color:var(--muted); background:var(--cream); text-decoration:none; white-space:nowrap; }
     @media(max-width:768px) { .dash-sidebar { display:none!important; } .dash-mobile-nav { display:flex!important; } .dash-layout { flex-direction:column!important; } }
   </style>
+  <style>
+    /* =========================================================
+       PROFESSIONAL REDESIGN OVERRIDES
+       Tight typography, flat surfaces, disciplined spacing.
+       Source-order wins over prior .tab-btn / .dash-sidebar rules.
+       ========================================================= */
+
+    /* TOP NAV — 52px, navy, DM Sans 0.82rem. Inline styles require !important. */
+    .dashboard > nav:first-of-type {
+      padding: 10px 32px !important;
+      background: #1a3a52 !important;
+      backdrop-filter: none !important;
+      border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+      min-height: 52px;
+    }
+    .dashboard > nav:first-of-type a,
+    .dashboard > nav:first-of-type .nav-coach-name,
+    .dashboard > nav:first-of-type .nav-profile-link {
+      font-family: 'DM Sans', sans-serif !important;
+      font-size: 0.82rem !important;
+      font-weight: 500 !important;
+      letter-spacing: 0.01em !important;
+      text-transform: none !important;
+      color: #c8ccd1 !important;
+    }
+    .dashboard > nav:first-of-type a.logo {
+      font-family: 'Cormorant Garamond', serif !important;
+      font-size: 1.15rem !important;
+      font-weight: 600 !important;
+      color: #f7f4ee !important;
+    }
+    .dashboard > nav:first-of-type a:hover {
+      color: #ffffff !important;
+    }
+    .dashboard > nav:first-of-type .nav-profile-link {
+      color: #c49a3c !important;
+    }
+    .dashboard > nav:first-of-type .sign-out-btn {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 6px 14px;
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 4px;
+      color: #c8ccd1;
+      background: transparent;
+    }
+    .dashboard > nav:first-of-type .sign-out-btn:hover {
+      border-color: #c49a3c;
+      color: #c49a3c;
+    }
+
+    /* LAYOUT — lift the sticky offset so sidebar + content clear the 52px nav */
+    .dash-layout { padding-top: 52px; }
+
+    /* SIDEBAR — 200px, white, flat right border, tight rhythm */
+    .dash-sidebar {
+      width: 200px;
+      background: #ffffff;
+      border-right: 1px solid #eeecf0;
+      padding: 12px 0 24px;
+      top: 52px;
+      max-height: calc(100vh - 52px);
+    }
+    .dash-sidebar .dash-group {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #8a8a9a;
+      padding: 20px 16px 6px;
+    }
+    .dash-sidebar .tab-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 8px 16px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 400;
+      color: #3d3d4e;
+      background: none;
+      border: none;
+      border-left: 2px solid transparent;
+      cursor: pointer;
+      transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+    }
+    .dash-sidebar .tab-btn:hover {
+      background: #f9f7f4;
+      color: #1a3a52;
+      border-left: 2px solid #e8e0cc;
+    }
+    .dash-sidebar .tab-btn.active {
+      background: #fdf9f2;
+      color: #1a3a52;
+      font-weight: 500;
+      border-left: 2px solid #c49a3c;
+    }
+
+    /* MAIN CONTENT AREA */
+    .dash-content {
+      max-width: none;
+      margin: 0;
+      padding: 28px 32px;
+      background: #f7f5f1;
+    }
+
+    /* CARDS — tight radius, minimal shadow */
+    .form-section,
+    .review-card,
+    .draft-article-card,
+    .service-item {
+      background: #ffffff;
+      border: 1px solid #eeecf0;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      padding: 20px 24px;
+      margin-bottom: 16px;
+    }
+    .review-card:hover,
+    .draft-article-card:hover {
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      border-color: #eeecf0;
+    }
+
+    /* SECTION HEADERS — serif, no uppercase */
+    .form-section-title,
+    .dash-content h1,
+    .dash-content h2:not(.no-profile h2) {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: #1a3a52;
+      text-transform: none;
+      letter-spacing: -0.005em;
+      border-bottom: 1px solid #eeecf0;
+      padding-bottom: 14px;
+      margin-bottom: 18px;
+    }
+
+    /* CARD LABELS / VALUES */
+    .form-group label {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #8a8a9a;
+      margin-bottom: 6px;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      color: #1a3a52;
+      background: #ffffff;
+      border: 1px solid #eeecf0;
+      border-radius: 4px;
+      padding: 9px 12px;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      border-color: #c49a3c;
+      outline: none;
+    }
+
+    /* BUTTONS — flat, tight corners, no shadow */
+    .btn-primary,
+    .save-btn,
+    .pill-add-btn,
+    .add-service-btn,
+    .action-confirm,
+    .action-approve {
+      background: #c49a3c;
+      color: #ffffff;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 18px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 500;
+      box-shadow: none;
+      cursor: pointer;
+      transition: background 0.12s ease;
+    }
+    .btn-primary:hover,
+    .save-btn:hover,
+    .pill-add-btn:hover,
+    .add-service-btn:hover,
+    .action-confirm:hover,
+    .action-approve:hover {
+      background: #a87d1f;
+      box-shadow: none;
+    }
+    .btn-secondary,
+    .action-remove {
+      background: transparent;
+      color: #1a3a52;
+      border: 1px solid #d4cfc8;
+      border-radius: 4px;
+      padding: 8px 18px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 500;
+      box-shadow: none;
+      cursor: pointer;
+      transition: border-color 0.12s ease, color 0.12s ease;
+    }
+    .btn-secondary:hover {
+      background: transparent;
+      border-color: #1a3a52;
+      color: #1a3a52;
+    }
+
+    /* BOOKINGS TABLE — align with flat card system */
+    .bookings-table {
+      border: 1px solid #eeecf0;
+      border-radius: 6px;
+    }
+    .bookings-table th {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: #8a8a9a;
+      background: #faf8f4;
+      border-bottom: 1px solid #eeecf0;
+    }
+    .bookings-table td {
+      font-size: 0.88rem;
+      color: #1a3a52;
+      border-bottom: 1px solid #f3f1ec;
+    }
+    .bookings-table tbody tr:nth-child(even) { background: #fbfaf7; }
+
+    /* STATUS PILLS — softer, non-uppercase elements stay consistent */
+    .status-pill { border-radius: 4px; font-weight: 600; }
+
+    /* MOBILE TIGHTENING */
+    @media (max-width: 768px) {
+      .dashboard > nav:first-of-type { padding: 10px 18px !important; }
+      .dash-content { padding: 20px 16px; }
+      .dash-layout { padding-top: 52px; }
+    }
+  </style>
   <div class="dash-mobile-nav">
     <a href="#" data-mobile-group="practice">Practice</a>
     <a href="#" data-mobile-group="work">Your Work</a>
@@ -521,7 +769,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
   <div class="dash-layout" style="display:flex;gap:0;align-items:flex-start;">
   <nav class="dash-sidebar">
     <div class="dash-group">Practice</div>
-    <button class="tab-btn" data-tab="clients">Clients</button>
+    <button class="tab-btn active" data-tab="clients">Clients</button>
     <button class="tab-btn" data-tab="bookings">Bookings</button>
     <button class="tab-btn" data-tab="messages" id="tab-btn-messages">Messages</button>
     <button class="tab-btn" data-tab="goals">Goals</button>
@@ -534,7 +782,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
     <button class="tab-btn" data-tab="scheduling">Scheduling</button>
     <button class="tab-btn" data-tab="intake">Forms</button>
     <div class="dash-group">Profile</div>
-    <button class="tab-btn active" data-tab="profile">Profile</button>
+    <button class="tab-btn" data-tab="profile">Profile</button>
     <button class="tab-btn" data-tab="testimonials">Testimonials</button>
     <button class="tab-btn" data-tab="recommendations">Recommendations</button>
   </nav>
@@ -557,7 +805,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
   <div id="dash-content" class="dash-content hidden">
 
     <!-- PROFILE TAB -->
-    <div id="tab-profile" class="tab-panel active">
+    <div id="tab-profile" class="tab-panel">
 
       <!-- Photo -->
       <div class="form-section">
@@ -869,7 +1117,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
     </div>
 
     <!-- CLIENTS TAB -->
-    <div id="tab-clients" class="tab-panel">
+    <div id="tab-clients" class="tab-panel active">
       <div id="clients-loading" class="loading-state" style="min-height:30vh;">
         <div class="loading-spinner"></div>
       </div>
