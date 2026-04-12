@@ -57,54 +57,54 @@ export default async function handler(req, res) {
     }
 
     // Aggregate Mirror outputs into identity-relevant signals per session
-    const mirrorData = notes.map((n, idx) => {
-      const m = n.post_session_analysis || {};
-      const interventions = Array.isArray(m.coaching_interventions) ? m.coaching_interventions : [];
-      const missed = Array.isArray(m.missed_windows) ? m.missed_windows : [];
-      const stood = Array.isArray(m.what_stood_out) ? m.what_stood_out : [];
-      const revealed = Array.isArray(m.what_this_session_revealed) ? m.what_this_session_revealed : [];
-      return {
-        session_index: idx + 1,
-        client_email: n.client_email,
-        created_at: n.created_at,
-        coach_moves: interventions
-          .map((i) => ({
-            move_type: i.technique_name || '',
-            evidence: i.what_you_did || '',
-            immediate_effect: i.immediate_effect || '',
-            why_mattered: i.why_it_mattered || '',
-            signal_strength: i.signal_strength || '',
-          }))
-          .filter((mv) => mv.move_type),
-        sequence_of_moves: interventions.map((i) => i.technique_name).filter(Boolean),
-        triggers: missed
-          .map((w) => ({
+    const mirrorData = notes
+      .map((n, idx) => {
+        const m = n.post_session_analysis || {};
+        const interventions = Array.isArray(m.coaching_interventions) ? m.coaching_interventions : [];
+        const missed = Array.isArray(m.missed_windows) ? m.missed_windows : [];
+        const stood = Array.isArray(m.what_stood_out) ? m.what_stood_out : [];
+        return {
+          session_index: idx + 1,
+          client_email: n.client_email,
+          created_at: n.created_at,
+          coach_moves: interventions
+            .map((i) => ({
+              move_type: i.technique_name || '',
+              evidence: i.what_you_did || '',
+              immediate_effect: i.immediate_effect || '',
+              why_mattered: i.why_it_mattered || '',
+              signal_strength: i.signal_strength || '',
+            }))
+            .filter((mv) => mv.move_type),
+          sequence_of_moves: interventions.map((i) => i.technique_name).filter(Boolean),
+          triggers: missed
+            .map((w) => ({
+              signal_type: w.signal_type || '',
+              moment: w.moment || '',
+              strength: w.signal_strength || '',
+            }))
+            .filter((t) => t.signal_type || t.moment),
+          client_responses: stood
+            .map((s) => ({
+              title: s.title || '',
+              client_did: s.what_happened_client || '',
+              your_impact: s.your_impact || '',
+            }))
+            .filter((c) => c.title || c.client_did),
+          missed_opportunities: missed.map((w) => ({
             signal_type: w.signal_type || '',
+            signal_strength: w.signal_strength || '',
             moment: w.moment || '',
-            strength: w.signal_strength || '',
-          }))
-          .filter((t) => t.signal_type || t.moment),
-        client_responses: stood
-          .map((s) => ({
-            title: s.title || '',
-            client_did: s.what_happened_client || '',
-            your_impact: s.your_impact || '',
-          }))
-          .filter((c) => c.title || c.client_did),
-        missed_opportunities: missed.map((w) => ({
-          signal_type: w.signal_type || '',
-          signal_strength: w.signal_strength || '',
-          moment: w.moment || '',
-          underneath: w.what_was_underneath || '',
-          what_was_possible: w.what_was_possible || '',
-          why_matters: w.why_this_matters_for_your_work || '',
-        })),
-        coach_patterns: revealed.map((p) => p.coach_pattern).filter(Boolean),
-        coach_tendencies: revealed.map((p) => p.what_you_tend_to_do).filter(Boolean),
-        what_effective: m.reflection_and_growth?.what_seemed_effective || null,
-        stay_curious: m.reflection_and_growth?.one_place_to_stay_curious || null,
-      };
-    });
+            underneath: w.what_was_underneath || '',
+            what_was_possible: w.what_was_possible || '',
+            why_matters: w.why_this_matters_for_your_work || '',
+          })),
+          what_effective: m.reflection_and_growth?.what_seemed_effective || null,
+          stay_curious: m.reflection_and_growth?.one_place_to_stay_curious || null,
+        };
+      })
+      // Filter out old-schema sessions with no usable signal
+      .filter((s) => s.coach_moves.length > 0 || s.missed_opportunities.length > 0);
 
     // Get coach profile
     const coachRes = await fetch(`${SUPABASE_URL}/rest/v1/coach_profiles?id=eq.${coachId}&select=specialties,headline,bio,feedback_style`, { headers });
