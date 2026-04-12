@@ -1322,7 +1322,7 @@ function safeHTML(id, html) { var el = $(id); if (el) el.innerHTML = html; }
       var res = await fetch(SUPABASE_URL + '/auth/v1/otp', {
         method: 'POST',
         headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email, create_user: false })
+        body: JSON.stringify({ email: email, redirect_to: 'https://www.ineedcoaching.org/coach-dashboard.html' })
       });
       if (res.ok || res.status === 200) {
         msg.textContent = 'Check your email \u2014 your link is on the way.';
