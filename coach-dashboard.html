@@ -6177,20 +6177,16 @@ function renderPostSessionAnalysis(a, container) {
     });
   }
   // Suggested goals — always render when present, independent of existing goals.
-  // Header styled as a prominent gold uppercase callout so it reads as its own section
-  // (was previously low-contrast navy body text that blended with the "No active goals" line).
   var suggestedGoals = (goals && Array.isArray(goals.suggested)) ? goals.suggested.filter(function(x) { return !!x; }) : [];
   if (suggestedGoals.length) {
-    goalsBody += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#c49a3c;margin:18px 0 10px;border-top:1px solid var(--border);padding-top:14px;">Suggested from this session:</div>';
+    goalsBody += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#c49a3c;margin-top:12px;margin-bottom:8px;">Suggested from this session</div>';
     suggestedGoals.forEach(function(sg, idx) {
       if (!sg) return;
-      goalsBody += '<div class="suggested-goal-card" data-sg-idx="' + idx + '" style="background:var(--cream);border-radius:8px;padding:14px 16px;margin-bottom:10px;">'
-        + '<div style="font-size:0.88rem;font-weight:700;color:var(--ink);margin-bottom:4px;">' + escapeHtml(sg.title || '') + '</div>'
-        + (sg.description ? '<div style="font-size:0.82rem;color:var(--muted);line-height:1.5;margin-bottom:4px;">' + escapeHtml(sg.description) + '</div>' : '')
-        + (sg.suggested_target_date ? '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:8px;">Suggested target: ' + escapeHtml(sg.suggested_target_date) + '</div>' : '')
-        + '<div style="display:flex;gap:8px;">'
-        + '<button class="sg-add-btn" data-sg-title="' + escapeHtml(sg.title || '') + '" data-sg-desc="' + escapeHtml(sg.description || '') + '" data-sg-date="' + escapeHtml(sg.suggested_target_date || '') + '" style="padding:6px 14px;background:var(--gold);color:#fff;border:none;border-radius:6px;font-size:0.75rem;font-weight:600;cursor:pointer;font-family:\'DM Sans\',sans-serif;">+ Add This Goal</button>'
-        + '<button class="sg-dismiss-btn" data-sg-idx="' + idx + '" style="padding:6px 14px;background:none;border:1px solid var(--border);border-radius:6px;font-size:0.75rem;font-weight:600;color:var(--muted);cursor:pointer;font-family:\'DM Sans\',sans-serif;">Dismiss</button>'
+      goalsBody += '<div class="suggested-goal-card" data-sg-idx="' + idx + '" style="background:#ffffff;border:1px solid #edeae4;border-radius:6px;padding:12px 16px;margin-bottom:10px;">'
+        + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.875rem;font-weight:600;color:#1a3a52;">' + escapeHtml(sg.title || '') + '</div>'
+        + (sg.description ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.8rem;color:#5a5560;margin-top:4px;line-height:1.5;">' + escapeHtml(sg.description) + '</div>' : '')
+        + '<div style="margin-top:10px;">'
+        + '<button class="sg-prefill-btn" data-sg-title="' + escapeHtml(sg.title || '') + '" data-sg-desc="' + escapeHtml(sg.description || '') + '" data-sg-date="' + escapeHtml(sg.suggested_target_date || '') + '" style="background:transparent;border:1px solid #c49a3c;color:#c49a3c;border-radius:4px;padding:4px 12px;font-family:\'DM Sans\',sans-serif;font-size:0.75rem;font-weight:500;cursor:pointer;">Add Goal</button>'
         + '</div></div>';
     });
   }
@@ -6368,6 +6364,31 @@ function renderPostSessionAnalysis(a, container) {
     btn.addEventListener('click', function() {
       var card = this.closest('.suggested-goal-card');
       if (card) card.style.display = 'none';
+    });
+  });
+
+  // Wire new "Add Goal" prefill buttons — populate the client-goal-title input and focus it
+  container.querySelectorAll('.sg-prefill-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var titleInput = document.getElementById('client-goal-title');
+      var dateInput = document.getElementById('client-goal-date');
+      if (titleInput) {
+        titleInput.value = this.dataset.sgTitle || '';
+        titleInput.focus();
+        titleInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      if (dateInput && this.dataset.sgDate) {
+        dateInput.value = this.dataset.sgDate;
+      }
+      // Visual feedback on the button
+      var self = this;
+      var origText = self.textContent;
+      self.textContent = '\u2713 Added to form';
+      self.style.background = '#fdf9f1';
+      setTimeout(function() {
+        self.textContent = origText;
+        self.style.background = 'transparent';
+      }, 1800);
     });
   });
 
