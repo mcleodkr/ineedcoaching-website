@@ -3980,6 +3980,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
   };
 
   // Section 1.5: Pattern Map
+  var pmBodyId = 'pattern-map-body-' + (client.email || '').replace(/[@.]/g, '-');
   html += '<div class="form-section" style="margin-bottom:24px;background:#f7f4ef;padding:28px 32px;border:1px solid #e8e4dc;">'
     // Header row: title + Generate button
     + '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:6px;">'
@@ -3987,9 +3988,19 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
     + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:600;color:#1a3a52;letter-spacing:-0.005em;margin-bottom:4px;">Pattern Map</div>'
     + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#9a9490;">' + pmAnalyzedSessions.length + ' session' + (pmAnalyzedSessions.length !== 1 ? 's' : '') + ' with Coach Clarity analysis</div>'
     + '</div>'
-    + '<button id="generate-pattern-map-btn" data-client-email="' + escapeHtml(client.email) + '" style="background:#c49a3c;color:#ffffff;border:none;border-radius:4px;padding:8px 18px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:500;cursor:pointer;white-space:nowrap;transition:background 0.12s ease;">Generate Pattern Map</button>'
+    + '<button id="generate-pattern-map-btn" data-client-email="' + escapeHtml(client.email) + '" data-body-id="' + pmBodyId + '" style="background:#c49a3c;color:#ffffff;border:none;border-radius:4px;padding:8px 18px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:500;cursor:pointer;white-space:nowrap;transition:background 0.12s ease;">Generate Pattern Map</button>'
     + '</div>'
-    + '<div id="pattern-map-status" style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#c49a3c;min-height:18px;margin-top:10px;"></div>';
+    + '<div id="pattern-map-status" style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#c49a3c;min-height:18px;margin-top:10px;"></div>'
+    // Divider + context label
+    + '<div style="border-top:1px solid #edeae4;margin:16px 0;"></div>'
+    + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.75rem;font-style:italic;color:#b8b0a4;margin-bottom:20px;">Built from session evidence \u00b7 Updates each time you generate</div>'
+    // What is this? explanation box
+    + '<div style="background:#fdf9f1;border:1px solid #edeae4;border-radius:6px;padding:14px 16px;margin-bottom:20px;">'
+    + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#c49a3c;margin-bottom:6px;">What is this?</div>'
+    + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#5a5560;line-height:1.65;">The Pattern Map builds a picture of how this client operates \u2014 what drives their behavior, where they get stuck, what moves them forward, and how they\u2019re growing. It draws from their own words and repeated patterns across sessions. It is not a diagnosis. It is a coaching lens. Powered by Coach Clarity.</div>'
+    + '</div>'
+    // Body wrapper — replaced wholesale by Generate button loading state
+    + '<div id="' + pmBodyId + '">';
 
   if (!pmHasEnoughData) {
     html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#9a9490;line-height:1.6;padding:16px 0 4px;">Not enough session data yet. Pattern Map builds after 3 or more sessions with Coach Clarity analysis.</div>';
@@ -4155,6 +4166,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
     html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#b8b0a4;margin-top:20px;padding-top:12px;border-top:1px solid #edeae4;">Last analyzed ' + escapeHtml(la.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })) + '</div>';
   }
 
+  html += '</div>'; // close pattern-map body wrapper
   html += '</div>'; // close Pattern Map form-section
 
   // Section 2: Intake Responses
@@ -4304,12 +4316,21 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
       // ===================================================================
       var self = this;
       var email = self.dataset.clientEmail;
+      var bodyId = self.dataset.bodyId;
       var status = $('pattern-map-status');
       var origText = self.textContent;
       self.disabled = true;
-      self.textContent = 'Generating\u2026';
+      self.textContent = 'Coach Clarity is working\u2026';
       self.style.opacity = '0.6';
-      if (status) { status.textContent = 'Building pattern map from session data\u2026'; status.style.color = '#c49a3c'; }
+      if (status) { status.textContent = 'Coach Clarity is building your Pattern Map\u2026'; status.style.color = '#c49a3c'; }
+      // Scroll Pattern Map header into view immediately
+      var pmHeader = document.querySelector('#generate-pattern-map-btn');
+      if (pmHeader) pmHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Replace body with loading state
+      var bodyEl = bodyId ? document.getElementById(bodyId) : null;
+      if (bodyEl) {
+        bodyEl.innerHTML = '<div style="text-align:center;padding:48px 24px;color:#9a9490;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;"><div style="font-size:1.5rem;margin-bottom:12px;animation:spin 1.5s linear infinite;display:inline-block;">\u27f3</div><br>Coach Clarity is building your Pattern Map...<br><span style="font-size:0.75rem;color:#b8b0a4;">This takes about 15 seconds</span></div>';
+      }
       try {
         var res = await fetch('/api/generate-client-pattern-map', {
           method: 'POST',
@@ -4321,6 +4342,9 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
 
         if (data && data.locked) {
           if (status) { status.textContent = 'Pattern Map needs at least ' + (data.needed || 3) + ' analyzed sessions. You have ' + (data.session_count || 0) + '.'; status.style.color = '#9a9490'; }
+          if (bodyEl) {
+            bodyEl.innerHTML = '<div style="text-align:center;padding:48px 24px;color:#9a9490;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-style:italic;">Pattern Map needs at least ' + escapeHtml(String(data.needed || 3)) + ' analyzed sessions. You have ' + escapeHtml(String(data.session_count || 0)) + '.</div>';
+          }
           return;
         }
 
@@ -4341,11 +4365,14 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
           if (pmSection) pmSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         } else {
           console.warn('[Pattern Map] bundle missing or stale, skipping re-render');
-          if (status) { status.textContent = 'Pattern Map generated. Refresh to see results.'; status.style.color = '#2d6a4f'; }
+          if (status) { status.textContent = 'Pattern Map ready.'; status.style.color = '#2d6a4f'; }
         }
       } catch (e) {
         console.warn('[Pattern Map] generation failed:', e && e.message);
-        if (status) { status.textContent = 'Pattern Map generation failed. Try again shortly.'; status.style.color = '#c44'; }
+        if (status) { status.textContent = 'Coach Clarity couldn\u2019t complete this. Try again shortly.'; status.style.color = '#c44'; }
+        if (bodyEl) {
+          bodyEl.innerHTML = '<div style="text-align:center;padding:48px 24px;color:#c44;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;">Coach Clarity couldn\u2019t complete this. Try again shortly.</div>';
+        }
       } finally {
         self.disabled = false;
         self.textContent = origText;
@@ -4713,7 +4740,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
             if (!transcript) { alert('Please paste your session transcript or notes.'); return; }
             this.disabled = true;
             this.textContent = 'Processing...';
-            safeText('proc-status-' + bid, 'Claude is analyzing your session...');
+            safeText('proc-status-' + bid, 'Coach Clarity is analyzing your session...');
 
             try {
               var apiRes = await fetch('/api/process-session', {
@@ -4858,7 +4885,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
   document.querySelectorAll('.gen-brief-inline-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
       generatePreSessionBrief(this.dataset.clientEmail, this.dataset.bookingId, $('pre-session-brief-container'));
-      this.textContent = 'Generating...';
+      this.textContent = 'Coach Clarity is working...';
       this.disabled = true;
     });
   });
@@ -7104,7 +7131,7 @@ function renderCoachDNA(profile, sessionCount) {
       this.textContent = 'Regenerating...';
       this.style.opacity = '0.6';
       this.style.cursor = 'wait';
-      if (container) container.innerHTML = ciSpinner('Reanalyzing your coaching patterns...');
+      if (container) container.innerHTML = ciSpinner('Coach Clarity is reanalyzing your patterns...');
       try {
         var res = await fetch('/api/generate-coach-dna', {
           method: 'POST',
@@ -9111,7 +9138,7 @@ function wireGenerateArticle() {
   genBtn.addEventListener('click', async function() {
     this.disabled = true;
     this.textContent = 'Generating...';
-    safeText('generate-article-msg', 'Claude is writing your article...');
+    safeText('generate-article-msg', 'Coach Clarity is writing your article...');
     try {
       var res = await fetch('/api/generate-coach-article', {
         method: 'POST',
