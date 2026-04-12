@@ -396,6 +396,75 @@ Return ONLY this JSON:
 
     formattedOutput.dna_manifestations = pass3cOutput?.dna_manifestations || null;
 
+    // ── Pass 3d: Approaches to Explore Next (conditional, fault-tolerant) ─
+    // Generates 1-2 fit-based approach lens suggestions based on this session's
+    // missed windows and the client's pattern map. Skipped if no missed windows.
+    let pass3dOutput = null;
+    try {
+      const hasMissedWindows = Array.isArray(pass2cOutput?.missed_windows) && pass2cOutput.missed_windows.length > 0;
+      if (hasMissedWindows && clientEmail) {
+        // Fetch client pattern map for context
+        const cpmRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/coach_client_patterns?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&select=pattern_map&limit=1`,
+          { headers: supabaseHeaders }
+        );
+        const cpmRows = await cpmRes.json();
+        const clientPatternSummary = cpmRows?.[0]?.pattern_map ? {
+          core_patterns: cpmRows[0].pattern_map.core_patterns?.slice(0, 3),
+          where_stuck: cpmRows[0].pattern_map.where_they_get_stuck?.slice(0, 2),
+          likely_drivers: cpmRows[0].pattern_map.likely_drivers?.slice(0, 2),
+        } : null;
+
+        // Growth edges from DNA (if any)
+        const dnaGrowthEdges = pass3cOutput?.dna_manifestations ? null :
+          (formattedOutput.dna_manifestations ? null : null);
+        // Try to pull growth edges from the existing DNA fetch if cached in pass3c flow
+        let dnaEdgesForPrompt = null;
+        try {
+          const dnaRes2 = await fetch(
+            `${SUPABASE_URL}/rest/v1/coach_dna_profiles?coach_id=eq.${coachId}&select=signal_patterns&limit=1`,
+            { headers: supabaseHeaders }
+          );
+          const dnaRows2 = await dnaRes2.json();
+          const sp = dnaRows2?.[0]?.signal_patterns;
+          if (sp && Array.isArray(sp.growth_edges)) dnaEdgesForPrompt = sp.growth_edges.slice(0, 3);
+        } catch (_) { dnaEdgesForPrompt = null; }
+
+        pass3dOutput = await callClaude(
+          ANTHROPIC_API_KEY,
+          'claude-sonnet-4-6',
+          800,
+          `You are Coach Clarity. Suggest 1-2 coaching approach lenses that fit this session and this client. These are not corrections. They are fit-based expansions of the coach's range. Use coaching language only. No clinical labels. Return ONLY valid JSON.`,
+          `Based on this session's missed windows and client patterns, suggest 1-2 approaches to explore.
+
+Missed windows: ${JSON.stringify(pass2cOutput.missed_windows)}
+Client patterns: ${clientPatternSummary ? JSON.stringify(clientPatternSummary) : 'not yet generated'}
+Coach DNA growth edges: ${dnaEdgesForPrompt ? JSON.stringify(dnaEdgesForPrompt) : 'not yet generated'}
+
+For each suggestion return:
+{
+  "approach_name": "coaching lens name",
+  "why_it_fits_this_client": "2 sentences grounded in client patterns",
+  "why_it_fits_this_moment": "1 sentence tied to a specific missed window",
+  "how_it_aligns_with_your_style": "1 sentence starting You already...",
+  "how_it_stretches_your_range": "1 sentence starting This would stretch you by...",
+  "open_in_lab": true
+}
+
+Return: { "approaches_to_explore": [...] }
+Limit to 2 suggestions max. If no strong fit exists return empty array.`,
+          'Pass 3d: Approaches to Explore Next'
+        );
+      } else {
+        console.log('[Pass 3d] No missed windows or no clientEmail, skipping.');
+      }
+    } catch (e) {
+      console.error('[Pass 3d: Approaches to Explore Next] Failed, setting to null:', e.message);
+      pass3dOutput = null;
+    }
+
+    formattedOutput.approaches_to_explore = pass3dOutput?.approaches_to_explore || null;
+
     // ── Save results to Supabase ────────────────────────────────────────
     if (bookingId) {
       await fetch(

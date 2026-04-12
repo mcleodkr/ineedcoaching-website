@@ -6238,6 +6238,36 @@ function renderPostSessionAnalysis(a, container) {
       + '</div>';
   }
 
+  // 17. Approaches to Explore Next — only if present
+  var approaches = Array.isArray(a.approaches_to_explore) ? a.approaches_to_explore : null;
+  if (approaches && approaches.length) {
+    h += '<div id="psi-approaches" style="margin:20px 0 24px;">';
+    h += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;border-bottom:1px solid #edeae4;padding-bottom:8px;margin-bottom:4px;">Approaches to Explore Next</div>';
+    h += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-style:italic;color:#9a9490;margin-bottom:16px;">Fit-based lenses \u2014 not corrections, just range.</div>';
+    approaches.forEach(function(ap) {
+      if (!ap) return;
+      h += '<div style="background:#ffffff;border:1px solid #edeae4;border-radius:8px;padding:18px 22px;margin-bottom:12px;">';
+      h += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.9rem;font-weight:600;color:#1a3a52;margin-bottom:10px;">' + escapeHtml(ap.approach_name || '') + '</div>';
+      if (ap.why_it_fits_this_client) {
+        h += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9a9490;margin-bottom:2px;">Why it fits this client:</div>';
+        h += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#5a5560;line-height:1.6;margin-bottom:10px;">' + escapeHtml(ap.why_it_fits_this_client) + '</div>';
+      }
+      if (ap.why_it_fits_this_moment) {
+        h += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9a9490;margin-bottom:2px;">Why it fits this moment:</div>';
+        h += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#5a5560;line-height:1.6;margin-bottom:10px;">' + escapeHtml(ap.why_it_fits_this_moment) + '</div>';
+      }
+      if (ap.how_it_aligns_with_your_style) {
+        h += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#2d6a4f;line-height:1.55;margin-bottom:4px;">' + escapeHtml(ap.how_it_aligns_with_your_style) + '</div>';
+      }
+      if (ap.how_it_stretches_your_range) {
+        h += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#1a3a52;line-height:1.55;margin-bottom:10px;">' + escapeHtml(ap.how_it_stretches_your_range) + '</div>';
+      }
+      h += '<button class="open-in-lab-btn" data-booking-id="' + escapeHtml(container.dataset.bookingId || '') + '" style="background:none;border:none;padding:4px 0;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;color:#c49a3c;cursor:pointer;">Open in Approach Lab \u2192</button>';
+      h += '</div>';
+    });
+    h += '</div>';
+  }
+
 
   h += '</div>'; // close main content column
   h += '</div>'; // close two-column layout
@@ -6357,6 +6387,16 @@ function renderPostSessionAnalysis(a, container) {
         self.style.color = '#fff';
         self.style.borderColor = '#2d6a4f';
       } catch(e) { self.textContent = 'Error'; self.disabled = false; }
+    });
+  });
+
+  // Wire "Open in Approach Lab" buttons — switch to the Approach Lab sub-tab for this session
+  container.querySelectorAll('.open-in-lab-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var bid = this.dataset.bookingId;
+      if (!bid) return;
+      var labTabBtn = document.querySelector('.stab[data-sid="' + bid + '"][data-stab="approach-lab"]');
+      if (labTabBtn) labTabBtn.click();
     });
   });
   } catch(renderErr) {
