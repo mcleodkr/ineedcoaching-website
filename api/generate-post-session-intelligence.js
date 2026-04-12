@@ -252,7 +252,7 @@ Return ONLY:
       pass2dOutput = await callClaude(
         ANTHROPIC_API_KEY,
         'claude-sonnet-4-6',
-        800,
+        900,
         `${MIRROR_RULES} Return ONLY 2 patterns maximum. Every field must be under 12 words. Start with { end with }. No markdown.`,
         `Generate max 2 patterns and goals. Every field under 12 words.
 ${goalsContext}
@@ -260,7 +260,7 @@ ${goalsContext}
 EVIDENCE: ${JSON.stringify(extractionOutput)}
 CORE: ${JSON.stringify(coreOutput)}
 
-You MUST suggest 1-2 goals based on what emerged in this session. Even if no goals were explicitly discussed, suggest goals based on patterns, commitments, or themes that surfaced. Do not return an empty suggested array. The suggested array must contain at least 1 item and at most 2.
+goals: You MUST generate 1-2 suggested goals based on what emerged in this session. Look at: commitments made, patterns surfaced, insights reached, behavioral intentions stated. Every session has something worth tracking. Suggested goals should be actionable and specific to this client. Format: { "existing": [], "suggested": [{ "title": "short actionable goal title", "description": "1 sentence explaining the goal" }] }
 
 Return ONLY:
 {"patterns_and_your_role":[{"pattern_name":"","what_client_did":"","status":"surfaced|interrupted|reinforced|stabilizing","what_this_means":"","your_role":"You..."}],"what_this_session_revealed":[{"coach_pattern":"","what_you_tend_to_do":"You...","why_this_is_effective":"","where_to_stay_curious":""}],"goals":{"existing":[{"title":"","status":"","session_relevance":""}],"suggested":[{"title":"","description":""}]},"between_session":[{"title":"","invitation":"","why_it_matters":""}],"frameworks":[{"name":"","presence_level":"","what_was_observed":""}]}`,

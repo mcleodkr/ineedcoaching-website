@@ -6485,12 +6485,11 @@ function renderPostSessionAnalysis(a, container) {
 
 function renderApproachLab(data, container) {
   if (!container) return;
-  if (!data || (!Array.isArray(data.moments) && !data.bridge_to_your_style)) {
+  if (!data || !Array.isArray(data.moments) || !data.moments.length) {
     container.innerHTML = '<div style="text-align:center;padding:48px 24px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#9a9490;">Coach Clarity needs session notes or a transcript to generate the Approach Lab. Run Coach Clarity analysis first.</div>';
     return;
   }
-  var moments = Array.isArray(data.moments) ? data.moments : [];
-  var bridge = data.bridge_to_your_style || { where_you_already_align: [], where_this_expands_your_range: [] };
+  var moments = data.moments;
 
   var lensColor = function(lens) {
     var l = (lens || '').toLowerCase();
@@ -6502,109 +6501,150 @@ function renderApproachLab(data, container) {
     return '#9a9490';
   };
 
-  var html = '';
-  // Top orientation block
-  html += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:600;color:#1a3a52;letter-spacing:-0.005em;margin-bottom:10px;">Approach Lab</div>';
-  html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#5a5560;line-height:1.65;max-width:680px;margin-bottom:32px;">Approach Lab lets you explore how a real moment from your session could unfold using different coaching approaches. This is a learning and exploration space \u2014 not a recommendation engine. No approach is correct. Each offers a different way of working.</div>';
+  var labelStyle = 'font-family:\'DM Sans\',sans-serif;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;';
+  var bodyStyle = 'font-family:\'DM Sans\',sans-serif;';
 
-  // Moments
+  var html = '';
+  // ── Top orientation block ───────────────────────────────
+  html += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:600;color:#1a3a52;letter-spacing:-0.005em;margin-bottom:12px;">Approach Lab</div>';
+  html += '<div style="background:#fdf9f1;border:1px solid #edeae4;border-radius:8px;padding:16px 20px;margin-bottom:28px;max-width:780px;">';
+  html += '<div style="' + bodyStyle + 'font-size:0.82rem;color:#5a5560;line-height:1.7;">Approach Lab lets you explore how a real moment from your session could unfold using different coaching approaches. You will see what you did, compare it to a different approach, understand what that approach is trying to shift, and learn when you might use it. This is a learning and exploration space \u2014 not a recommendation engine. No approach is correct. Each offers a different way of working.</div>';
+  html += '</div>';
+
+  // ── Per-moment cards ───────────────────────────────────
   moments.forEach(function(m) {
     if (!m) return;
     var color = lensColor(m.approach_lens);
-    html += '<div style="background:#ffffff;border:1px solid #edeae4;border-radius:8px;padding:20px 24px;margin-bottom:16px;">';
+    var yourApproach = m.your_approach_summary || '';
+    var dialogue = Array.isArray(m.dialogue_with_teaching) ? m.dialogue_with_teaching : [];
+    var firstCoachLines = dialogue.filter(function(x) { return x && x.type === 'line' && (x.speaker || '').toLowerCase() === 'coach'; }).slice(0, 2);
+
+    html += '<div style="background:#ffffff;border:1px solid #edeae4;border-radius:8px;padding:22px 26px;margin-bottom:20px;">';
+
     // Moment label + title
-    html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#c49a3c;margin-bottom:4px;">Moment from your session:</div>';
-    html += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;border-bottom:1px solid #edeae4;padding-bottom:8px;margin-bottom:14px;">' + escapeHtml(m.title || '') + '</div>';
-    // Your approach
-    if (m.what_you_did) {
-      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#9a9490;margin-bottom:4px;">Your approach:</div>';
-      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#5a5560;line-height:1.6;margin-bottom:14px;">' + escapeHtml(m.what_you_did) + '</div>';
+    html += '<div style="' + labelStyle + 'color:#c49a3c;margin-bottom:4px;">Moment from your session</div>';
+    html += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.2rem;font-weight:600;color:#1a3a52;margin-bottom:14px;">' + escapeHtml(m.title || '') + '</div>';
+
+    // Your approach summary
+    if (yourApproach) {
+      html += '<div style="' + labelStyle + 'color:#9a9490;margin-bottom:4px;">Your approach:</div>';
+      html += '<div style="' + bodyStyle + 'font-size:0.85rem;color:#5a5560;line-height:1.65;margin-bottom:16px;">' + escapeHtml(yourApproach) + '</div>';
     }
-    // Approach lens pill (with APPROACH: prefix inside)
+
+    // Alternative approach label + pill
     if (m.approach_name) {
-      html += '<div style="margin-bottom:12px;">';
-      html += '<span style="display:inline-block;padding:5px 14px;background:' + color + ';color:#ffffff;border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.72rem;font-weight:600;letter-spacing:0.02em;">'
-        + '<span style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;margin-right:6px;opacity:0.9;">Approach:</span>'
+      html += '<div style="' + labelStyle + 'color:#9a9490;margin-bottom:6px;">Alternative approach:</div>';
+      html += '<div style="margin-bottom:18px;">';
+      html += '<span style="display:inline-block;padding:6px 16px;background:' + color + ';color:#ffffff;border-radius:50px;' + bodyStyle + 'font-size:0.75rem;font-weight:600;letter-spacing:0.02em;">'
+        + '<span style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;margin-right:6px;opacity:0.85;">Approach:</span>'
         + escapeHtml(m.approach_name)
         + '</span>';
       html += '</div>';
     }
-    // What this approach is trying to shift
-    if (m.what_this_approach_does_differently) {
-      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#9a9490;margin-bottom:4px;">What this approach is trying to shift:</div>';
-      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#1a3a52;line-height:1.6;margin-bottom:14px;">' + escapeHtml(m.what_this_approach_does_differently) + '</div>';
+
+    // ── Side-by-side comparison ──
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;border-top:1px solid #edeae4;padding-top:16px;margin-bottom:20px;">';
+    html += '<div>';
+    html += '<div style="' + labelStyle + 'color:#9a9490;margin-bottom:6px;">Your approach</div>';
+    html += '<div style="' + bodyStyle + 'font-size:0.85rem;font-style:italic;color:#5a5560;line-height:1.6;">' + escapeHtml(yourApproach || '\u2014') + '</div>';
+    html += '</div>';
+    html += '<div>';
+    html += '<div style="' + labelStyle + 'color:#c49a3c;margin-bottom:6px;">Alternative approach</div>';
+    if (firstCoachLines.length) {
+      firstCoachLines.forEach(function(l) {
+        html += '<div style="' + bodyStyle + 'font-size:0.85rem;font-style:italic;color:#1a3a52;line-height:1.6;margin-bottom:4px;">\u201C' + escapeHtml(l.text || '') + '\u201D</div>';
+      });
+    } else {
+      html += '<div style="' + bodyStyle + 'font-size:0.82rem;font-style:italic;color:#9a9490;">\u2014</div>';
     }
-    // Dialogue
-    if (Array.isArray(m.what_it_would_sound_like) && m.what_it_would_sound_like.length) {
-      html += '<div style="background:#fdf9f1;border-left:2px solid #c49a3c;padding:12px 16px;margin-bottom:14px;">';
-      m.what_it_would_sound_like.forEach(function(line) {
-        if (!line || !line.line) return;
-        var speaker = (line.speaker || 'coach').toLowerCase();
-        var label = speaker === 'client' ? 'CLIENT' : 'COACH';
-        var lineStyle = speaker === 'client'
-          ? 'font-family:\'DM Sans\',sans-serif;font-size:0.875rem;font-style:italic;color:#5a5560;line-height:1.55;'
-          : 'font-family:\'DM Sans\',sans-serif;font-size:0.875rem;color:#1a3a52;line-height:1.55;';
-        html += '<div style="margin-bottom:8px;">';
-        html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9a9490;margin-bottom:2px;">' + label + '</div>';
-        html += '<div style="' + lineStyle + '">' + escapeHtml(line.line) + '</div>';
-        html += '</div>';
+    html += '</div>';
+    html += '</div>';
+
+    // ── Dialogue with teaching ──
+    if (dialogue.length) {
+      html += '<div style="' + labelStyle + 'color:#9a9490;margin-bottom:10px;">How this approach unfolds:</div>';
+      html += '<div style="margin-bottom:20px;">';
+      dialogue.forEach(function(item) {
+        if (!item) return;
+        if (item.type === 'pause') {
+          html += '<div style="background:#fdf9f1;border-left:2px solid #c49a3c;padding:12px 16px;margin:10px 0;">';
+          html += '<div style="' + labelStyle + 'color:#c49a3c;margin-bottom:4px;">' + escapeHtml(item.label || 'Pause') + '</div>';
+          html += '<div style="' + bodyStyle + 'font-size:0.8rem;font-style:italic;color:#1a3a52;line-height:1.6;">' + escapeHtml(item.text || '') + '</div>';
+          html += '</div>';
+        } else if (item.type === 'line') {
+          var speaker = (item.speaker || 'coach').toLowerCase();
+          var label = speaker === 'client' ? 'Client' : 'Coach';
+          var lineStyle = speaker === 'client'
+            ? bodyStyle + 'font-size:0.875rem;font-style:italic;color:#5a5560;line-height:1.6;'
+            : bodyStyle + 'font-size:0.875rem;color:#1a3a52;line-height:1.6;';
+          html += '<div style="margin-bottom:10px;">';
+          html += '<div style="' + bodyStyle + 'font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9a9490;margin-bottom:2px;">' + label + ':</div>';
+          html += '<div style="' + lineStyle + '">' + escapeHtml(item.text || '') + '</div>';
+          html += '</div>';
+        }
       });
       html += '</div>';
     }
-    // What this approach is doing (teaching block)
-    if (m.what_this_approach_does_differently) {
+
+    // ── The move ──
+    if (m.the_move) {
+      html += '<div style="' + labelStyle + 'color:#c49a3c;margin-bottom:6px;">The move:</div>';
+      html += '<div style="border-left:2px solid #edeae4;padding-left:12px;margin-bottom:18px;">';
+      html += '<div style="' + bodyStyle + 'font-size:0.875rem;color:#1a3a52;line-height:1.6;">' + escapeHtml(m.the_move) + '</div>';
+      html += '</div>';
+    }
+
+    // ── Teaching section ──
+    if (m.what_this_approach_is_doing) {
       html += '<div style="margin-bottom:14px;">';
-      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#9a9490;margin-bottom:4px;">What this approach is doing:</div>';
-      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#5a5560;line-height:1.65;">' + escapeHtml(m.what_this_approach_does_differently) + '</div>';
+      html += '<div style="' + labelStyle + 'color:#9a9490;margin-bottom:4px;">What this approach is doing:</div>';
+      html += '<div style="' + bodyStyle + 'font-size:0.85rem;color:#1a3a52;line-height:1.65;">' + escapeHtml(m.what_this_approach_is_doing) + '</div>';
       html += '</div>';
     }
-    // When you might use this
-    html += '<div style="background:#fdf9f1;border-left:2px solid #c49a3c;padding:10px 14px;margin-bottom:14px;">';
-    html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#c49a3c;margin-bottom:4px;">When you might use this:</div>';
-    html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#5a5560;line-height:1.6;">Consider this approach when the client is naming cost or loss but moving past it quickly, or when insight arrives without emotional weight.</div>';
-    html += '</div>';
-    // How this could impact this client
-    if (m.why_this_shift_matters_for_this_client) {
-      html += '<div style="border-left:2px solid #edeae4;padding-left:12px;margin-top:8px;">';
-      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#9a9490;margin-bottom:4px;">How this could impact this client:</div>';
-      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#5a5560;line-height:1.6;">' + escapeHtml(m.why_this_shift_matters_for_this_client) + '</div>';
+    if (m.what_it_is_trying_to_shift) {
+      html += '<div style="margin-bottom:14px;">';
+      html += '<div style="' + labelStyle + 'color:#9a9490;margin-bottom:4px;">What it is trying to shift:</div>';
+      html += '<div style="' + bodyStyle + 'font-size:0.85rem;font-style:italic;color:#5a5560;line-height:1.65;">' + escapeHtml(m.what_it_is_trying_to_shift) + '</div>';
       html += '</div>';
     }
+    if (Array.isArray(m.when_you_might_use_this) && m.when_you_might_use_this.length) {
+      html += '<div style="margin-bottom:18px;">';
+      html += '<div style="' + labelStyle + 'color:#9a9490;margin-bottom:6px;">When you might use this:</div>';
+      html += '<ul style="margin:0;padding-left:18px;">';
+      m.when_you_might_use_this.forEach(function(cue) {
+        if (cue) html += '<li style="' + bodyStyle + 'font-size:0.82rem;color:#1a3a52;line-height:1.6;margin-bottom:4px;">' + escapeHtml(cue) + '</li>';
+      });
+      html += '</ul>';
+      html += '</div>';
+    }
+
+    // ── Per-moment bridge ──
+    var mBridge = m.bridge || {};
+    var aligns = Array.isArray(mBridge.aligns) ? mBridge.aligns : [];
+    var stretches = Array.isArray(mBridge.stretches) ? mBridge.stretches : [];
+    if (aligns.length || stretches.length) {
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;border-top:1px solid #edeae4;padding-top:16px;margin-top:8px;">';
+      html += '<div>';
+      html += '<div style="' + labelStyle + 'color:#2d6a4f;margin-bottom:8px;">Where you already align with this approach</div>';
+      if (aligns.length) {
+        html += '<ul style="margin:0;padding-left:18px;">';
+        aligns.forEach(function(item) { html += '<li style="' + bodyStyle + 'font-size:0.82rem;color:#2d6a4f;line-height:1.55;margin-bottom:6px;">' + escapeHtml(item || '') + '</li>'; });
+        html += '</ul>';
+      }
+      html += '</div>';
+      html += '<div>';
+      html += '<div style="' + labelStyle + 'color:#1a3a52;margin-bottom:8px;">Where this stretches your range</div>';
+      if (stretches.length) {
+        html += '<ul style="margin:0;padding-left:18px;">';
+        stretches.forEach(function(item) { html += '<li style="' + bodyStyle + 'font-size:0.82rem;color:#1a3a52;line-height:1.55;margin-bottom:6px;">' + escapeHtml(item || '') + '</li>'; });
+        html += '</ul>';
+      }
+      html += '</div>';
+      html += '</div>';
+    }
+
     html += '</div>';
   });
-
-  // Bridge to Your Style
-  var align = Array.isArray(bridge.where_you_already_align) ? bridge.where_you_already_align : [];
-  var expand = Array.isArray(bridge.where_this_expands_your_range) ? bridge.where_this_expands_your_range : [];
-  if (align.length || expand.length) {
-    html += '<div style="margin-top:28px;padding-top:20px;border-top:1px solid #edeae4;">';
-    html += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;margin-bottom:16px;">Bridge to Your Style</div>';
-    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;">';
-    // Left: align
-    html += '<div>';
-    html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#2d6a4f;margin-bottom:8px;">Where you already align with this approach</div>';
-    if (align.length) {
-      html += '<ul style="margin:0;padding-left:18px;">';
-      align.forEach(function(item) { html += '<li style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#2d6a4f;line-height:1.55;margin-bottom:6px;">' + escapeHtml(item || '') + '</li>'; });
-      html += '</ul>';
-    } else {
-      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#9a9490;">No alignment points surfaced.</div>';
-    }
-    html += '</div>';
-    // Right: expand
-    html += '<div>';
-    html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#1a3a52;margin-bottom:8px;">Where this approach stretches your range</div>';
-    if (expand.length) {
-      html += '<ul style="margin:0;padding-left:18px;">';
-      expand.forEach(function(item) { html += '<li style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#1a3a52;line-height:1.55;margin-bottom:6px;">' + escapeHtml(item || '') + '</li>'; });
-      html += '</ul>';
-    } else {
-      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#9a9490;">No expansion points surfaced.</div>';
-    }
-    html += '</div>';
-    html += '</div>';
-    html += '</div>';
-  }
 
   container.innerHTML = html;
 }

@@ -160,7 +160,9 @@ Translate all approaches into coaching-relevant language. Explain approaches in 
 
 Tone: practical, grounded, non-clinical, focused on clarity and movement.
 
-Be concise. Maximum 2 sentences per field. Complete the JSON structure even if content is brief.
+Be concise where instructed. Complete the JSON structure even if content is brief.
+
+Dialogue requirements: Each approach dialogue must be 6-10 turns minimum. Show how the approach STAYS inside its lens over multiple exchanges. Include 2-3 PAUSE annotations inside the dialogue to teach the move in real time. Do not rush to resolution. Language must be natural and conversational.
 
 Return ONLY valid JSON. No markdown. Start with { end with }.`;
 
@@ -179,29 +181,38 @@ Relational/Exploratory: Client-Led Exploration, Relational Pattern Awareness
 
 APPROACH SELECTION RULE: Select the approach that best fits each moment. Prioritize fit over variety. Repeating a category is acceptable.
 
+REQUIREMENTS:
+- 6-10 dialogue turns per moment (alternating coach/client)
+- 2-3 pause annotations interleaved mid-dialogue teaching the move in real time
+- your_approach_summary must be concrete, 2-3 sentences, grounded in what the coach actually did in this session (not abstract)
+- per-moment bridge (not one global bridge)
+- Never say "why this works" or "this works because" — use "what it is trying to shift"
+
 For each moment return:
 {
   "title": "",
-  "what_you_did": "",
   "approach_name": "",
   "approach_lens": "cognitive|emotional|action|identity|relational",
-  "what_this_approach_does_differently": "",
-  "what_it_would_sound_like": [
-    { "speaker": "coach|client", "line": "" }
+  "your_approach_summary": "2-3 sentences, concrete, what the coach actually did in this moment",
+  "dialogue_with_teaching": [
+    { "type": "line", "speaker": "coach", "text": "" },
+    { "type": "line", "speaker": "client", "text": "" },
+    { "type": "pause", "label": "WHAT THE COACH IS DOING", "text": "1-2 sentence teaching note" },
+    { "type": "line", "speaker": "coach", "text": "" }
   ],
-  "why_this_shift_matters_for_this_client": ""
-}
-
-Then return a bridge section:
-"bridge_to_your_style": {
-  "where_you_already_align": ["You already do this when...", "..."],
-  "where_this_expands_your_range": ["This approach would stretch you by...", "..."]
+  "the_move": "1-2 sentences naming the specific coaching move being demonstrated",
+  "what_this_approach_is_doing": "3-4 sentences plain language",
+  "what_it_is_trying_to_shift": "what change it attempts — no certainty implied",
+  "when_you_might_use_this": ["cue 1", "cue 2", "cue 3"],
+  "bridge": {
+    "aligns": ["You already do this when..."],
+    "stretches": ["This approach would stretch you by..."]
+  }
 }
 
 Full schema:
 {
-  "moments": [...],
-  "bridge_to_your_style": { "where_you_already_align": [], "where_this_expands_your_range": [] }
+  "moments": [ ...per-moment objects above... ]
 }
 
 GUARDRAILS:
@@ -210,12 +221,14 @@ GUARDRAILS:
 - Reflect this client's actual patterns
 - Be immediately usable in the coach's next session
 - Do NOT label attachment styles or clinical constructs
-- Keep dialogue natural — consistent with how this client actually speaks`;
+- Keep dialogue natural — consistent with how this client actually speaks
+- 6-10 dialogue turns per moment minimum, with 2-3 pause annotations
+- bridge is per-moment only, never global`;
 
     const pass2Output = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
-      2000,
+      5000,
       PASS2_SYSTEM,
       PASS2_USER,
       'Pass 2 Approach Lab'
@@ -223,7 +236,6 @@ GUARDRAILS:
 
     return res.status(200).json({
       moments: Array.isArray(pass2Output.moments) ? pass2Output.moments : [],
-      bridge_to_your_style: pass2Output.bridge_to_your_style || { where_you_already_align: [], where_this_expands_your_range: [] },
     });
   } catch (e) {
     console.error('[generate-approach-lab] Error:', e);
