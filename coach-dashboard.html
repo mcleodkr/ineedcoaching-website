@@ -6192,17 +6192,29 @@ async function loadDashGoals() {
     var statusLabels = { not_started: 'Not Started', in_progress: 'In Progress', completed: 'Completed' };
     var statusColors = { not_started: 'background:rgba(107,107,96,0.15);color:var(--muted)', in_progress: 'background:#c49a3c;color:#fff', completed: 'background:#2d6a4f;color:#fff' };
 
-    // Build name lookup from goals + bookings
+    // Build name lookup, priority lowest → highest:
+    //   1. clientsData (Clients tab — already deduped from confirmed bookings)
+    //   2. goalClients (parsed from booking notes)
+    //   3. the goal row's own client_name (most authoritative)
     var nameMap = {};
+    if (typeof clientsData !== 'undefined' && Array.isArray(clientsData)) {
+      clientsData.forEach(function(c) {
+        if (c && c.email && c.name) nameMap[c.email] = c.name;
+      });
+    }
     goalClients.forEach(function(c) { if (c.name) nameMap[c.email] = c.name; });
     if (data) data.forEach(function(g) { if (g.client_name && g.client_email) nameMap[g.client_email] = g.client_name; });
+
+    // Sentinel key for goals with no client_email at all — rendered as a friendly
+    // label later rather than the literal word "unknown".
+    var NO_EMAIL_KEY = '__no_email__';
 
     // Group goals by client
     var clients = {};
     var clientOrder = [];
     if (data && data.length > 0) {
       data.forEach(function(g) {
-        var key = g.client_email || 'unknown';
+        var key = g.client_email || NO_EMAIL_KEY;
         if (!clients[key]) { clients[key] = []; clientOrder.push(key); }
         clients[key].push(g);
       });
@@ -6216,13 +6228,19 @@ async function loadDashGoals() {
     } else {
       clientOrder.forEach(function(email) {
         var goals = clients[email];
-        var displayName = nameMap[email] || email;
+        // Resolution order:
+        //   a) looked-up name from nameMap (clientsData → goalClients → goal row)
+        //   b) the email itself — an email is more useful than "unknown"
+        //   c) "No email on file" — only when there's no email at all
+        var isNoEmail = (email === NO_EMAIL_KEY);
+        var displayName = nameMap[email] || (isNoEmail ? 'No email on file' : email);
+        var showEmailSub = !isNoEmail && displayName !== email;
         var completedCount = goals.filter(function(g) { return g.status === 'completed'; }).length;
         html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);margin-bottom:12px;overflow:hidden;">'
           + '<div class="goal-client-header" data-toggle-client="' + escapeHtml(email) + '" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;transition:background 0.2s;">'
           + '<div style="display:flex;align-items:center;gap:10px;">'
           + '<span style="font-weight:700;font-size:0.92rem;color:var(--ink);">' + escapeHtml(displayName) + '</span>'
-          + (displayName !== email ? '<span style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(email) + '</span>' : '')
+          + (showEmailSub ? '<span style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(email) + '</span>' : '')
           + '<span style="font-size:0.75rem;background:var(--cream);padding:3px 10px;border-radius:50px;color:var(--muted);font-weight:600;">' + goals.length + ' goal' + (goals.length !== 1 ? 's' : '') + '</span>'
           + (completedCount > 0 ? '<span style="font-size:0.75rem;background:#2d6a4f;color:#fff;padding:3px 10px;border-radius:50px;font-weight:600;">' + completedCount + ' done</span>' : '')
           + '</div>'
