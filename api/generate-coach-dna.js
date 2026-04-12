@@ -137,6 +137,10 @@ IDENTITY-LEVEL THINKING:
 - Trajectory values: "Increasing" (more frequent recently), "Stable" (consistent across sessions), "Decreasing" (less recent), "Emerging" (appeared in last 2 sessions only), "Underutilized" (appeared 1-2 times total).
 - Frequency format: "X of last Y sessions".
 
+HARD LIMITS:
+- Maximum 3 items per array.
+- Maximum 20 words per string value.
+
 LANGUAGE RULES:
 - Never clinical (no CBT, DBT, ACT, diagnosis, pathology).
 - Use coaching-safe language only: pattern awareness, emotional regulation strategy, strategic questioning, behavioral reframing, values clarification.
@@ -145,15 +149,18 @@ LANGUAGE RULES:
 
 Return ONLY raw JSON. Start with { end with }. No markdown. No preamble.`;
 
-    const USER = `Analyze ${notes.length} sessions across ${new Set(notes.map((n) => n.client_email).filter(Boolean)).size} clients and generate a full Coach DNA profile.
+    const clientCount = new Set(notes.map((n) => n.client_email).filter(Boolean)).size;
+    const contextPreamble = `Analyze ${notes.length} sessions across ${clientCount} clients.
 
 Coach specialties: ${JSON.stringify(coach.specialties || [])}
 Coach headline: ${coach.headline || 'Not set'}
 
 MIRROR DATA (aggregated from ${notes.length} sessions, most recent first):
-${JSON.stringify(mirrorData)}
+${JSON.stringify(mirrorData)}`;
 
-Derive these 10 sections. Every pattern must appear in 2+ sessions. For evolution_signal compare earliest third of sessions to most recent third.
+    const USER_PASS1 = `${contextPreamble}
+
+Derive sections 1-5 of the Coach DNA profile. Every pattern must appear in 2+ sessions. MAX 3 items per array. MAX 20 words per string value.
 
 Return ONLY this JSON:
 {
@@ -161,16 +168,16 @@ Return ONLY this JSON:
   "client_count": number,
   "coaching_decision_model": [
     {
-      "trigger": "when [observable client state or moment]",
+      "trigger": "when [observable client state]",
       "default_response": "you tend to [specific coach move]",
-      "rationale": "why this pairing appears recurrent",
+      "rationale": "short reason",
       "frequency": "X of last Y sessions",
       "trajectory": "Increasing|Stable|Decreasing|Emerging|Underutilized"
     }
   ],
   "default_intervention_sequence": {
     "description": "one sentence summary of your typical flow",
-    "typical_sequence": ["step 1 move", "step 2 move", "step 3 move"],
+    "typical_sequence": ["step 1", "step 2", "step 3"],
     "variations": [
       { "when": "condition", "sequence": ["alt step 1", "alt step 2"] }
     ]
@@ -178,8 +185,8 @@ Return ONLY this JSON:
   "pattern_activation_map": [
     {
       "pattern_name": "short name",
-      "trigger": "what activates this pattern in clients you work with",
-      "typical_response": "how you tend to meet it",
+      "trigger": "what activates it",
+      "typical_response": "how you meet it",
       "frequency": "X of last Y sessions",
       "trajectory": "..."
     }
@@ -187,23 +194,33 @@ Return ONLY this JSON:
   "technique_profile": [
     {
       "technique": "technique name",
-      "definition": "one sentence plain language",
+      "definition": "one short sentence",
       "frequency": "X of last Y sessions",
       "trajectory": "...",
-      "observed_when": "the situation where it tends to show up"
+      "observed_when": "situation"
     }
   ],
   "bias_profile": [
     {
-      "bias": "e.g. speed over depth, cognition over emotion, action over staying",
-      "description": "what this bias does in your coaching",
-      "evidence": "observable pattern from sessions",
+      "bias": "e.g. speed over depth",
+      "description": "what it does",
+      "evidence": "observable pattern",
       "trajectory": "..."
     }
-  ],
+  ]
+}
+
+CRITICAL: Return ONLY valid JSON. No trailing commas. No comments. No markdown. Every array must be properly closed. Start with { and end with }.`;
+
+    const USER_PASS2 = `${contextPreamble}
+
+Derive sections 6-10 of the Coach DNA profile. Every pattern must appear in 2+ sessions. MAX 3 items per array. MAX 20 words per string value. For evolution_signal compare earliest third of sessions to most recent third.
+
+Return ONLY this JSON:
+{
   "client_response_signature": [
     {
-      "response_type": "how clients tend to move when you coach",
+      "response_type": "how clients tend to move",
       "description": "what this looks like",
       "frequency": "X of last Y sessions"
     }
@@ -231,13 +248,13 @@ Return ONLY this JSON:
   "missed_leverage_moments": [
     {
       "moment": "what happened",
-      "signal": "emotional or behavioral cue present",
-      "why_high_leverage": "what was possible that did not happen",
+      "signal": "cue present",
+      "why_high_leverage": "what was possible",
       "frequency": "X of last Y sessions"
     }
   ],
   "evolution_signal": {
-    "first_third_summary": "what you did in the earliest sessions",
+    "first_third_summary": "what you did earliest",
     "last_third_summary": "what you tend to do now",
     "trajectory_summary": "one sentence naming the shift",
     "emerging_strengths": ["string"],
@@ -247,14 +264,12 @@ Return ONLY this JSON:
 
 CRITICAL: Return ONLY valid JSON. No trailing commas. No comments. No markdown. Every array must be properly closed. Start with { and end with }.`;
 
-    const dnaOutput = await callClaude(
-      ANTHROPIC_API_KEY,
-      'claude-sonnet-4-6',
-      2500,
-      SYSTEM,
-      USER,
-      'Identity Analysis'
-    );
+    const [pass1Output, pass2Output] = await Promise.all([
+      callClaude(ANTHROPIC_API_KEY, 'claude-sonnet-4-6', 2000, SYSTEM, USER_PASS1, 'Pass 1 (1-5)'),
+      callClaude(ANTHROPIC_API_KEY, 'claude-sonnet-4-6', 2000, SYSTEM, USER_PASS2, 'Pass 2 (6-10)'),
+    ]);
+
+    const dnaOutput = Object.assign({}, pass1Output, pass2Output);
 
     const existRes = await fetch(`${SUPABASE_URL}/rest/v1/coach_dna_profiles?coach_id=eq.${coachId}&select=id`, { headers });
     const existing = await existRes.json();
