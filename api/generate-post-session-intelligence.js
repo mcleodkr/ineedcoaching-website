@@ -276,6 +276,72 @@ If crisis_adjacent: return null.`,
       formattedOutput.coaching_reflection = null;
     }
 
+    // ── Pass 3c: DNA Pattern Manifestation (conditional, fault-tolerant) ─
+    // Connects this session's evidence to the coach's established DNA patterns.
+    // Runs only when a DNA profile with bias_profile or pattern_activation_map
+    // already exists — never invents patterns. Depends on pass2bOutput + pass2cOutput.
+    let pass3cOutput = null;
+    try {
+      const dnaRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/coach_dna_profiles?coach_id=eq.${coachId}&select=signal_patterns`,
+        { headers: supabaseHeaders }
+      );
+      const dnaRows = await dnaRes.json();
+      const existingDNA = dnaRows?.[0]?.signal_patterns || null;
+
+      const hasDNA = existingDNA && (
+        (Array.isArray(existingDNA.bias_profile) && existingDNA.bias_profile.length > 0) ||
+        (Array.isArray(existingDNA.pattern_activation_map) && existingDNA.pattern_activation_map.length > 0)
+      );
+
+      if (hasDNA) {
+        pass3cOutput = await callClaude(
+          ANTHROPIC_API_KEY,
+          'claude-sonnet-4-6',
+          1000,
+          `You are Coach Clarity. Your role is to connect this session's evidence to the coach's established DNA patterns. Do not invent new patterns. Only surface patterns where clear evidence exists in this session. Return ONLY valid JSON.`,
+          `Here are this coach's established DNA patterns:
+BIAS PROFILE: ${JSON.stringify(existingDNA.bias_profile?.slice(0, 3))}
+PATTERN ACTIVATION MAP: ${JSON.stringify(existingDNA.pattern_activation_map?.slice(0, 3))}
+BLIND SPOTS: ${JSON.stringify(existingDNA.blind_spots?.slice(0, 3))}
+
+Here is this session's evidence:
+INTERVENTIONS: ${JSON.stringify(pass2bOutput.coaching_interventions)}
+MISSED WINDOWS: ${JSON.stringify(pass2cOutput.missed_windows)}
+EXTRACTION: ${JSON.stringify(extractionOutput.client_quotes?.slice(0, 5))}
+
+Identify which DNA patterns manifested in this session. Limit to 2-4 strongest matches only. For each match include verbatim or near-verbatim evidence from the session.
+
+Return ONLY this JSON:
+{
+  "dna_manifestations": [
+    {
+      "pattern_name": "exact name from DNA",
+      "pattern_type": "bias|pattern|blind_spot",
+      "how_it_showed_up": "one sentence, max 20 words",
+      "verbatim_evidence": [
+        {
+          "speaker": "client|coach",
+          "quote": "exact or near-exact quote from session",
+          "what_this_reflects": "one sentence explanation, max 15 words"
+        }
+      ],
+      "recurrence_note": "Seen in X of last Y sessions from DNA data"
+    }
+  ]
+}`,
+          'Pass 3c: DNA Pattern Manifestation'
+        );
+      } else {
+        console.log('[Pass 3c] No DNA profile found for coach, skipping.');
+      }
+    } catch (e) {
+      console.error('[Pass 3c: DNA Pattern Manifestation] Failed, setting to null:', e.message);
+      pass3cOutput = null;
+    }
+
+    formattedOutput.dna_manifestations = pass3cOutput?.dna_manifestations || null;
+
     // ── Save results to Supabase ────────────────────────────────────────
     if (bookingId) {
       await fetch(
@@ -290,6 +356,7 @@ If crisis_adjacent: return null.`,
             pre_session_seed: formattedOutput.core_focus?.summary || null,
             coaching_signals: formattedOutput.coaching_signals || null,
             frameworks_detected: formattedOutput.frameworks || null,
+            dna_manifestations: formattedOutput.dna_manifestations,
           }),
         }
       );
