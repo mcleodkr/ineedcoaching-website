@@ -1,20 +1,9 @@
 // POST { coach_id, client_email }
 // Generates a Client Pattern Map from all post_session_analysis rows for a client.
 //
-// ===================================================================
-// SUPABASE MIGRATION — RUN THIS IN THE SQL EDITOR BEFORE DEPLOYING
-// ===================================================================
-//
-// CREATE TABLE IF NOT EXISTS coach_client_patterns (
-//   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-//   coach_id uuid NOT NULL,
-//   client_email text NOT NULL,
-//   pattern_map jsonb,
-//   session_count integer,
-//   last_analyzed timestamptz DEFAULT now(),
-//   created_at timestamptz DEFAULT now(),
-//   UNIQUE(coach_id, client_email)
-// );
+// SQL already run: coach_client_patterns table exists in Supabase
+// (columns: id, coach_id, client_email, pattern_map jsonb, session_count,
+//  last_analyzed, created_at — unique on (coach_id, client_email))
 //
 // ===================================================================
 // PATTERN MAP AI GUARDRAIL

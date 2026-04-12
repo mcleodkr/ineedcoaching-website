@@ -3657,7 +3657,8 @@ async function openClientDetail(email) {
       supabaseGet('coach_checkin_responses?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&submitted_at=not.is.null&order=created_at.desc&select=*'),
       supabaseGet('coach_messages?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&order=created_at.asc&select=*'),
       supabaseGet('coach_session_notes?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&select=*'),
-      supabaseGet('coach_intake_forms?coach_id=eq.' + cid + '&form_type=eq.checkin&select=id,name')
+      supabaseGet('coach_intake_forms?coach_id=eq.' + cid + '&form_type=eq.checkin&select=id,name'),
+      supabaseGet('coach_client_patterns?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&select=pattern_map,last_analyzed,session_count&limit=1')
     ]);
     var goals = results[0] || [];
     var intakeResponses = results[1] || [];
@@ -3665,9 +3666,20 @@ async function openClientDetail(email) {
     var messages = results[3] || [];
     var sessionNotes = results[4] || [];
     var checkinForms = results[5] || [];
+    var patternRows = results[6] || [];
 
     notesByBooking = {};
     sessionNotes.forEach(function(n) { notesByBooking[n.booking_id] = n; });
+
+    // Preload previously-generated Client Pattern Map so returning to this
+    // client shows sections 5-9 without re-running generation.
+    if (Array.isArray(patternRows) && patternRows.length && patternRows[0] && patternRows[0].pattern_map) {
+      var row = patternRows[0];
+      client.patternMap = Object.assign({}, row.pattern_map, {
+        last_analyzed: row.last_analyzed || row.pattern_map.last_analyzed || null,
+        session_count: row.session_count || row.pattern_map.session_count || null
+      });
+    }
 
     // Stash the full bundle so Pattern Map generation can re-render without a refetch.
     _clientDetailBundle = { client: client, goals: goals, intakeResponses: intakeResponses, checkinResponses: checkinResponses, messages: messages, notesByBooking: notesByBooking, checkinForms: checkinForms };
