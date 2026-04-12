@@ -12,6 +12,9 @@
     "api/generate-coach-dna.js": {
       "maxDuration": 120
     },
+    "api/generate-approach-lab.js": {
+      "maxDuration": 60
+    },
     "api/*.js": {
       "maxDuration": 30
     }

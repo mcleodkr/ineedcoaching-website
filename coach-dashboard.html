@@ -6144,6 +6144,7 @@ function renderPostSessionAnalysis(a, container) {
 
   // 10. Goals
   // Live goals will be fetched after render
+  console.log('[Coach Clarity] goals data:', a.goals);
   var goalsBody = '';
   goalsBody += '<div class="live-goals-slot" style="margin-bottom:12px;"></div>';
   if (goals && goals.existing && goals.existing.length) {
@@ -6177,7 +6178,11 @@ function renderPostSessionAnalysis(a, container) {
     });
   }
   // Suggested goals — always render when present, independent of existing goals.
-  var suggestedGoals = (goals && Array.isArray(goals.suggested)) ? goals.suggested.filter(function(x) { return !!x; }) : [];
+  // Source from a.goals directly (goals var is derived from a.goals at top of function).
+  var suggestedSource = (a.goals && Array.isArray(a.goals.suggested)) ? a.goals.suggested
+    : ((goals && Array.isArray(goals.suggested)) ? goals.suggested : []);
+  var suggestedGoals = suggestedSource.filter(function(x) { return !!x && (x.title || x.description); });
+  console.log('[Coach Clarity] suggested goals count:', suggestedGoals.length, suggestedGoals);
   if (suggestedGoals.length) {
     goalsBody += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#c49a3c;margin-top:12px;margin-bottom:8px;">Suggested from this session</div>';
     suggestedGoals.forEach(function(sg, idx) {
@@ -6416,8 +6421,18 @@ function renderPostSessionAnalysis(a, container) {
     btn.addEventListener('click', function() {
       var bid = this.dataset.bookingId;
       if (!bid) return;
-      var labTabBtn = document.querySelector('.stab[data-sid="' + bid + '"][data-stab="approach-lab"]');
-      if (labTabBtn) labTabBtn.click();
+      var labBtn = document.querySelector('.stab[data-sid="' + bid + '"][data-stab="approach-lab"]');
+      if (!labBtn) return;
+      // Activate the Approach Lab sub-tab
+      labBtn.click();
+      // Scroll the session card into view first (not the bottom of the page)
+      var sessionCard = labBtn.closest('.session-card') || labBtn.closest('[data-sid="' + bid + '"]');
+      if (sessionCard) sessionCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Then after the tab has switched, scroll the Approach Lab panel into view
+      setTimeout(function() {
+        var labPanel = document.getElementById('stab-approach-lab-' + bid);
+        if (labPanel) labPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 300);
     });
   });
   } catch(renderErr) {

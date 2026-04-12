@@ -94,7 +94,7 @@ export default async function handler(req, res) {
     // STEP 3 — Build context
     const fullTranscript = note.raw_transcript || '';
     const transcript = fullTranscript.length > 6000 ? fullTranscript.substring(0, 6000) : fullTranscript;
-    const transcriptForPass1 = transcript.length > 4000 ? transcript.substring(0, 4000) : transcript;
+    const transcriptForPass1 = transcript.length > 2000 ? transcript.substring(0, 2000) : transcript;
     const psa = note.post_session_analysis || {};
     const interventions = Array.isArray(psa.coaching_interventions) ? psa.coaching_interventions : [];
     const missedWindows = Array.isArray(psa.missed_windows) ? psa.missed_windows : [];
@@ -132,7 +132,7 @@ Select 3-4 key moments. Return ONLY:
     const pass1Output = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
-      800,
+      400,
       PASS1_SYSTEM,
       PASS1_USER,
       'Pass 1 Moment Selection'
@@ -150,6 +150,8 @@ DO: focus on observable patterns, client language, behavior and decision tendenc
 Translate all approaches into coaching-relevant language. Explain approaches in terms of how the coach listens, what the coach prioritizes, how the coach responds, and what the coach is trying to shift in the client.
 
 Tone: practical, grounded, non-clinical, focused on clarity and movement.
+
+Be concise. Maximum 2 sentences per field. Complete the JSON structure even if content is brief.
 
 Return ONLY valid JSON. No markdown. Start with { end with }.`;
 
@@ -204,7 +206,7 @@ GUARDRAILS:
     const pass2Output = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
-      2500,
+      2000,
       PASS2_SYSTEM,
       PASS2_USER,
       'Pass 2 Approach Lab'
