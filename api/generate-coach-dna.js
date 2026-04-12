@@ -21,10 +21,27 @@ async function callClaude(apiKey, model, maxTokens, system, userMessage, passNam
   }
   const data = await res.json();
   let raw = data.content?.[0]?.text || '';
-  raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
-  const match = raw.match(/\{[\s\S]*\}/);
-  try { return match ? JSON.parse(match[0]) : JSON.parse(raw); }
-  catch (e) { throw new Error(`DNA ${passName} JSON parse error: ${e.message}`); }
+  raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+  // Try direct parse first
+  try {
+    return JSON.parse(raw);
+  } catch (e1) {
+    // Try extracting first complete JSON object
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (match) {
+      try { return JSON.parse(match[0]); } catch (e2) {}
+    }
+    // Progressive trim from end to find valid JSON
+    for (let i = raw.length; i > raw.length * 0.5; i--) {
+      const trimmed = raw.substring(0, i);
+      const lastBrace = trimmed.lastIndexOf('}');
+      if (lastBrace === -1) continue;
+      try {
+        return JSON.parse(trimmed.substring(0, lastBrace + 1));
+      } catch (e3) { continue; }
+    }
+    throw new Error(`DNA ${passName} JSON parse error: ${e1.message}`);
+  }
 }
 
 export default async function handler(req, res) {
@@ -226,12 +243,14 @@ Return ONLY this JSON:
     "emerging_strengths": ["string"],
     "fading_habits": ["string"]
   }
-}`;
+}
+
+CRITICAL: Return ONLY valid JSON. No trailing commas. No comments. No markdown. Every array must be properly closed. Start with { and end with }.`;
 
     const dnaOutput = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
-      4000,
+      2500,
       SYSTEM,
       USER,
       'Identity Analysis'
