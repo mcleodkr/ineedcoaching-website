@@ -1625,14 +1625,29 @@ var dnaTagDefinitions = {
   'fear-driven-commitment': 'Client makes commitments motivated by fear rather than genuine desire',
   'behavioral-transfer': 'Insight is being converted into a specific behavioral practice',
   'self-forgiveness': 'Client is working toward releasing self-blame or shame',
-  'unprocessed-cost': 'Client named a loss or cost but has not yet felt its full weight'
+  'unprocessed-cost': 'Client named a loss or cost but has not yet felt its full weight',
+  'permission seeking': 'Client defers action until external validation is received',
+  'avoidance of visible failure': 'Client avoids situations where failure could be publicly observed',
+  'internalized junior identity': 'Client operates from a self-image smaller than their actual role or capability',
+  'suppressed conviction': 'Client holds a clear internal position but does not express it',
+  'behavioral leverage': 'A specific behavior is being used to create meaningful change',
+  'reframe': 'The meaning of a situation or belief was shifted to open new possibilities',
+  'insight-to-action bridge': 'Insight from the session is being connected to a specific next action'
 };
 function lookupDnaTagDef(tag) {
   if (!tag) return null;
-  // Normalize: lowercase and collapse whitespace to hyphens so variants like
-  // "Fear Of Abandonment" or "fear of abandonment" resolve to "fear-of-abandonment".
-  var key = tag.toLowerCase().replace(/\s+/g, '-');
-  return dnaTagDefinitions[key] || dnaTagDefinitions[tag] || null;
+  // Try exact match first
+  if (dnaTagDefinitions[tag]) return dnaTagDefinitions[tag];
+  // Try lowercase exact
+  var lower = tag.toLowerCase();
+  if (dnaTagDefinitions[lower]) return dnaTagDefinitions[lower];
+  // Try hyphenated
+  var hyphen = lower.replace(/\s+/g, '-');
+  if (dnaTagDefinitions[hyphen]) return dnaTagDefinitions[hyphen];
+  // Try spaces instead of hyphens
+  var spaced = lower.replace(/-/g, ' ');
+  if (dnaTagDefinitions[spaced]) return dnaTagDefinitions[spaced];
+  return null;
 }
 
 /* ================================================
