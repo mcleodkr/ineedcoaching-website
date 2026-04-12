@@ -3784,11 +3784,11 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
 
       // Tab 4: Coaching Mirror
       html += '<div id="stab-coaching-mirror-' + s.id + '" class="stab-panel" data-sid="' + s.id + '" style="padding:20px;display:none;">';
-      if (hasAnalysis) {
-        html += '<div id="coaching-mirror-' + s.id + '"></div>';
-      } else {
+      html += '<div id="coaching-mirror-' + s.id + '">';
+      if (!hasAnalysis) {
         html += '<p style="font-size:0.85rem;color:var(--muted);font-style:italic;">Run Coach Clarity analysis first to unlock your Coaching Mirror.</p>';
       }
+      html += '</div>';
       html += '</div>';
 
       html += '</div>'; // session-panel
