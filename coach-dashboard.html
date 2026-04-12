@@ -519,6 +519,10 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
        Source-order wins over prior .tab-btn / .dash-sidebar rules.
        ========================================================= */
 
+    :root {
+      --sidebar-width: 200px;
+    }
+
     /* TOP NAV — 52px, navy, DM Sans 0.82rem. Inline styles require !important. */
     .dashboard > nav:first-of-type {
       padding: 10px 32px !important;
@@ -526,6 +530,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       backdrop-filter: none !important;
       border-bottom: 1px solid rgba(255,255,255,0.08) !important;
       min-height: 52px;
+      height: 52px;
     }
     .dashboard > nav:first-of-type a,
     .dashboard > nav:first-of-type .nav-coach-name,
@@ -535,7 +540,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       font-weight: 500 !important;
       letter-spacing: 0.01em !important;
       text-transform: none !important;
-      color: #c8ccd1 !important;
+      color: #d4cfc8 !important;
     }
     .dashboard > nav:first-of-type a.logo {
       font-family: 'Cormorant Garamond', serif !important;
@@ -556,7 +561,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       padding: 6px 14px;
       border: 1px solid rgba(255,255,255,0.18);
       border-radius: 4px;
-      color: #c8ccd1;
+      color: #d4cfc8;
       background: transparent;
     }
     .dashboard > nav:first-of-type .sign-out-btn:hover {
@@ -567,23 +572,29 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
     /* LAYOUT — lift the sticky offset so sidebar + content clear the 52px nav */
     .dash-layout { padding-top: 52px; }
 
-    /* SIDEBAR — 200px, white, flat right border, tight rhythm */
+    /* SIDEBAR — 200px, white, flat right border, disciplined rhythm */
     .dash-sidebar {
-      width: 200px;
-      background: #ffffff;
-      border-right: 1px solid #eeecf0;
-      padding: 12px 0 24px;
+      width: var(--sidebar-width);
+      flex-shrink: 0;
+      position: sticky;
       top: 52px;
-      max-height: calc(100vh - 52px);
+      height: calc(100vh - 52px);
+      overflow-y: auto;
+      background: #ffffff;
+      border-right: 1px solid #edeae4;
+      padding: 24px 0;
     }
-    .dash-sidebar .dash-group {
+    .dash-sidebar .dash-group,
+    .dash-group {
       font-family: 'DM Sans', sans-serif;
       font-size: 0.68rem;
-      font-weight: 600;
+      font-weight: 700;
       letter-spacing: 0.1em;
       text-transform: uppercase;
-      color: #8a8a9a;
+      color: #a09a8e;
       padding: 20px 16px 6px;
+      cursor: default;
+      pointer-events: none;
     }
     .dash-sidebar .tab-btn {
       display: block;
@@ -593,64 +604,65 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       font-family: 'DM Sans', sans-serif;
       font-size: 0.875rem;
       font-weight: 400;
-      color: #3d3d4e;
+      color: #5a5560;
       background: none;
       border: none;
       border-left: 2px solid transparent;
       cursor: pointer;
-      transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+      transition: all 0.12s ease;
+      line-height: 1.4;
     }
     .dash-sidebar .tab-btn:hover {
       background: #f9f7f4;
       color: #1a3a52;
-      border-left: 2px solid #e8e0cc;
+      border-left-color: #e0d5be;
     }
     .dash-sidebar .tab-btn.active {
-      background: #fdf9f2;
+      background: #fdf8ee;
       color: #1a3a52;
       font-weight: 500;
-      border-left: 2px solid #c49a3c;
+      border-left-color: #c49a3c;
     }
 
     /* MAIN CONTENT AREA */
     .dash-content {
       max-width: none;
       margin: 0;
-      padding: 28px 32px;
-      background: #f7f5f1;
+      padding: 32px 36px;
+      background: #f4f2ee;
     }
 
-    /* CARDS — tight radius, minimal shadow */
+    /* CARDS — tight radius, minimal shadow, no decorative colored shadows */
     .form-section,
     .review-card,
     .draft-article-card,
     .service-item {
       background: #ffffff;
-      border: 1px solid #eeecf0;
+      border: 1px solid #e8e4dc;
       border-radius: 6px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
       padding: 20px 24px;
       margin-bottom: 16px;
     }
     .review-card:hover,
     .draft-article-card:hover {
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-      border-color: #eeecf0;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      border-color: #e8e4dc;
     }
 
-    /* SECTION HEADERS — serif, no uppercase */
+    /* SECTION HEADERS inside panels */
     .form-section-title,
     .dash-content h1,
     .dash-content h2:not(.no-profile h2) {
       font-family: 'Cormorant Garamond', serif;
-      font-size: 1.6rem;
+      font-size: 1.5rem;
       font-weight: 600;
       color: #1a3a52;
       text-transform: none;
       letter-spacing: -0.005em;
-      border-bottom: 1px solid #eeecf0;
-      padding-bottom: 14px;
-      margin-bottom: 18px;
+      border-bottom: 1px solid #edeae4;
+      padding-bottom: 12px;
+      margin-bottom: 20px;
     }
 
     /* CARD LABELS / VALUES */
@@ -670,7 +682,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       font-size: 0.9rem;
       color: #1a3a52;
       background: #ffffff;
-      border: 1px solid #eeecf0;
+      border: 1px solid #e8e4dc;
       border-radius: 4px;
       padding: 9px 12px;
     }
@@ -681,7 +693,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       outline: none;
     }
 
-    /* BUTTONS — flat, tight corners, no shadow */
+    /* BUTTONS — flat, tight corners, no shadow, no glow, no gradient */
     .btn-primary,
     .save-btn,
     .pill-add-btn,
@@ -696,7 +708,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       font-family: 'DM Sans', sans-serif;
       font-size: 0.82rem;
       font-weight: 500;
-      box-shadow: none;
+      box-shadow: none !important;
       cursor: pointer;
       transition: background 0.12s ease;
     }
@@ -707,7 +719,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
     .action-confirm:hover,
     .action-approve:hover {
       background: #a87d1f;
-      box-shadow: none;
+      box-shadow: none !important;
     }
     .btn-secondary,
     .action-remove {
@@ -719,7 +731,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       font-family: 'DM Sans', sans-serif;
       font-size: 0.82rem;
       font-weight: 500;
-      box-shadow: none;
+      box-shadow: none !important;
       cursor: pointer;
       transition: border-color 0.12s ease, color 0.12s ease;
     }
@@ -729,9 +741,18 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       color: #1a3a52;
     }
 
+    /* Strip decorative shadows from any button-like element in the dashboard */
+    .dashboard button,
+    .dashboard .btn-primary,
+    .dashboard .btn-secondary,
+    .dashboard .save-btn,
+    .dashboard .prop-btn {
+      box-shadow: none !important;
+    }
+
     /* BOOKINGS TABLE — align with flat card system */
     .bookings-table {
-      border: 1px solid #eeecf0;
+      border: 1px solid #e8e4dc;
       border-radius: 6px;
     }
     .bookings-table th {
@@ -741,7 +762,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       letter-spacing: 0.08em;
       color: #8a8a9a;
       background: #faf8f4;
-      border-bottom: 1px solid #eeecf0;
+      border-bottom: 1px solid #e8e4dc;
     }
     .bookings-table td {
       font-size: 0.88rem;
@@ -750,13 +771,13 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
     }
     .bookings-table tbody tr:nth-child(even) { background: #fbfaf7; }
 
-    /* STATUS PILLS — softer, non-uppercase elements stay consistent */
+    /* STATUS PILLS */
     .status-pill { border-radius: 4px; font-weight: 600; }
 
     /* MOBILE TIGHTENING */
     @media (max-width: 768px) {
       .dashboard > nav:first-of-type { padding: 10px 18px !important; }
-      .dash-content { padding: 20px 16px; }
+      .dash-content { padding: 24px 18px; }
       .dash-layout { padding-top: 52px; }
     }
   </style>
@@ -1695,6 +1716,14 @@ async function init() {
   populateProfileForm();
   setupTabs();
   setupProfileHandlers();
+
+  // Clients is the default active tab — the setupTabs lazy-loader
+  // only fires on click, so kick off the initial clients fetch here.
+  var clientsBtn = document.querySelector('.tab-btn[data-tab="clients"]');
+  if (clientsBtn && !clientsBtn._loaded) {
+    clientsBtn._loaded = true;
+    loadClientsTab();
+  }
 
   // Check for Stripe return
   var stripeParam = new URLSearchParams(window.location.search).get('stripe');
@@ -3308,6 +3337,7 @@ async function loadClientsTab() {
     $('clients-list-view').classList.remove('hidden');
     renderClientsList();
   } catch(e) {
+    console.error('[loadClientsTab] failed:', e);
     $('clients-loading').style.display = 'none';
     $('clients-list-view').classList.remove('hidden');
     $('clients-list-view').innerHTML = '<div class="empty-state"><p>Error loading clients.</p></div>';
