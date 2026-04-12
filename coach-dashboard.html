@@ -6151,6 +6151,48 @@ function renderCoachingMirror(a, container) {
     h += mirrorSection('pm-curiosity', 'Where to Stay Curious', 'Coach Clarity surfaces these edges not as corrections but as live questions worth holding.', 'Coach Clarity \u2192 For Your Development', ceBody);
   }
 
+  // 7. Your Coaching Patterns in This Session (dna_manifestations)
+  var dnaM = Array.isArray(a.dna_manifestations) ? a.dna_manifestations.filter(function(x) { return x != null; }) : [];
+  if (dnaM.length) {
+    var dnaTypeColor = function(t) {
+      if (t === 'bias') return '#B8654A';
+      if (t === 'blind_spot') return '#c44';
+      return '#c49a3c'; // pattern (default)
+    };
+    var dnaTypeLabel = function(t) {
+      if (t === 'bias') return 'Bias';
+      if (t === 'blind_spot') return 'Blind Spot';
+      return 'Pattern';
+    };
+    var dnaBody = '';
+    dnaM.forEach(function(m) {
+      if (!m) return;
+      var pillColor = dnaTypeColor(m.pattern_type);
+      dnaBody += '<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:18px 20px;margin-bottom:14px;">'
+        + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">'
+        + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.9rem;font-weight:600;color:#1a3a52;">' + escapeHtml(m.pattern_name || '') + '</div>'
+        + '<span style="display:inline-block;padding:3px 10px;border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;background:' + pillColor + ';color:#ffffff;">' + escapeHtml(dnaTypeLabel(m.pattern_type)) + '</span>'
+        + '</div>'
+        + (m.how_it_showed_up ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#5a5560;line-height:1.55;margin-bottom:6px;"><span style="font-weight:600;color:#1a3a52;">How it showed up:</span> ' + escapeHtml(m.how_it_showed_up) + '</div>' : '')
+        + (m.recurrence_note ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.75rem;color:#9a9490;font-style:italic;margin-bottom:14px;">' + escapeHtml(m.recurrence_note) + '</div>' : '<div style="margin-bottom:10px;"></div>');
+
+      var ev = Array.isArray(m.verbatim_evidence) ? m.verbatim_evidence.filter(function(x) { return x != null; }) : [];
+      if (ev.length) {
+        ev.forEach(function(e) {
+          var speaker = (e.speaker || '').toLowerCase() === 'coach' ? 'COACH' : 'CLIENT';
+          dnaBody += '<div style="margin-top:10px;">'
+            + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9a9490;margin-bottom:4px;">' + speaker + ':</div>'
+            + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-style:italic;color:#1a3a52;line-height:1.55;background:#fdf9f1;border-left:2px solid #c49a3c;padding:8px 12px;">' + escapeHtml(e.quote || '') + '</div>'
+            + (e.what_this_reflects ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.75rem;color:#9a9490;font-style:italic;margin-top:4px;">' + escapeHtml(e.what_this_reflects) + '</div>' : '')
+            + '</div>';
+        });
+      }
+
+      dnaBody += '</div>';
+    });
+    h += mirrorSection('pm-dna-manifest', 'Your Coaching Patterns in This Session', 'Where your established coaching DNA showed up in this session.', 'Coach Clarity \u2192 Your Coaching DNA', dnaBody);
+  }
+
   // Link to Coach DNA tab
   h += '<div style="text-align:center;padding:16px 0;margin-top:8px;">'
     + '<a href="#" onclick="document.querySelector(\'[data-tab=coach-dna]\').click();return false;" style="font-size:0.85rem;color:var(--gold);font-weight:600;text-decoration:none;">View your full Coach DNA profile \u2192</a>'
