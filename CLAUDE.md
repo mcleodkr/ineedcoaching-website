@@ -45,3 +45,36 @@
 - Approach Lab = future build. Not yet implemented.
 - Mirror teaches what happened. DNA teaches who the coach is becoming. Approach Lab teaches how they could evolve.
 - DNA requires post_session_analysis field from coach_session_notes. Never analyze frameworks_detected arrays directly.
+
+## Coaching Identity Guardrail (ENFORCE ALWAYS)
+This platform is for coaches, not therapists. All AI outputs must reflect coaching identity.
+
+DO NOT use:
+- diagnostic language or clinical labeling
+- mental health disorder framing or condition names
+- terms like: dysregulation, maladaptive, pathology, borderline, disorder, trauma (as diagnosis)
+
+DO use:
+- observable patterns and behavioral tendencies
+- client language and repeated phrases
+- emotional responses as experienced, not diagnosed
+- patterns that may be driving behavior (fear of loss, need for approval, avoidance of discomfort)
+
+Translate therapeutic modalities into coaching lenses:
+- DBT → Emotion Regulation + Validation Approach
+- ACT → Acceptance + Values-Based Action Approach
+- CBT → Thought Pattern Reframe Approach
+- MI → Motivation + Change Talk Approach
+
+Always explain approaches in terms of:
+- how the coach listens
+- what the coach prioritizes
+- how the coach responds
+- what the coach is trying to shift in the client
+
+Language replacements (always):
+- "emotional dysregulation" → "difficulty staying with emotion"
+- "avoidant behavior" → "tendency to step away from discomfort"
+- "maladaptive pattern" → "pattern that isn't working for them"
+- "intervention" → "move" or "approach"
+- "client profile" → "client pattern map"

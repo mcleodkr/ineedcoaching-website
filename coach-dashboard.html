@@ -3720,6 +3720,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
         + '<button class="stab" data-sid="' + s.id + '" data-stab="notes" style="flex:1;padding:8px 14px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;color:var(--muted);background:none;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all 0.15s ease;">Session Notes</button>'
         + '<button class="stab" data-sid="' + s.id + '" data-stab="coach-clarity" style="flex:1;padding:8px 14px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;color:var(--muted);background:none;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all 0.15s ease;">Coach Clarity</button>'
         + '<button class="stab" data-sid="' + s.id + '" data-stab="coaching-mirror" style="flex:1;padding:8px 14px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;color:var(--muted);background:none;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all 0.15s ease;">Coaching Mirror</button>'
+        + '<button class="stab" data-sid="' + s.id + '" data-stab="approach-lab" style="flex:1;padding:8px 14px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;color:var(--muted);background:none;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all 0.15s ease;">Approach Lab</button>'
         + '</div>';
 
       // Tab 1: Transcript
@@ -3805,6 +3806,15 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
       }
       html += '</div>';
       html += '</div>';
+
+      // Tab 5: Approach Lab — placeholder, unlocks after Coaching Mirror is complete
+      html += '<div id="stab-approach-lab-' + s.id + '" class="stab-panel" data-sid="' + s.id + '" style="padding:20px;display:none;">'
+        + '<div style="max-width:640px;margin:0 auto;padding:48px 24px;text-align:center;">'
+        + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:600;color:#1a3a52;margin-bottom:10px;letter-spacing:-0.005em;">Approach Lab</div>'
+        + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#9a9490;line-height:1.6;margin-bottom:18px;">Explore how this session could unfold through a different coaching lens.</div>'
+        + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#b8b0a4;">Coming soon \u2014 available after Coaching Mirror is complete.</div>'
+        + '</div>'
+        + '</div>';
 
       html += '</div>'; // session-panel
       html += '</div>'; // session card
