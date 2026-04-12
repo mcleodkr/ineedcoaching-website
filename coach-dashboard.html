@@ -1595,6 +1595,10 @@ let currentUser = null;
 let coachProfile = null;
 var notesByBooking = {};
 
+// Stash of the last client detail bundle so the Pattern Map re-render
+// can re-call renderClientDetail without re-fetching from Supabase.
+var _clientDetailBundle = null;
+
 // ===================================================================
 // DNA TAG DEFINITIONS — shared between the Coaching Mirror (per-session
 // intervention tags) and the Client Pattern Map (aggregated behavioral
@@ -3665,6 +3669,8 @@ async function openClientDetail(email) {
     notesByBooking = {};
     sessionNotes.forEach(function(n) { notesByBooking[n.booking_id] = n; });
 
+    // Stash the full bundle so Pattern Map generation can re-render without a refetch.
+    _clientDetailBundle = { client: client, goals: goals, intakeResponses: intakeResponses, checkinResponses: checkinResponses, messages: messages, notesByBooking: notesByBooking, checkinForms: checkinForms };
     renderClientDetail(client, goals, intakeResponses, checkinResponses, messages, notesByBooking, checkinForms);
   } catch(e) {
     $('clients-detail-view').innerHTML = '<div class="empty-state"><p>Error loading client details.</p></div>';
@@ -4027,19 +4033,89 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
     html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#9a9490;">No unmet openings logged yet.</div>';
   }
 
-  // SECTIONS 5-9 — AI placeholders, unlock after Generate Pattern Map runs
-  var pmAiPlaceholders = [
-    ['Likely Drivers', 'What may be driving this client\u2019s patterns'],
-    ['Emotional Style', 'How this client moves through emotional territory'],
-    ['What Moves Them Forward', 'Conditions that create real movement'],
-    ['Where They Get Stuck', 'Conditions that cause them to stall'],
-    ['Signs of Growth', 'Observable shifts across sessions']
+  // SECTIONS 5-9 — AI-populated when client.patternMap exists, locked otherwise.
+  var pm = client.patternMap || null;
+  var pmAiSections = [
+    { key: 'likely_drivers',         title: 'Likely Drivers',            sub: 'What may be driving this client\u2019s patterns' },
+    { key: 'emotional_style',        title: 'Emotional Style',           sub: 'How this client moves through emotional territory' },
+    { key: 'what_moves_them_forward',title: 'What Moves Them Forward',   sub: 'Conditions that create real movement' },
+    { key: 'where_they_get_stuck',   title: 'Where They Get Stuck',      sub: 'Conditions that cause them to stall' },
+    { key: 'signs_of_growth',        title: 'Signs of Growth',           sub: 'Observable shifts across sessions' }
   ];
-  pmAiPlaceholders.forEach(function(p) {
-    html += pmHdr(p[0])
-      + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#9a9490;margin-top:-8px;margin-bottom:10px;">' + p[1] + '</div>'
-      + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-style:italic;color:#9a9490;padding:10px 0;">Generate Pattern Map to unlock</div>';
+  pmAiSections.forEach(function(s) {
+    html += pmHdr(s.title)
+      + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#9a9490;margin-top:-8px;margin-bottom:12px;">' + s.sub + '</div>';
+
+    if (!pm || !pm[s.key] || (Array.isArray(pm[s.key]) && !pm[s.key].length)) {
+      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-style:italic;color:#9a9490;padding:10px 0;">Generate Pattern Map to unlock</div>';
+      return;
+    }
+
+    if (s.key === 'likely_drivers') {
+      pm.likely_drivers.forEach(function(d) {
+        if (!d) return;
+        html += '<div style="background:#ffffff;border:1px solid #edeae4;border-radius:6px;padding:14px 16px;margin-bottom:10px;">'
+          + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.9rem;font-weight:700;color:#1a3a52;margin-bottom:6px;">' + escapeHtml(d.driver || '') + '</div>'
+          + (d.evidence ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#5a5560;line-height:1.6;margin-bottom:6px;">' + escapeHtml(d.evidence) + '</div>' : '')
+          + (d.frequency ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#9a9490;">' + escapeHtml(d.frequency) + '</div>' : '')
+          + '</div>';
+      });
+    } else if (s.key === 'emotional_style') {
+      var es = pm.emotional_style || {};
+      if (es.summary) {
+        html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:#1a3a52;line-height:1.65;margin-bottom:12px;">' + escapeHtml(es.summary) + '</div>';
+      }
+      if (Array.isArray(es.patterns) && es.patterns.length) {
+        html += '<div style="margin-bottom:10px;">';
+        es.patterns.forEach(function(p) {
+          if (!p) return;
+          html += '<span style="display:inline-block;padding:4px 12px;border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.72rem;font-weight:600;background:#c49a3c;color:#ffffff;margin-right:6px;margin-bottom:6px;">' + escapeHtml(p) + '</span>';
+        });
+        html += '</div>';
+      }
+      if (Array.isArray(es.client_language) && es.client_language.length) {
+        es.client_language.forEach(function(q) {
+          if (!q) return;
+          html += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-style:italic;color:var(--gold);background:#fdf9f1;border-left:2px solid #c49a3c;padding:8px 12px;line-height:1.55;margin-bottom:6px;">\u201C' + escapeHtml(q) + '\u201D</div>';
+        });
+      }
+    } else if (s.key === 'what_moves_them_forward') {
+      pm.what_moves_them_forward.forEach(function(m) {
+        if (!m) return;
+        html += '<div style="background:#ffffff;border:1px solid #edeae4;border-radius:6px;padding:14px 16px;margin-bottom:10px;">'
+          + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.9rem;font-weight:700;color:#1a3a52;margin-bottom:6px;">' + escapeHtml(m.condition || '') + '</div>'
+          + (m.evidence ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#5a5560;line-height:1.6;">' + escapeHtml(m.evidence) + '</div>' : '')
+          + '</div>';
+      });
+    } else if (s.key === 'where_they_get_stuck') {
+      pm.where_they_get_stuck.forEach(function(st) {
+        if (!st) return;
+        html += '<div style="background:#ffffff;border:1px solid #edeae4;border-radius:6px;padding:14px 16px;margin-bottom:10px;">'
+          + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.9rem;font-weight:700;color:#B8654A;margin-bottom:6px;">' + escapeHtml(st.stall_point || '') + '</div>'
+          + (st.evidence ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#5a5560;line-height:1.6;margin-bottom:6px;">' + escapeHtml(st.evidence) + '</div>' : '')
+          + (st.frequency ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#9a9490;">' + escapeHtml(st.frequency) + '</div>' : '')
+          + '</div>';
+      });
+    } else if (s.key === 'signs_of_growth') {
+      pm.signs_of_growth.forEach(function(g) {
+        if (!g) return;
+        html += '<div style="background:#ffffff;border:1px solid #edeae4;border-radius:6px;padding:14px 16px;margin-bottom:10px;">'
+          + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.9rem;font-weight:700;color:#1a3a52;margin-bottom:8px;">' + escapeHtml(g.shift || '') + '</div>'
+          + ((g.from || g.to) ? '<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">'
+              + '<div style="flex:1;min-width:140px;background:#f7f5f1;border-radius:4px;padding:8px 12px;font-family:\'DM Sans\',sans-serif;font-size:0.8rem;color:#5a5560;line-height:1.5;"><span style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9a9490;display:block;margin-bottom:2px;">From</span>' + escapeHtml(g.from || '') + '</div>'
+              + '<div style="color:#c49a3c;font-size:1rem;">\u2192</div>'
+              + '<div style="flex:1;min-width:140px;background:#fdf9f1;border-radius:4px;padding:8px 12px;font-family:\'DM Sans\',sans-serif;font-size:0.8rem;color:#1a3a52;line-height:1.5;"><span style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#c49a3c;display:block;margin-bottom:2px;">To</span>' + escapeHtml(g.to || '') + '</div>'
+              + '</div>' : '')
+          + (g.evidence ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#9a9490;font-style:italic;">' + escapeHtml(g.evidence) + '</div>' : '')
+          + '</div>';
+      });
+    }
   });
+
+  if (pm && pm.last_analyzed) {
+    var la = new Date(pm.last_analyzed);
+    html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#b8b0a4;margin-top:20px;padding-top:12px;border-top:1px solid #edeae4;">Last analyzed ' + escapeHtml(la.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })) + '</div>';
+  }
 
   html += '</div>'; // close Pattern Map form-section
 
@@ -4202,14 +4278,36 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
           headers: { 'Content-Type': 'application/json', ...apiHeaders() },
           body: JSON.stringify({ coach_id: coachProfile.id, client_email: email })
         });
-        if (!res.ok) throw new Error('endpoint not ready (' + res.status + ')');
+        if (!res.ok) throw new Error('endpoint returned ' + res.status);
         var data = await res.json();
-        if (status) { status.textContent = 'Pattern Map generated.'; status.style.color = '#2d6a4f'; }
-        // TODO: re-render the AI-filled sections when the endpoint ships.
-        console.log('[Pattern Map] generated:', data);
+
+        if (data && data.locked) {
+          if (status) { status.textContent = 'Pattern Map needs at least ' + (data.needed || 3) + ' analyzed sessions. You have ' + (data.session_count || 0) + '.'; status.style.color = '#9a9490'; }
+          return;
+        }
+
+        // Re-render the client detail with the populated Pattern Map sections.
+        if (_clientDetailBundle && _clientDetailBundle.client && _clientDetailBundle.client.email === email) {
+          _clientDetailBundle.client.patternMap = data;
+          renderClientDetail(
+            _clientDetailBundle.client,
+            _clientDetailBundle.goals,
+            _clientDetailBundle.intakeResponses,
+            _clientDetailBundle.checkinResponses,
+            _clientDetailBundle.messages,
+            _clientDetailBundle.notesByBooking,
+            _clientDetailBundle.checkinForms
+          );
+          // Scroll the newly-rendered Pattern Map into view.
+          var pmSection = document.querySelector('#generate-pattern-map-btn');
+          if (pmSection) pmSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          console.warn('[Pattern Map] bundle missing or stale, skipping re-render');
+          if (status) { status.textContent = 'Pattern Map generated. Refresh to see results.'; status.style.color = '#2d6a4f'; }
+        }
       } catch (e) {
-        console.warn('[Pattern Map] generation unavailable:', e && e.message);
-        if (status) { status.textContent = 'Pattern Map generation coming soon.'; status.style.color = '#9a9490'; }
+        console.warn('[Pattern Map] generation failed:', e && e.message);
+        if (status) { status.textContent = 'Pattern Map generation failed. Try again shortly.'; status.style.color = '#c44'; }
       } finally {
         self.disabled = false;
         self.textContent = origText;
