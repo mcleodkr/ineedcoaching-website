@@ -6181,17 +6181,25 @@ function renderPostSessionAnalysis(a, container) {
   // Source from a.goals directly (goals var is derived from a.goals at top of function).
   var suggestedSource = (a.goals && Array.isArray(a.goals.suggested)) ? a.goals.suggested
     : ((goals && Array.isArray(goals.suggested)) ? goals.suggested : []);
-  var suggestedGoals = suggestedSource.filter(function(x) { return !!x && (x.title || x.description); });
-  console.log('[Coach Clarity] suggested goals count:', suggestedGoals.length, suggestedGoals);
+  // Permissive filter — accept any object. Some Mirror outputs use title/description,
+  // others may use goal/desc/text. Pull whichever field is present at render time.
+  var suggestedGoals = suggestedSource.filter(function(x) { return !!x && typeof x === 'object'; });
+  console.log('[Coach Clarity] suggested goals count:', suggestedGoals.length);
+  console.log('[Coach Clarity] suggested item keys:', suggestedGoals.map(function(x) { return x ? Object.keys(x) : null; }));
   if (suggestedGoals.length) {
     goalsBody += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#c49a3c;margin-top:12px;margin-bottom:8px;">Suggested from this session</div>';
     suggestedGoals.forEach(function(sg, idx) {
       if (!sg) return;
+      var sgTitle = sg.title || sg.goal || sg.text || sg.name || '';
+      var sgDesc = sg.description || sg.desc || sg.why || sg.rationale || '';
+      var sgDate = sg.suggested_target_date || sg.target_date || sg.date || '';
+      // If the item has nothing renderable, skip it (instead of emitting an empty card)
+      if (!sgTitle && !sgDesc) return;
       goalsBody += '<div class="suggested-goal-card" data-sg-idx="' + idx + '" style="background:#ffffff;border:1px solid #edeae4;border-radius:6px;padding:12px 16px;margin-bottom:10px;">'
-        + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.875rem;font-weight:600;color:#1a3a52;">' + escapeHtml(sg.title || '') + '</div>'
-        + (sg.description ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.8rem;color:#5a5560;margin-top:4px;line-height:1.5;">' + escapeHtml(sg.description) + '</div>' : '')
+        + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.875rem;font-weight:600;color:#1a3a52;">' + escapeHtml(sgTitle || '(untitled goal)') + '</div>'
+        + (sgDesc ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.8rem;color:#5a5560;margin-top:4px;line-height:1.5;">' + escapeHtml(sgDesc) + '</div>' : '')
         + '<div style="margin-top:10px;">'
-        + '<button class="sg-prefill-btn" data-sg-title="' + escapeHtml(sg.title || '') + '" data-sg-desc="' + escapeHtml(sg.description || '') + '" data-sg-date="' + escapeHtml(sg.suggested_target_date || '') + '" style="background:transparent;border:1px solid #c49a3c;color:#c49a3c;border-radius:4px;padding:4px 12px;font-family:\'DM Sans\',sans-serif;font-size:0.75rem;font-weight:500;cursor:pointer;">Add Goal</button>'
+        + '<button class="sg-prefill-btn" data-sg-title="' + escapeHtml(sgTitle) + '" data-sg-desc="' + escapeHtml(sgDesc) + '" data-sg-date="' + escapeHtml(sgDate) + '" style="background:transparent;border:none;color:#c49a3c;padding:4px 0;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;cursor:pointer;">Add Goal \u2192</button>'
         + '</div></div>';
     });
   }
@@ -6461,31 +6469,35 @@ function renderApproachLab(data, container) {
   };
 
   var html = '';
-  // Header + subtitle
-  html += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:600;color:#1a3a52;letter-spacing:-0.005em;margin-bottom:6px;">Approach Lab</div>';
-  html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#9a9490;margin-bottom:24px;">How this session could have unfolded through a different coaching lens.</div>';
+  // Top orientation block
+  html += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:600;color:#1a3a52;letter-spacing:-0.005em;margin-bottom:10px;">Approach Lab</div>';
+  html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#5a5560;line-height:1.65;max-width:680px;margin-bottom:32px;">Approach Lab lets you explore how a real moment from your session could unfold using different coaching approaches. This is a learning and exploration space \u2014 not a recommendation engine. No approach is correct. Each offers a different way of working.</div>';
 
   // Moments
   moments.forEach(function(m) {
     if (!m) return;
     var color = lensColor(m.approach_lens);
     html += '<div style="background:#ffffff;border:1px solid #edeae4;border-radius:8px;padding:20px 24px;margin-bottom:16px;">';
-    // Moment title
+    // Moment label + title
+    html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#c49a3c;margin-bottom:4px;">Moment from your session:</div>';
     html += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;border-bottom:1px solid #edeae4;padding-bottom:8px;margin-bottom:14px;">' + escapeHtml(m.title || '') + '</div>';
-    // What you did
+    // Your approach
     if (m.what_you_did) {
-      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9a9490;margin-bottom:4px;">What you did:</div>';
+      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#9a9490;margin-bottom:4px;">Your approach:</div>';
       html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#5a5560;line-height:1.6;margin-bottom:14px;">' + escapeHtml(m.what_you_did) + '</div>';
     }
-    // Approach lens badge
+    // Approach lens pill (with APPROACH: prefix inside)
     if (m.approach_name) {
       html += '<div style="margin-bottom:12px;">';
-      html += '<span style="display:inline-block;padding:5px 14px;background:' + color + ';color:#ffffff;border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.72rem;font-weight:600;letter-spacing:0.02em;">' + escapeHtml(m.approach_name) + '</span>';
+      html += '<span style="display:inline-block;padding:5px 14px;background:' + color + ';color:#ffffff;border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.72rem;font-weight:600;letter-spacing:0.02em;">'
+        + '<span style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;margin-right:6px;opacity:0.9;">Approach:</span>'
+        + escapeHtml(m.approach_name)
+        + '</span>';
       html += '</div>';
     }
-    // What this approach does differently
+    // What this approach is trying to shift
     if (m.what_this_approach_does_differently) {
-      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9a9490;margin-bottom:4px;">What this approach would do differently:</div>';
+      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#9a9490;margin-bottom:4px;">What this approach is trying to shift:</div>';
       html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#1a3a52;line-height:1.6;margin-bottom:14px;">' + escapeHtml(m.what_this_approach_does_differently) + '</div>';
     }
     // Dialogue
@@ -6505,10 +6517,22 @@ function renderApproachLab(data, container) {
       });
       html += '</div>';
     }
-    // Why this shift matters
+    // What this approach is doing (teaching block)
+    if (m.what_this_approach_does_differently) {
+      html += '<div style="margin-bottom:14px;">';
+      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#9a9490;margin-bottom:4px;">What this approach is doing:</div>';
+      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#5a5560;line-height:1.65;">' + escapeHtml(m.what_this_approach_does_differently) + '</div>';
+      html += '</div>';
+    }
+    // When you might use this
+    html += '<div style="background:#fdf9f1;border-left:2px solid #c49a3c;padding:10px 14px;margin-bottom:14px;">';
+    html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#c49a3c;margin-bottom:4px;">When you might use this:</div>';
+    html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#5a5560;line-height:1.6;">Consider this approach when the client is naming cost or loss but moving past it quickly, or when insight arrives without emotional weight.</div>';
+    html += '</div>';
+    // How this could impact this client
     if (m.why_this_shift_matters_for_this_client) {
       html += '<div style="border-left:2px solid #edeae4;padding-left:12px;margin-top:8px;">';
-      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9a9490;margin-bottom:4px;">Why this shift matters for this client:</div>';
+      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#9a9490;margin-bottom:4px;">How this could impact this client:</div>';
       html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#5a5560;line-height:1.6;">' + escapeHtml(m.why_this_shift_matters_for_this_client) + '</div>';
       html += '</div>';
     }
@@ -6524,7 +6548,7 @@ function renderApproachLab(data, container) {
     html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;">';
     // Left: align
     html += '<div>';
-    html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#2d6a4f;margin-bottom:8px;">Where you already align</div>';
+    html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#2d6a4f;margin-bottom:8px;">Where you already align with this approach</div>';
     if (align.length) {
       html += '<ul style="margin:0;padding-left:18px;">';
       align.forEach(function(item) { html += '<li style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#2d6a4f;line-height:1.55;margin-bottom:6px;">' + escapeHtml(item || '') + '</li>'; });
@@ -6535,7 +6559,7 @@ function renderApproachLab(data, container) {
     html += '</div>';
     // Right: expand
     html += '<div>';
-    html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#1a3a52;margin-bottom:8px;">Where this expands your range</div>';
+    html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#1a3a52;margin-bottom:8px;">Where this approach stretches your range</div>';
     if (expand.length) {
       html += '<ul style="margin:0;padding-left:18px;">';
       expand.forEach(function(item) { html += '<li style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#1a3a52;line-height:1.55;margin-bottom:6px;">' + escapeHtml(item || '') + '</li>'; });
