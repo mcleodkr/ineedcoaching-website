@@ -156,9 +156,11 @@ Return ONLY this JSON:
     const pass2bOutput = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
-      2500,
+      3500,
       MIRROR_RULES,
-      `Generate max 2 interventions, max 2 what_stood_out items, and reflection.
+      `CRITICAL: You must complete valid JSON. If you are running low on tokens, reduce the depth of later items rather than truncating mid-structure. Never leave an array or object unclosed. Prioritize completing the JSON structure over maximizing depth.
+
+Generate max 2 interventions, max 2 what_stood_out items, and reflection.
 
 WORD LIMITS: 15 words max per field EXCEPT see_why_this_works fields. The see_why_this_works block overrides the 15-word cap — treat those as applied teaching, not glossary entries.
 
