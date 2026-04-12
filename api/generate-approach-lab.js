@@ -126,7 +126,7 @@ export default async function handler(req, res) {
     }
 
     // STEP 4a — PASS 1: Moment Selection
-    const PASS1_SYSTEM = `You are Coach Clarity. Select up to 3 key moments from this session. A key moment is where the client revealed something important, showed hesitation or contradiction, the coach made a move that shaped direction, or the moment could have gone deeper. Return ONLY a JSON array. Maximum 3 items. Keep each field under 15 words. Complete the array even if brief.`;
+    const PASS1_SYSTEM = `You are Coach Clarity. Select up to 2 key moments from this session. A key moment is where the client revealed something important, showed hesitation or contradiction, the coach made a move that shaped direction, or the moment could have gone deeper. Return ONLY a JSON array. Maximum 2 items. Keep each field under 15 words. Complete the array even if brief.`;
 
     const PASS1_USER = `Session signals (no transcript):
 
@@ -135,7 +135,7 @@ Themes: ${JSON.stringify(pass1Themes)}
 Coach interventions: ${JSON.stringify(pass1Interventions)}
 Missed windows: ${JSON.stringify(pass1MissedWindows)}
 
-Select up to 3 key moments from these signals. Maximum 3. Each field under 15 words. Return ONLY:
+Select up to 2 key moments from these signals. Maximum 2. Each field under 15 words. Return ONLY:
 [{ "title": "short title", "what_happened": "one sentence", "client_quote": "short quote", "coach_move": "what coach did", "moment_type": "revelation|hesitation|contradiction|emotional_weight|coaching_move" }]`;
 
     const pass1Output = await callClaude(
@@ -148,7 +148,9 @@ Select up to 3 key moments from these signals. Maximum 3. Each field under 15 wo
     );
 
     // STEP 4b — PASS 2: Approach Lab Generation
-    const PASS2_SYSTEM = `You are Coach Clarity, an applied coaching intelligence system.
+    const PASS2_SYSTEM = `CRITICAL: You must return complete valid JSON. If you are running low on tokens, reduce dialogue turns to 4 minimum rather than leaving JSON incomplete. Never truncate mid-structure. The JSON must close properly.
+
+You are Coach Clarity, an applied coaching intelligence system.
 
 This system is designed for coaches, not therapists.
 
@@ -162,7 +164,7 @@ Tone: practical, grounded, non-clinical, focused on clarity and movement.
 
 Be concise where instructed. Complete the JSON structure even if content is brief.
 
-Dialogue requirements: Each approach dialogue must be 6-10 turns minimum. Show how the approach STAYS inside its lens over multiple exchanges. Include 2-3 PAUSE annotations inside the dialogue to teach the move in real time. Do not rush to resolution. Language must be natural and conversational.
+Dialogue requirements: Each approach dialogue must be 4-6 turns minimum. Show how the approach STAYS inside its lens over multiple exchanges. Include 2-3 PAUSE annotations inside the dialogue to teach the move in real time. Do not rush to resolution. Language must be natural and conversational.
 
 Return ONLY valid JSON. No markdown. Start with { end with }.`;
 
@@ -182,7 +184,7 @@ Relational/Exploratory: Client-Led Exploration, Relational Pattern Awareness
 APPROACH SELECTION RULE: Select the approach that best fits each moment. Prioritize fit over variety. Repeating a category is acceptable.
 
 REQUIREMENTS:
-- 6-10 dialogue turns per moment (alternating coach/client)
+- 4-6 dialogue turns per moment minimum (alternating coach/client)
 - 2-3 pause annotations interleaved mid-dialogue teaching the move in real time
 - your_approach_summary must be concrete, 2-3 sentences, grounded in what the coach actually did in this session (not abstract)
 - per-moment bridge (not one global bridge)
@@ -222,7 +224,7 @@ GUARDRAILS:
 - Be immediately usable in the coach's next session
 - Do NOT label attachment styles or clinical constructs
 - Keep dialogue natural — consistent with how this client actually speaks
-- 6-10 dialogue turns per moment minimum, with 2-3 pause annotations
+- 4-6 dialogue turns per moment minimum, with 2-3 pause annotations
 - bridge is per-moment only, never global`;
 
     const pass2Output = await callClaude(
