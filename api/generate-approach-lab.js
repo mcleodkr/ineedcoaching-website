@@ -214,6 +214,7 @@ For each moment return:
   "title": "",
   "approach_name": "",
   "approach_lens": "cognitive|emotional|action|identity|relational",
+  "moment_setup": "2-3 sentences. Describe what was happening in this moment, why it is worth exploring differently, and why the selected approach fits. Do not describe what the coach did — that comes separately.",
   "your_approach_summary": "2-3 sentences, concrete, what the coach actually did in this moment",
   "dialogue": "COACH: [line]\\nCLIENT: [line]\\n\\n[PAUSE — WHAT THE COACH IS DOING: 1-2 sentence teaching note]\\n\\nCOACH: [line]\\nCLIENT: [line]\\n\\n[PAUSE — WHY THIS MATTERS: 1-2 sentence teaching note]\\n\\nCOACH: [line]\\nCLIENT: [line]",
   "the_move": "1-2 sentences naming the specific coaching move being demonstrated",

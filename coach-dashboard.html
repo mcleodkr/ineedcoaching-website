@@ -6642,10 +6642,10 @@ function renderApproachLab(data, container, ctx) {
     html += '<div style="' + labelStyle + 'color:#c49a3c;margin-bottom:4px;">Moment from your session</div>';
     html += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.2rem;font-weight:600;color:#1a3a52;margin-bottom:14px;">' + escapeHtml(m.title || '') + '</div>';
 
-    // Your approach summary
-    if (yourApproach) {
-      html += '<div style="' + labelStyle + 'color:#9a9490;margin-bottom:4px;">Your approach:</div>';
-      html += '<div style="' + bodyStyle + 'font-size:0.85rem;color:#5a5560;line-height:1.65;margin-bottom:16px;">' + escapeHtml(yourApproach) + '</div>';
+    // Moment setup — paragraph introduction, no label
+    var momentSetup = m.moment_setup || '';
+    if (momentSetup) {
+      html += '<div style="' + bodyStyle + 'font-size:0.875rem;color:#5a5560;line-height:1.7;margin-bottom:18px;">' + escapeHtml(momentSetup) + '</div>';
     }
 
     // Alternative approach label + pill
