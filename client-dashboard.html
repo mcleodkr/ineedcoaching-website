@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Coaching Space | ineedcoaching.org</title>
+<meta name="description" content="Your coaching space — sessions, goals, check-ins, messages, and courses.">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/*
+// CLIENT DASHBOARD GUARDRAIL
+// This dashboard is for clients, not coaches.
+// Never show: Mirror analysis, DNA patterns, technique names, coaching interventions,
+// approach lab content, coach development content, or any language that frames
+// the client as a subject of analysis.
+// Tone: warm, supportive, growth-oriented, client-empowering.
+// This is a continuity space, not an intelligence report.
+*/
+:root {
+  --navy: #1a3a52;
+  --navy-soft: #2a4a62;
+  --gold: #c49a3c;
+  --gold-hover: #a87d1f;
+  --cream: #f7f4ef;
+  --cream-warm: #faf7f1;
+  --white: #ffffff;
+  --border: #e8e4dc;
+  --border-soft: #f0ece3;
+  --text: #1f2937;
+  --muted: #6b6b60;
+  --shadow-sm: 0 1px 2px rgba(26,58,82,0.04);
+  --shadow: 0 4px 14px rgba(26,58,82,0.06);
+  --r: 10px;
+  --r-sm: 6px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'DM Sans', sans-serif; font-size: 18px; background: var(--cream); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; color: var(--navy); font-weight: 600; }
+a { color: var(--navy); text-decoration: none; }
+
+/* LOGIN */
+.login-screen { display: none; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; background: var(--cream); }
+.login-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 48px 40px; max-width: 440px; width: 100%; text-align: center; box-shadow: var(--shadow); }
+.login-card h1 { font-size: 2rem; margin-bottom: 10px; }
+.login-sub { font-size: 0.95rem; color: var(--muted); margin-bottom: 28px; line-height: 1.6; }
+.login-card input[type="email"] { width: 100%; padding: 13px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--text); background: var(--cream-warm); margin-bottom: 12px; transition: border-color 0.15s ease; }
+.login-card input[type="email"]:focus { outline: none; border-color: var(--gold); }
+.login-btn { width: 100%; padding: 13px 24px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background 0.15s ease; }
+.login-btn:hover { background: var(--gold-hover); }
+.login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.login-msg { font-size: 0.85rem; color: var(--gold); margin-top: 14px; min-height: 20px; }
+.login-logo { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; font-weight: 700; color: var(--navy); margin-bottom: 20px; }
+.login-logo .i { color: var(--gold); font-style: italic; }
+
+/* LAYOUT */
+.dashboard { display: none; min-height: 100vh; }
+.dash-layout { display: flex; min-height: 100vh; }
+
+/* SIDEBAR */
+.sidebar { width: 260px; background: var(--white); border-right: 1px solid var(--border); padding: 28px 0; position: fixed; top: 0; bottom: 0; left: 0; overflow-y: auto; z-index: 200; }
+.side-brand { padding: 0 26px 28px; border-bottom: 1px solid var(--border-soft); }
+.side-brand .logo { font-family: 'Cormorant Garamond', serif; font-size: 1.35rem; font-weight: 700; color: var(--navy); display: block; }
+.side-brand .logo .i { color: var(--gold); font-style: italic; }
+.side-brand .tagline { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 4px; }
+.side-nav { padding: 18px 14px; }
+.side-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: var(--r-sm); font-size: 0.9rem; color: var(--muted); font-weight: 500; cursor: pointer; margin-bottom: 2px; border-left: 3px solid transparent; transition: all 0.15s ease; background: none; border-top: none; border-right: none; border-bottom: none; width: 100%; text-align: left; font-family: 'DM Sans', sans-serif; }
+.side-item:hover { color: var(--navy); background: var(--cream-warm); }
+.side-item.active { color: var(--navy); background: rgba(196,154,60,0.10); border-left-color: var(--gold); font-weight: 600; }
+.side-item .icon { width: 18px; text-align: center; font-size: 1rem; }
+.side-foot { padding: 20px 26px; border-top: 1px solid var(--border-soft); margin-top: 16px; }
+.side-foot .user-email { font-size: 0.78rem; color: var(--muted); word-break: break-all; margin-bottom: 10px; }
+.sign-out { background: none; border: 1px solid var(--border); color: var(--muted); padding: 7px 14px; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
+.sign-out:hover { border-color: var(--gold); color: var(--gold); }
+
+/* MOBILE NAV */
+.mobile-nav { display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 250; background: var(--white); border-bottom: 1px solid var(--border); padding: 14px 20px; align-items: center; justify-content: space-between; }
+.mobile-nav .logo { font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; font-weight: 700; color: var(--navy); }
+.mobile-nav .logo .i { color: var(--gold); font-style: italic; }
+.hamburger { background: none; border: 1px solid var(--border); border-radius: var(--r-sm); padding: 8px 12px; font-size: 1.1rem; cursor: pointer; color: var(--navy); }
+
+/* MAIN */
+.main { flex: 1; margin-left: 260px; padding: 36px 48px 80px; max-width: 1100px; }
+.page-title { font-size: 1.9rem; margin-bottom: 6px; }
+.page-sub { font-size: 0.95rem; color: var(--muted); margin-bottom: 24px; }
+
+/* WELCOME CARD */
+.welcome-card { background: var(--cream-warm); border: 1px solid var(--border); border-radius: var(--r); padding: 26px 28px; margin-bottom: 28px; box-shadow: var(--shadow-sm); }
+.welcome-card h2 { font-size: 1.7rem; margin-bottom: 6px; }
+.welcome-card .prompt { font-size: 0.92rem; color: var(--muted); font-style: italic; margin-bottom: 14px; line-height: 1.5; }
+.welcome-meta { display: flex; gap: 24px; flex-wrap: wrap; font-size: 0.85rem; color: var(--text); }
+.welcome-meta .label { color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.7rem; display: block; margin-bottom: 2px; }
+.welcome-meta .value { font-weight: 500; }
+
+/* SECTIONS */
+.section { display: none; }
+.section.active { display: block; }
+
+/* CARDS */
+.card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 22px 24px; margin-bottom: 14px; box-shadow: var(--shadow-sm); transition: border-color 0.15s ease; }
+.card:hover { border-color: #d9d4c7; }
+.card h3 { font-size: 1.2rem; margin-bottom: 4px; }
+.card .meta { font-size: 0.82rem; color: var(--muted); margin-bottom: 10px; }
+.card p { font-size: 0.92rem; color: var(--text); line-height: 1.6; }
+
+.section-header { font-family: 'Cormorant Garamond', serif; font-size: 1.15rem; font-weight: 600; color: var(--navy); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin: 28px 0 16px; }
+
+/* BADGES */
+.badge { display: inline-block; padding: 3px 10px; border-radius: 50px; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+.badge-upcoming { background: rgba(196,154,60,0.15); color: var(--gold); }
+.badge-complete { background: rgba(26,58,82,0.08); color: var(--navy); }
+.badge-pending { background: rgba(196,154,60,0.18); color: var(--gold-hover); }
+.badge-cancelled { background: rgba(107,107,96,0.12); color: var(--muted); }
+
+/* BUTTONS */
+.btn { padding: 8px 16px; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 600; border: none; cursor: pointer; transition: all 0.15s ease; text-decoration: none; display: inline-block; }
+.btn-primary { background: var(--gold); color: var(--white); }
+.btn-primary:hover { background: var(--gold-hover); }
+.btn-secondary { background: transparent; color: var(--navy); border: 1px solid var(--navy); }
+.btn-secondary:hover { background: var(--navy); color: var(--white); }
+.btn-tertiary { background: var(--cream-warm); color: var(--muted); border: 1px solid var(--border); }
+.btn-tertiary:hover { border-color: var(--gold); color: var(--gold); }
+.btn-sm { padding: 6px 12px; font-size: 0.78rem; }
+
+/* EMPTY */
+.empty { text-align: center; padding: 48px 24px; background: var(--white); border: 1px dashed var(--border); border-radius: var(--r); color: var(--muted); }
+.empty p { font-size: 0.95rem; font-style: italic; line-height: 1.6; }
+
+/* LOADING */
+.loading { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 30vh; gap: 16px; }
+.spinner { width: 42px; height: 42px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* SESSION SUMMARY PANEL */
+.summary-panel { margin-top: 16px; padding: 18px 20px; background: var(--cream-warm); border-radius: var(--r-sm); border: 1px solid var(--border-soft); display: none; }
+.summary-panel.open { display: block; }
+.summary-block { margin-bottom: 14px; }
+.summary-block:last-child { margin-bottom: 0; }
+.summary-label { font-family: 'Cormorant Garamond', serif; font-size: 1rem; font-weight: 600; color: var(--navy); margin-bottom: 6px; }
+.summary-block p, .summary-block li { font-size: 0.88rem; color: var(--text); line-height: 1.55; }
+.summary-block ul { list-style: none; padding: 0; }
+.summary-block li { padding: 6px 0 6px 22px; position: relative; }
+.summary-block li::before { content: '•'; color: var(--gold); position: absolute; left: 8px; top: 4px; font-weight: 700; }
+
+/* GOAL STATUS */
+.goal-status-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.goal-status-btn { padding: 7px 14px; border-radius: 50px; border: 1px solid var(--border); background: var(--white); font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 500; color: var(--muted); cursor: pointer; transition: all 0.15s ease; }
+.goal-status-btn:hover { border-color: var(--gold); color: var(--navy); }
+.goal-status-btn.active { background: var(--gold); color: var(--white); border-color: var(--gold); font-weight: 600; }
+
+/* CHECK-INS */
+.checkin-invite { background: linear-gradient(135deg, var(--cream-warm) 0%, #fbf9f3 100%); border: 1px solid var(--gold); border-radius: var(--r); padding: 24px 26px; margin-bottom: 16px; }
+.checkin-invite h3 { font-size: 1.3rem; margin-bottom: 6px; }
+.checkin-invite p { font-size: 0.9rem; color: var(--muted); margin-bottom: 14px; }
+.accordion-item { background: var(--white); border: 1px solid var(--border); border-radius: var(--r-sm); margin-bottom: 8px; overflow: hidden; }
+.accordion-head { padding: 12px 18px; cursor: pointer; font-size: 0.88rem; color: var(--navy); font-weight: 500; display: flex; justify-content: space-between; align-items: center; }
+.accordion-head:hover { background: var(--cream-warm); }
+.accordion-body { padding: 0 18px 14px; font-size: 0.87rem; color: var(--text); line-height: 1.55; display: none; }
+.accordion-body.open { display: block; }
+
+/* MESSAGES */
+.message-thread { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 20px 22px; max-height: 460px; overflow-y: auto; margin-bottom: 14px; }
+.msg { margin-bottom: 14px; max-width: 80%; }
+.msg .bubble { padding: 10px 14px; border-radius: var(--r-sm); font-size: 0.88rem; line-height: 1.5; }
+.msg .time { font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
+.msg.me { margin-left: auto; text-align: right; }
+.msg.me .bubble { background: var(--navy); color: var(--white); border-bottom-right-radius: 2px; }
+.msg.them .bubble { background: var(--cream-warm); color: var(--text); border: 1px solid var(--border-soft); border-bottom-left-radius: 2px; }
+.compose { display: flex; gap: 10px; align-items: flex-end; }
+.compose textarea { flex: 1; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: var(--text); background: var(--white); resize: vertical; min-height: 60px; }
+.compose textarea:focus { outline: none; border-color: var(--gold); }
+.compose-note { font-size: 0.78rem; color: var(--muted); font-style: italic; margin-top: 8px; }
+
+/* COURSES */
+.course-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.course-progress { width: 100%; height: 6px; background: var(--border-soft); border-radius: 50px; margin: 10px 0 4px; overflow: hidden; }
+.course-progress .bar { height: 100%; background: var(--gold); border-radius: 50px; transition: width 0.3s ease; }
+.progress-text { font-size: 0.78rem; color: var(--muted); }
+
+/* PROFILE */
+.form-row { margin-bottom: 16px; }
+.form-row label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 6px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
+.form-row input, .form-row textarea { width: 100%; max-width: 480px; padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.92rem; color: var(--text); background: var(--white); }
+.form-row input:focus, .form-row textarea:focus { outline: none; border-color: var(--gold); }
+.form-row .readonly { color: var(--muted); font-size: 0.92rem; padding: 11px 0; }
+.save-msg { font-size: 0.82rem; color: var(--gold); margin-left: 12px; }
+
+.hidden { display: none !important; }
+
+/* MOBILE */
+@media (max-width: 900px) {
+  .sidebar { transform: translateX(-100%); transition: transform 0.25s ease; box-shadow: var(--shadow); }
+  .sidebar.open { transform: translateX(0); }
+  .mobile-nav { display: flex; }
+  .main { margin-left: 0; padding: 84px 20px 60px; }
+  .page-title { font-size: 1.5rem; }
+  .welcome-card { padding: 20px 22px; }
+  .welcome-card h2 { font-size: 1.35rem; }
+  .welcome-meta { gap: 14px; }
+  .card { padding: 18px 20px; }
+  .login-card { padding: 32px 24px; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <div class="login-logo"><span class="i">i</span>need<span class="i">coaching</span>.org</div>
+    <h1>Your coaching space</h1>
+    <p class="login-sub">Sign in with a magic link to see your sessions, goals, and conversations with your coach.</p>
+    <form id="login-form">
+      <input type="email" id="login-email" placeholder="you@example.com" required>
+      <button type="submit" class="login-btn" id="login-submit">Send magic link</button>
+    </form>
+    <div class="login-msg" id="login-msg"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="dashboard">
+  <!-- MOBILE NAV -->
+  <div class="mobile-nav">
+    <div class="logo"><span class="i">i</span>need<span class="i">coaching</span>.org</div>
+    <button class="hamburger" id="hamburger" aria-label="Open menu">&#9776;</button>
+  </div>
+
+  <div class="dash-layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="side-brand">
+        <a href="/" class="logo"><span class="i">i</span>need<span class="i">coaching</span>.org</a>
+        <div class="tagline">Your coaching space</div>
+      </div>
+      <nav class="side-nav">
+        <button class="side-item active" data-section="sessions"><span class="icon">&#9679;</span>My Sessions</button>
+        <button class="side-item" data-section="goals"><span class="icon">&#9679;</span>My Goals</button>
+        <button class="side-item" data-section="checkins"><span class="icon">&#9679;</span>My Check-ins</button>
+        <button class="side-item" data-section="messages"><span class="icon">&#9679;</span>Messages</button>
+        <button class="side-item" data-section="courses"><span class="icon">&#9679;</span>My Courses</button>
+        <button class="side-item" data-section="profile"><span class="icon">&#9679;</span>My Profile</button>
+      </nav>
+      <div class="side-foot">
+        <div class="user-email" id="nav-email"></div>
+        <button class="sign-out" id="sign-out">Sign out</button>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <div id="loading-main" class="loading"><div class="spinner"></div></div>
+
+      <div id="dash-body" class="hidden">
+        <!-- WELCOME -->
+        <div class="welcome-card" id="welcome-card">
+          <h2 id="welcome-heading">Welcome back</h2>
+          <div class="prompt">Your coaching space — everything from your sessions in one place.</div>
+          <div class="welcome-meta" id="welcome-meta"></div>
+        </div>
+
+        <!-- SESSIONS -->
+        <section class="section active" id="sec-sessions">
+          <h1 class="page-title">My Sessions</h1>
+          <p class="page-sub">Your upcoming and past sessions, with a gentle summary of what you explored together.</p>
+          <div id="sessions-content"><div class="loading"><div class="spinner"></div></div></div>
+        </section>
+
+        <!-- GOALS -->
+        <section class="section" id="sec-goals">
+          <h1 class="page-title">My Goals</h1>
+          <p class="page-sub">The intentions you and your coach are working toward. Mark where you are — no pressure, just a reflection.</p>
+          <div id="goals-content"></div>
+        </section>
+
+        <!-- CHECKINS -->
+        <section class="section" id="sec-checkins">
+          <h1 class="page-title">My Check-ins</h1>
+          <p class="page-sub">A moment to pause and notice how you're arriving.</p>
+          <div id="checkins-content"></div>
+        </section>
+
+        <!-- MESSAGES -->
+        <section class="section" id="sec-messages">
+          <h1 class="page-title">Messages</h1>
+          <p class="page-sub">A quiet line between sessions for questions, reflections, or a note to your coach.</p>
+          <div id="messages-content"></div>
+        </section>
+
+        <!-- COURSES -->
+        <section class="section" id="sec-courses">
+          <h1 class="page-title">My Courses</h1>
+          <p class="page-sub">Resources and learning your coach has shared with you.</p>
+          <div id="courses-content"></div>
+        </section>
+
+        <!-- PROFILE -->
+        <section class="section" id="sec-profile">
+          <h1 class="page-title">My Profile</h1>
+          <p class="page-sub">Keep your details current so your coach can reach you well.</p>
+          <div id="profile-content"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+/* ================================================
+   SUPABASE CONFIG — matches coach-dashboard.html
+   ================================================ */
+const SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+const TOKEN_KEY = 'sb_access_token';
+const REDIRECT_TO = 'https://www.ineedcoaching.org/client-dashboard.html';
+
+let currentToken = null;
+let currentUser = null;
+let currentEmail = null;
+let clientProfile = null;
+let sessionsCache = [];
+
+/* HELPERS */
+function $(id) { return document.getElementById(id); }
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  const d = document.createElement('div');
+  d.textContent = String(str);
+  return d.innerHTML;
+}
+function apiHeaders() {
+  return {
+    'apikey': ANON_KEY,
+    'Authorization': 'Bearer ' + currentToken,
+    'Content-Type': 'application/json'
+  };
+}
+function formatDate(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+function formatDateTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+function firstName(s) {
+  if (!s) return 'there';
+  return String(s).trim().split(/\s+/)[0];
+}
+
+/* ================================================
+   AUTH — magic link pattern matched to coach-dashboard
+   ================================================ */
+(async function checkAuthCallback() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const hash = window.location.hash;
+  if (hash && hash.includes('access_token')) {
+    const params = new URLSearchParams(hash.substring(1));
+    const token = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+      if (refreshToken) localStorage.setItem('sb_refresh_token', refreshToken);
+      window.location.hash = '';
+      window.location.reload();
+      return;
+    }
+  }
+  const tokenHash = urlParams.get('token_hash');
+  const type = urlParams.get('type');
+  if (tokenHash && type === 'magiclink') {
+    try {
+      const res = await fetch(SUPABASE_URL + '/auth/v1/verify', {
+        method: 'POST',
+        headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token_hash: tokenHash, type: 'magiclink' })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.access_token) {
+          localStorage.setItem(TOKEN_KEY, data.access_token);
+          if (data.refresh_token) localStorage.setItem('sb_refresh_token', data.refresh_token);
+          window.history.replaceState({}, '', window.location.pathname);
+          window.location.reload();
+          return;
+        }
+      }
+    } catch (e) { /* fall through to login */ }
+  }
+})();
+
+(function attachLoginForm() {
+  const form = $('login-form');
+  if (!form) { document.addEventListener('DOMContentLoaded', attachLoginForm); return; }
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const email = $('login-email').value.trim();
+    if (!email) return;
+    const btn = $('login-submit');
+    const msg = $('login-msg');
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    msg.textContent = '';
+    try {
+      const res = await fetch(SUPABASE_URL + '/auth/v1/otp', {
+        method: 'POST',
+        headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, options: { emailRedirectTo: REDIRECT_TO } })
+      });
+      if (res.ok) {
+        msg.textContent = 'Check your email — your link is on the way.';
+        msg.style.color = 'var(--gold)';
+      } else {
+        const data = await res.json().catch(function() { return {}; });
+        msg.textContent = data.msg || data.error_description || 'Something went wrong. Try again.';
+        msg.style.color = '#c44';
+      }
+    } catch (err) {
+      msg.textContent = 'Network error. Please try again.';
+      msg.style.color = '#c44';
+    }
+    btn.disabled = false;
+    btn.textContent = 'Send magic link';
+  });
+})();
+
+/* ================================================
+   INIT
+   ================================================ */
+async function init() {
+  let token = localStorage.getItem(TOKEN_KEY);
+  if (!token) {
+    $('login-screen').style.display = 'flex';
+    return;
+  }
+  $('login-screen').style.display = 'none';
+  $('dashboard').style.display = 'block';
+
+  try {
+    let res = await fetch(SUPABASE_URL + '/auth/v1/user', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) {
+      const refreshToken = localStorage.getItem('sb_refresh_token');
+      if (refreshToken) {
+        const refreshRes = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
+          method: 'POST',
+          headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh_token: refreshToken })
+        });
+        if (refreshRes.ok) {
+          const data = await refreshRes.json();
+          token = data.access_token;
+          localStorage.setItem(TOKEN_KEY, token);
+          if (data.refresh_token) localStorage.setItem('sb_refresh_token', data.refresh_token);
+          res = await fetch(SUPABASE_URL + '/auth/v1/user', {
+            headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + token }
+          });
+          if (!res.ok) { signOutHard(); return; }
+        } else { signOutHard(); return; }
+      } else { signOutHard(); return; }
+    }
+    currentUser = await res.json();
+    currentToken = token;
+    currentEmail = (currentUser.email || '').toLowerCase();
+  } catch (err) {
+    console.error('[Auth] init error:', err);
+    signOutHard();
+    return;
+  }
+
+  $('nav-email').textContent = currentEmail;
+  $('sign-out').addEventListener('click', signOutHard);
+  $('hamburger').addEventListener('click', function() { $('sidebar').classList.toggle('open'); });
+
+  setupSidebar();
+  await loadClientProfile();
+  await loadSessions();
+  renderWelcome();
+  $('loading-main').style.display = 'none';
+  $('dash-body').classList.remove('hidden');
+}
+
+function signOutHard() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem('sb_refresh_token');
+  window.location.reload();
+}
+
+/* ================================================
+   CLIENT PROFILE
+   ================================================ */
+async function loadClientProfile() {
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/explorer_profiles?user_email=eq.' + encodeURIComponent(currentEmail) + '&select=*', {
+      headers: apiHeaders()
+    });
+    if (res.ok) {
+      const rows = await res.json();
+      if (rows && rows.length > 0) clientProfile = rows[0];
+    }
+  } catch (err) {
+    // Profile optional — gracefully fall back to email-only welcome
+    console.error('[Profile] load error:', err);
+  }
+}
+
+/* ================================================
+   SIDEBAR
+   ================================================ */
+function setupSidebar() {
+  const items = document.querySelectorAll('.side-item');
+  items.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      items.forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      const target = btn.dataset.section;
+      document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
+      const sec = $('sec-' + target);
+      if (sec) sec.classList.add('active');
+      $('sidebar').classList.remove('open');
+      if (!btn._loaded) {
+        btn._loaded = true;
+        if (target === 'goals') loadGoals();
+        if (target === 'checkins') loadCheckins();
+        if (target === 'messages') loadMessages();
+        if (target === 'courses') loadCourses();
+        if (target === 'profile') renderProfile();
+      }
+    });
+  });
+}
+
+/* ================================================
+   WELCOME CARD
+   ================================================ */
+function renderWelcome() {
+  const name = (clientProfile && (clientProfile.display_name || clientProfile.full_name || clientProfile.name)) || '';
+  $('welcome-heading').textContent = 'Welcome back, ' + firstName(name || currentEmail);
+
+  const now = new Date();
+  const upcoming = (sessionsCache || [])
+    .filter(function(s) {
+      const dt = s._when;
+      return dt && dt > now && s.status !== 'cancelled' && s.status !== 'rejected';
+    })
+    .sort(function(a, b) { return a._when - b._when; });
+  const completed = (sessionsCache || [])
+    .filter(function(s) { return s.status === 'completed' || (s._when && s._when < now); })
+    .sort(function(a, b) { return (b._when || 0) - (a._when || 0); });
+
+  let meta = '';
+  if (upcoming.length > 0) {
+    const next = upcoming[0];
+    const coachName = next._coachName || 'your coach';
+    meta += '<div><span class="label">Next session</span><span class="value">' + escapeHtml(formatDateTime(next._when)) + ' with ' + escapeHtml(coachName) + '</span></div>';
+  }
+  if (completed.length > 0) {
+    const last = completed[0];
+    meta += '<div><span class="label">Last session</span><span class="value">' + escapeHtml(formatDate(last._when)) + '</span></div>';
+  }
+  if (!meta) {
+    meta = '<div><span class="label">A gentle note</span><span class="value">Your sessions will appear here once they\'re booked.</span></div>';
+  }
+  $('welcome-meta').innerHTML = meta;
+}
+
+/* ================================================
+   SESSIONS
+   ================================================ */
+async function loadSessions() {
+  const container = $('sessions-content');
+  try {
+    const res = await fetch(
+      SUPABASE_URL + '/rest/v1/coach_bookings?client_email=eq.' + encodeURIComponent(currentEmail) +
+      '&order=created_at.desc&select=*,coach_profiles(display_name,full_name,zoom_meeting_link)',
+      { headers: apiHeaders() }
+    );
+    const data = await res.json();
+    if (!Array.isArray(data)) { throw new Error('Unexpected response'); }
+
+    // Enrich with parsed datetime + coach name
+    sessionsCache = data.map(function(b) {
+      const whenRaw = b.scheduled_at || b.preferred_date || b.session_date || b.created_at;
+      const when = whenRaw ? new Date(whenRaw) : null;
+      let coachName = '';
+      if (b.coach_profiles) {
+        coachName = b.coach_profiles.display_name || b.coach_profiles.full_name || '';
+      }
+      return Object.assign({}, b, { _when: when && !isNaN(when.getTime()) ? when : null, _coachName: coachName });
+    });
+
+    if (sessionsCache.length === 0) {
+      container.innerHTML = '<div class="empty"><p>When you book your first session, it will live here — a quiet home for everything you and your coach explore together.</p></div>';
+      return;
+    }
+
+    const now = new Date();
+    const upcoming = sessionsCache
+      .filter(function(s) { return s._when && s._when > now && s.status !== 'cancelled' && s.status !== 'rejected'; })
+      .sort(function(a, b) { return a._when - b._when; });
+    const past = sessionsCache
+      .filter(function(s) { return !(s._when && s._when > now) || s.status === 'completed'; })
+      .sort(function(a, b) { return (b._when || 0) - (a._when || 0); });
+
+    let html = '';
+    if (upcoming.length > 0) {
+      html += '<div class="section-header">Upcoming</div>';
+      upcoming.forEach(function(s) { html += renderSessionCard(s, true); });
+    }
+    if (past.length > 0) {
+      html += '<div class="section-header">Past sessions</div>';
+      past.forEach(function(s) { html += renderSessionCard(s, false); });
+    }
+    container.innerHTML = html;
+  } catch (err) {
+    console.error('[Sessions] load error:', err);
+    container.innerHTML = '<div class="empty"><p>We had trouble loading your sessions. Please refresh in a moment.</p></div>';
+  }
+}
+
+function renderSessionCard(s, isUpcoming) {
+  const coachName = s._coachName || 'Your coach';
+  const dateStr = s._when ? formatDateTime(s._when) : formatDate(s.created_at);
+  const sessionType = s.service_name || s.session_type || 'Coaching session';
+  const badge = isUpcoming
+    ? '<span class="badge badge-upcoming">Upcoming</span>'
+    : (s.status === 'completed' ? '<span class="badge badge-complete">Complete</span>' : '<span class="badge badge-pending">' + escapeHtml((s.status || 'past').replace(/_/g, ' ')) + '</span>');
+
+  const hasAnalysis = !!s.post_session_analysis;
+  const zoomLink = s.zoom_link || (s.coach_profiles && s.coach_profiles.zoom_meeting_link) || '';
+
+  let html = '<div class="card" id="session-' + escapeHtml(s.id) + '">'
+    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">'
+    + '<div><h3>' + escapeHtml(sessionType) + '</h3><div class="meta">' + escapeHtml(dateStr) + ' &middot; with ' + escapeHtml(coachName) + '</div></div>'
+    + badge
+    + '</div>';
+
+  html += '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">';
+  if (isUpcoming && zoomLink) {
+    html += '<a href="' + escapeHtml(zoomLink) + '" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Join session</a>';
+  }
+  if (hasAnalysis) {
+    html += '<button class="btn btn-secondary btn-sm" onclick="toggleSummary(\'' + escapeHtml(s.id) + '\')">View summary</button>';
+  }
+  html += '</div>';
+
+  if (hasAnalysis) {
+    html += '<div class="summary-panel" id="summary-' + escapeHtml(s.id) + '">' + renderSummary(s.post_session_analysis) + '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderSummary(analysisRaw) {
+  // analysis may be a JSON object or string
+  let a = analysisRaw;
+  if (typeof a === 'string') {
+    try { a = JSON.parse(a); } catch (e) { a = null; }
+  }
+  if (!a || typeof a !== 'object') {
+    return '<p style="font-size:0.88rem;color:var(--muted);font-style:italic;">A reflection from this session will appear here soon.</p>';
+  }
+
+  let out = '';
+
+  // What we focused on — use session_in_one_line or pre_session_seed
+  const focus = a.session_in_one_line || a.pre_session_seed || a.core_focus;
+  if (focus) {
+    out += '<div class="summary-block"><div class="summary-label">What we focused on</div><p>' + escapeHtml(String(focus)) + '</p></div>';
+  }
+
+  // What emerged — breakthrough
+  let breakthrough = '';
+  if (a.breakthrough_moment && typeof a.breakthrough_moment === 'object') {
+    breakthrough = a.breakthrough_moment.identity_shift || a.breakthrough_moment.text || '';
+  } else if (typeof a.breakthrough === 'string') {
+    breakthrough = a.breakthrough;
+  }
+  if (breakthrough) {
+    out += '<div class="summary-block"><div class="summary-label">What emerged</div><p>' + escapeHtml(String(breakthrough)) + '</p></div>';
+  }
+
+  // Before your next session — between_session_practices
+  const between = Array.isArray(a.between_session_practices) ? a.between_session_practices : (Array.isArray(a.between_session) ? a.between_session : []);
+  if (between.length > 0) {
+    out += '<div class="summary-block"><div class="summary-label">Before your next session</div><ul>';
+    between.forEach(function(b) {
+      if (!b) return;
+      const t = (typeof b === 'string') ? b : (b.invitation || b.title || '');
+      if (t) out += '<li>' + escapeHtml(String(t)) + '</li>';
+    });
+    out += '</ul></div>';
+  }
+
+  // Your commitments
+  const commitments = Array.isArray(a.client_commitments) ? a.client_commitments : (Array.isArray(a.commitments) ? a.commitments : []);
+  if (commitments.length > 0) {
+    out += '<div class="summary-block"><div class="summary-label">Your commitments</div><ul>';
+    commitments.forEach(function(c) {
+      if (!c) return;
+      const t = (typeof c === 'string') ? c : (c.title || '');
+      if (t) out += '<li>' + escapeHtml(String(t)) + '</li>';
+    });
+    out += '</ul></div>';
+  }
+
+  // Goals from this session — goal_review
+  const goalReview = Array.isArray(a.goal_review) ? a.goal_review : [];
+  if (goalReview.length > 0) {
+    out += '<div class="summary-block"><div class="summary-label">Goals from this session</div><ul>';
+    goalReview.forEach(function(g) {
+      if (!g) return;
+      const t = g.goal_title || '';
+      const rel = g.session_relevance || '';
+      if (t) out += '<li><strong>' + escapeHtml(t) + '</strong>' + (rel ? ' — ' + escapeHtml(rel) : '') + '</li>';
+    });
+    out += '</ul></div>';
+  }
+
+  if (!out) {
+    out = '<p style="font-size:0.88rem;color:var(--muted);font-style:italic;">A reflection from this session will appear here soon.</p>';
+  }
+  return out;
+}
+
+function toggleSummary(id) {
+  const panel = $('summary-' + id);
+  if (panel) panel.classList.toggle('open');
+}
+window.toggleSummary = toggleSummary;
+
+/* ================================================
+   GOALS
+   ================================================ */
+async function loadGoals() {
+  const container = $('goals-content');
+  container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/coach_goals?client_email=eq.' + encodeURIComponent(currentEmail) + '&order=created_at.desc&select=*', {
+      headers: apiHeaders()
+    });
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) {
+      container.innerHTML = '<div class="empty"><p>Your coach will add goals here as you work together.</p></div>';
+      return;
+    }
+    let html = '';
+    data.forEach(function(g) {
+      if (!g) return;
+      const status = g.status || 'not_started';
+      const inProgressActive = status === 'in_progress' ? 'active' : '';
+      const smallWinActive = status === 'small_win' ? 'active' : '';
+      const doneActive = status === 'completed' ? 'active' : '';
+      const target = g.target_date ? formatDate(g.target_date) : '';
+      html += '<div class="card">'
+        + '<h3>' + escapeHtml(g.title || 'Goal') + '</h3>'
+        + (target ? '<div class="meta">Target: ' + escapeHtml(target) + '</div>' : '')
+        + (g.description ? '<p>' + escapeHtml(g.description) + '</p>' : '')
+        + '<div class="goal-status-row">'
+        + '<button class="goal-status-btn ' + inProgressActive + '" onclick="updateGoal(\'' + escapeHtml(g.id) + '\', \'in_progress\')">Still working on it</button>'
+        + '<button class="goal-status-btn ' + smallWinActive + '" onclick="updateGoal(\'' + escapeHtml(g.id) + '\', \'small_win\')">Small win &#127881;</button>'
+        + '<button class="goal-status-btn ' + doneActive + '" onclick="updateGoal(\'' + escapeHtml(g.id) + '\', \'completed\')">Done &#10003;</button>'
+        + '</div>'
+        + '</div>';
+    });
+    container.innerHTML = html;
+  } catch (err) {
+    console.error('[Goals] load error:', err);
+    container.innerHTML = '<div class="empty"><p>We had trouble loading your goals. Please refresh in a moment.</p></div>';
+  }
+}
+
+async function updateGoal(goalId, newStatus) {
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/coach_goals?id=eq.' + encodeURIComponent(goalId), {
+      method: 'PATCH',
+      headers: Object.assign({}, apiHeaders(), { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ status: newStatus })
+    });
+    if (!res.ok) throw new Error('Update failed');
+    loadGoals();
+  } catch (err) {
+    console.error('[Goals] update error:', err);
+    alert('We had trouble saving that. Please try again.');
+  }
+}
+window.updateGoal = updateGoal;
+
+/* ================================================
+   CHECK-INS
+   ================================================ */
+async function loadCheckins() {
+  const container = $('checkins-content');
+  container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/explorer_checkins?user_email=eq.' + encodeURIComponent(currentEmail) + '&order=created_at.desc&select=*', {
+      headers: apiHeaders()
+    });
+    let data = [];
+    if (res.ok) data = await res.json();
+    if (!Array.isArray(data)) data = [];
+
+    // Pending vs completed. Unknown schema — treat status === 'pending' or completed_at === null as pending
+    const pending = data.filter(function(c) { return c && (c.status === 'pending' || (c.completed_at === null && c.status !== 'completed')); });
+    const completed = data.filter(function(c) { return c && (c.status === 'completed' || c.completed_at || c.mood); });
+
+    let html = '';
+    if (pending.length > 0) {
+      pending.forEach(function(c) {
+        html += '<div class="checkin-invite">'
+          + '<h3>A moment to reflect before your next session</h3>'
+          + '<p>' + escapeHtml(c.prompt || 'When you\'re ready, take a few quiet minutes to notice how you\'re arriving.') + '</p>'
+          + '<a href="/checkin.html?id=' + escapeHtml(c.id || '') + '" class="btn btn-primary">Open check-in</a>'
+          + '</div>';
+      });
+    } else {
+      html += '<div class="checkin-invite">'
+        + '<h3>A moment to reflect</h3>'
+        + '<p>When a check-in is waiting for you, it will appear here as a gentle invitation — not a task.</p>'
+        + '</div>';
+    }
+
+    if (completed.length > 0) {
+      html += '<div class="section-header">Past reflections</div>';
+      completed.forEach(function(c, idx) {
+        const dt = formatDate(c.created_at || c.completed_at);
+        const mood = c.mood ? ' — ' + escapeHtml(c.mood) : '';
+        const body = c.notes || c.reflection || c.response || '';
+        html += '<div class="accordion-item">'
+          + '<div class="accordion-head" onclick="toggleAccordion(' + idx + ')"><span>' + escapeHtml(dt) + mood + '</span><span>&#9662;</span></div>'
+          + '<div class="accordion-body" id="acc-' + idx + '">' + (body ? escapeHtml(body) : '<em>A quiet check-in.</em>') + '</div>'
+          + '</div>';
+      });
+    }
+    container.innerHTML = html;
+  } catch (err) {
+    console.error('[Checkins] load error:', err);
+    container.innerHTML = '<div class="empty"><p>We had trouble loading your check-ins. Please refresh in a moment.</p></div>';
+  }
+}
+
+function toggleAccordion(idx) {
+  const el = $('acc-' + idx);
+  if (el) el.classList.toggle('open');
+}
+window.toggleAccordion = toggleAccordion;
+
+/* ================================================
+   MESSAGES
+   ================================================ */
+async function loadMessages() {
+  const container = $('messages-content');
+  container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/coach_messages?client_email=eq.' + encodeURIComponent(currentEmail) + '&order=created_at.asc&select=*,coach_profiles:coach_id(display_name,full_name)', {
+      headers: apiHeaders()
+    });
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) {
+      container.innerHTML = '<div class="empty"><p>No messages yet. After your first session, this becomes a quiet line between you and your coach.</p></div>';
+      return;
+    }
+
+    // Determine coach name + coach_id for replies
+    let coachName = 'Your coach';
+    let coachId = null;
+    for (let i = 0; i < data.length; i++) {
+      if (data[i].coach_profiles) {
+        coachName = data[i].coach_profiles.display_name || data[i].coach_profiles.full_name || coachName;
+      }
+      if (data[i].coach_id) coachId = data[i].coach_id;
+    }
+
+    let html = '<div class="card"><h3>Conversation with ' + escapeHtml(coachName) + '</h3><div class="message-thread" id="msg-thread">';
+    data.forEach(function(m) {
+      if (!m) return;
+      const isMe = m.sender === 'client' || m.sender_email === currentEmail;
+      const body = m.message || m.body || m.content || '';
+      const t = formatDateTime(m.created_at);
+      html += '<div class="msg ' + (isMe ? 'me' : 'them') + '">'
+        + '<div class="bubble">' + escapeHtml(body) + '</div>'
+        + '<div class="time">' + escapeHtml(t) + '</div>'
+        + '</div>';
+    });
+    html += '</div>';
+    html += '<div class="compose">'
+      + '<textarea id="msg-input" placeholder="Write a note to your coach..."></textarea>'
+      + '<button class="btn btn-primary" onclick="sendMessage(\'' + escapeHtml(coachId || '') + '\')">Send</button>'
+      + '</div>'
+      + '<div class="compose-note">Your coach will respond at their next availability.</div>'
+      + '</div>';
+    container.innerHTML = html;
+    const thread = $('msg-thread');
+    if (thread) thread.scrollTop = thread.scrollHeight;
+  } catch (err) {
+    console.error('[Messages] load error:', err);
+    container.innerHTML = '<div class="empty"><p>We had trouble loading your messages. Please refresh in a moment.</p></div>';
+  }
+}
+
+async function sendMessage(coachId) {
+  const input = $('msg-input');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  try {
+    const payload = {
+      client_email: currentEmail,
+      sender: 'client',
+      message: text,
+      created_at: new Date().toISOString()
+    };
+    if (coachId) payload.coach_id = coachId;
+    const res = await fetch(SUPABASE_URL + '/rest/v1/coach_messages', {
+      method: 'POST',
+      headers: Object.assign({}, apiHeaders(), { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Send failed');
+    input.value = '';
+    loadMessages();
+  } catch (err) {
+    console.error('[Messages] send error:', err);
+    alert('We had trouble sending that. Please try again.');
+  }
+}
+window.sendMessage = sendMessage;
+
+/* ================================================
+   COURSES
+   ================================================ */
+async function loadCourses() {
+  const container = $('courses-content');
+  container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    // Try course_enrollments first, fall back gracefully
+    const res = await fetch(SUPABASE_URL + '/rest/v1/course_enrollments?client_email=eq.' + encodeURIComponent(currentEmail) + '&select=*,courses(id,title,description,lesson_count)', {
+      headers: apiHeaders()
+    });
+    let data = [];
+    if (res.ok) data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) {
+      container.innerHTML = '<div class="empty"><p>Your coach will share courses and resources here.</p></div>';
+      return;
+    }
+    let html = '';
+    data.forEach(function(e) {
+      if (!e) return;
+      const c = e.courses || {};
+      const title = c.title || e.course_title || 'Course';
+      const total = c.lesson_count || e.lesson_count || 0;
+      const done = e.lessons_completed || 0;
+      const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+      html += '<div class="card">'
+        + '<div class="course-row"><div style="flex:1;"><h3>' + escapeHtml(title) + '</h3>'
+        + (c.description ? '<p>' + escapeHtml(c.description) + '</p>' : '')
+        + '<div class="course-progress"><div class="bar" style="width:' + pct + '%"></div></div>'
+        + '<div class="progress-text">' + done + ' of ' + total + ' lessons</div>'
+        + '</div>'
+        + '<a href="/course-view.html?id=' + escapeHtml(c.id || e.course_id || '') + '" class="btn btn-primary btn-sm">Continue</a>'
+        + '</div></div>';
+    });
+    container.innerHTML = html;
+  } catch (err) {
+    // Table likely doesn't exist yet
+    container.innerHTML = '<div class="empty"><p>Your coach will share courses and resources here.</p></div>';
+  }
+}
+
+/* ================================================
+   PROFILE
+   ================================================ */
+function renderProfile() {
+  const container = $('profile-content');
+  const p = clientProfile || {};
+  const display = p.display_name || p.full_name || p.name || '';
+  const phone = p.phone || p.phone_number || '';
+  container.innerHTML = '<div class="card">'
+    + '<div class="form-row"><label>Display name</label><input type="text" id="pf-name" value="' + escapeHtml(display) + '" placeholder="What your coach calls you"></div>'
+    + '<div class="form-row"><label>Email</label><div class="readonly">' + escapeHtml(currentEmail) + '</div></div>'
+    + '<div class="form-row"><label>Phone</label><input type="tel" id="pf-phone" value="' + escapeHtml(phone) + '" placeholder="Optional"></div>'
+    + '<div style="margin-top:16px;display:flex;align-items:center;gap:10px;">'
+    + '<button class="btn btn-primary" onclick="saveProfile()">Save changes</button>'
+    + '<span class="save-msg" id="pf-msg"></span>'
+    + '</div>'
+    + '</div>';
+}
+
+async function saveProfile() {
+  const msg = $('pf-msg');
+  const name = $('pf-name').value.trim();
+  const phone = $('pf-phone').value.trim();
+  const body = { display_name: name, phone: phone };
+  try {
+    // If no profile row exists, upsert; otherwise patch
+    let res;
+    if (clientProfile && clientProfile.id) {
+      res = await fetch(SUPABASE_URL + '/rest/v1/explorer_profiles?user_email=eq.' + encodeURIComponent(currentEmail), {
+        method: 'PATCH',
+        headers: Object.assign({}, apiHeaders(), { 'Prefer': 'return=representation' }),
+        body: JSON.stringify(body)
+      });
+    } else {
+      res = await fetch(SUPABASE_URL + '/rest/v1/explorer_profiles', {
+        method: 'POST',
+        headers: Object.assign({}, apiHeaders(), { 'Prefer': 'return=representation' }),
+        body: JSON.stringify(Object.assign({ user_email: currentEmail }, body))
+      });
+    }
+    if (!res.ok) throw new Error('Save failed');
+    const rows = await res.json().catch(function() { return []; });
+    if (Array.isArray(rows) && rows.length > 0) clientProfile = rows[0];
+    msg.textContent = 'Saved.';
+    msg.style.color = 'var(--gold)';
+    setTimeout(function() { msg.textContent = ''; }, 2500);
+  } catch (err) {
+    console.error('[Profile] save error:', err);
+    msg.textContent = 'We had trouble saving. Please try again.';
+    msg.style.color = '#c44';
+  }
+}
+window.saveProfile = saveProfile;
+
+/* GO */
+init();
+</script>
+</body>
+</html>
