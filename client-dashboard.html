@@ -177,9 +177,35 @@ a { color: var(--navy); text-decoration: none; }
 /* CONTINUITY BLOCK */
 .continuity-block { background: #fdf9f1; border: 1px solid #edeae4; border-radius: 8px; padding: 20px 24px; margin-bottom: 20px; }
 .continuity-block .cont-label { font-family: 'DM Sans', sans-serif; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; color: #c49a3c; margin-bottom: 10px; }
-.continuity-timeline { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
-.continuity-timeline .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #c49a3c; flex-shrink: 0; }
-.continuity-timeline .phrase { font-family: 'DM Sans', sans-serif; font-size: 0.82rem; color: var(--navy); font-style: italic; }
+.continuity-timeline { display: flex; flex-direction: column; gap: 8px; }
+.continuity-timeline .row { display: flex; align-items: flex-start; gap: 10px; }
+.continuity-timeline .row .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #c49a3c; flex-shrink: 0; margin-top: 8px; }
+.continuity-timeline .row .phrase { font-family: 'DM Sans', sans-serif; font-size: 0.88rem; color: var(--navy); font-style: italic; line-height: 1.5; }
+.continuity-empty { font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-style: italic; color: #5a5560; text-align: center; }
+
+/* Growth Right Now card */
+.growth-card { background: #fdf9f1; border: 1px solid #edeae4; border-radius: 10px; padding: 22px 26px; margin-bottom: 20px; }
+.growth-card h3 { font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; font-weight: 600; color: var(--navy); margin: 0 0 4px; }
+.growth-sub { font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-style: italic; color: #9a9490; margin-bottom: 18px; }
+.growth-row { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+.growth-row:last-child { margin-bottom: 0; }
+.growth-name { flex: 1 1 auto; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; color: var(--navy); font-weight: 500; }
+.growth-bars { display: inline-flex; gap: 4px; flex-shrink: 0; }
+.growth-bars .bar { display: inline-block; width: 14px; height: 8px; border-radius: 2px; }
+.growth-bars .bar.filled { background: #c49a3c; }
+.growth-bars .bar.empty { background: #edeae4; }
+.growth-level { flex-shrink: 0; font-family: 'DM Sans', sans-serif; font-size: 0.72rem; font-style: italic; color: #9a9490; min-width: 90px; text-align: right; }
+@media (max-width: 640px) {
+  .growth-level { min-width: auto; font-size: 0.68rem; }
+  .growth-row { gap: 10px; }
+}
+
+/* Practice list (Your practice right now) */
+.practice-list { display: flex; flex-direction: column; gap: 10px; margin: 4px 0 10px; }
+.practice-item { display: flex; align-items: flex-start; gap: 12px; }
+.practice-circle { display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #c49a3c; flex-shrink: 0; margin-top: 4px; }
+.practice-text { font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: #1a3a52; line-height: 1.6; }
+.practice-note { font-family: 'DM Sans', sans-serif; font-size: 0.75rem; font-style: italic; color: #9a9490; margin-top: 6px; }
 
 /* CHECK-IN EMPTY STATE */
 .checkin-empty { background: #fdf9f1; border: 1px solid #edeae4; border-radius: 10px; padding: 28px 32px; text-align: center; }
@@ -312,6 +338,9 @@ a { color: var(--navy); text-decoration: none; }
           <div class="prompt">Your coaching space — everything from your sessions in one place.</div>
           <div class="welcome-meta" id="welcome-meta"></div>
         </div>
+
+        <!-- GROWTH HOST -->
+        <div id="growth-host"></div>
 
         <!-- PROGRESS HOST -->
         <div id="progress-host"></div>
@@ -541,6 +570,7 @@ async function init() {
   await loadClientProfile();
   await Promise.all([loadSessions(), loadSessionNotesCache()]);
   renderWelcome();
+  renderGrowthCard();
   renderProgressAndContinuity();
   $('loading-main').style.display = 'none';
   $('dash-body').classList.remove('hidden');
@@ -641,6 +671,75 @@ function growthLevel(sessionCount) {
   return { levels: levels, currentIndex: idx };
 }
 
+// Normalize a tag for matching: lowercase, spaces/underscores -> hyphens
+function normTag(t) {
+  return String(t || '').toLowerCase().trim().replace(/[\s_]+/g, '-');
+}
+
+// Count how many sessions in sessionNotesCache contain at least one matching dna_tag
+function countSessionsWithTags(signalSet) {
+  let count = 0;
+  (sessionNotesCache || []).forEach(function(r) {
+    const a = (r && r.analysis) || {};
+    const interventions = Array.isArray(a.coaching_interventions) ? a.coaching_interventions : [];
+    let matched = false;
+    for (let i = 0; i < interventions.length && !matched; i++) {
+      const ci = interventions[i] || {};
+      const tags = Array.isArray(ci.dna_tag) ? ci.dna_tag : [];
+      for (let j = 0; j < tags.length; j++) {
+        if (signalSet[normTag(tags[j])]) { matched = true; break; }
+      }
+    }
+    if (matched) count++;
+  });
+  return count;
+}
+
+function growthDimensionLevel(count) {
+  if (count >= 7) return { bars: 5, label: 'Leading from it' };
+  if (count >= 4) return { bars: 4, label: 'Steady' };
+  if (count >= 2) return { bars: 3, label: 'Strengthening' };
+  if (count >= 1) return { bars: 2, label: 'Building' };
+  return { bars: 1, label: 'Emerging' };
+}
+
+function renderGrowthCard() {
+  const host = $('growth-host');
+  if (!host) return;
+
+  // Signals kept internal — never surfaced to the client.
+  const toSet = function(arr) { const s = {}; arr.forEach(function(t) { s[normTag(t)] = true; }); return s; };
+  const dims = [
+    { name: 'Self-trust',         signals: toSet(['self-efficacy-building', 'self-trust']) },
+    { name: 'Follow-through',     signals: toSet(['behavioral-transfer', 'behavioral-activation']) },
+    { name: 'Clarity',            signals: toSet(['identity-shift', 'insight-to-action-bridge']) },
+    { name: 'Naming what is true',signals: toSet(['suppressed-conviction', 'visibility-avoidance']) }
+  ];
+
+  const hasNotes = (sessionNotesCache || []).length > 0;
+
+  let rowsHtml = '';
+  dims.forEach(function(d) {
+    const count = hasNotes ? countSessionsWithTags(d.signals) : 0;
+    const lvl = hasNotes ? growthDimensionLevel(count) : { bars: 1, label: 'Emerging' };
+    let barsHtml = '';
+    for (let i = 0; i < 5; i++) {
+      barsHtml += '<span class="bar ' + (i < lvl.bars ? 'filled' : 'empty') + '"></span>';
+    }
+    rowsHtml += '<div class="growth-row">'
+      + '<span class="growth-name">' + escapeHtml(d.name) + '</span>'
+      + '<span class="growth-bars">' + barsHtml + '</span>'
+      + '<span class="growth-level">' + escapeHtml(lvl.label) + '</span>'
+      + '</div>';
+  });
+
+  host.innerHTML = '<div class="growth-card">'
+    + '<h3>Your Growth Right Now</h3>'
+    + '<div class="growth-sub">Where your work is showing up &mdash; across your sessions so far.</div>'
+    + rowsHtml
+    + '</div>';
+}
+
 async function renderProgressAndContinuity() {
   // Progress card
   const now = new Date();
@@ -669,7 +768,7 @@ async function renderProgressAndContinuity() {
     + '<div class="growth-scale">' + scaleHtml + '</div>'
     + '</div>';
 
-  // Continuity block — last 3 core_focus phrases
+  // "What's becoming stronger" — last 3 core_focus phrases, reframed as "You are ..."
   const phrases = [];
   (sessionNotesCache || []).forEach(function(r) {
     if (phrases.length >= 3) return;
@@ -677,22 +776,26 @@ async function renderProgressAndContinuity() {
     const raw = (typeof a.core_focus === 'string' && a.core_focus)
       || (typeof a.session_in_one_line === 'string' && a.session_in_one_line) || '';
     if (!raw) return;
-    const words = toClientVoice(String(raw).trim()).split(/\s+/).slice(0, 8).join(' ');
-    if (words) phrases.push(words);
+    let transformed = toClientVoice(String(raw).trim());
+    if (!transformed) return;
+    // lowercase first letter, trim to ~10 words
+    transformed = transformed.charAt(0).toLowerCase() + transformed.slice(1);
+    const words = transformed.split(/\s+/).slice(0, 10).join(' ');
+    if (words) phrases.push('You are ' + words);
   });
 
-  let continuityHtml = '';
+  let continuityHtml = '<div class="continuity-block">'
+    + '<div class="cont-label">What&rsquo;s becoming stronger</div>';
   if (phrases.length > 0) {
     let timeline = '';
-    phrases.forEach(function(p, i) {
-      timeline += '<span class="dot"></span><span class="phrase">' + escapeHtml(p) + '</span>';
-      if (i < phrases.length - 1) timeline += '';
+    phrases.forEach(function(p) {
+      timeline += '<div class="row"><span class="dot"></span><span class="phrase">' + escapeHtml(p) + '</span></div>';
     });
-    continuityHtml = '<div class="continuity-block">'
-      + '<div class="cont-label">Across your recent sessions</div>'
-      + '<div class="continuity-timeline">' + timeline + '</div>'
-      + '</div>';
+    continuityHtml += '<div class="continuity-timeline">' + timeline + '</div>';
+  } else {
+    continuityHtml += '<div class="continuity-empty">Your growth story is building. Come back after more sessions to see what&rsquo;s emerging.</div>';
   }
+  continuityHtml += '</div>';
 
   const host = $('progress-host');
   if (host) host.innerHTML = progressHtml;
@@ -987,9 +1090,14 @@ function renderSummary(analysisRaw) {
     if (t) betweenItems.push(t);
   });
   if (betweenItems.length > 0) {
-    out += '<div class="summary-section"><h4>What to carry into this week</h4><ul>';
-    betweenItems.forEach(function(t) { out += '<li>' + escapeHtml(toClientVoice(t)) + '</li>'; });
-    out += '</ul></div>';
+    out += '<div class="summary-section"><h4>Your practice right now</h4><div class="practice-list">';
+    betweenItems.forEach(function(t) {
+      out += '<div class="practice-item">'
+        + '<span class="practice-circle"></span>'
+        + '<span class="practice-text">' + escapeHtml(toClientVoice(t)) + '</span>'
+        + '</div>';
+    });
+    out += '</div><div class="practice-note">Return to this between sessions</div></div>';
   }
 
   // 5. Your commitments
