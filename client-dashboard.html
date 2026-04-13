@@ -145,6 +145,57 @@ a { color: var(--navy); text-decoration: none; }
 .summary-block li { padding: 6px 0 6px 22px; position: relative; }
 .summary-block li::before { content: '•'; color: var(--gold); position: absolute; left: 8px; top: 4px; font-weight: 700; }
 
+/* SESSION SUMMARY — fuller sections */
+.summary-section { padding-top: 16px; border-top: 1px solid #edeae4; }
+.summary-section:first-child { padding-top: 0; border-top: none; }
+.summary-section + .summary-section { margin-top: 0; }
+.summary-section h4 { font-family: 'Cormorant Garamond', serif; font-size: 1.05rem; font-weight: 600; color: var(--navy); margin-top: 20px; margin-bottom: 8px; }
+.summary-section:first-child h4 { margin-top: 0; }
+.summary-section p, .summary-section li { font-family: 'DM Sans', sans-serif; font-size: 0.875rem; line-height: 1.7; color: #5a5560; }
+.summary-section ul { list-style: none; padding: 0; margin: 0; }
+.summary-section li { padding: 4px 0 4px 18px; position: relative; }
+.summary-section li::before { content: '•'; color: var(--gold); position: absolute; left: 4px; top: 4px; font-weight: 700; }
+.summary-goal-title { font-family: 'Cormorant Garamond', serif; font-size: 1rem; color: var(--navy); font-weight: 600; margin-top: 8px; }
+.summary-goal-rel { font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-style: italic; color: #6b6b60; margin-bottom: 4px; }
+
+/* PROGRESS CARD */
+.progress-card { background: var(--cream-warm); border: 1px solid var(--border); border-radius: var(--r); padding: 24px 26px; margin-bottom: 20px; box-shadow: var(--shadow-sm); }
+.progress-card .progress-label { font-family: 'DM Sans', sans-serif; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--gold); margin-bottom: 14px; }
+.progress-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 22px; }
+.progress-tile { text-align: center; padding: 10px 4px; }
+.progress-tile .num { font-family: 'Cormorant Garamond', serif; font-size: 2rem; font-weight: 600; color: var(--navy); line-height: 1.1; }
+.progress-tile .lbl { font-family: 'DM Sans', sans-serif; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-top: 4px; }
+.growth-scale { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; padding-top: 18px; border-top: 1px solid var(--border-soft); }
+.growth-scale .gs-item { font-family: 'DM Sans', sans-serif; font-size: 0.8rem; color: #b8b0a4; }
+.growth-scale .gs-item.current { color: #c49a3c; font-weight: 700; }
+.growth-scale .gs-sep { color: #d9d4c7; font-size: 0.85rem; }
+@media (max-width: 700px) {
+  .progress-tiles { grid-template-columns: repeat(2, 1fr); }
+  .growth-scale { justify-content: flex-start; }
+}
+
+/* CONTINUITY BLOCK */
+.continuity-block { background: #fdf9f1; border: 1px solid #edeae4; border-radius: 8px; padding: 20px 24px; margin-bottom: 20px; }
+.continuity-block .cont-label { font-family: 'DM Sans', sans-serif; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; color: #c49a3c; margin-bottom: 10px; }
+.continuity-timeline { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.continuity-timeline .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #c49a3c; flex-shrink: 0; }
+.continuity-timeline .phrase { font-family: 'DM Sans', sans-serif; font-size: 0.82rem; color: var(--navy); font-style: italic; }
+
+/* CHECK-IN EMPTY STATE */
+.checkin-empty { background: #fdf9f1; border: 1px solid #edeae4; border-radius: 10px; padding: 28px 32px; text-align: center; }
+.checkin-empty .icon { font-size: 2rem; color: #c49a3c; margin-bottom: 10px; }
+.checkin-empty p { font-family: 'Cormorant Garamond', serif; font-size: 1rem; line-height: 1.7; max-width: 480px; margin: 0 auto; color: #5a5560; }
+
+/* PROFILE CARD — identity feel */
+.profile-section { margin-bottom: 22px; }
+.profile-section h4 { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; color: var(--navy); border-bottom: 1px solid #edeae4; padding-bottom: 8px; margin-bottom: 14px; font-weight: 600; }
+.form-row select { width: 100%; max-width: 480px; padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.92rem; color: var(--text); background: var(--white); }
+.form-row select:focus { outline: none; border-color: var(--gold); }
+
+/* GOAL META */
+.goal-meta-line { font-family: 'DM Sans', sans-serif; font-size: 0.72rem; color: #9a9490; margin-top: 2px; margin-bottom: 6px; }
+.goal-sessions-line { font-family: 'DM Sans', sans-serif; font-size: 0.72rem; color: var(--gold); font-style: italic; margin-bottom: 8px; }
+
 /* GOAL STATUS */
 .goal-status-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 .goal-status-btn { padding: 7px 14px; border-radius: 50px; border: 1px solid var(--border); background: var(--white); font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 500; color: var(--muted); cursor: pointer; transition: all 0.15s ease; }
@@ -241,7 +292,7 @@ a { color: var(--navy); text-decoration: none; }
         <button class="side-item" data-section="goals"><span class="icon">&#9679;</span>My Goals</button>
         <button class="side-item" data-section="checkins"><span class="icon">&#9679;</span>My Check-ins</button>
         <button class="side-item" data-section="messages"><span class="icon">&#9679;</span>Messages</button>
-        <button class="side-item" data-section="courses"><span class="icon">&#9679;</span>My Courses</button>
+        <button class="side-item" data-section="courses"><span class="icon">&#9679;</span>Resources</button>
         <button class="side-item" data-section="profile"><span class="icon">&#9679;</span>My Profile</button>
       </nav>
       <div class="side-foot">
@@ -261,6 +312,9 @@ a { color: var(--navy); text-decoration: none; }
           <div class="prompt">Your coaching space — everything from your sessions in one place.</div>
           <div class="welcome-meta" id="welcome-meta"></div>
         </div>
+
+        <!-- PROGRESS HOST -->
+        <div id="progress-host"></div>
 
         <!-- SESSIONS -->
         <section class="section active" id="sec-sessions">
@@ -290,9 +344,9 @@ a { color: var(--navy); text-decoration: none; }
           <div id="messages-content"></div>
         </section>
 
-        <!-- COURSES -->
+        <!-- RESOURCES -->
         <section class="section" id="sec-courses">
-          <h1 class="page-title">My Courses</h1>
+          <h1 class="page-title">Resources</h1>
           <p class="page-sub">Resources and learning your coach has shared with you.</p>
           <div id="courses-content"></div>
         </section>
@@ -322,6 +376,9 @@ let currentUser = null;
 let currentEmail = null;
 let clientProfile = null;
 let sessionsCache = [];
+let sessionNotesCache = []; // all post_session_analysis for the client, newest first
+let currentCoachName = '';
+let currentCoachId = null;
 
 /* HELPERS */
 function $(id) { return document.getElementById(id); }
@@ -482,8 +539,9 @@ async function init() {
 
   setupSidebar();
   await loadClientProfile();
-  await loadSessions();
+  await Promise.all([loadSessions(), loadSessionNotesCache()]);
   renderWelcome();
+  renderProgressAndContinuity();
   $('loading-main').style.display = 'none';
   $('dash-body').classList.remove('hidden');
 }
@@ -510,6 +568,136 @@ async function loadClientProfile() {
     // Profile optional — gracefully fall back to email-only welcome
     console.error('[Profile] load error:', err);
   }
+}
+
+/* ================================================
+   SESSION NOTES CACHE — shared by progress card, continuity block, goals
+   ================================================ */
+async function loadSessionNotesCache() {
+  try {
+    const res = await fetch(
+      SUPABASE_URL + '/rest/v1/coach_session_notes?client_email=eq.' + encodeURIComponent(currentEmail) +
+      '&order=created_at.desc&select=post_session_analysis,created_at',
+      { headers: apiHeaders() }
+    );
+    if (!res.ok) { sessionNotesCache = []; return; }
+    const rows = await res.json();
+    if (!Array.isArray(rows)) { sessionNotesCache = []; return; }
+    sessionNotesCache = rows.map(function(r) {
+      let a = r ? r.post_session_analysis : null;
+      if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) { a = null; } }
+      return { analysis: a, created_at: r ? r.created_at : null };
+    }).filter(function(r) { return r.analysis && typeof r.analysis === 'object'; });
+  } catch (err) {
+    console.error('[SessionNotes] load error:', err);
+    sessionNotesCache = [];
+  }
+}
+
+function countCommitmentsAcrossNotes() {
+  let total = 0;
+  (sessionNotesCache || []).forEach(function(r) {
+    const a = r.analysis || {};
+    const c = Array.isArray(a.commitments) ? a.commitments
+      : (Array.isArray(a.client_commitments) ? a.client_commitments : []);
+    total += c.length;
+  });
+  return total;
+}
+
+async function countCheckins() {
+  try {
+    const res = await fetch(
+      SUPABASE_URL + '/rest/v1/explorer_checkins?user_email=eq.' + encodeURIComponent(currentEmail) + '&select=id',
+      { headers: Object.assign({}, apiHeaders(), { 'Prefer': 'count=exact' }) }
+    );
+    if (!res.ok) return 0;
+    const rows = await res.json().catch(function() { return []; });
+    return Array.isArray(rows) ? rows.length : 0;
+  } catch (err) { return 0; }
+}
+
+async function countGoalsAdvanced() {
+  try {
+    const res = await fetch(
+      SUPABASE_URL + '/rest/v1/coach_goals?client_email=eq.' + encodeURIComponent(currentEmail) +
+      '&status=in.(in_progress,completed)&select=id',
+      { headers: apiHeaders() }
+    );
+    if (!res.ok) return 0;
+    const rows = await res.json().catch(function() { return []; });
+    return Array.isArray(rows) ? rows.length : 0;
+  } catch (err) { return 0; }
+}
+
+function growthLevel(sessionCount) {
+  const levels = ['Emerging', 'Building', 'Strengthening', 'Steady', 'Leading from it'];
+  let idx = 0;
+  if (sessionCount >= 13) idx = 4;
+  else if (sessionCount >= 8) idx = 3;
+  else if (sessionCount >= 5) idx = 2;
+  else if (sessionCount >= 3) idx = 1;
+  else idx = 0;
+  return { levels: levels, currentIndex: idx };
+}
+
+async function renderProgressAndContinuity() {
+  // Progress card
+  const now = new Date();
+  const completedCount = (sessionsCache || []).filter(function(s) {
+    return s.status === 'completed' || (s._when && s._when < now);
+  }).length;
+  const commitmentsMade = countCommitmentsAcrossNotes();
+  const [goalsAdvanced, checkinsCount] = await Promise.all([countGoalsAdvanced(), countCheckins()]);
+
+  const gl = growthLevel(completedCount);
+  let scaleHtml = '';
+  gl.levels.forEach(function(lbl, i) {
+    const cls = i === gl.currentIndex ? 'gs-item current' : 'gs-item';
+    scaleHtml += '<span class="' + cls + '">' + escapeHtml(lbl) + '</span>';
+    if (i < gl.levels.length - 1) scaleHtml += '<span class="gs-sep">&rarr;</span>';
+  });
+
+  const progressHtml = '<div class="progress-card">'
+    + '<div class="progress-label">Your Progress</div>'
+    + '<div class="progress-tiles">'
+    + '<div class="progress-tile"><div class="num">' + completedCount + '</div><div class="lbl">Sessions completed</div></div>'
+    + '<div class="progress-tile"><div class="num">' + goalsAdvanced + '</div><div class="lbl">Goals advanced</div></div>'
+    + '<div class="progress-tile"><div class="num">' + commitmentsMade + '</div><div class="lbl">Commitments made</div></div>'
+    + '<div class="progress-tile"><div class="num">' + checkinsCount + '</div><div class="lbl">Check-ins completed</div></div>'
+    + '</div>'
+    + '<div class="growth-scale">' + scaleHtml + '</div>'
+    + '</div>';
+
+  // Continuity block — last 3 core_focus phrases
+  const phrases = [];
+  (sessionNotesCache || []).forEach(function(r) {
+    if (phrases.length >= 3) return;
+    const a = r.analysis || {};
+    const raw = (typeof a.core_focus === 'string' && a.core_focus)
+      || (typeof a.session_in_one_line === 'string' && a.session_in_one_line) || '';
+    if (!raw) return;
+    const words = String(raw).trim().split(/\s+/).slice(0, 8).join(' ');
+    if (words) phrases.push(words);
+  });
+
+  let continuityHtml = '';
+  if (phrases.length > 0) {
+    let timeline = '';
+    phrases.forEach(function(p, i) {
+      timeline += '<span class="dot"></span><span class="phrase">' + escapeHtml(p) + '</span>';
+      if (i < phrases.length - 1) timeline += '';
+    });
+    continuityHtml = '<div class="continuity-block">'
+      + '<div class="cont-label">Across your recent sessions</div>'
+      + '<div class="continuity-timeline">' + timeline + '</div>'
+      + '</div>';
+  }
+
+  const host = $('progress-host');
+  if (host) host.innerHTML = progressHtml;
+  const contHost = $('continuity-host');
+  if (contHost) contHost.innerHTML = continuityHtml;
 }
 
 /* ================================================
@@ -597,6 +785,18 @@ async function loadSessions() {
       return Object.assign({}, b, { _when: when && !isNaN(when.getTime()) ? when : null, _coachName: coachName });
     });
 
+    // Capture most-recent coach for profile display
+    const sortedByWhen = sessionsCache.slice().sort(function(a, b) {
+      return (b._when ? b._when.getTime() : 0) - (a._when ? a._when.getTime() : 0);
+    });
+    for (let i = 0; i < sortedByWhen.length; i++) {
+      if (sortedByWhen[i]._coachName) {
+        currentCoachName = sortedByWhen[i]._coachName;
+        currentCoachId = sortedByWhen[i].coach_id || null;
+        break;
+      }
+    }
+
     if (sessionsCache.length === 0) {
       container.innerHTML = '<div class="empty"><p>When you book your first session, it will live here — a quiet home for everything you and your coach explore together.</p></div>';
       return;
@@ -616,6 +816,7 @@ async function loadSessions() {
       upcoming.forEach(function(s) { html += renderSessionCard(s, true); });
     }
     if (past.length > 0) {
+      html += '<div id="continuity-host"></div>';
       html += '<div class="section-header">Past sessions</div>';
       past.forEach(function(s) { html += renderSessionCard(s, false); });
     }
@@ -661,7 +862,10 @@ function renderSessionCard(s, isUpcoming) {
 }
 
 function renderSummary(analysisRaw) {
-  // analysis may be a JSON object or string
+  // analysis may be a JSON object or string.
+  // CLIENT-SAFE ONLY. Never render coach-only fields: frameworks_detected, coaching_signals,
+  // active_pattern, dna_manifestations, next_session_strategy, coach_dna_update,
+  // coaching_interventions, missed_windows. These are stripped at the renderer level.
   let a = analysisRaw;
   if (typeof a === 'string') {
     try { a = JSON.parse(a); } catch (e) { a = null; }
@@ -672,58 +876,102 @@ function renderSummary(analysisRaw) {
 
   let out = '';
 
-  // What we focused on — use session_in_one_line or pre_session_seed
-  const focus = a.session_in_one_line || a.pre_session_seed || a.core_focus;
+  // 1. What we worked on — core_focus (prefer longer of core_focus vs session_in_one_line)
+  let focus = '';
+  const cf = typeof a.core_focus === 'string' ? a.core_focus : '';
+  const sol = typeof a.session_in_one_line === 'string' ? a.session_in_one_line : '';
+  if (cf && sol) focus = cf.length >= sol.length ? cf : sol;
+  else focus = cf || sol || '';
   if (focus) {
-    out += '<div class="summary-block"><div class="summary-label">What we focused on</div><p>' + escapeHtml(String(focus)) + '</p></div>';
+    out += '<div class="summary-section"><h4>What we worked on</h4><p>' + escapeHtml(String(focus)) + '</p></div>';
   }
 
-  // What emerged — breakthrough
+  // 2. What stood out — breakthrough
   let breakthrough = '';
-  if (a.breakthrough_moment && typeof a.breakthrough_moment === 'object') {
-    breakthrough = a.breakthrough_moment.identity_shift || a.breakthrough_moment.text || '';
-  } else if (typeof a.breakthrough === 'string') {
+  if (typeof a.breakthrough === 'string') {
     breakthrough = a.breakthrough;
+  } else if (a.breakthrough_moment && typeof a.breakthrough_moment === 'object') {
+    breakthrough = a.breakthrough_moment.identity_shift || a.breakthrough_moment.text || '';
   }
   if (breakthrough) {
-    out += '<div class="summary-block"><div class="summary-label">What emerged</div><p>' + escapeHtml(String(breakthrough)) + '</p></div>';
+    out += '<div class="summary-section"><h4>What stood out</h4><p>' + escapeHtml(String(breakthrough)) + '</p></div>';
   }
 
-  // Before your next session — between_session_practices
-  const between = Array.isArray(a.between_session_practices) ? a.between_session_practices : (Array.isArray(a.between_session) ? a.between_session : []);
-  if (between.length > 0) {
-    out += '<div class="summary-block"><div class="summary-label">Before your next session</div><ul>';
-    between.forEach(function(b) {
-      if (!b) return;
-      const t = (typeof b === 'string') ? b : (b.invitation || b.title || '');
-      if (t) out += '<li>' + escapeHtml(String(t)) + '</li>';
-    });
+  // 3. What became clearer — patterns_and_your_role[0].what_this_means
+  let clearer = '';
+  if (Array.isArray(a.patterns_and_your_role) && a.patterns_and_your_role.length > 0) {
+    const first = a.patterns_and_your_role[0];
+    if (first && typeof first === 'object' && typeof first.what_this_means === 'string') {
+      clearer = first.what_this_means;
+    }
+  }
+  if (clearer) {
+    const lower = clearer.toLowerCase();
+    const alreadyPrefixed = lower.startsWith('something that became clearer') || lower.startsWith('what became clearer');
+    const text = alreadyPrefixed ? clearer : 'Something that became clearer this session — ' + clearer;
+    out += '<div class="summary-section"><h4>What became clearer</h4><p>' + escapeHtml(text) + '</p></div>';
+  }
+
+  // 4. What to carry into this week — between_session
+  const between = Array.isArray(a.between_session) ? a.between_session
+    : (Array.isArray(a.between_session_practices) ? a.between_session_practices : []);
+  const betweenItems = [];
+  between.forEach(function(b) {
+    if (!b) return;
+    let t = '';
+    if (typeof b === 'string') t = b;
+    else if (typeof b === 'object') {
+      if (b.invitation) t = b.invitation;
+      else if (b.title) t = b.title;
+    }
+    if (t) betweenItems.push(t);
+  });
+  if (betweenItems.length > 0) {
+    out += '<div class="summary-section"><h4>What to carry into this week</h4><ul>';
+    betweenItems.forEach(function(t) { out += '<li>' + escapeHtml(String(t)) + '</li>'; });
     out += '</ul></div>';
   }
 
-  // Your commitments
-  const commitments = Array.isArray(a.client_commitments) ? a.client_commitments : (Array.isArray(a.commitments) ? a.commitments : []);
-  if (commitments.length > 0) {
-    out += '<div class="summary-block"><div class="summary-label">Your commitments</div><ul>';
-    commitments.forEach(function(c) {
-      if (!c) return;
-      const t = (typeof c === 'string') ? c : (c.title || '');
-      if (t) out += '<li>' + escapeHtml(String(t)) + '</li>';
-    });
+  // 5. Your commitments
+  const commitments = Array.isArray(a.commitments) ? a.commitments
+    : (Array.isArray(a.client_commitments) ? a.client_commitments : []);
+  const commitItems = [];
+  commitments.forEach(function(c) {
+    if (!c) return;
+    let t = '';
+    if (typeof c === 'string') t = c;
+    else if (typeof c === 'object') {
+      t = c.title || c.commitment || '';
+    }
+    if (t) commitItems.push(t);
+  });
+  if (commitItems.length > 0) {
+    out += '<div class="summary-section"><h4>Your commitments</h4><ul>';
+    commitItems.forEach(function(t) { out += '<li>' + escapeHtml(String(t)) + '</li>'; });
     out += '</ul></div>';
   }
 
-  // Goals from this session — goal_review
-  const goalReview = Array.isArray(a.goal_review) ? a.goal_review : [];
-  if (goalReview.length > 0) {
-    out += '<div class="summary-block"><div class="summary-label">Goals from this session</div><ul>';
-    goalReview.forEach(function(g) {
-      if (!g) return;
-      const t = g.goal_title || '';
-      const rel = g.session_relevance || '';
-      if (t) out += '<li><strong>' + escapeHtml(t) + '</strong>' + (rel ? ' — ' + escapeHtml(rel) : '') + '</li>';
+  // 6. Goals this session moved forward
+  let goalsArr = [];
+  if (a.goals && typeof a.goals === 'object' && Array.isArray(a.goals.existing)) {
+    goalsArr = a.goals.existing;
+  } else if (Array.isArray(a.goal_review)) {
+    goalsArr = a.goal_review;
+  }
+  const goalRows = [];
+  goalsArr.forEach(function(g) {
+    if (!g || typeof g !== 'object') return;
+    const t = g.title || g.goal_title || '';
+    const rel = g.session_relevance || '';
+    if (t) goalRows.push({ title: t, rel: rel });
+  });
+  if (goalRows.length > 0) {
+    out += '<div class="summary-section"><h4>Goals this session moved forward</h4>';
+    goalRows.forEach(function(gr) {
+      out += '<div class="summary-goal-title">' + escapeHtml(gr.title) + '</div>';
+      if (gr.rel) out += '<div class="summary-goal-rel">' + escapeHtml(gr.rel) + '</div>';
     });
-    out += '</ul></div>';
+    out += '</div>';
   }
 
   if (!out) {
@@ -782,8 +1030,27 @@ async function loadGoals() {
     });
     const data = await res.json();
     if (!Array.isArray(data) || data.length === 0) {
-      container.innerHTML = '<div class="empty"><p>Your coach will add goals here as you work together — or you can add your own below.</p></div>' + createForm;
+      container.innerHTML = '<div class="empty"><p>Goals you and your coach set together will appear here. You can also add your own below.</p></div>' + createForm;
       return;
+    }
+    // Count sessions that touched each goal by title (case-insensitive)
+    function sessionsForGoal(title) {
+      if (!title) return 0;
+      const needle = String(title).trim().toLowerCase();
+      let count = 0;
+      (sessionNotesCache || []).forEach(function(r) {
+        const a = r.analysis || {};
+        let arr = [];
+        if (a.goals && Array.isArray(a.goals.existing)) arr = a.goals.existing;
+        else if (Array.isArray(a.goal_review)) arr = a.goal_review;
+        const hit = arr.some(function(g) {
+          if (!g) return false;
+          const t = (g.title || g.goal_title || '').toString().trim().toLowerCase();
+          return t && t === needle;
+        });
+        if (hit) count++;
+      });
+      return count;
     }
     let html = '';
     data.forEach(function(g) {
@@ -804,8 +1071,19 @@ async function loadGoals() {
         completionNote = '<div style="margin-top:10px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-style:italic;color:var(--navy);">Completed with your coach</div>';
       }
       const gid = escapeHtml(g.id);
+      const addedStr = g.created_at ? formatDate(g.created_at) : '';
+      const updatedStr = g.updated_at ? formatDate(g.updated_at) : '';
+      let metaLine = '';
+      if (addedStr && updatedStr && updatedStr !== addedStr) {
+        metaLine = 'Added ' + addedStr + ' \u00b7 Last updated ' + updatedStr;
+      } else if (addedStr) {
+        metaLine = 'Added ' + addedStr;
+      }
+      const sessionsTouched = sessionsForGoal(g.title || '');
       html += '<div class="card">'
         + '<h3>' + escapeHtml(g.title || 'Goal') + '</h3>'
+        + (metaLine ? '<div class="goal-meta-line">' + escapeHtml(metaLine) + '</div>' : '')
+        + (sessionsTouched > 0 ? '<div class="goal-sessions-line">Connected to ' + sessionsTouched + ' session' + (sessionsTouched === 1 ? '' : 's') + '</div>' : '')
         + (target ? '<div class="meta">Target: ' + escapeHtml(target) + '</div>' : '')
         + (g.description ? '<p>' + escapeHtml(g.description) + '</p>' : '')
         + '<div class="goal-status-row">'
@@ -910,10 +1188,10 @@ async function loadCheckins() {
           + '<a href="/checkin.html?id=' + escapeHtml(c.id || '') + '" class="btn btn-primary">Open check-in</a>'
           + '</div>';
       });
-    } else {
-      html += '<div class="checkin-invite">'
-        + '<h3>A moment to reflect</h3>'
-        + '<p>When a check-in is waiting for you, it will appear here as a gentle invitation — not a task.</p>'
+    } else if (completed.length === 0) {
+      html += '<div class="checkin-empty">'
+        + '<div class="icon">&#10022;</div>'
+        + '<p>Check-ins help you and your coach stay connected between sessions. When your coach sends one, it will appear here as a moment to reflect.</p>'
         + '</div>';
     }
 
@@ -1037,7 +1315,7 @@ async function loadCourses() {
     let data = [];
     if (res.ok) data = await res.json();
     if (!Array.isArray(data) || data.length === 0) {
-      container.innerHTML = '<div class="empty"><p>Your coach will share courses and resources here.</p></div>';
+      container.innerHTML = '<div class="empty"><p>Your coach will share resources, courses, and tools here as you work together.</p></div>';
       return;
     }
     let html = '';
@@ -1067,15 +1345,62 @@ async function loadCourses() {
 /* ================================================
    PROFILE
    ================================================ */
+/*
+  renderProfile — identity card layout.
+  SCHEMA NOTE: timezone and preferred_contact columns are added via
+  migrations/20260413_explorer_profile_fields.sql. Until that migration runs,
+  saveProfile will retry without those fields if the server rejects them.
+*/
 function renderProfile() {
   const container = $('profile-content');
   const p = clientProfile || {};
   const display = p.display_name || '';
   const phone = p.phone || '';
+  const tz = p.timezone || '';
+  const contact = p.preferred_contact || '';
+  const memberSince = p.created_at ? formatDate(p.created_at) : '';
+
+  // Next session
+  const now = new Date();
+  const upcoming = (sessionsCache || [])
+    .filter(function(s) { return s._when && s._when > now && s.status !== 'cancelled' && s.status !== 'rejected'; })
+    .sort(function(a, b) { return a._when - b._when; });
+  const nextSession = upcoming.length > 0 ? formatDateTime(upcoming[0]._when) : 'No session scheduled';
+  const coachDisplay = currentCoachName || 'Not yet assigned';
+
+  const tzOptions = [
+    'America/New_York','America/Chicago','America/Denver','America/Los_Angeles',
+    'America/Phoenix','America/Anchorage','Pacific/Honolulu','Europe/London',
+    'Europe/Paris','Europe/Berlin','Asia/Tokyo','Australia/Sydney','Other (just ask)'
+  ];
+  let tzOptsHtml = '<option value="">Select...</option>';
+  tzOptions.forEach(function(o) {
+    const sel = (o === tz) ? ' selected' : '';
+    tzOptsHtml += '<option value="' + escapeHtml(o) + '"' + sel + '>' + escapeHtml(o) + '</option>';
+  });
+
+  const contactOptions = ['Email', 'Text', 'Either is fine'];
+  let contactOptsHtml = '<option value="">Select...</option>';
+  contactOptions.forEach(function(o) {
+    const sel = (o === contact) ? ' selected' : '';
+    contactOptsHtml += '<option value="' + escapeHtml(o) + '"' + sel + '>' + escapeHtml(o) + '</option>';
+  });
+
   container.innerHTML = '<div class="card">'
+    + '<div class="profile-section">'
+    + '<h4>Your details</h4>'
     + '<div class="form-row"><label>Display name</label><input type="text" id="pf-name" value="' + escapeHtml(display) + '" placeholder="What your coach calls you"></div>'
-    + '<div class="form-row"><label>Email</label><div class="readonly">' + escapeHtml(currentEmail) + '</div></div>'
     + '<div class="form-row"><label>Phone</label><input type="tel" id="pf-phone" value="' + escapeHtml(phone) + '" placeholder="(optional)"></div>'
+    + '<div class="form-row"><label>Timezone</label><select id="pf-tz">' + tzOptsHtml + '</select></div>'
+    + '<div class="form-row"><label>How you like to be reached</label><select id="pf-contact">' + contactOptsHtml + '</select></div>'
+    + '</div>'
+    + '<div class="profile-section">'
+    + '<h4>Your coaching space</h4>'
+    + '<div class="form-row"><label>Email</label><div class="readonly">' + escapeHtml(currentEmail) + '</div></div>'
+    + '<div class="form-row"><label>Coach</label><div class="readonly">' + escapeHtml(coachDisplay) + '</div></div>'
+    + '<div class="form-row"><label>Member since</label><div class="readonly">' + escapeHtml(memberSince || '—') + '</div></div>'
+    + '<div class="form-row"><label>Next session</label><div class="readonly">' + escapeHtml(nextSession) + '</div></div>'
+    + '</div>'
     + '<div style="margin-top:16px;display:flex;align-items:center;gap:10px;">'
     + '<button class="btn btn-primary" onclick="saveProfile()">Save changes</button>'
     + '<span class="save-msg" id="pf-msg"></span>'
@@ -1088,22 +1413,32 @@ async function saveProfile() {
   const name = $('pf-name').value.trim();
   const phoneEl = $('pf-phone');
   const phone = phoneEl ? phoneEl.value.trim() : '';
-  const body = { display_name: name, phone: phone };
+  const tzEl = $('pf-tz');
+  const contactEl = $('pf-contact');
+  const tz = tzEl ? tzEl.value.trim() : '';
+  const contact = contactEl ? contactEl.value.trim() : '';
+  const fullBody = { display_name: name, phone: phone, timezone: tz || null, preferred_contact: contact || null };
+  const safeBody = { display_name: name, phone: phone };
   try {
-    // If no profile row exists, upsert; otherwise patch
-    let res;
-    if (clientProfile && clientProfile.id) {
-      res = await fetch(SUPABASE_URL + '/rest/v1/explorer_profiles?email=eq.' + encodeURIComponent(currentEmail), {
-        method: 'PATCH',
-        headers: Object.assign({}, apiHeaders(), { 'Prefer': 'return=representation' }),
-        body: JSON.stringify(body)
-      });
-    } else {
-      res = await fetch(SUPABASE_URL + '/rest/v1/explorer_profiles', {
+    // If no profile row exists, upsert; otherwise patch.
+    // Retry with safeBody if server rejects unknown columns (migration not run yet).
+    async function doSave(payload) {
+      if (clientProfile && clientProfile.id) {
+        return fetch(SUPABASE_URL + '/rest/v1/explorer_profiles?email=eq.' + encodeURIComponent(currentEmail), {
+          method: 'PATCH',
+          headers: Object.assign({}, apiHeaders(), { 'Prefer': 'return=representation' }),
+          body: JSON.stringify(payload)
+        });
+      }
+      return fetch(SUPABASE_URL + '/rest/v1/explorer_profiles', {
         method: 'POST',
         headers: Object.assign({}, apiHeaders(), { 'Prefer': 'return=representation' }),
-        body: JSON.stringify(Object.assign({ email: currentEmail, role: 'explorer' }, body))
+        body: JSON.stringify(Object.assign({ email: currentEmail, role: 'explorer' }, payload))
       });
+    }
+    let res = await doSave(fullBody);
+    if (!res.ok && res.status === 400) {
+      res = await doSave(safeBody);
     }
     if (!res.ok) throw new Error('Save failed');
     const rows = await res.json().catch(function() { return []; });
