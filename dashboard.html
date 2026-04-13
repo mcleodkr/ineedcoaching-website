@@ -295,6 +295,24 @@ async function initDashboard() {
         window.location.href = '/client-dashboard.html';
         return;
       }
+      // No coach, no explorer — auto-create an explorer profile with role 'client'
+      // so first-time magic-link users land directly in their client dashboard.
+      var defaultDisplay = (currentUserEmail.split('@')[0] || '').trim();
+      var createRes = await fetch(SUPABASE_URL + '/rest/v1/explorer_profiles', {
+        method: 'POST',
+        headers: {
+          'apikey': ANON_KEY,
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal,resolution=ignore-duplicates'
+        },
+        body: JSON.stringify({ email: currentUserEmail, display_name: defaultDisplay, role: 'client' })
+      });
+      if (createRes.ok || createRes.status === 409) {
+        window.location.href = '/client-dashboard.html';
+        return;
+      }
+      console.error('[Routing] failed to auto-create explorer profile:', createRes.status);
     } catch (routeErr) {
       // If role lookup fails, fall through to the default explorer view.
       console.error('[Routing] role lookup error:', routeErr);
