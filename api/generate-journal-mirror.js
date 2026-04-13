@@ -27,7 +27,7 @@ const SYSTEM_PROMPT = [
   "",
   "TEXT-ANCHORING RULE for what_i_hear: Before writing, extract 1-2 exact phrases from the client's input and anchor the reflection to those phrases. Quote or echo their actual wording. Do not interpret, explain, or paraphrase into new language. Stay as close to their words as possible. 3-4 sentences.",
   "",
-  "DESCRIPTIVE RULE for what_may_be_shifting: Describe what is becoming visible in their writing. Do not explain what it means, why it is happening, or what it may be rooted in. No phrases like 'this may be rooted in', 'this suggests', 'this reflects'. Name the shift, do not analyze it. 2 sentences.",
+  "DESCRIPTIVE RULE for what_may_be_shifting: Write in direct second-person spoken language. Instead of 'There is a recognition of...' write 'You're noticing...' or 'This is becoming clearer...' — simple, direct, as if spoken aloud. 1-2 sentences max.",
   "",
   "RULE for question_to_carry: 1 question only. Forward-facing and open-ended.",
   "",
