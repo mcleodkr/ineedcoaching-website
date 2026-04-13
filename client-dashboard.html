@@ -1801,8 +1801,9 @@ async function fetchJournalPrompt() {
 }
 
 function renderJournal() {
+  console.log('[Journal] renderJournal called. Stage:', journalState.stage, 'mirror:', !!journalState.mirror);
   const host = $('journal-content');
-  if (!host) return;
+  if (!host) { console.warn('[Journal] renderJournal: #journal-content not found'); return; }
   let html = '';
   if (journalState.stage === 'prompt') {
     html += renderJournalPromptCard();
@@ -2149,6 +2150,7 @@ async function journalSaveReflection() {
   }
   journalState.matchedSignals = detectGrowthSignals();
   await persistGrowthSignals(journalState.matchedSignals);
+  console.log('[Journal] Mirror step starting — reflection saved, transitioning to mirroring stage');
   journalState.mirror = null;
   journalState.stage = 'mirroring';
   renderJournal();
@@ -2159,6 +2161,7 @@ window.journalSaveReflection = journalSaveReflection;
 function journalSkipReflection() {
   captureReflectionState();
   journalState.matchedSignals = detectGrowthSignals();
+  console.log('[Journal] Mirror step starting (skipped reflection) — transitioning to mirroring stage');
   journalState.mirror = null;
   journalState.stage = 'mirroring';
   renderJournal();
@@ -2167,13 +2170,16 @@ function journalSkipReflection() {
 window.journalSkipReflection = journalSkipReflection;
 
 async function fetchJournalMirror() {
+  console.log('[Journal] fetchJournalMirror invoked. Stage:', journalState.stage, 'entryId:', journalState.entryId);
   const token = currentToken || localStorage.getItem(TOKEN_KEY);
   if (!token) {
+    console.warn('[Journal] No token available — skipping mirror and advancing to sharing');
     journalState.stage = 'sharing';
     renderJournal();
     return;
   }
   try {
+    console.log('[Journal] Calling mirror API /api/generate-journal-mirror');
     const res = await fetch('/api/generate-journal-mirror', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
@@ -2185,7 +2191,14 @@ async function fetchJournalMirror() {
         reflection_next_step: (journalState.reflection && journalState.reflection.next) || ''
       })
     });
-    const data = await res.json().catch(function() { return {}; });
+    console.log('[Journal] Mirror API response status:', res.status, res.statusText);
+    const rawText = await res.text();
+    console.log('[Journal] Mirror API raw body:', rawText);
+    let data = {};
+    try { data = JSON.parse(rawText); } catch (parseErr) {
+      console.error('[Journal] Mirror API JSON parse failed:', parseErr);
+    }
+    console.log('[Journal] Mirror received — parsed data:', data);
     journalState.mirror = {
       text: (data && data.mirror_text) || '',
       what_i_hear: (data && data.what_i_hear) || null,
@@ -2207,7 +2220,7 @@ async function fetchJournalMirror() {
       } catch (e) { console.error('[Journal] mirror persist failed', e); }
     }
   } catch (e) {
-    console.error('[Journal] mirror fetch failed', e);
+    console.error('[Journal] Mirror failed — error thrown in fetchJournalMirror:', e);
     journalState.mirror = {
       text: 'Your words have been received. Take whatever feels right with you from this.',
       what_i_hear: null,
@@ -2215,6 +2228,7 @@ async function fetchJournalMirror() {
       question_to_carry: null
     };
   }
+  console.log('[Journal] fetchJournalMirror finished. Stage:', journalState.stage, 'mirror set:', !!journalState.mirror);
   if (journalState.stage === 'mirroring') renderJournal();
 }
 
