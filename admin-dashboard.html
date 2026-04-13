@@ -1,0 +1,772 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — ineedcoaching.org</title>
+<!-- ADMIN DASHBOARD NOTE: Admin email list is hardcoded for MVP. Move to role-based system before scaling. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #1a3a52;
+    --gold: #c49a3c;
+    --cream: #f7f5f1;
+    --card: #ffffff;
+    --border: #e8e4dc;
+    --text: #1a3a52;
+    --muted: #6b6b6b;
+    --terracotta: #B8654A;
+    --green: #2f7d4f;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(26,58,82,0.06), 0 4px 12px rgba(26,58,82,0.04);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--cream); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 16px; -webkit-font-smoothing: antialiased; }
+  h1, h2, h3, h4 { font-family: 'Cormorant Garamond', serif; color: var(--navy); margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+  a { color: var(--navy); }
+
+  .layout { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+  .sidebar { background: #fff; border-right: 1px solid var(--border); padding: 28px 16px; position: sticky; top: 0; height: 100vh; }
+  .brand { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 700; color: var(--navy); padding: 0 12px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .brand small { display: block; font-family: 'DM Sans', sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); font-weight: 600; margin-top: 4px; }
+  .nav { display: flex; flex-direction: column; gap: 2px; }
+  .nav button { background: none; border: 0; border-left: 3px solid transparent; text-align: left; padding: 10px 14px; font-family: 'DM Sans', sans-serif; font-size: 0.92rem; color: var(--muted); cursor: pointer; border-radius: 0 6px 6px 0; transition: all 0.15s ease; }
+  .nav button:hover { background: #faf8f4; color: var(--navy); }
+  .nav button.active { background: rgba(196,154,60,0.1); color: var(--navy); border-left-color: var(--gold); font-weight: 600; }
+  .sidebar-footer { position: absolute; bottom: 16px; left: 16px; right: 16px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 0.78rem; color: var(--muted); }
+  .sidebar-footer .email { color: var(--navy); font-weight: 500; word-break: break-all; display: block; margin-bottom: 6px; }
+  .sidebar-footer button { background: none; border: 1px solid var(--border); color: var(--muted); padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+
+  .main { padding: 32px 40px 80px; max-width: 1400px; }
+  .page-title { font-size: 1.9rem; margin-bottom: 4px; }
+  .page-sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 28px; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 24px; }
+  .stat { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
+  .stat-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+  .stat-value { font-family: 'Cormorant Garamond', serif; font-size: 2rem; color: var(--navy); font-weight: 700; margin-top: 6px; line-height: 1; }
+  .stat-sub { font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; margin-bottom: 20px; }
+  .card h2 { font-size: 1.15rem; padding-bottom: 10px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+  .card.terracotta { border-left: 4px solid var(--terracotta); }
+  .card.success { border-left: 4px solid var(--green); }
+  .card.placeholder { background: #faf8f4; border-style: dashed; }
+
+  .attention-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .attn-item { padding: 12px 14px; background: #faf6f2; border: 1px solid #ead9cd; border-radius: 8px; }
+  .attn-item .n { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; color: var(--terracotta); font-weight: 700; line-height: 1; }
+  .attn-item .l { font-size: 0.78rem; color: var(--navy); margin-top: 4px; font-weight: 500; }
+
+  .activity-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .activity-col h3 { font-size: 1rem; margin-bottom: 10px; color: var(--navy); }
+  .activity-item { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+  .activity-item:last-child { border-bottom: 0; }
+  .activity-item .when { color: var(--muted); font-size: 0.72rem; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.87rem; }
+  th { text-align: left; padding: 10px 12px; background: #faf8f4; color: var(--navy); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; }
+  th:hover { background: #f3eee6; }
+  td { padding: 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+  tr:hover td { background: #faf8f4; }
+  .badge { display: inline-block; padding: 3px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 600; }
+  .badge.yes { background: rgba(47,125,79,0.12); color: var(--green); }
+  .badge.no { background: rgba(184,101,74,0.12); color: var(--terracotta); }
+  .badge.neutral { background: #f0ebe2; color: var(--muted); }
+  .check { color: var(--green); font-weight: 700; }
+  .x { color: #c96b5a; font-weight: 700; }
+
+  .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+  .search { flex: 1; min-width: 220px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; background: #fff; }
+  .search:focus { outline: 2px solid var(--gold); outline-offset: -1px; }
+  select.filter { padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; background: #fff; }
+
+  .btn { display: inline-block; padding: 7px 14px; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: all 0.15s ease; text-decoration: none; }
+  .btn.primary { background: var(--gold); color: #fff; }
+  .btn.primary:hover { background: #b08a32; }
+  .btn.secondary { background: #fff; color: var(--navy); border-color: var(--navy); }
+  .btn.secondary:hover { background: var(--navy); color: #fff; }
+  .btn.small { padding: 4px 10px; font-size: 0.75rem; }
+
+  .pagination { display: flex; gap: 6px; align-items: center; justify-content: flex-end; margin-top: 14px; font-size: 0.82rem; color: var(--muted); }
+  .pagination button { padding: 5px 10px; border: 1px solid var(--border); background: #fff; border-radius: 4px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+  .pagination button:disabled { opacity: 0.4; cursor: default; }
+
+  .loading, .empty { padding: 30px; text-align: center; color: var(--muted); font-size: 0.88rem; }
+  .loading::before { content: ''; display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .section { display: none; }
+  .section.active { display: block; }
+
+  @media (max-width: 1100px) {
+    .stat-grid { grid-template-columns: repeat(3, 1fr); }
+    .attention-grid { grid-template-columns: repeat(2, 1fr); }
+    .activity-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 800px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--border); }
+    .sidebar-footer { position: static; margin-top: 12px; }
+    .main { padding: 20px; }
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">ineedcoaching<small>admin console</small></div>
+    <nav class="nav" id="nav">
+      <button data-section="overview" class="active">Overview</button>
+      <button data-section="errors">Errors &amp; Logs</button>
+      <button data-section="coaches">Coaches</button>
+      <button data-section="clients">Clients</button>
+      <button data-section="sessions">Sessions</button>
+      <button data-section="revenue">Revenue</button>
+    </nav>
+    <div class="sidebar-footer">
+      <span class="email" id="admin-email">—</span>
+      <button id="sign-out">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- OVERVIEW -->
+    <section class="section active" id="section-overview">
+      <h1 class="page-title">Overview</h1>
+      <div class="page-sub">Platform health at a glance</div>
+      <div class="stat-grid" id="stat-grid">
+        <div class="loading">Loading stats</div>
+      </div>
+      <div id="attention-card"></div>
+      <div class="card">
+        <h2>Recent Activity</h2>
+        <div class="activity-grid" id="activity">
+          <div class="loading">Loading activity</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ERRORS -->
+    <section class="section" id="section-errors">
+      <h1 class="page-title">Errors &amp; Logs</h1>
+      <div class="page-sub">What needs attention, in one place</div>
+      <div id="errors-body"><div class="loading">Loading</div></div>
+      <div class="card placeholder"><h2>Twilio SMS Log</h2><div class="empty">Twilio webhook logging coming soon</div></div>
+      <div class="card placeholder"><h2>Vercel Deployments</h2><div class="empty">Connect Vercel webhook for deployment alerts</div></div>
+    </section>
+
+    <!-- COACHES -->
+    <section class="section" id="section-coaches">
+      <h1 class="page-title">Coaches</h1>
+      <div class="page-sub">All coach profiles</div>
+      <div class="card">
+        <div class="toolbar">
+          <input class="search" id="coach-search" placeholder="Search by name or email…">
+        </div>
+        <div id="coaches-table"><div class="loading">Loading coaches</div></div>
+      </div>
+    </section>
+
+    <!-- CLIENTS -->
+    <section class="section" id="section-clients">
+      <h1 class="page-title">Clients</h1>
+      <div class="page-sub">All explorer profiles</div>
+      <div class="card">
+        <div class="toolbar">
+          <input class="search" id="client-search" placeholder="Search by name or email…">
+          <select class="filter" id="client-coach-filter"><option value="">All coaches</option></select>
+        </div>
+        <div id="clients-table"><div class="loading">Loading clients</div></div>
+      </div>
+    </section>
+
+    <!-- SESSIONS -->
+    <section class="section" id="section-sessions">
+      <h1 class="page-title">Sessions</h1>
+      <div class="page-sub">All coach bookings</div>
+      <div class="card">
+        <div class="toolbar">
+          <input class="search" id="session-search" placeholder="Search coach or client…">
+          <select class="filter" id="session-coach-filter"><option value="">All coaches</option></select>
+          <select class="filter" id="session-missing-filter">
+            <option value="">All sessions</option>
+            <option value="missing">Missing analysis only</option>
+          </select>
+        </div>
+        <div id="sessions-table"><div class="loading">Loading sessions</div></div>
+      </div>
+    </section>
+
+    <!-- REVENUE -->
+    <section class="section" id="section-revenue">
+      <h1 class="page-title">Revenue</h1>
+      <div class="page-sub">Estimate — not live billing data</div>
+      <div id="revenue-body"><div class="loading">Loading</div></div>
+      <div class="card placeholder"><h2>Stripe</h2><div class="empty">Connect Stripe for live billing data</div></div>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ================================================
+   ADMIN DASHBOARD
+   Service role key NEVER lives here. All data flows
+   through /api/admin-query which verifies caller.
+   ================================================ */
+const SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+const TOKEN_KEY = 'sb_access_token';
+const ADMIN_EMAILS = ['drkmcleod@gmail.com', 'creativeenergytx@gmail.com'];
+const PAGE_SIZE = 25;
+
+var currentToken = null;
+var currentEmail = null;
+var cache = {};
+var tableState = {
+  coaches: { page: 1, sort: 'created_at', dir: 'desc', search: '' },
+  clients: { page: 1, sort: 'created_at', dir: 'desc', search: '', coachFilter: '' },
+  sessions: { page: 1, sort: 'scheduled_at', dir: 'desc', search: '', coachFilter: '', missing: '' }
+};
+
+function $(id) { return document.getElementById(id); }
+function escapeHtml(s) {
+  if (s === null || s === undefined) return '';
+  var d = document.createElement('div');
+  d.textContent = String(s);
+  return d.innerHTML;
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  try {
+    var d = new Date(iso);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch (e) { return '—'; }
+}
+function fmtRelative(iso) {
+  if (!iso) return '—';
+  var ms = Date.now() - new Date(iso).getTime();
+  var d = Math.floor(ms / 86400000);
+  if (d === 0) return 'today';
+  if (d === 1) return '1d ago';
+  if (d < 30) return d + 'd ago';
+  var mo = Math.floor(d / 30);
+  return mo + 'mo ago';
+}
+
+/* ================================================
+   AUTH
+   ================================================ */
+async function bootstrapAuth() {
+  currentToken = localStorage.getItem(TOKEN_KEY);
+  if (!currentToken) return redirectToLogin();
+  try {
+    var res = await fetch(SUPABASE_URL + '/auth/v1/user', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + currentToken }
+    });
+    if (!res.ok) return redirectToLogin();
+    var user = await res.json();
+    currentEmail = (user.email || '').toLowerCase();
+    if (ADMIN_EMAILS.indexOf(currentEmail) === -1) {
+      alert('This account does not have admin access.');
+      return redirectToLogin();
+    }
+    $('admin-email').textContent = currentEmail;
+    return true;
+  } catch (e) {
+    return redirectToLogin();
+  }
+}
+function redirectToLogin() {
+  window.location.href = '/coach-dashboard.html';
+}
+
+async function adminQuery(query) {
+  try {
+    var res = await fetch('/api/admin-query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionAccessToken: currentToken, query: query })
+    });
+    if (res.status === 401) {
+      redirectToLogin();
+      return null;
+    }
+    var json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.error || 'Query failed');
+    }
+    return json.data;
+  } catch (e) {
+    return { __error: e.message || 'Something went wrong' };
+  }
+}
+
+/* ================================================
+   OVERVIEW
+   ================================================ */
+async function loadOverview() {
+  var stats = await adminQuery({ kind: 'overview-stats' });
+  renderStats(stats);
+  var attn = await adminQuery({ kind: 'attention-needed' });
+  renderAttention(attn);
+  var activity = await adminQuery({ kind: 'recent-activity' });
+  renderActivity(activity);
+}
+
+function renderStats(s) {
+  var grid = $('stat-grid');
+  if (!s || s.__error) {
+    grid.innerHTML = '<div class="empty">Could not load stats: ' + escapeHtml(s && s.__error) + '</div>';
+    return;
+  }
+  grid.innerHTML = [
+    statCard('Total Coaches', s.totalCoaches),
+    statCard('Total Clients', s.totalClients),
+    statCard('Sessions This Month', s.sessionsThisMonth),
+    statCard('Coach Clarity Runs This Month', s.clarityRunsThisMonth),
+    statCard('Published Profiles', s.publishedCount),
+    statCard('Estimated MRR', '$' + (s.estimatedMrr || 0).toLocaleString())
+  ].join('');
+}
+function statCard(label, value) {
+  return '<div class="stat"><div class="stat-label">' + escapeHtml(label) + '</div><div class="stat-value">' + escapeHtml(value) + '</div></div>';
+}
+
+function renderAttention(a) {
+  var el = $('attention-card');
+  if (!a || a.__error) {
+    el.innerHTML = '<div class="card"><div class="empty">Could not load attention items</div></div>';
+    return;
+  }
+  var total = (a.failedClarity || 0) + (a.sessionsMissingAnalysis || 0) + (a.coachesInactive14 || 0) + (a.coachesZeroSessions7 || 0);
+  if (total === 0) {
+    el.innerHTML = '<div class="card success"><h2>All systems running</h2><div class="empty">Nothing needs attention right now.</div></div>';
+    return;
+  }
+  el.innerHTML = '<div class="card terracotta"><h2>Attention Needed</h2><div class="attention-grid">' +
+    attnItem(a.failedClarity, 'Failed Coach Clarity runs') +
+    attnItem(a.sessionsMissingAnalysis, 'Sessions >48h with no analysis') +
+    attnItem(a.coachesInactive14, 'Coaches inactive 14+ days') +
+    attnItem(a.coachesZeroSessions7, 'Coaches, 0 sessions after 7 days') +
+    '</div></div>';
+}
+function attnItem(n, label) {
+  return '<div class="attn-item"><div class="n">' + escapeHtml(n || 0) + '</div><div class="l">' + escapeHtml(label) + '</div></div>';
+}
+
+function renderActivity(a) {
+  var el = $('activity');
+  if (!a || a.__error) { el.innerHTML = '<div class="empty">Could not load activity</div>'; return; }
+  var signups = (a.signups || []).map(function(c) {
+    return '<div class="activity-item">' + escapeHtml(c.display_name || c.user_email || 'Unknown') +
+      '<div class="when">' + fmtRelative(c.created_at) + '</div></div>';
+  }).join('') || '<div class="empty">No recent signups</div>';
+  var sessions = (a.sessions || []).map(function(b) {
+    return '<div class="activity-item">' + escapeHtml(b.client_email || 'Unknown') +
+      '<div class="when">' + fmtDate(b.scheduled_at) + ' · ' + escapeHtml(b.status || '') + '</div></div>';
+  }).join('') || '<div class="empty">No recent sessions</div>';
+  var analyses = (a.analyses || []).map(function(n) {
+    return '<div class="activity-item">' + escapeHtml(n.client_email || 'Unknown') +
+      '<div class="when">' + fmtRelative(n.updated_at) + '</div></div>';
+  }).join('') || '<div class="empty">No recent analyses</div>';
+  el.innerHTML =
+    '<div class="activity-col"><h3>Last 10 coach signups</h3>' + signups + '</div>' +
+    '<div class="activity-col"><h3>Last 10 sessions</h3>' + sessions + '</div>' +
+    '<div class="activity-col"><h3>Last 5 Coach Clarity analyses</h3>' + analyses + '</div>';
+}
+
+/* ================================================
+   ERRORS
+   ================================================ */
+async function loadErrors() {
+  var data = await adminQuery({ kind: 'errors-logs' });
+  var el = $('errors-body');
+  if (!data || data.__error) { el.innerHTML = '<div class="card"><div class="empty">Could not load errors</div></div>'; return; }
+  var fc = (data.failedClarity || []).map(function(r) {
+    return '<tr><td>' + escapeHtml((r.coach && r.coach.display_name) || '—') +
+      '</td><td>' + escapeHtml(r.client_email || '—') +
+      '</td><td>' + fmtDate(r.created_at) +
+      '</td><td><button class="btn primary small" data-rerun="' + escapeHtml(r.booking_id) + '">Re-run</button></td></tr>';
+  }).join('') || '<tr><td colspan="4" class="empty">No failed runs</td></tr>';
+  var ma = (data.missingAnalysis || []).map(function(r) {
+    return '<tr><td>' + escapeHtml((r.coach && r.coach.display_name) || '—') +
+      '</td><td>' + escapeHtml(r.client_email || '—') +
+      '</td><td>' + fmtDate(r.scheduled_at) + '</td></tr>';
+  }).join('') || '<tr><td colspan="3" class="empty">None</td></tr>';
+  var qp = (data.quietProfiles || []).map(function(p) {
+    return '<tr><td>' + escapeHtml(p.display_name || '—') + '</td><td>' + escapeHtml(p.email) + '</td><td>' + fmtRelative(p.created_at) + '</td></tr>';
+  }).join('') || '<tr><td colspan="3" class="empty">None</td></tr>';
+
+  el.innerHTML =
+    '<div class="card terracotta"><h2>Failed Coach Clarity Runs</h2>' +
+    '<table><thead><tr><th>Coach</th><th>Client</th><th>Session date</th><th>Action</th></tr></thead><tbody>' + fc + '</tbody></table></div>' +
+    '<div class="card terracotta"><h2>Sessions Missing Analysis (>24h)</h2>' +
+    '<table><thead><tr><th>Coach</th><th>Client</th><th>Scheduled</th></tr></thead><tbody>' + ma + '</tbody></table></div>' +
+    '<div class="card"><h2>Quiet Profiles (last 7 days)</h2>' +
+    '<table><thead><tr><th>Name</th><th>Email</th><th>Signed up</th></tr></thead><tbody>' + qp + '</tbody></table></div>';
+
+  el.querySelectorAll('[data-rerun]').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      btn.disabled = true;
+      btn.textContent = 'Running…';
+      var bookingId = btn.getAttribute('data-rerun');
+      var r = await adminQuery({ kind: 'rerun-clarity', bookingId: bookingId });
+      if (r && r.__error) {
+        btn.textContent = 'Failed';
+      } else {
+        btn.textContent = 'Queued';
+      }
+    });
+  });
+}
+
+/* ================================================
+   COACHES
+   ================================================ */
+async function loadCoaches() {
+  var data = await adminQuery({ kind: 'coaches-list' });
+  if (!data || data.__error) {
+    $('coaches-table').innerHTML = '<div class="empty">Could not load coaches</div>';
+    return;
+  }
+  cache.coaches = data;
+  // populate coach filter dropdowns
+  var opts = data.map(function(c) { return '<option value="' + escapeHtml(c.id) + '">' + escapeHtml(c.display_name || c.user_email) + '</option>'; }).join('');
+  var cf = $('client-coach-filter');
+  if (cf.children.length <= 1) cf.innerHTML = '<option value="">All coaches</option>' + opts;
+  var sf = $('session-coach-filter');
+  if (sf.children.length <= 1) sf.innerHTML = '<option value="">All coaches</option>' + opts;
+  renderCoaches();
+}
+
+function renderCoaches() {
+  var st = tableState.coaches;
+  var rows = (cache.coaches || []).slice();
+  if (st.search) {
+    var q = st.search.toLowerCase();
+    rows = rows.filter(function(c) {
+      return (c.display_name || '').toLowerCase().indexOf(q) > -1 ||
+             (c.user_email || '').toLowerCase().indexOf(q) > -1;
+    });
+  }
+  rows.sort(function(a, b) {
+    var x = a[st.sort], y = b[st.sort];
+    if (x === null || x === undefined) x = '';
+    if (y === null || y === undefined) y = '';
+    if (x < y) return st.dir === 'asc' ? -1 : 1;
+    if (x > y) return st.dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+  var total = rows.length;
+  var start = (st.page - 1) * PAGE_SIZE;
+  var pageRows = rows.slice(start, start + PAGE_SIZE);
+  var html = '<table><thead><tr>' +
+    thSort('coaches', 'display_name', 'Name') +
+    thSort('coaches', 'user_email', 'Email') +
+    thSort('coaches', 'is_published', 'Published') +
+    thSort('coaches', 'created_at', 'Created') +
+    thSort('coaches', 'sessionCount', 'Sessions') +
+    thSort('coaches', 'lastActive', 'Last Active') +
+    thSort('coaches', 'hasClarity', 'Clarity') +
+    '<th>Actions</th></tr></thead><tbody>';
+  if (!pageRows.length) {
+    html += '<tr><td colspan="8" class="empty">No coaches</td></tr>';
+  } else {
+    pageRows.forEach(function(c) {
+      html += '<tr>' +
+        '<td>' + escapeHtml(c.display_name || c.full_name || '—') + '</td>' +
+        '<td>' + escapeHtml(c.user_email) + '</td>' +
+        '<td>' + (c.is_published ? '<span class="badge yes">Published</span>' : '<span class="badge neutral">Draft</span>') + '</td>' +
+        '<td>' + fmtDate(c.created_at) + '</td>' +
+        '<td>' + escapeHtml(c.sessionCount) + '</td>' +
+        '<td>' + fmtRelative(c.lastActive) + '</td>' +
+        '<td>' + (c.hasClarity ? '<span class="check">&#10003;</span>' : '<span class="x">&#10007;</span>') + '</td>' +
+        '<td>' +
+          '<button class="btn secondary small" data-toggle="' + escapeHtml(c.id) + '" data-pub="' + (c.is_published ? '1' : '0') + '">' +
+            (c.is_published ? 'Unpublish' : 'Publish') + '</button> ' +
+          (c.slug ? '<a class="btn secondary small" href="/coach-profile.html?slug=' + encodeURIComponent(c.slug) + '" target="_blank">View</a>' : '') +
+        '</td>' +
+        '</tr>';
+    });
+  }
+  html += '</tbody></table>';
+  html += pagination('coaches', st.page, total);
+  $('coaches-table').innerHTML = html;
+  wireSort('coaches', renderCoaches);
+  wirePagination('coaches', renderCoaches);
+  $('coaches-table').querySelectorAll('[data-toggle]').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      var id = btn.getAttribute('data-toggle');
+      var isPub = btn.getAttribute('data-pub') === '1';
+      btn.disabled = true;
+      var r = await adminQuery({ kind: 'toggle-published', coachId: id, isPublished: !isPub });
+      if (r && !r.__error) {
+        var row = (cache.coaches || []).find(function(x) { return x.id === id; });
+        if (row) row.is_published = !isPub;
+        renderCoaches();
+      } else {
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
+/* ================================================
+   CLIENTS
+   ================================================ */
+async function loadClients() {
+  var data = await adminQuery({ kind: 'clients-list' });
+  if (!data || data.__error) {
+    $('clients-table').innerHTML = '<div class="empty">Could not load clients</div>';
+    return;
+  }
+  cache.clients = data;
+  renderClients();
+}
+function renderClients() {
+  var st = tableState.clients;
+  var rows = (cache.clients || []).slice();
+  if (st.search) {
+    var q = st.search.toLowerCase();
+    rows = rows.filter(function(c) {
+      return (c.display_name || '').toLowerCase().indexOf(q) > -1 ||
+             (c.email || '').toLowerCase().indexOf(q) > -1;
+    });
+  }
+  if (st.coachFilter) {
+    var coachName = ((cache.coaches || []).find(function(c) { return c.id === st.coachFilter; }) || {}).display_name;
+    rows = rows.filter(function(c) { return c.assignedCoach === coachName; });
+  }
+  rows.sort(function(a, b) {
+    var x = a[st.sort], y = b[st.sort];
+    if (x === null || x === undefined) x = '';
+    if (y === null || y === undefined) y = '';
+    if (x < y) return st.dir === 'asc' ? -1 : 1;
+    if (x > y) return st.dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+  var total = rows.length;
+  var start = (st.page - 1) * PAGE_SIZE;
+  var pageRows = rows.slice(start, start + PAGE_SIZE);
+  var html = '<table><thead><tr>' +
+    thSort('clients', 'display_name', 'Name') +
+    thSort('clients', 'email', 'Email') +
+    thSort('clients', 'created_at', 'Created') +
+    thSort('clients', 'assignedCoach', 'Assigned Coach') +
+    thSort('clients', 'lastSession', 'Last Session') +
+    thSort('clients', 'checkinCount', 'Check-ins') +
+    thSort('clients', 'lastActive', 'Last Active') +
+    '</tr></thead><tbody>';
+  if (!pageRows.length) html += '<tr><td colspan="7" class="empty">No clients</td></tr>';
+  else pageRows.forEach(function(c) {
+    html += '<tr>' +
+      '<td>' + escapeHtml(c.display_name || '—') + '</td>' +
+      '<td>' + escapeHtml(c.email) + '</td>' +
+      '<td>' + fmtDate(c.created_at) + '</td>' +
+      '<td>' + escapeHtml(c.assignedCoach || '—') + '</td>' +
+      '<td>' + fmtDate(c.lastSession) + '</td>' +
+      '<td>' + escapeHtml(c.checkinCount) + '</td>' +
+      '<td>' + fmtRelative(c.lastActive) + '</td>' +
+      '</tr>';
+  });
+  html += '</tbody></table>' + pagination('clients', st.page, total);
+  $('clients-table').innerHTML = html;
+  wireSort('clients', renderClients);
+  wirePagination('clients', renderClients);
+}
+
+/* ================================================
+   SESSIONS
+   ================================================ */
+async function loadSessions() {
+  var data = await adminQuery({ kind: 'sessions-list' });
+  if (!data || data.__error) {
+    $('sessions-table').innerHTML = '<div class="empty">Could not load sessions</div>';
+    return;
+  }
+  cache.sessions = data;
+  renderSessions();
+}
+function renderSessions() {
+  var st = tableState.sessions;
+  var rows = (cache.sessions || []).slice();
+  if (st.search) {
+    var q = st.search.toLowerCase();
+    rows = rows.filter(function(r) {
+      return (r.coach_name || '').toLowerCase().indexOf(q) > -1 ||
+             (r.client_email || '').toLowerCase().indexOf(q) > -1;
+    });
+  }
+  if (st.coachFilter) rows = rows.filter(function(r) { return r.coach_id === st.coachFilter; });
+  if (st.missing === 'missing') rows = rows.filter(function(r) { return !r.has_clarity; });
+  rows.sort(function(a, b) {
+    var x = a[st.sort], y = b[st.sort];
+    if (x === null || x === undefined) x = '';
+    if (y === null || y === undefined) y = '';
+    if (x < y) return st.dir === 'asc' ? -1 : 1;
+    if (x > y) return st.dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+  var total = rows.length;
+  var start = (st.page - 1) * PAGE_SIZE;
+  var pageRows = rows.slice(start, start + PAGE_SIZE);
+  var html = '<table><thead><tr>' +
+    thSort('sessions', 'scheduled_at', 'Date') +
+    thSort('sessions', 'coach_name', 'Coach') +
+    thSort('sessions', 'client_email', 'Client') +
+    thSort('sessions', 'session_type', 'Type') +
+    thSort('sessions', 'has_transcript', 'Transcript') +
+    thSort('sessions', 'has_clarity', 'Clarity') +
+    thSort('sessions', 'has_notes', 'Notes') +
+    '</tr></thead><tbody>';
+  if (!pageRows.length) html += '<tr><td colspan="7" class="empty">No sessions</td></tr>';
+  else pageRows.forEach(function(r) {
+    html += '<tr>' +
+      '<td>' + fmtDate(r.scheduled_at) + '</td>' +
+      '<td>' + escapeHtml(r.coach_name) + '</td>' +
+      '<td>' + escapeHtml(r.client_email) + '</td>' +
+      '<td>' + escapeHtml(r.session_type) + '</td>' +
+      '<td>' + (r.has_transcript ? '<span class="check">&#10003;</span>' : '<span class="x">&#10007;</span>') + '</td>' +
+      '<td>' + (r.has_clarity ? '<span class="check">&#10003;</span>' : '<span class="x">&#10007;</span>') + '</td>' +
+      '<td>' + (r.has_notes ? '<span class="check">&#10003;</span>' : '<span class="x">&#10007;</span>') + '</td>' +
+      '</tr>';
+  });
+  html += '</tbody></table>' + pagination('sessions', st.page, total);
+  $('sessions-table').innerHTML = html;
+  wireSort('sessions', renderSessions);
+  wirePagination('sessions', renderSessions);
+}
+
+/* ================================================
+   REVENUE
+   ================================================ */
+async function loadRevenue() {
+  var data = await adminQuery({ kind: 'revenue' });
+  var el = $('revenue-body');
+  if (!data || data.__error) { el.innerHTML = '<div class="card"><div class="empty">Could not load revenue</div></div>'; return; }
+  var churn = (data.churnRisk || []).map(function(c) {
+    return '<tr><td>' + escapeHtml(c.display_name || '—') + '</td><td>' + escapeHtml(c.user_email) + '</td><td>' + fmtDate(c.created_at) + '</td></tr>';
+  }).join('') || '<tr><td colspan="3" class="empty">No churn risk right now</td></tr>';
+  el.innerHTML =
+    '<div class="stat-grid" style="grid-template-columns:repeat(2,1fr);">' +
+      statCard('Published Profiles', data.publishedCount) +
+      statCard('Estimated MRR', '$' + (data.estimatedMrr || 0).toLocaleString()) +
+    '</div>' +
+    '<div class="card terracotta"><h2>Churn Risk (inactive 14+ days)</h2>' +
+    '<table><thead><tr><th>Coach</th><th>Email</th><th>Signed up</th></tr></thead><tbody>' + churn + '</tbody></table></div>';
+}
+
+/* ================================================
+   TABLE HELPERS
+   ================================================ */
+function thSort(key, col, label) {
+  var st = tableState[key];
+  var arrow = st.sort === col ? (st.dir === 'asc' ? ' &uarr;' : ' &darr;') : '';
+  return '<th data-col="' + col + '">' + label + arrow + '</th>';
+}
+function wireSort(key, rerender) {
+  document.querySelectorAll('#' + key + '-table th[data-col]').forEach(function(th) {
+    th.addEventListener('click', function() {
+      var col = th.getAttribute('data-col');
+      var st = tableState[key];
+      if (st.sort === col) st.dir = st.dir === 'asc' ? 'desc' : 'asc';
+      else { st.sort = col; st.dir = 'asc'; }
+      st.page = 1;
+      rerender();
+    });
+  });
+}
+function pagination(key, page, total) {
+  var pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  return '<div class="pagination">' +
+    '<span>' + total + ' rows · page ' + page + ' of ' + pages + '</span>' +
+    '<button data-pg="prev" ' + (page <= 1 ? 'disabled' : '') + '>Prev</button>' +
+    '<button data-pg="next" ' + (page >= pages ? 'disabled' : '') + '>Next</button>' +
+    '</div>';
+}
+function wirePagination(key, rerender) {
+  document.querySelectorAll('#' + key + '-table [data-pg]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var dir = btn.getAttribute('data-pg');
+      if (dir === 'prev') tableState[key].page = Math.max(1, tableState[key].page - 1);
+      else tableState[key].page++;
+      rerender();
+    });
+  });
+}
+
+/* ================================================
+   NAVIGATION
+   ================================================ */
+var loaded = {};
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
+  document.querySelectorAll('#nav button').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-section') === name); });
+  var sec = $('section-' + name);
+  if (sec) sec.classList.add('active');
+  if (loaded[name]) return;
+  loaded[name] = true;
+  if (name === 'overview') loadOverview();
+  if (name === 'errors') loadErrors();
+  if (name === 'coaches') loadCoaches();
+  if (name === 'clients') { if (!cache.coaches) loadCoaches().then(loadClients); else loadClients(); }
+  if (name === 'sessions') { if (!cache.coaches) loadCoaches().then(loadSessions); else loadSessions(); }
+  if (name === 'revenue') loadRevenue();
+}
+
+/* ================================================
+   INIT
+   ================================================ */
+(async function init() {
+  var ok = await bootstrapAuth();
+  if (!ok) return;
+
+  document.querySelectorAll('#nav button').forEach(function(b) {
+    b.addEventListener('click', function() { showSection(b.getAttribute('data-section')); });
+  });
+  $('sign-out').addEventListener('click', function() {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('sb_refresh_token');
+    redirectToLogin();
+  });
+
+  $('coach-search').addEventListener('input', function(e) {
+    tableState.coaches.search = e.target.value;
+    tableState.coaches.page = 1;
+    renderCoaches();
+  });
+  $('client-search').addEventListener('input', function(e) {
+    tableState.clients.search = e.target.value;
+    tableState.clients.page = 1;
+    renderClients();
+  });
+  $('client-coach-filter').addEventListener('change', function(e) {
+    tableState.clients.coachFilter = e.target.value;
+    tableState.clients.page = 1;
+    renderClients();
+  });
+  $('session-search').addEventListener('input', function(e) {
+    tableState.sessions.search = e.target.value;
+    tableState.sessions.page = 1;
+    renderSessions();
+  });
+  $('session-coach-filter').addEventListener('change', function(e) {
+    tableState.sessions.coachFilter = e.target.value;
+    tableState.sessions.page = 1;
+    renderSessions();
+  });
+  $('session-missing-filter').addEventListener('change', function(e) {
+    tableState.sessions.missing = e.target.value;
+    tableState.sessions.page = 1;
+    renderSessions();
+  });
+
+  showSection('overview');
+})();
+</script>
+</body>
+</html>
