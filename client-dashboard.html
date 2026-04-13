@@ -323,6 +323,7 @@ a { color: var(--navy); text-decoration: none; }
         <button class="side-item active" data-section="sessions"><span class="icon">&#9679;</span>My Sessions</button>
         <button class="side-item" data-section="goals"><span class="icon">&#9679;</span>My Goals</button>
         <button class="side-item" data-section="checkins"><span class="icon">&#9679;</span>My Check-ins</button>
+        <button class="side-item" data-section="journal"><span class="icon">&#9679;</span>Journal</button>
         <button class="side-item" data-section="messages"><span class="icon">&#9679;</span>Messages</button>
         <button class="side-item" data-section="courses"><span class="icon">&#9679;</span>Resources</button>
         <button class="side-item" data-section="profile"><span class="icon">&#9679;</span>My Profile</button>
@@ -370,6 +371,13 @@ a { color: var(--navy); text-decoration: none; }
           <h1 class="page-title">My Check-ins</h1>
           <p class="page-sub">A moment to pause and notice how you're arriving.</p>
           <div id="checkins-content"></div>
+        </section>
+
+        <!-- JOURNAL -->
+        <section class="section" id="sec-journal">
+          <h1 class="page-title">Journal</h1>
+          <p class="page-sub">A quiet space to write, reflect, and notice what's becoming clearer.</p>
+          <div id="journal-content"></div>
         </section>
 
         <!-- MESSAGES -->
@@ -904,6 +912,7 @@ function setupSidebar() {
         btn._loaded = true;
         if (target === 'goals') loadGoals();
         if (target === 'checkins') loadCheckins();
+        if (target === 'journal') loadJournal();
         if (target === 'messages') loadMessages();
         if (target === 'courses') loadCourses();
         if (target === 'profile') renderProfile();
@@ -1711,6 +1720,488 @@ async function saveProfile() {
   }
 }
 window.saveProfile = saveProfile;
+
+/* ================================================
+   JOURNAL — coaching-native reflection flow
+   ================================================ */
+let journalState = {
+  stage: 'prompt',
+  prompt: null,
+  entryId: null,
+  entryText: '',
+  entryTitle: '',
+  reflection: { clearer: '', unresolved: '', next: '' },
+  shareMode: 'private',
+  matchedSignals: []
+};
+
+const SIGNAL_KEYWORDS = {
+  clarity:        ['clear', 'clearer', 'makes sense', 'understand', 'see now', 'realize', 'finally', 'obvious'],
+  follow_through: ['will do', 'going to', "i'll", 'plan to', 'committed', 'next step', 'take action', 'step', 'try', 'practice'],
+  self_trust:     ['i can', 'i am', 'i chose', 'i decided', 'i know', 'my choice', 'my voice', 'own it', 'trust myself'],
+  naming_truth:   ['named', 'admit', 'truth', 'honest', 'say it', 'voice', "wasn't seeing", 'suppressed', 'avoided']
+};
+
+const SIGNAL_LABELS = {
+  clarity:        'Something became clearer for you today.',
+  follow_through: 'You named a next step.',
+  self_trust:     'You claimed your own voice.',
+  naming_truth:   'You named something true.'
+};
+
+const SIGNAL_SUMMARIES = {
+  clarity:        'Found new clarity through writing',
+  follow_through: 'Named a concrete next step',
+  self_trust:     'Spoke from a place of self-trust',
+  naming_truth:   'Named something previously unspoken'
+};
+
+async function loadJournal() {
+  journalState = {
+    stage: 'prompt',
+    prompt: null,
+    entryId: null,
+    entryText: '',
+    entryTitle: '',
+    reflection: { clearer: '', unresolved: '', next: '' },
+    shareMode: 'private',
+    matchedSignals: []
+  };
+  await fetchJournalPrompt();
+  renderJournal();
+}
+window.loadJournal = loadJournal;
+
+async function fetchJournalPrompt() {
+  try {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const res = await fetch('/api/generate-journal-prompt', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + (token || '')
+      },
+      body: JSON.stringify({ client_email: currentEmail })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      journalState.prompt = data;
+      return;
+    }
+  } catch (e) {
+    console.error('[Journal] prompt fetch failed', e);
+  }
+  journalState.prompt = {
+    prompt_title: 'A moment to reflect',
+    prompt_text: "Start wherever you are. What's on your mind right now?",
+    source_type: 'default'
+  };
+}
+
+function renderJournal() {
+  const host = $('journal-content');
+  if (!host) return;
+  let html = '';
+  if (journalState.stage === 'prompt') {
+    html += renderJournalPromptCard();
+  } else if (journalState.stage === 'writing') {
+    html += renderJournalWriting();
+  } else if (journalState.stage === 'reflecting') {
+    html += renderJournalReflection();
+  } else if (journalState.stage === 'sharing') {
+    html += renderJournalSharing();
+  } else if (journalState.stage === 'done') {
+    html += renderJournalDone();
+  }
+  html += renderJournalHistory();
+  host.innerHTML = html;
+  if (journalState.stage === 'prompt' || journalState.stage === 'done') {
+    fetchJournalHistory();
+  }
+}
+
+function renderJournalPromptCard() {
+  const p = journalState.prompt || {};
+  return ''
+    + '<div class="card" style="background:#fdf9f1;border-left:3px solid #c49a3c;padding:24px 26px;margin-bottom:24px;">'
+    +   '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.35rem;color:#1a3a52;margin-bottom:10px;">' + escapeHtml(p.prompt_title || 'A moment to reflect') + '</div>'
+    +   '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.98rem;color:#3a3540;line-height:1.65;margin-bottom:18px;">' + escapeHtml(p.prompt_text || '') + '</div>'
+    +   '<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">'
+    +     '<button class="btn btn-primary" onclick="journalStartWriting(true)" style="background:#c49a3c;color:#1a3a52;border:none;padding:10px 22px;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:600;cursor:pointer;">Start writing</button>'
+    +     '<a href="javascript:void(0)" onclick="journalStartWriting(false)" style="font-size:0.85rem;color:#6a6560;text-decoration:underline;">Write freely instead</a>'
+    +   '</div>'
+    + '</div>';
+}
+
+function renderJournalWriting() {
+  const p = journalState.prompt || {};
+  const showPrompt = p && p.prompt_text;
+  let html = '<div class="card" style="padding:26px;margin-bottom:24px;">';
+  if (showPrompt) {
+    html += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;color:#5a5560;font-style:italic;margin-bottom:18px;border-left:2px solid #c49a3c;padding-left:14px;">' + escapeHtml(p.prompt_text) + '</div>';
+  }
+  html += ''
+    + '<input type="text" id="journal-title" placeholder="Give this a title (optional)" value="' + escapeHtml(journalState.entryTitle || '') + '" style="width:100%;padding:10px 12px;border:1px solid #e8e4dc;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.95rem;margin-bottom:14px;color:#1a3a52;">'
+    + '<textarea id="journal-entry" placeholder="This is your space. Write as much or as little as you need." style="width:100%;min-height:280px;padding:14px 16px;border:1px solid #e8e4dc;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:1rem;line-height:1.65;color:#1a3a52;resize:vertical;">' + escapeHtml(journalState.entryText || '') + '</textarea>'
+    + '<div style="display:flex;gap:14px;align-items:center;margin-top:18px;flex-wrap:wrap;">'
+    +   '<button class="btn btn-primary" onclick="journalSaveAndReflect()" style="background:#c49a3c;color:#1a3a52;border:none;padding:11px 24px;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:600;cursor:pointer;">Save and reflect</button>'
+    +   '<a href="javascript:void(0)" onclick="journalSaveAndClose()" style="font-size:0.85rem;color:#6a6560;text-decoration:underline;">Save and close</a>'
+    +   '<span id="journal-write-msg" style="font-size:0.82rem;color:#b03a2e;"></span>'
+    + '</div>'
+    + '</div>';
+  return html;
+}
+
+function renderJournalReflection() {
+  const r = journalState.reflection || {};
+  return ''
+    + '<div class="card" style="padding:26px;margin-bottom:24px;">'
+    +   '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.4rem;color:#1a3a52;margin-bottom:8px;">Before you close — take one more moment</div>'
+    +   '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:#6a6560;line-height:1.6;margin-bottom:22px;">A short pause to let what you just wrote settle into something you can carry with you.</div>'
+    +   journalReflectionField('reflect-clearer',    'What became clearer through writing this?', r.clearer)
+    +   journalReflectionField('reflect-unresolved', 'What still feels unresolved?', r.unresolved)
+    +   journalReflectionField('reflect-next',       'What feels like your next step?', r.next)
+    +   '<div style="display:flex;gap:14px;align-items:center;margin-top:8px;flex-wrap:wrap;">'
+    +     '<button class="btn btn-primary" onclick="journalSaveReflection()" style="background:#c49a3c;color:#1a3a52;border:none;padding:11px 24px;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:600;cursor:pointer;">Save reflection</button>'
+    +     '<a href="javascript:void(0)" onclick="journalSkipReflection()" style="font-size:0.85rem;color:#6a6560;text-decoration:underline;">Skip this step</a>'
+    +   '</div>'
+    + '</div>';
+}
+
+function journalReflectionField(id, label, val) {
+  return ''
+    + '<div style="margin-bottom:16px;">'
+    +   '<label style="display:block;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6a6560;margin-bottom:6px;">' + escapeHtml(label) + '</label>'
+    +   '<textarea id="' + id + '" style="width:100%;min-height:70px;padding:10px 12px;border:1px solid #e8e4dc;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.92rem;line-height:1.55;color:#1a3a52;resize:vertical;">' + escapeHtml(val || '') + '</textarea>'
+    + '</div>';
+}
+
+function renderJournalSharing() {
+  const opts = [
+    { v: 'private', label: 'Keep it private',         desc: 'Your coach will not see this entry.' },
+    { v: 'summary', label: 'Share a summary only',    desc: 'Your coach will see the reflection answers and growth signals, not the entry itself.' },
+    { v: 'full',    label: 'Share everything',        desc: 'Your coach will see the full entry and your reflection.' }
+  ];
+  let html = ''
+    + '<div class="card" style="padding:26px;margin-bottom:24px;">'
+    +   '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.4rem;color:#1a3a52;margin-bottom:18px;">Would you like to share this with your coach?</div>';
+  for (let i = 0; i < opts.length; i++) {
+    const o = opts[i];
+    const sel = (journalState.shareMode === o.v);
+    html += ''
+      + '<div onclick="journalSetShare(\'' + o.v + '\')" style="cursor:pointer;border:1.5px solid ' + (sel ? '#c49a3c' : '#e8e4dc') + ';background:' + (sel ? '#fdf9f1' : '#ffffff') + ';border-radius:8px;padding:16px 18px;margin-bottom:12px;transition:all 0.15s ease;">'
+      +   '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.95rem;font-weight:600;color:#1a3a52;margin-bottom:4px;">' + escapeHtml(o.label) + '</div>'
+      +   '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.84rem;color:#6a6560;line-height:1.5;">' + escapeHtml(o.desc) + '</div>'
+      + '</div>';
+  }
+  html += ''
+    +   '<button class="btn btn-primary" onclick="journalConfirmShare()" style="margin-top:8px;background:#c49a3c;color:#1a3a52;border:none;padding:11px 24px;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:600;cursor:pointer;">Done</button>'
+    + '</div>';
+  return html;
+}
+
+function renderJournalDone() {
+  const insights = (journalState.matchedSignals || []).slice(0, 2);
+  let body = '';
+  if (insights.length === 0) {
+    body = 'Your reflection has been captured.';
+  } else {
+    body = insights.map(function(k) { return SIGNAL_LABELS[k]; }).filter(Boolean).join(' ');
+  }
+  return ''
+    + '<div class="card" style="padding:30px 28px;margin-bottom:24px;background:#fdf9f1;border-left:3px solid #c49a3c;">'
+    +   '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.4rem;color:#1a3a52;margin-bottom:10px;">Your reflection has been captured.</div>'
+    +   '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.95rem;color:#3a3540;line-height:1.7;margin-bottom:18px;">' + escapeHtml(body) + '</div>'
+    +   '<button class="btn btn-primary" onclick="loadJournal()" style="background:#c49a3c;color:#1a3a52;border:none;padding:10px 22px;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:600;cursor:pointer;">Return to your journal</button>'
+    + '</div>';
+}
+
+function renderJournalHistory() {
+  return '<div id="journal-history-host"><div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#8a8580;">Loading your journal&hellip;</div></div>';
+}
+
+async function fetchJournalHistory() {
+  const host = document.getElementById('journal-history-host');
+  if (!host) return;
+  try {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const url = SUPABASE_URL + '/rest/v1/coach_journal_entries?client_email=eq.'
+      + encodeURIComponent(currentEmail)
+      + '&order=created_at.desc&limit=20&select=id,entry_title,entry_text,share_mode,created_at';
+    const res = await fetch(url, {
+      headers: {
+        'apikey': ANON_KEY,
+        'Authorization': 'Bearer ' + (token || ANON_KEY)
+      }
+    });
+    if (!res.ok) throw new Error('history ' + res.status);
+    const rows = await res.json().catch(function() { return []; });
+    host.innerHTML = renderJournalHistoryList(rows);
+  } catch (e) {
+    console.error('[Journal] history error', e);
+    host.innerHTML = '<div class="card" style="padding:18px;font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:#6a6560;">Your journal entries will appear here as you reflect.</div>';
+  }
+}
+
+function renderJournalHistoryList(rows) {
+  if (!rows || rows.length === 0) {
+    return '<div class="card" style="padding:18px;font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:#6a6560;">Your journal entries will appear here as you reflect.</div>';
+  }
+  let html = '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;color:#1a3a52;margin:8px 0 14px;border-bottom:1px solid #e8e4dc;padding-bottom:10px;">Your past reflections</div>';
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r) continue;
+    const dateStr = r.created_at ? new Date(r.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+    const title = (r.entry_title && r.entry_title.trim()) ? r.entry_title : ((r.entry_text || '').slice(0, 60) + ((r.entry_text || '').length > 60 ? '...' : ''));
+    let badge = '<span style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;background:#eee;color:#6a6560;padding:3px 9px;border-radius:50px;">Private</span>';
+    if (r.share_mode === 'summary') badge = '<span style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;background:#fdf2da;color:#8a6a1c;padding:3px 9px;border-radius:50px;">Shared summary</span>';
+    if (r.share_mode === 'full')    badge = '<span style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;background:#c49a3c;color:#1a3a52;padding:3px 9px;border-radius:50px;">Shared</span>';
+    html += ''
+      + '<div class="card" style="padding:16px 18px;margin-bottom:12px;cursor:pointer;" onclick="journalToggleHistory(\'' + escapeHtml(r.id) + '\')">'
+      +   '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">'
+      +     '<div style="flex:1;min-width:0;">'
+      +       '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8a8580;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">' + escapeHtml(dateStr) + '</div>'
+      +       '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.92rem;color:#1a3a52;font-weight:500;">' + escapeHtml(title || '(untitled)') + '</div>'
+      +     '</div>'
+      +     '<div>' + badge + '</div>'
+      +   '</div>'
+      +   '<div id="journal-hist-body-' + escapeHtml(r.id) + '" style="display:none;margin-top:14px;padding:14px 16px;background:#fdf9f1;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:#3a3540;line-height:1.65;white-space:pre-wrap;">' + escapeHtml(r.entry_text || '') + '</div>'
+      + '</div>';
+  }
+  return html;
+}
+
+function journalToggleHistory(id) {
+  const el = document.getElementById('journal-hist-body-' + id);
+  if (!el) return;
+  el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+}
+window.journalToggleHistory = journalToggleHistory;
+
+function journalStartWriting(usePrompt) {
+  if (!usePrompt) {
+    journalState.prompt = { prompt_title: '', prompt_text: '', source_type: 'free' };
+  }
+  journalState.stage = 'writing';
+  renderJournal();
+}
+window.journalStartWriting = journalStartWriting;
+
+function captureWritingState() {
+  const ta = document.getElementById('journal-entry');
+  const ti = document.getElementById('journal-title');
+  if (ta) journalState.entryText = ta.value || '';
+  if (ti) journalState.entryTitle = ti.value || '';
+}
+
+async function persistJournalEntry() {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const body = {
+    client_email: currentEmail,
+    prompt_text: (journalState.prompt && journalState.prompt.prompt_text) || null,
+    prompt_source: (journalState.prompt && journalState.prompt.source_type) || 'free',
+    entry_text: journalState.entryText || '',
+    entry_title: journalState.entryTitle || null,
+    share_mode: 'private'
+  };
+  const res = await fetch(SUPABASE_URL + '/rest/v1/coach_journal_entries', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': ANON_KEY,
+      'Authorization': 'Bearer ' + (token || ANON_KEY),
+      'Prefer': 'return=representation'
+    },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error('insert ' + res.status);
+  const rows = await res.json().catch(function() { return []; });
+  if (Array.isArray(rows) && rows[0] && rows[0].id) {
+    journalState.entryId = rows[0].id;
+  }
+}
+
+async function journalSaveAndReflect() {
+  captureWritingState();
+  if (!(journalState.entryText || '').trim()) {
+    const m = document.getElementById('journal-write-msg');
+    if (m) m.textContent = 'Please write something before continuing.';
+    return;
+  }
+  try {
+    await persistJournalEntry();
+    journalState.stage = 'reflecting';
+    renderJournal();
+  } catch (e) {
+    console.error('[Journal] save error', e);
+    const m = document.getElementById('journal-write-msg');
+    if (m) m.textContent = 'We had trouble saving your entry. Please try again in a moment.';
+  }
+}
+window.journalSaveAndReflect = journalSaveAndReflect;
+
+async function journalSaveAndClose() {
+  captureWritingState();
+  if (!(journalState.entryText || '').trim()) {
+    const m = document.getElementById('journal-write-msg');
+    if (m) m.textContent = 'Please write something before saving.';
+    return;
+  }
+  try {
+    await persistJournalEntry();
+    journalState.stage = 'done';
+    journalState.matchedSignals = [];
+    renderJournal();
+  } catch (e) {
+    console.error('[Journal] save error', e);
+    const m = document.getElementById('journal-write-msg');
+    if (m) m.textContent = 'We had trouble saving your entry. Please try again in a moment.';
+  }
+}
+window.journalSaveAndClose = journalSaveAndClose;
+
+function captureReflectionState() {
+  const c = document.getElementById('reflect-clearer');
+  const u = document.getElementById('reflect-unresolved');
+  const n = document.getElementById('reflect-next');
+  journalState.reflection = {
+    clearer:    c ? (c.value || '') : '',
+    unresolved: u ? (u.value || '') : '',
+    next:       n ? (n.value || '') : ''
+  };
+}
+
+function detectGrowthSignals() {
+  const text = ((journalState.entryText || '') + ' ' + (journalState.reflection.clearer || '') + ' ' + (journalState.reflection.next || '')).toLowerCase();
+  const matched = [];
+  Object.keys(SIGNAL_KEYWORDS).forEach(function(key) {
+    const list = SIGNAL_KEYWORDS[key] || [];
+    for (let i = 0; i < list.length; i++) {
+      if (text.indexOf(list[i]) !== -1) { matched.push(key); return; }
+    }
+  });
+  return matched;
+}
+
+async function persistGrowthSignals(matched) {
+  if (!matched || matched.length === 0) return;
+  const token = localStorage.getItem(TOKEN_KEY);
+  const rows = matched.map(function(k) {
+    return {
+      client_email: currentEmail,
+      source_type: 'journal',
+      source_id: journalState.entryId || null,
+      dimension_key: k,
+      signal_direction: 'up',
+      signal_strength: 1,
+      signal_summary: SIGNAL_SUMMARIES[k] || k,
+      coach_visible: journalState.shareMode !== 'private',
+      client_visible: true
+    };
+  });
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/coach_growth_signals', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': ANON_KEY,
+        'Authorization': 'Bearer ' + (token || ANON_KEY),
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(rows)
+    });
+  } catch (e) {
+    console.error('[Journal] signal insert failed', e);
+  }
+}
+
+async function journalSaveReflection() {
+  captureReflectionState();
+  const token = localStorage.getItem(TOKEN_KEY);
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/coach_journal_reflections', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': ANON_KEY,
+        'Authorization': 'Bearer ' + (token || ANON_KEY),
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        journal_entry_id: journalState.entryId || null,
+        client_email: currentEmail,
+        what_became_clearer: journalState.reflection.clearer || null,
+        what_still_unresolved: journalState.reflection.unresolved || null,
+        next_step: journalState.reflection.next || null
+      })
+    });
+  } catch (e) {
+    console.error('[Journal] reflection insert failed', e);
+  }
+  journalState.matchedSignals = detectGrowthSignals();
+  await persistGrowthSignals(journalState.matchedSignals);
+  journalState.stage = 'sharing';
+  renderJournal();
+}
+window.journalSaveReflection = journalSaveReflection;
+
+function journalSkipReflection() {
+  captureReflectionState();
+  journalState.matchedSignals = detectGrowthSignals();
+  journalState.stage = 'sharing';
+  renderJournal();
+}
+window.journalSkipReflection = journalSkipReflection;
+
+function journalSetShare(v) {
+  journalState.shareMode = v;
+  renderJournal();
+}
+window.journalSetShare = journalSetShare;
+
+async function journalConfirmShare() {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const shared = journalState.shareMode !== 'private';
+  if (journalState.entryId) {
+    try {
+      await fetch(SUPABASE_URL + '/rest/v1/coach_journal_entries?id=eq.' + encodeURIComponent(journalState.entryId), {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': ANON_KEY,
+          'Authorization': 'Bearer ' + (token || ANON_KEY),
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          share_mode: journalState.shareMode,
+          shared_with_coach: shared
+        })
+      });
+    } catch (e) {
+      console.error('[Journal] share update failed', e);
+    }
+    // Update visibility on the signals we just inserted
+    if (shared && journalState.matchedSignals && journalState.matchedSignals.length > 0) {
+      try {
+        await fetch(SUPABASE_URL + '/rest/v1/coach_growth_signals?source_id=eq.' + encodeURIComponent(journalState.entryId), {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': ANON_KEY,
+            'Authorization': 'Bearer ' + (token || ANON_KEY),
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({ coach_visible: true })
+        });
+      } catch (e) {
+        console.error('[Journal] signal share update failed', e);
+      }
+    }
+  }
+  journalState.stage = 'done';
+  renderJournal();
+}
+window.journalConfirmShare = journalConfirmShare;
 
 /* GO */
 init();

@@ -3997,6 +3997,19 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
       + '</span></span>';
   };
 
+  // Section 1.4: Journal Intelligence (client-shared journal entries)
+  var jiBodyId = 'journal-intel-body-' + (client.email || '').replace(/[@.]/g, '-');
+  html += '<div class="form-section" style="margin-bottom:24px;background:#fdf9f1;padding:24px 28px;border:1px solid #edeae4;border-left:3px solid #c49a3c;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;cursor:pointer;" onclick="toggleJournalIntel(\'' + jiBodyId + '\',\'' + escapeHtml(client.email) + '\')">'
+    +   '<div>'
+    +     '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.4rem;font-weight:600;color:#1a3a52;margin-bottom:2px;">Journal Intelligence</div>'
+    +     '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#8a8580;">Reflections this client has chosen to share with you.</div>'
+    +   '</div>'
+    +   '<button type="button" style="background:transparent;border:1px solid #1a3a52;color:#1a3a52;padding:6px 14px;border-radius:6px;font-size:0.78rem;font-family:\'DM Sans\',sans-serif;font-weight:600;cursor:pointer;">Open</button>'
+    + '</div>'
+    + '<div id="' + jiBodyId + '" style="display:none;margin-top:18px;"><div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#8a8580;">Loading&hellip;</div></div>'
+    + '</div>';
+
   // Section 1.5: Pattern Map
   var pmBodyId = 'pattern-map-body-' + (client.email || '').replace(/[@.]/g, '-');
   html += '<div class="form-section" style="margin-bottom:24px;background:#f7f4ef;padding:28px 32px;border:1px solid #e8e4dc;">'
@@ -9946,6 +9959,112 @@ function openIntakePreview() {
   });
   document.getElementById('intake-preview-body').innerHTML = html;
   document.getElementById('intake-preview-overlay').classList.add('open');
+}
+
+/* ================================================
+   JOURNAL INTELLIGENCE — coach-side view of shared
+   client journal entries, reflections, and signals
+   ================================================ */
+async function toggleJournalIntel(bodyId, clientEmail) {
+  var el = document.getElementById(bodyId);
+  if (!el) return;
+  if (el.style.display === 'none' || !el.style.display) {
+    el.style.display = 'block';
+    if (!el.dataset.loaded) {
+      el.dataset.loaded = '1';
+      await loadJournalIntel(bodyId, clientEmail);
+    }
+  } else {
+    el.style.display = 'none';
+  }
+}
+window.toggleJournalIntel = toggleJournalIntel;
+
+async function loadJournalIntel(bodyId, clientEmail) {
+  var el = document.getElementById(bodyId);
+  if (!el) return;
+  try {
+    var token = localStorage.getItem(TOKEN_KEY);
+    var headers = { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + (token || ANON_KEY) };
+    var encEmail = encodeURIComponent(clientEmail || '');
+    var entriesRes = await fetch(SUPABASE_URL + '/rest/v1/coach_journal_entries?client_email=eq.' + encEmail + '&shared_with_coach=eq.true&order=created_at.desc&limit=20&select=*', { headers: headers });
+    if (!entriesRes.ok) throw new Error('entries ' + entriesRes.status);
+    var entries = await entriesRes.json().catch(function() { return []; });
+    if (!entries || entries.length === 0) {
+      el.innerHTML = '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:#6a6560;font-style:italic;">Your client hasn\'t shared any journal entries yet. When they do, you\'ll see them here.</div>';
+      return;
+    }
+    var entryIds = entries.map(function(e) { return '"' + e.id + '"'; }).join(',');
+    var reflections = [];
+    var signals = [];
+    try {
+      var rRes = await fetch(SUPABASE_URL + '/rest/v1/coach_journal_reflections?journal_entry_id=in.(' + entryIds + ')&select=*', { headers: headers });
+      if (rRes.ok) reflections = await rRes.json().catch(function() { return []; });
+    } catch (re) { console.error('[JournalIntel] reflections error', re); }
+    try {
+      var sRes = await fetch(SUPABASE_URL + '/rest/v1/coach_growth_signals?source_id=in.(' + entryIds + ')&coach_visible=eq.true&select=*', { headers: headers });
+      if (sRes.ok) signals = await sRes.json().catch(function() { return []; });
+    } catch (se) { console.error('[JournalIntel] signals error', se); }
+
+    var byEntryReflection = {};
+    (reflections || []).forEach(function(r) { if (r && r.journal_entry_id) byEntryReflection[r.journal_entry_id] = r; });
+    var byEntrySignals = {};
+    (signals || []).forEach(function(s) {
+      if (!s || !s.source_id) return;
+      if (!byEntrySignals[s.source_id]) byEntrySignals[s.source_id] = [];
+      byEntrySignals[s.source_id].push(s);
+    });
+
+    var html = '';
+    for (var i = 0; i < entries.length; i++) {
+      var e = entries[i];
+      if (!e) continue;
+      var dateStr = e.created_at ? new Date(e.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+      var ref = byEntryReflection[e.id] || null;
+      var sigs = byEntrySignals[e.id] || [];
+      html += '<div style="background:#ffffff;border:1px solid #edeae4;border-radius:8px;padding:18px 20px;margin-bottom:14px;">'
+        +   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">'
+        +     '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#8a8580;text-transform:uppercase;letter-spacing:0.04em;">' + escapeHtml(dateStr) + '</div>'
+        +     '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;color:#c49a3c;font-weight:600;">Shared by client</div>'
+        +   '</div>';
+      if (e.entry_title) {
+        html += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;color:#1a3a52;font-weight:600;margin-bottom:8px;">' + escapeHtml(e.entry_title) + '</div>';
+      }
+      if (e.share_mode === 'full' && e.entry_text) {
+        html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.92rem;color:#3a3540;line-height:1.7;white-space:pre-wrap;background:#fdf9f1;padding:14px 16px;border-radius:6px;margin-bottom:12px;">' + escapeHtml(e.entry_text) + '</div>';
+      }
+      if (ref) {
+        html += '<div style="margin-top:10px;border-top:1px solid #edeae4;padding-top:12px;">'
+          +     '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.74rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6a6560;margin-bottom:6px;">Their reflection</div>';
+        if (ref.what_became_clearer) html += journalIntelRefField('What became clearer', ref.what_became_clearer);
+        if (ref.what_still_unresolved) html += journalIntelRefField('What still feels unresolved', ref.what_still_unresolved);
+        if (ref.next_step) html += journalIntelRefField('Next step', ref.next_step);
+        html += '</div>';
+      }
+      if (sigs.length > 0) {
+        html += '<div style="margin-top:12px;border-top:1px solid #edeae4;padding-top:12px;">'
+          +     '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.74rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6a6560;margin-bottom:8px;">Growth signals</div>'
+          +     '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+        for (var j = 0; j < sigs.length; j++) {
+          var sg = sigs[j];
+          html += '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;background:#fdf2da;color:#8a6a1c;padding:4px 10px;border-radius:50px;">' + escapeHtml(sg.signal_summary || sg.dimension_key || '') + '</span>';
+        }
+        html += '</div></div>';
+      }
+      html += '</div>';
+    }
+    el.innerHTML = html;
+  } catch (err) {
+    console.error('[JournalIntel] load error', err);
+    el.innerHTML = '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:#6a6560;">We had trouble loading shared journal entries. Please try again in a moment.</div>';
+  }
+}
+
+function journalIntelRefField(label, val) {
+  return '<div style="margin-bottom:8px;">'
+    +   '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8a8580;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">' + escapeHtml(label) + '</div>'
+    +   '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:#3a3540;line-height:1.6;white-space:pre-wrap;">' + escapeHtml(val) + '</div>'
+    + '</div>';
 }
 </script>
 </body>
