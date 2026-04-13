@@ -138,6 +138,53 @@ Tone: practical, grounded, non-clinical, focused on clarity and movement.
 
 Dialogue format: The "dialogue" field is a single plain-text string (not an array). Format each line as "COACH: ..." or "CLIENT: ..." separated by \\n. Include 2-3 PAUSE annotations on their own lines formatted as "[PAUSE — WHAT THE COACH IS DOING: ...]" or "[PAUSE — WHY THIS MATTERS: ...]" separated by blank lines. Each approach dialogue must be 4-6 turns minimum. Show how the approach STAYS inside its lens over multiple exchanges. Do not rush to resolution. Language must be natural and conversational.
 
+OUTPUT QUALITY RULES — enforce before returning:
+
+1. NO REPETITION: Each section serves a distinct purpose.
+- YOUR APPROACH SUMMARY: describe what the coach actually did and what it closed
+- WHAT THE COACH IS DOING: name the move in plain terms
+- THE MOVE: one concise sentence naming the move
+- WHAT THIS APPROACH IS DOING: the pattern or logic behind the approach
+- WHAT IT IS TRYING TO SHIFT: the intended change — use 'From: X / To: Y' format
+Do NOT repeat the same idea across these sections. Each must add new information.
+
+2. ROLE CLARITY — critical:
+- COACH lines: guiding, questioning, reflecting — never internal processing
+- CLIENT lines: responding, processing, exploring — never directing or guiding
+- Every line must be clearly labeled and voice must match role exactly
+- Do not allow coach statements that sound like client internal dialogue
+
+3. DIALOGUE INTEGRITY:
+- Tone must remain consistent throughout
+- Coach must stay inside the selected approach lens
+- No sudden shifts in style or language
+- Dialogue must feel like a real coaching conversation, not a script
+
+4. VALIDATE BEFORE RETURNING:
+- Are roles correctly labeled and consistent?
+- Does each section add new information not present in other sections?
+- Is there any repeated phrasing or idea? If yes, revise.
+- Does the dialogue feel natural?
+
+GOLD STANDARD EXAMPLE — match this level of quality:
+
+Moment: 'Eight Months of Knowing and Not Saying'
+Your approach summary: 'You named the pattern directly and challenged it with a sharp reframe. This moved the conversation forward, but it closed the space before the client could fully sit with the cost of staying silent.'
+Approach: Relational Pattern Awareness
+Dialogue:
+COACH: Eight months is a long time to hold something like that. What did the room need from you during that time?
+CLIENT: Probably for me to say it. To actually name what I was seeing.
+COACH: And what happened instead?
+CLIENT: I stayed quiet. I brought it up in smaller conversations, but never directly.
+COACH: So the room did not get your actual view. What do you think that created?
+CLIENT: Confusion. Maybe even trust issues. Like I was not fully showing up.
+COACH: Not just for you. For them too.
+The move: Move the client from internal justification to relational awareness.
+What this approach is doing: It expands the client's field of awareness. Rather than seeing silence as self-protection, she begins to see it as an action that affects trust, clarity, and direction in shared environments.
+What it is trying to shift — From: I stayed quiet because it felt safer / To: My silence had consequences beyond me.
+
+Every output must match this level of clarity, depth, and non-repetition.
+
 Return ONLY valid JSON. No markdown. Start with { end with }.`;
 
     const LAB_USER = `Select 2 key moments from the session data and generate the Approach Lab for each.
