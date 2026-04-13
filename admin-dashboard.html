@@ -213,6 +213,17 @@
 </div>
 
 <script>
+// METRIC DEFINITIONS
+// Published Profiles = coach_profiles.is_published = true (NOT billing status)
+// Clarity Run = post_session_analysis IS NOT NULL
+// Regeneration = coach_clarity_usage.is_regeneration = true
+// Active Coach = has session in last 14 days
+// Estimated MRR = published profiles × $47 (estimate only, not live billing)
+//
+// TIME WINDOWS
+// INACTIVE_COACH_DAYS = 14
+// NEW_USER_GRACE_DAYS = 5
+// SESSION_ANALYSIS_THRESHOLD_HOURS = 48
 /* ================================================
    ADMIN DASHBOARD
    Service role key NEVER lives here. All data flows
@@ -324,13 +335,17 @@ function renderStats(s) {
     grid.innerHTML = '<div class="empty">Could not load stats: ' + escapeHtml(s && s.__error) + '</div>';
     return;
   }
+  var aiCost = Number(s.estimatedAiCostThisMonth || 0).toFixed(2);
   grid.innerHTML = [
     statCard('Total Coaches', s.totalCoaches),
     statCard('Total Clients', s.totalClients),
     statCard('Sessions This Month', s.sessionsThisMonth),
     statCard('Coach Clarity Runs This Month', s.clarityRunsThisMonth),
     statCard('Published Profiles', s.publishedCount),
-    statCard('Estimated MRR', '$' + (s.estimatedMrr || 0).toLocaleString())
+    statCard('Estimated MRR', '$' + (s.estimatedMrr || 0).toLocaleString()),
+    statCard('Clarity Runs This Month', s.clarityRunsThisMonth || 0),
+    statCard('Regenerations This Month', s.regenerationsThisMonth || 0),
+    statCard('Estimated AI Cost (Month)', '$' + aiCost)
   ].join('');
 }
 function statCard(label, value) {
@@ -473,11 +488,19 @@ function renderCoaches() {
     thSort('coaches', 'sessionCount', 'Sessions') +
     thSort('coaches', 'lastActive', 'Last Active') +
     thSort('coaches', 'hasClarity', 'Clarity') +
+    thSort('coaches', 'totalRuns', 'Total Runs') +
+    thSort('coaches', 'regenerations', 'Regenerations') +
+    thSort('coaches', 'usageTier', 'Usage Tier') +
     '<th>Actions</th></tr></thead><tbody>';
   if (!pageRows.length) {
-    html += '<tr><td colspan="8" class="empty">No coaches</td></tr>';
+    html += '<tr><td colspan="11" class="empty">No coaches</td></tr>';
   } else {
     pageRows.forEach(function(c) {
+      var tier = c.usageTier || 'light';
+      var tierStyle = tier === 'heavy' ? 'background:#fbeae4;color:#B8654A;'
+                    : tier === 'moderate' ? 'background:#fdf9f1;color:#c49a3c;'
+                    : 'background:#f0ede6;color:#5a5560;';
+      var tierBadge = '<span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;' + tierStyle + '">' + escapeHtml(tier) + '</span>';
       html += '<tr>' +
         '<td>' + escapeHtml(c.display_name || c.full_name || '—') + '</td>' +
         '<td>' + escapeHtml(c.user_email) + '</td>' +
@@ -486,6 +509,9 @@ function renderCoaches() {
         '<td>' + escapeHtml(c.sessionCount) + '</td>' +
         '<td>' + fmtRelative(c.lastActive) + '</td>' +
         '<td>' + (c.hasClarity ? '<span class="check">&#10003;</span>' : '<span class="x">&#10007;</span>') + '</td>' +
+        '<td>' + escapeHtml(c.totalRuns || 0) + '</td>' +
+        '<td>' + escapeHtml(c.regenerations || 0) + '</td>' +
+        '<td>' + tierBadge + '</td>' +
         '<td>' +
           '<button class="btn secondary small" data-toggle="' + escapeHtml(c.id) + '" data-pub="' + (c.is_published ? '1' : '0') + '">' +
             (c.is_published ? 'Unpublish' : 'Publish') + '</button> ' +
@@ -623,8 +649,9 @@ function renderSessions() {
     thSort('sessions', 'has_transcript', 'Transcript') +
     thSort('sessions', 'has_clarity', 'Clarity') +
     thSort('sessions', 'has_notes', 'Notes') +
+    thSort('sessions', 'regens', 'Regens') +
     '</tr></thead><tbody>';
-  if (!pageRows.length) html += '<tr><td colspan="7" class="empty">No sessions</td></tr>';
+  if (!pageRows.length) html += '<tr><td colspan="8" class="empty">No sessions</td></tr>';
   else pageRows.forEach(function(r) {
     html += '<tr>' +
       '<td>' + fmtDate(r.scheduled_at) + '</td>' +
@@ -634,6 +661,7 @@ function renderSessions() {
       '<td>' + (r.has_transcript ? '<span class="check">&#10003;</span>' : '<span class="x">&#10007;</span>') + '</td>' +
       '<td>' + (r.has_clarity ? '<span class="check">&#10003;</span>' : '<span class="x">&#10007;</span>') + '</td>' +
       '<td>' + (r.has_notes ? '<span class="check">&#10003;</span>' : '<span class="x">&#10007;</span>') + '</td>' +
+      '<td>' + escapeHtml(r.regens || 0) + '</td>' +
       '</tr>';
   });
   html += '</tbody></table>' + pagination('sessions', st.page, total);

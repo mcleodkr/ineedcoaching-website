@@ -5933,6 +5933,29 @@ async function runPostSessionAnalysis(bookingId, clientEmail, sessionNotes, form
     // Update progress indicators ③ and ④
     updateSessionProgress(bookingId, 3, true);
     updateSessionProgress(bookingId, 4, true);
+    // Log Coach Clarity usage (non-blocking — never breaks UI on failure)
+    try {
+      if (!window.clarityRunCounts) window.clarityRunCounts = {};
+      var prevRuns = window.clarityRunCounts[bookingId] || 0;
+      var runNumber = prevRuns + 1;
+      window.clarityRunCounts[bookingId] = runNumber;
+      var coachEmailForLog = ((coachProfile && (coachProfile.user_email || coachProfile.email)) || '').toLowerCase();
+      fetch(SUPABASE_URL + '/rest/v1/coach_clarity_usage', {
+        method: 'POST',
+        headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+        body: JSON.stringify({
+          session_id: bookingId,
+          coach_email: coachEmailForLog,
+          client_email: clientEmail,
+          is_regeneration: runNumber > 1,
+          clarity_run_number: runNumber,
+          estimated_tokens: 15000,
+          estimated_cost_usd: 0.045
+        })
+      }).catch(function(err) { console.error('[clarity usage log] failed:', err); });
+    } catch (logErr) {
+      console.error('[clarity usage log] unexpected error:', logErr);
+    }
   } catch(e) {
     psiTimers.forEach(function(t) { clearTimeout(t); });
     container.innerHTML = '<div style="color:#c44;font-size:0.88rem;">Error: ' + escapeHtml(e.message) + '</div>';

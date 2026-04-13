@@ -161,21 +161,38 @@ async function overviewStats(sb) {
     sessionsThisMonth,
     clarityRunsThisMonth,
     publishedCount,
+    usageThisMonth,
   ] = await Promise.all([
     sb.count('coach_profiles'),
     sb.count('explorer_profiles'),
     sb.count('coach_bookings', `scheduled_at=gte.${somISO}`),
     sb.count('coach_session_notes', `post_session_analysis=not.is.null&created_at=gte.${somISO}`),
     sb.count('coach_profiles', `is_published=eq.true`),
+    sb.get(`coach_clarity_usage?select=is_regeneration,estimated_cost_usd,created_at&created_at=gte.${somISO}&limit=${MAX_ROWS}`).catch(() => []),
   ]);
+  const usageRows = Array.isArray(usageThisMonth) ? usageThisMonth : [];
+  const clarityUsageRunsThisMonth = usageRows.length;
+  const regenerationsThisMonth = usageRows.filter(r => r && r.is_regeneration).length;
+  const estimatedAiCostThisMonth = usageRows.reduce((sum, r) => sum + (Number(r && r.estimated_cost_usd) || 0), 0);
   return {
     totalCoaches,
     totalClients,
     sessionsThisMonth,
-    clarityRunsThisMonth,
+    clarityRunsThisMonth: clarityUsageRunsThisMonth || clarityRunsThisMonth,
+    regenerationsThisMonth,
+    estimatedAiCostThisMonth: Number(estimatedAiCostThisMonth.toFixed(2)),
     publishedCount,
     estimatedMrr: publishedCount * MRR_PER_COACH,
   };
+}
+
+async function fetchAllUsage(sb) {
+  try {
+    return await sb.get(`coach_clarity_usage?select=session_id,coach_email,is_regeneration&limit=${MAX_ROWS}`);
+  } catch (e) {
+    console.error('[admin-query] fetchAllUsage failed:', e.message);
+    return [];
+  }
 }
 
 async function attentionNeeded(sb) {
@@ -261,6 +278,7 @@ async function coachesList(sb) {
   const coaches = await sb.get(`coach_profiles?select=id,display_name,full_name,user_email,slug,is_published,created_at&order=created_at.desc&limit=${MAX_ROWS}`);
   const bookings = await sb.get(`coach_bookings?select=coach_id,scheduled_at&limit=${MAX_ROWS}`);
   const notes = await sb.get(`coach_session_notes?select=coach_id,post_session_analysis&limit=${MAX_ROWS}`);
+  const usage = await fetchAllUsage(sb);
   const sessionCountByCoach = {};
   const lastActiveByCoach = {};
   bookings.forEach(b => {
@@ -272,12 +290,46 @@ async function coachesList(sb) {
   notes.forEach(n => {
     if (n.post_session_analysis) clarityByCoach[n.coach_id] = true;
   });
-  return coaches.map(c => ({
-    ...c,
-    sessionCount: sessionCountByCoach[c.id] || 0,
-    lastActive: lastActiveByCoach[c.id] || null,
-    hasClarity: !!clarityByCoach[c.id],
-  }));
+  // Group usage by coach_email
+  const totalRunsByCoach = {};
+  const regensByCoach = {};
+  const sessionsByCoach = {};          // coach_email -> Set<session_id>
+  const regensBySessionCoach = {};      // coach_email -> { session_id: regenCount }
+  (usage || []).forEach(u => {
+    const email = (u && u.coach_email || '').toLowerCase();
+    if (!email) return;
+    totalRunsByCoach[email] = (totalRunsByCoach[email] || 0) + 1;
+    if (u.is_regeneration) regensByCoach[email] = (regensByCoach[email] || 0) + 1;
+    if (!sessionsByCoach[email]) sessionsByCoach[email] = new Set();
+    if (u.session_id) sessionsByCoach[email].add(u.session_id);
+    if (!regensBySessionCoach[email]) regensBySessionCoach[email] = {};
+    if (u.is_regeneration && u.session_id) {
+      regensBySessionCoach[email][u.session_id] = (regensBySessionCoach[email][u.session_id] || 0) + 1;
+    }
+  });
+  function tierFor(email) {
+    const sessions = sessionsByCoach[email];
+    if (!sessions || sessions.size === 0) return 'light';
+    const perSession = regensBySessionCoach[email] || {};
+    let total = 0;
+    sessions.forEach(sid => { total += perSession[sid] || 0; });
+    const avg = total / sessions.size;
+    if (avg <= 1) return 'light';
+    if (avg <= 5) return 'moderate';
+    return 'heavy';
+  }
+  return coaches.map(c => {
+    const email = (c.user_email || '').toLowerCase();
+    return {
+      ...c,
+      sessionCount: sessionCountByCoach[c.id] || 0,
+      lastActive: lastActiveByCoach[c.id] || null,
+      hasClarity: !!clarityByCoach[c.id],
+      totalRuns: totalRunsByCoach[email] || 0,
+      regenerations: regensByCoach[email] || 0,
+      usageTier: tierFor(email),
+    };
+  });
 }
 
 async function clientsList(sb) {
@@ -325,6 +377,13 @@ async function sessionsList(sb) {
   notes.forEach(n => { noteMap[n.booking_id] = n; });
   const coaches = await sb.get(`coach_profiles?select=id,display_name&limit=${MAX_ROWS}`);
   const coachMap = Object.fromEntries(coaches.map(c => [c.id, c.display_name]));
+  const usage = await fetchAllUsage(sb);
+  const regensBySession = {};
+  (usage || []).forEach(u => {
+    if (u && u.is_regeneration && u.session_id) {
+      regensBySession[u.session_id] = (regensBySession[u.session_id] || 0) + 1;
+    }
+  });
 
   return bookings.map(b => {
     const n = noteMap[b.id] || {};
@@ -339,6 +398,7 @@ async function sessionsList(sb) {
       has_clarity: !!n.post_session_analysis,
       has_notes: !!(n.notes || n.post_session_analysis),
       status: b.status,
+      regens: regensBySession[b.id] || 0,
     };
   });
 }
