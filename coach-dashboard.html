@@ -1001,6 +1001,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
     <button class="tab-btn" data-tab="profile">Profile</button>
     <button class="tab-btn" data-tab="testimonials">Testimonials</button>
     <button class="tab-btn" data-tab="recommendations">Recommendations</button>
+    <a id="admin-console-link" href="/admin-dashboard.html" style="display:none;margin-top:12px;padding:10px 18px;border-top:1px solid #edeae4;font-family:'DM Sans',sans-serif;font-size:0.72rem;font-weight:400;color:#9a9490;text-decoration:none;">Admin Console</a>
   </nav>
   <div style="flex:1;min-width:0;">
 
@@ -1961,6 +1962,13 @@ async function init() {
   $('dash-loading').style.display = 'none';
   $('dash-content').classList.remove('hidden');
   if ($('nav-coach-name')) $('nav-coach-name').textContent = coachProfile.display_name || coachProfile.full_name || '';
+
+  // Admin console link — visible only to admin emails
+  var ADMIN_EMAILS = ['drkmcleod@gmail.com', 'creativeenergytx@gmail.com'];
+  var adminLink = $('admin-console-link');
+  if (adminLink && ADMIN_EMAILS.indexOf((email || '').toLowerCase()) !== -1) {
+    adminLink.style.display = 'block';
+  }
   if ($('nav-profile-link')) $('nav-profile-link').href = '/coach/' + (coachProfile.slug || '');
 
   populateProfileForm();
