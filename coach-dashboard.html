@@ -4483,7 +4483,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
         var labNote = notesByBooking[sid];
         // Cache result on notesByBooking so switching tabs does not re-fetch
         if (labNote && labNote._approachLab) {
-          renderApproachLab(labNote._approachLab, labContainer);
+          renderApproachLab(labNote._approachLab, labContainer, { sid: sid });
         } else if (!labContainer) {
           // container missing — nothing to do
         } else if (!labNote || (!labNote.raw_transcript && !labNote.post_session_analysis)) {
@@ -4508,7 +4508,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
               }
               if (!notesByBooking[sid]) notesByBooking[sid] = {};
               notesByBooking[sid]._approachLab = labData;
-              renderApproachLab(labData, labContainer);
+              renderApproachLab(labData, labContainer, { sid: sid });
             } catch (e) {
               labContainer.innerHTML = '<div style="text-align:center;padding:48px 24px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#c44;">Approach Lab failed: ' + escapeHtml(e.message) + '</div>';
             }
@@ -6483,13 +6483,66 @@ function renderPostSessionAnalysis(a, container) {
   }
 }
 
-function renderApproachLab(data, container) {
+var ALL_APPROACHES = [
+  'Thought Pattern Reframe',
+  'Perspective and Meaning Reframe',
+  'Emotion Regulation and Validation',
+  'Present-Moment Awareness',
+  'Solution-Focused Forward Movement',
+  'Motivation and Change Talk',
+  'Acceptance and Values-Based Action',
+  'Client-Led Exploration',
+  'Relational Pattern Awareness'
+];
+
+window.selectApproachLab = async function(sid, approachName) {
+  var container = document.getElementById('approach-lab-' + sid);
+  var panel = document.getElementById('stab-approach-lab-' + sid);
+  if (!container) return;
+  var clientEmail = panel && panel.dataset ? panel.dataset.clientEmail : '';
+  var note = notesByBooking[sid] || (notesByBooking[sid] = {});
+  var cacheKey = '_approachLab_' + approachName;
+  if (note[cacheKey]) {
+    renderApproachLab(note[cacheKey], container, { sid: sid, selectedApproach: approachName });
+    return;
+  }
+  container.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;gap:16px;">'
+    + '<div class="loading-spinner"></div>'
+    + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#9a9490;">Coach Clarity is exploring ' + escapeHtml(approachName) + '...</div>'
+    + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.75rem;color:#b8b0a4;">This takes about 20 seconds</div>'
+    + '</div>';
+  try {
+    var res = await fetch('/api/generate-approach-lab', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ coachId: coachProfile.id, clientEmail: clientEmail, bookingId: sid, selectedApproach: approachName })
+    });
+    var data = await res.json();
+    if (!res.ok || data.error) {
+      container.innerHTML = '<div style="text-align:center;padding:48px 24px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#c44;">' + escapeHtml(data.error || 'Failed to explore this approach.') + '</div>';
+      return;
+    }
+    note[cacheKey] = data;
+    renderApproachLab(data, container, { sid: sid, selectedApproach: approachName });
+  } catch (e) {
+    container.innerHTML = '<div style="text-align:center;padding:48px 24px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#c44;">Approach Lab failed: ' + escapeHtml(e.message) + '</div>';
+  }
+};
+
+function renderApproachLab(data, container, ctx) {
+  ctx = ctx || {};
   if (!container) return;
   if (!data || !Array.isArray(data.moments) || !data.moments.length) {
     container.innerHTML = '<div style="text-align:center;padding:48px 24px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#9a9490;">Coach Clarity needs session notes or a transcript to generate the Approach Lab. Run Coach Clarity analysis first.</div>';
     return;
   }
   var moments = data.moments;
+  var sid = ctx.sid || '';
+  var selectedApproach = ctx.selectedApproach || '';
+  // Recommended = approaches present in the current moments (unique)
+  var recommendedSet = {};
+  moments.forEach(function(m) { if (m && m.approach_name) recommendedSet[m.approach_name] = true; });
+  var recommended = Object.keys(recommendedSet);
 
   var lensColor = function(lens) {
     var l = (lens || '').toLowerCase();
@@ -6509,6 +6562,47 @@ function renderApproachLab(data, container) {
   html += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:600;color:#1a3a52;letter-spacing:-0.005em;margin-bottom:12px;">Approach Lab</div>';
   html += '<div style="background:#fdf9f1;border:1px solid #edeae4;border-radius:8px;padding:16px 20px;margin-bottom:28px;max-width:780px;">';
   html += '<div style="' + bodyStyle + 'font-size:0.82rem;color:#5a5560;line-height:1.7;">Approach Lab lets you explore how a real moment from your session could unfold using different coaching approaches. You will see what you did, compare it to a different approach, understand what that approach is trying to shift, and learn when you might use it. This is a learning and exploration space \u2014 not a recommendation engine. No approach is correct. Each offers a different way of working.</div>';
+  html += '</div>';
+
+  // ── Approach Selector ──────────────────────────────────
+  var sidJs = (sid + '').replace(/'/g, "\\'");
+  var renderPill = function(name, variant, isSelected) {
+    var base = 'display:inline-block;padding:7px 14px;margin:0 8px 8px 0;border-radius:50px;' + bodyStyle + 'font-size:0.78rem;font-weight:500;cursor:pointer;transition:all 0.15s ease;';
+    var style;
+    if (variant === 'recommended') {
+      if (isSelected) {
+        style = base + 'background:#ffffff;border:1.5px solid #c49a3c;color:#1a3a52;font-weight:600;';
+      } else {
+        style = base + 'background:#c49a3c;border:1.5px solid #c49a3c;color:#ffffff;';
+      }
+    } else {
+      if (isSelected) {
+        style = base + 'background:#ffffff;border:1.5px solid #c49a3c;color:#1a3a52;font-weight:600;';
+      } else {
+        style = base + 'background:#ffffff;border:1px solid #edeae4;color:#5a5560;';
+      }
+    }
+    var check = isSelected ? '\u2713 ' : '';
+    var nameJs = name.replace(/'/g, "\\'");
+    return '<span style="' + style + '" onclick="selectApproachLab(\'' + sidJs + '\',\'' + nameJs + '\')">' + check + escapeHtml(name) + '</span>';
+  };
+
+  html += '<div style="margin-bottom:24px;">';
+  if (recommended.length) {
+    html += '<div style="' + labelStyle + 'color:#9a9490;margin-bottom:10px;">Recommended for this session</div>';
+    html += '<div style="margin-bottom:16px;">';
+    recommended.forEach(function(name) {
+      html += renderPill(name, 'recommended', selectedApproach === name);
+    });
+    html += '</div>';
+  }
+  html += '<div style="' + labelStyle + 'color:#9a9490;margin-bottom:10px;">Explore other approaches</div>';
+  html += '<div>';
+  ALL_APPROACHES.forEach(function(name) {
+    if (recommendedSet[name]) return;
+    html += renderPill(name, 'other', selectedApproach === name);
+  });
+  html += '</div>';
   html += '</div>';
 
   // ── Per-moment cards ───────────────────────────────────

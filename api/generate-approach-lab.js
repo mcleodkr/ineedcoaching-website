@@ -61,7 +61,7 @@ export default async function handler(req, res) {
 
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const { coachId, clientEmail, bookingId } = body;
+    const { coachId, clientEmail, bookingId, selectedApproach } = body;
     if (!coachId || !bookingId) return res.status(400).json({ error: 'Missing required fields: coachId, bookingId' });
 
     const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
@@ -206,7 +206,7 @@ Action/Movement: Solution-Focused Forward Movement, Motivation and Change Talk, 
 Identity/Meaning: Acceptance and Values-Based Action, Meaning and Responsibility Exploration
 Relational/Exploratory: Client-Led Exploration, Relational Pattern Awareness
 
-APPROACH SELECTION RULE: Select the approach that best fits each moment. Prioritize fit over variety. Repeating a category is acceptable.
+APPROACH SELECTION RULE: Select the approach that best fits each moment. Prioritize fit over variety. Repeating a category is acceptable.${selectedApproach ? `\n\nAPPROACH LOCK: Use ONLY this approach for all moments: ${selectedApproach}. Do not choose a different approach. Every moment must use "${selectedApproach}" as the approach_name.` : ''}
 
 REQUIREMENTS:
 - Exactly 2 moments
