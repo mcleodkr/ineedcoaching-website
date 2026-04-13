@@ -35,29 +35,35 @@ const SYSTEM_PROMPT = [
 ].join('\n');
 
 async function callOpenAI(apiKey, system, userMessage) {
+  const requestBody = {
+    model: 'gpt-4o-mini',
+    max_tokens: 500,
+    temperature: 0.7,
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: userMessage },
+    ],
+  };
+  console.log('[mirror] OpenAI request — model:', requestBody.model, '— api key present:', !!apiKey, '— api key prefix:', apiKey ? apiKey.substring(0, 7) : 'MISSING');
+  console.log('[mirror] OpenAI messages array:', JSON.stringify(requestBody.messages, null, 2));
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Authorization': 'Bearer ' + apiKey,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      max_tokens: 500,
-      temperature: 0.7,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: userMessage },
-      ],
-    }),
+    body: JSON.stringify(requestBody),
   });
+  console.log('[mirror] OpenAI response status:', res.status, res.statusText);
   if (!res.ok) {
     const errBody = await res.text().catch(() => '');
+    console.error('[mirror] OpenAI error body:', errBody.substring(0, 500));
     throw new Error('OpenAI error ' + res.status + ': ' + errBody.substring(0, 200));
   }
   const data = await res.json();
+  console.log('[mirror] OpenAI full response data:', JSON.stringify(data).substring(0, 1000));
   const text = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+  console.log('[mirror] OpenAI raw content (before parse):', text);
   return (text || '').trim();
 }
 
@@ -108,6 +114,8 @@ export default async function handler(req, res) {
     const clearer = (body.reflection_what_became_clearer || '').toString();
     const unresolved = (body.reflection_what_still_unresolved || '').toString();
     const nextStep = (body.reflection_next_step || '').toString();
+    console.log('[mirror] incoming request — client_email:', clientEmail, '| entry_text length:', entryText.length, '| entry_text sample:', entryText.substring(0, 200));
+    console.log('[mirror] reflection fields — clearer:', clearer.substring(0, 100), '| unresolved:', unresolved.substring(0, 100), '| nextStep:', nextStep.substring(0, 100));
 
     // Auth check — verify the bearer token belongs to client_email
     const authHeader = req.headers['authorization'] || req.headers['Authorization'] || '';
@@ -150,12 +158,15 @@ export default async function handler(req, res) {
 
     try {
       const raw = await callOpenAI(OPENAI_API_KEY, SYSTEM_PROMPT, userPrompt);
+      console.log('[mirror] callOpenAI returned raw length:', raw ? raw.length : 0);
       if (!raw) {
+        console.warn('[mirror] raw response was empty — returning fallback');
         return res.status(200).json(FALLBACK);
       }
       const parsed = safeParseJSON(raw);
+      console.log('[mirror] safeParseJSON result:', parsed ? 'OK (object with keys: ' + Object.keys(parsed).join(',') + ')' : 'null');
       if (!parsed || typeof parsed !== 'object') {
-        console.error('[generate-journal-mirror] failed to parse JSON from model output:', raw.substring(0, 300));
+        console.error('[mirror] failed to parse JSON from model output. Raw:', raw.substring(0, 500));
         // Return the raw text as mirror_text so the client can still show something.
         return res.status(200).json({
           mirror_text: raw,
@@ -182,11 +193,11 @@ export default async function handler(req, res) {
         question_to_carry: questionToCarry,
       });
     } catch (cerr) {
-      console.error('[generate-journal-mirror] OpenAI generation failed', cerr);
+      console.error('[mirror] OpenAI generation failed:', cerr && cerr.message, '\nstack:', cerr && cerr.stack);
       return res.status(200).json(FALLBACK);
     }
   } catch (err) {
-    console.error('[generate-journal-mirror] fatal', err);
+    console.error('[mirror] fatal handler error:', err && err.message, '\nstack:', err && err.stack);
     return res.status(200).json(FALLBACK);
   }
 }
