@@ -1945,16 +1945,15 @@ async function init() {
     );
     profiles = await profileRes.json();
     if (!profiles || profiles.length === 0) {
-      $('dash-loading').style.display = 'none';
-      $('no-profile').classList.remove('hidden');
-      $('no-profile-email').textContent = 'No profile found for: ' + email;
+      // No coach profile for this email — route through /dashboard.html so the
+      // router can auto-create an explorer profile and send them to the client dashboard.
+      window.location.href = '/dashboard.html';
       return;
     }
     coachProfile = profiles[0];
   } catch(err) {
-    $('dash-loading').style.display = 'none';
-    $('no-profile').classList.remove('hidden');
-    $('no-profile-email').textContent = 'Error: ' + err.message;
+    console.error('[coach-dashboard] profile load error:', err);
+    window.location.href = '/dashboard.html';
     return;
   }
 
