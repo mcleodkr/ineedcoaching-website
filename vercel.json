@@ -15,10 +15,16 @@
     "api/generate-approach-lab.js": {
       "maxDuration": 60
     },
+    "api/cron-interventions.js": {
+      "maxDuration": 300
+    },
     "api/*.js": {
       "maxDuration": 30
     }
   },
+  "crons": [
+    { "path": "/api/cron-interventions", "schedule": "0 9 * * *" }
+  ],
   "rewrites": [
     { "source": "/coaches", "destination": "/coaches.html" },
     { "source": "/coach/:slug", "destination": "/coach-profile.html?slug=:slug" },
