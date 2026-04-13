@@ -25,16 +25,18 @@ const SYSTEM_PROMPT = [
   "",
   "Write in second person (you/your), warm and direct. Stay rooted in the client's actual words and experience. Do not interpret beyond the evidence.",
   "",
-  "TEXT-ANCHORING RULE for what_i_hear: Before writing, extract 1-2 exact phrases from the client's input and anchor the reflection to those phrases. Quote or echo their actual wording. Do not interpret, explain, or paraphrase into new language. Stay as close to their words as possible.",
+  "TEXT-ANCHORING RULE for what_i_hear: Before writing, extract 1-2 exact phrases from the client's input and anchor the reflection to those phrases. Quote or echo their actual wording. Do not interpret, explain, or paraphrase into new language. Stay as close to their words as possible. 3-4 sentences.",
   "",
-  "DESCRIPTIVE RULE for what_may_be_shifting: Describe what is becoming visible in their writing. Do not explain what it means, why it is happening, or what it may be rooted in. No phrases like 'this may be rooted in', 'this suggests', 'this reflects'. Name the shift, do not analyze it.",
+  "DESCRIPTIVE RULE for what_may_be_shifting: Describe what is becoming visible in their writing. Do not explain what it means, why it is happening, or what it may be rooted in. No phrases like 'this may be rooted in', 'this suggests', 'this reflects'. Name the shift, do not analyze it. 2 sentences.",
   "",
-  "Return ONLY a valid JSON object in this exact shape — no markdown, no preamble, no explanation, no code fences:",
+  "RULE for question_to_carry: 1 question only. Forward-facing and open-ended.",
+  "",
+  "Return ONLY a raw JSON object at the top level. Do not nest the JSON inside a mirror_text wrapper field. No markdown, no preamble, no explanation, no code fences. The three required top-level keys are what_i_hear, what_may_be_shifting, question_to_carry.",
   "",
   '{',
-  '  "what_i_hear": "1-2 sentences anchored to 1-2 exact phrases from the client\'s writing. Echo their language. Do not interpret.",',
-  '  "what_may_be_shifting": "1 sentence describing what is becoming visible. No explanation of meaning or cause.",',
-  '  "question_to_carry": "One open question that invites the client to go deeper or take one step. Not advice. Not multiple questions."',
+  '  "what_i_hear": "3-4 sentences anchored to exact phrases from the client\'s writing. Echo their language. Do not interpret.",',
+  '  "what_may_be_shifting": "2 sentences describing what is becoming visible. No explanation of meaning or cause.",',
+  '  "question_to_carry": "One forward-facing, open-ended question. Not advice. Not multiple questions."',
   '}',
 ].join('\n');
 
@@ -167,17 +169,34 @@ export default async function handler(req, res) {
         console.warn('[mirror] raw response was empty — returning fallback');
         return res.status(200).json(FALLBACK);
       }
-      const parsed = safeParseJSON(raw);
+      let parsed = safeParseJSON(raw);
       console.log('[mirror] safeParseJSON result:', parsed ? 'OK (object with keys: ' + Object.keys(parsed).join(',') + ')' : 'null');
       if (!parsed || typeof parsed !== 'object') {
         console.error('[mirror] failed to parse JSON from model output. Raw:', raw.substring(0, 500));
-        // Return the raw text as mirror_text so the client can still show something.
         return res.status(200).json({
           mirror_text: raw,
           what_i_hear: null,
           what_may_be_shifting: null,
           question_to_carry: null,
         });
+      }
+      // Unwrap: if the model wrapped the structured fields inside a mirror_text
+      // string (i.e. parsed.mirror_text is itself a JSON string), parse that and
+      // promote its fields to the top level.
+      if (
+        (!parsed.what_i_hear || !parsed.what_may_be_shifting || !parsed.question_to_carry)
+        && typeof parsed.mirror_text === 'string'
+        && /^\s*\{[\s\S]*\}\s*$/.test(parsed.mirror_text)
+      ) {
+        const inner = safeParseJSON(parsed.mirror_text);
+        if (inner && typeof inner === 'object') {
+          console.log('[mirror] unwrapped nested mirror_text — inner keys:', Object.keys(inner).join(','));
+          parsed = {
+            what_i_hear: inner.what_i_hear || parsed.what_i_hear,
+            what_may_be_shifting: inner.what_may_be_shifting || parsed.what_may_be_shifting,
+            question_to_carry: inner.question_to_carry || parsed.question_to_carry,
+          };
+        }
       }
       const whatIHear = clean(parsed.what_i_hear);
       const whatShifting = clean(parsed.what_may_be_shifting);
