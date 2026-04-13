@@ -272,6 +272,34 @@ async function initDashboard() {
     currentUserEmail = user.email;
     document.getElementById('user-email').textContent = currentUserEmail;
 
+    // Role-based routing: if this user has a client/explorer profile (and
+    // is not registered as a coach), send them to the warm client dashboard.
+    // Assumption: role is determined by which profile table has a row for
+    // this email. coach_profiles row wins (coaches may also browse articles);
+    // an explorer_profiles row with role='client' or 'explorer' routes to
+    // /client-dashboard.html. Everyone else stays on this explorer landing.
+    try {
+      var coachRes = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles?user_email=eq.' + encodeURIComponent(currentUserEmail) + '&select=id&limit=1', {
+        headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + token }
+      });
+      var coachRows = coachRes.ok ? await coachRes.json() : [];
+      if (coachRows && coachRows.length > 0) {
+        window.location.href = '/coach-dashboard.html';
+        return;
+      }
+      var expRes = await fetch(SUPABASE_URL + '/rest/v1/explorer_profiles?email=eq.' + encodeURIComponent(currentUserEmail) + '&select=role&limit=1', {
+        headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + token }
+      });
+      var expRows = expRes.ok ? await expRes.json() : [];
+      if (expRows && expRows.length > 0 && (expRows[0].role === 'client' || expRows[0].role === 'explorer')) {
+        window.location.href = '/client-dashboard.html';
+        return;
+      }
+    } catch (routeErr) {
+      // If role lookup fails, fall through to the default explorer view.
+      console.error('[Routing] role lookup error:', routeErr);
+    }
+
     // Load data
     loadSavedArticles();
     loadActiveRequest();

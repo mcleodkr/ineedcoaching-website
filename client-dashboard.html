@@ -496,7 +496,7 @@ function signOutHard() {
    ================================================ */
 async function loadClientProfile() {
   try {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/explorer_profiles?user_email=eq.' + encodeURIComponent(currentEmail) + '&select=*', {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/explorer_profiles?email=eq.' + encodeURIComponent(currentEmail) + '&select=*', {
       headers: apiHeaders()
     });
     if (res.ok) {
@@ -631,7 +631,7 @@ function renderSessionCard(s, isUpcoming) {
     ? '<span class="badge badge-upcoming">Upcoming</span>'
     : (s.status === 'completed' ? '<span class="badge badge-complete">Complete</span>' : '<span class="badge badge-pending">' + escapeHtml((s.status || 'past').replace(/_/g, ' ')) + '</span>');
 
-  const hasAnalysis = !!s.post_session_analysis;
+  const isCompleted = s.status === 'completed' || (!isUpcoming && s._when);
   const zoomLink = s.zoom_link || (s.coach_profiles && s.coach_profiles.zoom_meeting_link) || '';
 
   let html = '<div class="card" id="session-' + escapeHtml(s.id) + '">'
@@ -644,13 +644,14 @@ function renderSessionCard(s, isUpcoming) {
   if (isUpcoming && zoomLink) {
     html += '<a href="' + escapeHtml(zoomLink) + '" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Join session</a>';
   }
-  if (hasAnalysis) {
+  // Always show View summary for completed/past sessions — empty state handled on click.
+  if (!isUpcoming) {
     html += '<button class="btn btn-secondary btn-sm" onclick="toggleSummary(\'' + escapeHtml(s.id) + '\')">View summary</button>';
   }
   html += '</div>';
 
-  if (hasAnalysis) {
-    html += '<div class="summary-panel" id="summary-' + escapeHtml(s.id) + '">' + renderSummary(s.post_session_analysis) + '</div>';
+  if (!isUpcoming) {
+    html += '<div class="summary-panel" id="summary-' + escapeHtml(s.id) + '"><p style="font-size:0.88rem;color:var(--muted);font-style:italic;">Loading...</p></div>';
   }
   html += '</div>';
   return html;
@@ -728,9 +729,29 @@ function renderSummary(analysisRaw) {
   return out;
 }
 
-function toggleSummary(id) {
+async function toggleSummary(id) {
   const panel = $('summary-' + id);
-  if (panel) panel.classList.toggle('open');
+  if (!panel) return;
+  panel.classList.toggle('open');
+  if (panel._loaded) return;
+  panel._loaded = true;
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/coach_session_notes?booking_id=eq.' + encodeURIComponent(id) + '&select=post_session_analysis&limit=1', {
+      headers: apiHeaders()
+    });
+    if (!res.ok) throw new Error('fetch failed');
+    const rows = await res.json();
+    const analysis = (rows && rows.length > 0) ? rows[0].post_session_analysis : null;
+    if (!analysis) {
+      panel.innerHTML = '<p style="font-size:0.88rem;color:var(--muted);font-style:italic;">This session\'s summary is not available yet. Your coach may still be reflecting on it.</p>';
+      return;
+    }
+    panel.innerHTML = renderSummary(analysis);
+  } catch (err) {
+    console.error('[Summary] load error:', err);
+    panel.innerHTML = '<p style="font-size:0.88rem;color:var(--muted);font-style:italic;">We had trouble loading this summary. Please try again in a moment.</p>';
+    panel._loaded = false;
+  }
 }
 window.toggleSummary = toggleSummary;
 
@@ -763,7 +784,7 @@ async function loadGoals() {
         + (g.description ? '<p>' + escapeHtml(g.description) + '</p>' : '')
         + '<div class="goal-status-row">'
         + '<button class="goal-status-btn ' + inProgressActive + '" onclick="updateGoal(\'' + escapeHtml(g.id) + '\', \'in_progress\')">Still working on it</button>'
-        + '<button class="goal-status-btn ' + smallWinActive + '" onclick="updateGoal(\'' + escapeHtml(g.id) + '\', \'small_win\')">Small win &#127881;</button>'
+        + '<button class="goal-status-btn ' + smallWinActive + '" onclick="updateGoal(\'' + escapeHtml(g.id) + '\', \'in_progress\')">Small win &#127881;</button>'
         + '<button class="goal-status-btn ' + doneActive + '" onclick="updateGoal(\'' + escapeHtml(g.id) + '\', \'completed\')">Done &#10003;</button>'
         + '</div>'
         + '</div>';
@@ -978,12 +999,10 @@ async function loadCourses() {
 function renderProfile() {
   const container = $('profile-content');
   const p = clientProfile || {};
-  const display = p.display_name || p.full_name || p.name || '';
-  const phone = p.phone || p.phone_number || '';
+  const display = p.display_name || '';
   container.innerHTML = '<div class="card">'
     + '<div class="form-row"><label>Display name</label><input type="text" id="pf-name" value="' + escapeHtml(display) + '" placeholder="What your coach calls you"></div>'
     + '<div class="form-row"><label>Email</label><div class="readonly">' + escapeHtml(currentEmail) + '</div></div>'
-    + '<div class="form-row"><label>Phone</label><input type="tel" id="pf-phone" value="' + escapeHtml(phone) + '" placeholder="Optional"></div>'
     + '<div style="margin-top:16px;display:flex;align-items:center;gap:10px;">'
     + '<button class="btn btn-primary" onclick="saveProfile()">Save changes</button>'
     + '<span class="save-msg" id="pf-msg"></span>'
@@ -994,13 +1013,12 @@ function renderProfile() {
 async function saveProfile() {
   const msg = $('pf-msg');
   const name = $('pf-name').value.trim();
-  const phone = $('pf-phone').value.trim();
-  const body = { display_name: name, phone: phone };
+  const body = { display_name: name };
   try {
     // If no profile row exists, upsert; otherwise patch
     let res;
     if (clientProfile && clientProfile.id) {
-      res = await fetch(SUPABASE_URL + '/rest/v1/explorer_profiles?user_email=eq.' + encodeURIComponent(currentEmail), {
+      res = await fetch(SUPABASE_URL + '/rest/v1/explorer_profiles?email=eq.' + encodeURIComponent(currentEmail), {
         method: 'PATCH',
         headers: Object.assign({}, apiHeaders(), { 'Prefer': 'return=representation' }),
         body: JSON.stringify(body)
@@ -1009,7 +1027,7 @@ async function saveProfile() {
       res = await fetch(SUPABASE_URL + '/rest/v1/explorer_profiles', {
         method: 'POST',
         headers: Object.assign({}, apiHeaders(), { 'Prefer': 'return=representation' }),
-        body: JSON.stringify(Object.assign({ user_email: currentEmail }, body))
+        body: JSON.stringify(Object.assign({ email: currentEmail, role: 'explorer' }, body))
       });
     }
     if (!res.ok) throw new Error('Save failed');
