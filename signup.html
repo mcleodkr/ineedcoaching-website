@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Get Started | ineedcoaching.org</title>
+<meta name="description" content="Create your free ineedcoaching.org account and find your coaching space.">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #f7f5f1;
+    color: #1a3a52;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 300;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 52px;
+    background: rgba(26,58,82,0.95);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  nav a.logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem; font-weight: 700;
+    color: #f7f4ee; text-decoration: none;
+  }
+  nav a.logo span { color: #c49a3c; font-style: italic; }
+  nav .links { display: flex; align-items: center; gap: 22px; }
+  nav .links a {
+    font-size: 0.78rem; font-weight: 700;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    color: #8a8a9a; text-decoration: none;
+  }
+  nav .links a:hover { color: #f7f4ee; }
+
+  .signup-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 130px 24px 80px;
+  }
+
+  .signup-card {
+    width: 100%;
+    max-width: 480px;
+    background: #fdf9f1;
+    border: 1px solid #edeae4;
+    border-radius: 10px;
+    padding: 44px 40px;
+    box-shadow: 0 4px 20px rgba(26,58,82,0.05);
+  }
+
+  .signup-card h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2rem;
+    font-weight: 600;
+    color: #1a3a52;
+    line-height: 1.15;
+    margin-bottom: 12px;
+  }
+  .signup-card .sub {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    color: #5a5560;
+    line-height: 1.65;
+    margin-bottom: 28px;
+  }
+
+  form { display: flex; flex-direction: column; gap: 14px; }
+
+  label {
+    display: block;
+    font-size: 0.74rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #6a6560;
+    margin-bottom: 6px;
+  }
+
+  input[type="text"], input[type="email"], select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #e1ddd5;
+    background: #ffffff;
+    color: #1a3a52;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  input:focus, select:focus {
+    border-color: #c49a3c;
+    box-shadow: 0 0 0 3px rgba(196,154,60,0.12);
+  }
+  select { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%231a3a52' d='M6 8 0 0h12z'/></svg>"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+
+  .row { display: flex; gap: 12px; }
+  .row > div { flex: 1; }
+
+  button.submit {
+    margin-top: 8px;
+    width: 100%;
+    padding: 14px;
+    background: #c49a3c;
+    color: #1a3a52;
+    border: none;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.92rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  button.submit:hover { background: #d4a94c; transform: translateY(-1px); }
+  button.submit:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+  .fine {
+    margin-top: 14px;
+    font-size: 0.8rem;
+    color: #8a8580;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  .form-msg {
+    margin-top: 12px;
+    font-size: 0.85rem;
+    color: #b03a2e;
+    min-height: 18px;
+    text-align: center;
+  }
+
+  .confirm {
+    text-align: center;
+    padding: 20px 8px 8px;
+  }
+  .confirm h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1a3a52;
+    margin-bottom: 12px;
+    line-height: 1.25;
+  }
+  .confirm p {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.92rem;
+    color: #5a5560;
+    line-height: 1.7;
+  }
+  .confirm .check {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: rgba(196,154,60,0.15);
+    color: #c49a3c;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 18px;
+    font-size: 1.6rem;
+  }
+
+  footer {
+    padding: 24px 52px;
+    border-top: 1px solid #e8e4dc;
+    display: flex;
+    justify-content: center;
+  }
+  footer span { font-size: 0.7rem; color: #8a8580; }
+
+  @media (max-width: 600px) {
+    nav { padding: 12px 20px; }
+    nav .links a:not(:last-child) { display: none; }
+    .signup-card { padding: 32px 22px; }
+    .row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="/"><span>i</span>need<span>coaching</span>.org</a>
+  <div class="links">
+    <a href="/coaches.html">Coaches</a>
+    <a href="/sessions.html">Sessions</a>
+    <a href="/welcome.html">Sign In</a>
+  </div>
+</nav>
+
+<main class="signup-wrap">
+  <div class="signup-card" id="signup-card">
+    <div id="form-view">
+      <h1>Find your coaching space.</h1>
+      <p class="sub">Create a free account to connect with a coach, track your growth, and carry your work forward between sessions.</p>
+
+      <form id="signup-form" onsubmit="return false;">
+        <div class="row">
+          <div>
+            <label for="first_name">First name</label>
+            <input type="text" id="first_name" autocomplete="given-name">
+          </div>
+          <div>
+            <label for="last_name">Last name</label>
+            <input type="text" id="last_name" autocomplete="family-name">
+          </div>
+        </div>
+
+        <div>
+          <label for="email">Email</label>
+          <input type="email" id="email" required autocomplete="email">
+        </div>
+
+        <div>
+          <label for="referral">What brings you here?</label>
+          <select id="referral">
+            <option value="">Choose one&hellip;</option>
+            <option value="Career &amp; Leadership">Career &amp; Leadership</option>
+            <option value="Life Transitions">Life Transitions</option>
+            <option value="Confidence &amp; Self-Trust">Confidence &amp; Self-Trust</option>
+            <option value="Relationships">Relationships</option>
+            <option value="General Coaching">General Coaching</option>
+            <option value="Not sure yet">Not sure yet</option>
+          </select>
+        </div>
+
+        <button type="button" class="submit" id="submit-btn" onclick="submitSignup()">Create my account</button>
+      </form>
+
+      <p class="fine">No password needed &mdash; we&rsquo;ll send you a magic link.</p>
+      <div class="form-msg" id="form-msg"></div>
+    </div>
+
+    <div id="confirm-view" style="display:none;">
+      <div class="confirm">
+        <div class="check">&#10003;</div>
+        <h2>Check your email &mdash; we sent you a link to get started.</h2>
+        <p>Open the link from any device and you&rsquo;ll land right inside your space. You might want to keep this tab open while you check your inbox.</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span>Not a crisis service &mdash; In crisis, call or text 988</span>
+</footer>
+
+<script>
+const SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+
+function isValidEmail(s) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+}
+
+async function submitSignup() {
+  var firstName = (document.getElementById('first_name').value || '').trim();
+  var lastName  = (document.getElementById('last_name').value || '').trim();
+  var email     = (document.getElementById('email').value || '').trim();
+  var referral  = (document.getElementById('referral').value || '').trim();
+  var msg       = document.getElementById('form-msg');
+  var btn       = document.getElementById('submit-btn');
+
+  msg.textContent = '';
+
+  if (!email || !isValidEmail(email)) {
+    msg.textContent = 'Please enter a valid email address.';
+    return;
+  }
+
+  btn.disabled = true;
+  var originalLabel = btn.textContent;
+  btn.textContent = 'Sending your link...';
+
+  try {
+    var otpRes = await fetch(SUPABASE_URL + '/auth/v1/otp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': ANON_KEY
+      },
+      body: JSON.stringify({
+        email: email,
+        create_user: true,
+        options: {
+          emailRedirectTo: 'https://www.ineedcoaching.org/dashboard.html'
+        }
+      })
+    });
+
+    if (!otpRes.ok) {
+      var err = await otpRes.json().catch(function() { return {}; });
+      console.error('OTP error', err);
+      msg.textContent = 'We had trouble sending your link. Please try again.';
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+      return;
+    }
+
+    // Best-effort profile insert. Non-fatal: dashboard.html will auto-create on first login.
+    try {
+      var displayName = (firstName + ' ' + lastName).trim() || null;
+      var profileRes = await fetch(SUPABASE_URL + '/rest/v1/explorer_profiles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': ANON_KEY,
+          'Authorization': 'Bearer ' + ANON_KEY,
+          'Prefer': 'resolution=ignore-duplicates,return=minimal'
+        },
+        body: JSON.stringify({
+          email: email,
+          display_name: displayName,
+          role: 'client',
+          referral_source: referral || null
+        })
+      });
+      if (!profileRes.ok) {
+        var perr = await profileRes.text().catch(function() { return ''; });
+        console.error('Profile insert non-fatal error', profileRes.status, perr);
+      }
+    } catch (pe) {
+      console.error('Profile insert threw (non-fatal)', pe);
+    }
+
+    document.getElementById('form-view').style.display = 'none';
+    document.getElementById('confirm-view').style.display = 'block';
+  } catch (e) {
+    console.error('Signup error', e);
+    msg.textContent = 'We had trouble sending your link. Please try again.';
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
+}
+
+// Submit on Enter
+document.getElementById('signup-form').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); submitSignup(); }
+});
+</script>
+</body>
+</html>
