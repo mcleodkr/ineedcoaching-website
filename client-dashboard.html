@@ -1003,9 +1003,11 @@ function renderProfile() {
   const container = $('profile-content');
   const p = clientProfile || {};
   const display = p.display_name || '';
+  const phone = p.phone || '';
   container.innerHTML = '<div class="card">'
     + '<div class="form-row"><label>Display name</label><input type="text" id="pf-name" value="' + escapeHtml(display) + '" placeholder="What your coach calls you"></div>'
     + '<div class="form-row"><label>Email</label><div class="readonly">' + escapeHtml(currentEmail) + '</div></div>'
+    + '<div class="form-row"><label>Phone</label><input type="tel" id="pf-phone" value="' + escapeHtml(phone) + '" placeholder="(optional)"></div>'
     + '<div style="margin-top:16px;display:flex;align-items:center;gap:10px;">'
     + '<button class="btn btn-primary" onclick="saveProfile()">Save changes</button>'
     + '<span class="save-msg" id="pf-msg"></span>'
@@ -1016,7 +1018,9 @@ function renderProfile() {
 async function saveProfile() {
   const msg = $('pf-msg');
   const name = $('pf-name').value.trim();
-  const body = { display_name: name };
+  const phoneEl = $('pf-phone');
+  const phone = phoneEl ? phoneEl.value.trim() : '';
+  const body = { display_name: name, phone: phone };
   try {
     // If no profile row exists, upsert; otherwise patch
     let res;
