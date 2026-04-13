@@ -6663,13 +6663,7 @@ function renderApproachLab(data, container, ctx) {
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid #edeae4;padding-top:16px;margin-bottom:20px;">';
     html += '<div style="border-right:2px solid #c49a3c;padding-right:20px;">';
     html += '<div style="' + labelStyle + 'color:#9a9490;margin-bottom:8px;">Your approach</div>';
-    if (firstCoachLines.length) {
-      firstCoachLines.forEach(function(l) {
-        html += '<div style="' + bodyStyle + 'font-size:0.85rem;font-style:italic;color:#5a5560;line-height:1.6;margin-bottom:4px;">\u201C' + escapeHtml(l) + '\u201D</div>';
-      });
-    } else {
-      html += '<div style="' + bodyStyle + 'font-size:0.82rem;font-style:italic;color:#9a9490;">\u2014</div>';
-    }
+    html += '<div style="' + bodyStyle + 'font-size:0.85rem;font-style:italic;color:#5a5560;line-height:1.6;">' + escapeHtml(yourApproach || '\u2014') + '</div>';
     html += '</div>';
     html += '<div style="background:#fdf9f1;padding:12px 16px;border-radius:6px;margin-left:20px;">';
     html += '<div style="' + labelStyle + 'color:#c49a3c;margin-bottom:8px;">Alternative approach</div>';
