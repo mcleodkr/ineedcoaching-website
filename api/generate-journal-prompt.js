@@ -9,6 +9,31 @@ const DEFAULT_PROMPT = {
   source_type: 'default',
 };
 
+// Lowercase the first letter of a dynamic value that will land mid-sentence.
+function lc(str) {
+  if (!str || typeof str !== 'string') return str;
+  return str.charAt(0).toLowerCase() + str.slice(1);
+}
+
+// Clean up prompt text before returning. Fixes stray capitals after
+// prepositions (toward/about/on/for/of), collapses double periods, trims.
+function cleanPromptText(str) {
+  if (!str || typeof str !== 'string') return str;
+  let s = str.trim();
+  // Lowercase the first letter after a mid-sentence preposition when it's
+  // NOT the start of a new sentence (i.e. not preceded by . ! ?).
+  s = s.replace(/(\s(?:toward|about|on|for|of|around|with|through|into)\s)([A-Z])/g, function(_m, pre, ch) {
+    return pre + ch.toLowerCase();
+  });
+  // Collapse any double (or more) periods into a single period
+  s = s.replace(/\.{2,}/g, '.');
+  // Collapse stray " ." into "."
+  s = s.replace(/\s+\./g, '.');
+  // Tidy double spaces
+  s = s.replace(/ {2,}/g, ' ');
+  return s.trim();
+}
+
 async function callClaude(apiKey, system, userMessage) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -107,7 +132,7 @@ export default async function handler(req, res) {
         if (a && a.prompt_text) {
           return res.status(200).json({
             prompt_title: a.prompt_title || 'From your coach',
-            prompt_text: a.prompt_text,
+            prompt_text: cleanPromptText(a.prompt_text),
             source_type: 'coach_assigned',
           });
         }
@@ -137,7 +162,7 @@ export default async function handler(req, res) {
           if (generated && generated.length > 0) {
             return res.status(200).json({
               prompt_title: 'A moment to reflect',
-              prompt_text: generated.replace(/^["']|["']$/g, ''),
+              prompt_text: cleanPromptText(generated.replace(/^["']|["']$/g, '')),
               source_type: 'ai_session',
             });
           }
@@ -155,10 +180,10 @@ export default async function handler(req, res) {
         'coach_goals?client_email=eq.' + encEmail + '&status=eq.in_progress&limit=1&select=title'
       );
       if (Array.isArray(goals) && goals.length > 0 && goals[0].title) {
-        const title = goals[0].title;
+        const title = goals[0].title.trim().replace(/\.+$/, '');
         return res.status(200).json({
           prompt_title: 'A moment to reflect',
-          prompt_text: "You're working toward " + title + '. What has felt like movement this week — even a small one?',
+          prompt_text: cleanPromptText("You're working toward " + lc(title) + '. What has felt like movement this week — even a small one?'),
           source_type: 'ai_goal',
         });
       }

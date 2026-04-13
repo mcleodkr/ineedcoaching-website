@@ -1995,7 +1995,11 @@ function captureWritingState() {
 }
 
 async function persistJournalEntry() {
-  const token = localStorage.getItem(TOKEN_KEY);
+  // RLS on coach_journal_entries requires a real user JWT so auth.jwt()->>'email'
+  // matches client_email. Fall back through currentToken → localStorage; NEVER
+  // send anon key as the bearer token (that strips the auth context).
+  const token = currentToken || localStorage.getItem(TOKEN_KEY);
+  if (!token) throw new Error('not authenticated');
   const body = {
     client_email: currentEmail,
     prompt_text: (journalState.prompt && journalState.prompt.prompt_text) || null,
@@ -2007,9 +2011,9 @@ async function persistJournalEntry() {
   const res = await fetch(SUPABASE_URL + '/rest/v1/coach_journal_entries', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
       'apikey': ANON_KEY,
-      'Authorization': 'Bearer ' + (token || ANON_KEY),
+      'Authorization': 'Bearer ' + token,
+      'Content-Type': 'application/json',
       'Prefer': 'return=representation'
     },
     body: JSON.stringify(body)
@@ -2085,7 +2089,8 @@ function detectGrowthSignals() {
 
 async function persistGrowthSignals(matched) {
   if (!matched || matched.length === 0) return;
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = currentToken || localStorage.getItem(TOKEN_KEY);
+  if (!token) return;
   const rows = matched.map(function(k) {
     return {
       client_email: currentEmail,
@@ -2105,7 +2110,7 @@ async function persistGrowthSignals(matched) {
       headers: {
         'Content-Type': 'application/json',
         'apikey': ANON_KEY,
-        'Authorization': 'Bearer ' + (token || ANON_KEY),
+        'Authorization': 'Bearer ' + token,
         'Prefer': 'return=minimal'
       },
       body: JSON.stringify(rows)
@@ -2117,14 +2122,14 @@ async function persistGrowthSignals(matched) {
 
 async function journalSaveReflection() {
   captureReflectionState();
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = currentToken || localStorage.getItem(TOKEN_KEY);
   try {
     await fetch(SUPABASE_URL + '/rest/v1/coach_journal_reflections', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': ANON_KEY,
-        'Authorization': 'Bearer ' + (token || ANON_KEY),
+        'Authorization': 'Bearer ' + token,
         'Prefer': 'return=minimal'
       },
       body: JSON.stringify({
@@ -2160,7 +2165,7 @@ function journalSetShare(v) {
 window.journalSetShare = journalSetShare;
 
 async function journalConfirmShare() {
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = currentToken || localStorage.getItem(TOKEN_KEY);
   const shared = journalState.shareMode !== 'private';
   if (journalState.entryId) {
     try {
@@ -2169,7 +2174,7 @@ async function journalConfirmShare() {
         headers: {
           'Content-Type': 'application/json',
           'apikey': ANON_KEY,
-          'Authorization': 'Bearer ' + (token || ANON_KEY),
+          'Authorization': 'Bearer ' + token,
           'Prefer': 'return=minimal'
         },
         body: JSON.stringify({
@@ -2188,7 +2193,7 @@ async function journalConfirmShare() {
           headers: {
             'Content-Type': 'application/json',
             'apikey': ANON_KEY,
-            'Authorization': 'Bearer ' + (token || ANON_KEY),
+            'Authorization': 'Bearer ' + token,
             'Prefer': 'return=minimal'
           },
           body: JSON.stringify({ coach_visible: true })
