@@ -6569,6 +6569,7 @@ function renderApproachLab(data, container, ctx) {
   var renderPill = function(name, variant, isSelected) {
     var base = 'display:inline-block;padding:7px 14px;margin:0 8px 8px 0;border-radius:50px;' + bodyStyle + 'font-size:0.78rem;font-weight:500;cursor:pointer;transition:all 0.15s ease;';
     var style;
+    var hoverAttrs = '';
     if (variant === 'recommended') {
       if (isSelected) {
         style = base + 'background:#ffffff;border:1.5px solid #c49a3c;color:#1a3a52;font-weight:600;';
@@ -6580,29 +6581,40 @@ function renderApproachLab(data, container, ctx) {
         style = base + 'background:#ffffff;border:1.5px solid #c49a3c;color:#1a3a52;font-weight:600;';
       } else {
         style = base + 'background:#ffffff;border:1px solid #edeae4;color:#5a5560;';
+        hoverAttrs = ' onmouseover="this.style.background=\'#fdf9f1\';this.style.borderColor=\'#c49a3c\';" onmouseout="this.style.background=\'#ffffff\';this.style.borderColor=\'#edeae4\';"';
       }
     }
     var check = isSelected ? '\u2713 ' : '';
     var nameJs = name.replace(/'/g, "\\'");
-    return '<span style="' + style + '" onclick="selectApproachLab(\'' + sidJs + '\',\'' + nameJs + '\')">' + check + escapeHtml(name) + '</span>';
+    return '<span style="' + style + '"' + hoverAttrs + ' onclick="selectApproachLab(\'' + sidJs + '\',\'' + nameJs + '\')">' + check + escapeHtml(name) + '</span>';
   };
 
-  html += '<div style="margin-bottom:24px;">';
+  // Intro line above selector box
+  html += '<div style="' + bodyStyle + 'font-size:0.78rem;font-style:italic;color:#5a5560;margin-bottom:12px;">Start with a recommended approach or choose your own.</div>';
+
+  // Selector box
+  html += '<div style="background:#fdf9f1;border:1px solid #edeae4;border-radius:8px;padding:20px 24px;margin-bottom:28px;">';
+
   if (recommended.length) {
-    html += '<div style="' + labelStyle + 'color:#9a9490;margin-bottom:10px;">Recommended for this session</div>';
-    html += '<div style="margin-bottom:16px;">';
+    html += '<div style="' + labelStyle + 'color:#c49a3c;margin-bottom:4px;">Recommended for this session</div>';
+    html += '<div style="' + bodyStyle + 'font-size:0.72rem;font-style:italic;color:#9a9490;margin-bottom:12px;">Based on this session and your client\u2019s patterns</div>';
+    html += '<div>';
     recommended.forEach(function(name) {
       html += renderPill(name, 'recommended', selectedApproach === name);
     });
     html += '</div>';
+    html += '<div style="border-top:1px solid #edeae4;margin:16px 0;"></div>';
   }
-  html += '<div style="' + labelStyle + 'color:#9a9490;margin-bottom:10px;">Explore other approaches</div>';
+
+  html += '<div style="' + labelStyle + 'color:#9a9490;margin-bottom:4px;">Explore other approaches</div>';
+  html += '<div style="' + bodyStyle + 'font-size:0.72rem;font-style:italic;color:#9a9490;margin-bottom:12px;">Select any approach to see this session through that lens</div>';
   html += '<div>';
   ALL_APPROACHES.forEach(function(name) {
     if (recommendedSet[name]) return;
     html += renderPill(name, 'other', selectedApproach === name);
   });
   html += '</div>';
+
   html += '</div>';
 
   // ── Per-moment cards ───────────────────────────────────
