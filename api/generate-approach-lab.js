@@ -142,12 +142,14 @@ SECTION ROLE SEPARATION — each section has one job and one job only:
 
 YOUR APPROACH SUMMARY: describe only what the coach did and what it prevented. Observable behavior only. No theory.
 
-YOUR APPROACH SUMMARY language rule: Never use certain language about what would or would not have happened. Replace:
-- 'would have' → 'may have'
-- 'would have let her' → 'may have let her'
-- 'which would have' → 'which could have'
-- 'this would have' → 'this may have'
-The coach made a real move. We are speculating about the alternative — always use conditional language.
+YOUR APPROACH SUMMARY rules — enforce both:
+
+1. ALWAYS second person: Never write 'The coach' or 'the coach'. Always write 'You' or 'Your'.
+
+2. ALWAYS conditional language when describing what the alternative might have produced: Never write 'would have', 'this resolved', 'this closed', 'this prevented'. Always write 'may have', 'might have', 'could have'. You are describing what actually happened with certainty, but speculating about what was lost or missed with humility.
+
+Example of wrong: 'The coach moved to explanation before the client had fully felt the weight. This resolved the question mark before she could sit with it.'
+Example of right: 'You moved to explanation before she had fully felt the weight. This may have resolved the question mark before she could sit with it.'
 
 WHAT THE COACH IS DOING (pause annotations): name the specific micro-move at that exact line. One sentence. Tactical. Example: 'The coach is slowing down before the frame lands so the client feels the weight first.'
 
