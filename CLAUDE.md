@@ -78,3 +78,11 @@ Language replacements (always):
 - "maladaptive pattern" → "pattern that isn't working for them"
 - "intervention" → "move" or "approach"
 - "client profile" → "client pattern map"
+
+## PENDING BUILDS — DO NOT FORGET
+- Predictive risk signals: client drop-off detection, product adoption risk, first session funnel tracking
+- Stripe usage-based billing tiers based on coach_clarity_usage data
+- User self-signup flow on ineedcoaching.org homepage (clients need a way to create accounts)
+- Supabase Auth redirect URL allowlist — add ineedcoaching.org/client-dashboard.html and /dashboard.html
+- Mobile hamburger nav on all three sites
+- SPRIXLE_TRANSFER.md — document intelligence architecture before handoff
