@@ -677,7 +677,7 @@ async function renderProgressAndContinuity() {
     const raw = (typeof a.core_focus === 'string' && a.core_focus)
       || (typeof a.session_in_one_line === 'string' && a.session_in_one_line) || '';
     if (!raw) return;
-    const words = String(raw).trim().split(/\s+/).slice(0, 8).join(' ');
+    const words = toClientVoice(String(raw).trim()).split(/\s+/).slice(0, 8).join(' ');
     if (words) phrases.push(words);
   });
 
@@ -861,11 +861,61 @@ function renderSessionCard(s, isUpcoming) {
   return html;
 }
 
+// Rewrite coach-facing third-person into client-facing second person.
+// Coach Clarity writes about "the client" / "she" / "her"; clients see this same
+// text on their dashboard, so we transform pronouns before rendering. Word-boundary
+// regexes preserve case on the first letter so "She" → "You" and "she" → "you".
+// Also catches "the client" / "The client" → "you" / "You".
+// CLIENT GUARDRAIL: never expose raw coach analysis framing to clients.
+function toClientVoice(raw) {
+  if (raw == null) return '';
+  let s = String(raw);
+  // "the client" / "The client" / "a client" → "you" / "You"
+  s = s.replace(/\bThe client\b/g, 'You');
+  s = s.replace(/\bthe client\b/g, 'you');
+  s = s.replace(/\bA client\b/g, 'You');
+  s = s.replace(/\ba client\b/g, 'you');
+  s = s.replace(/\bClient\b/g, 'You');
+  s = s.replace(/\bclient\b/g, 'you');
+  // Pronouns — order matters; do Her/her (possessive "her X") then object "her"
+  s = s.replace(/\bShe\b/g, 'You');
+  s = s.replace(/\bshe\b/g, 'you');
+  s = s.replace(/\bHe\b/g, 'You');
+  s = s.replace(/\bhe\b/g, 'you');
+  s = s.replace(/\bHer\b/g, 'Your');
+  s = s.replace(/\bher\b/g, 'your');
+  s = s.replace(/\bHis\b/g, 'Your');
+  s = s.replace(/\bhis\b/g, 'your');
+  s = s.replace(/\bHim\b/g, 'You');
+  s = s.replace(/\bhim\b/g, 'you');
+  s = s.replace(/\bThey\b/g, 'You');
+  s = s.replace(/\bthey\b/g, 'you');
+  s = s.replace(/\bThem\b/g, 'You');
+  s = s.replace(/\bthem\b/g, 'you');
+  s = s.replace(/\bTheir\b/g, 'Your');
+  s = s.replace(/\btheir\b/g, 'your');
+  // Reflexives
+  s = s.replace(/\bherself\b/gi, 'yourself');
+  s = s.replace(/\bhimself\b/gi, 'yourself');
+  s = s.replace(/\bthemselves\b/gi, 'yourself');
+  // Verb agreement after pronoun replacement — common patterns
+  s = s.replace(/\bYou is\b/g, 'You are');
+  s = s.replace(/\byou is\b/g, 'you are');
+  s = s.replace(/\bYou was\b/g, 'You were');
+  s = s.replace(/\byou was\b/g, 'you were');
+  s = s.replace(/\bYou has\b/g, 'You have');
+  s = s.replace(/\byou has\b/g, 'you have');
+  s = s.replace(/\bYou does\b/g, 'You do');
+  s = s.replace(/\byou does\b/g, 'you do');
+  return s;
+}
+
 function renderSummary(analysisRaw) {
   // analysis may be a JSON object or string.
   // CLIENT-SAFE ONLY. Never render coach-only fields: frameworks_detected, coaching_signals,
   // active_pattern, dna_manifestations, next_session_strategy, coach_dna_update,
   // coaching_interventions, missed_windows. These are stripped at the renderer level.
+  // All rendered text passes through toClientVoice() to rewrite coach pronouns.
   let a = analysisRaw;
   if (typeof a === 'string') {
     try { a = JSON.parse(a); } catch (e) { a = null; }
@@ -883,7 +933,7 @@ function renderSummary(analysisRaw) {
   if (cf && sol) focus = cf.length >= sol.length ? cf : sol;
   else focus = cf || sol || '';
   if (focus) {
-    out += '<div class="summary-section"><h4>What we worked on</h4><p>' + escapeHtml(String(focus)) + '</p></div>';
+    out += '<div class="summary-section"><h4>What we worked on</h4><p>' + escapeHtml(toClientVoice(focus)) + '</p></div>';
   }
 
   // 2. What stood out — breakthrough
@@ -894,7 +944,7 @@ function renderSummary(analysisRaw) {
     breakthrough = a.breakthrough_moment.identity_shift || a.breakthrough_moment.text || '';
   }
   if (breakthrough) {
-    out += '<div class="summary-section"><h4>What stood out</h4><p>' + escapeHtml(String(breakthrough)) + '</p></div>';
+    out += '<div class="summary-section"><h4>What stood out</h4><p>' + escapeHtml(toClientVoice(breakthrough)) + '</p></div>';
   }
 
   // 3. What became clearer — patterns_and_your_role[0].what_this_means
@@ -906,9 +956,19 @@ function renderSummary(analysisRaw) {
     }
   }
   if (clearer) {
-    const lower = clearer.toLowerCase();
-    const alreadyPrefixed = lower.startsWith('something that became clearer') || lower.startsWith('what became clearer');
-    const text = alreadyPrefixed ? clearer : 'Something that became clearer this session — ' + clearer;
+    // Voice-transform first, then check for residual clinical framing.
+    let transformed = toClientVoice(clearer);
+    // If clinical/analytical phrases still leak through after pronoun rewriting,
+    // fall back to a gentle client-safe line instead of exposing coach analysis.
+    const clinicalSignals = /\b(pattern is visible|loses its grip|coaching move|coach analysis|intervention|framework|dysregulat|maladaptive|the coach)\b/i;
+    if (clinicalSignals.test(transformed)) {
+      transformed = 'Something shifted in this session that is worth sitting with.';
+    }
+    const lower = transformed.toLowerCase();
+    const alreadyPrefixed = lower.startsWith('something that became clearer')
+      || lower.startsWith('what became clearer')
+      || lower.startsWith('something shifted');
+    const text = alreadyPrefixed ? transformed : 'Something that became clearer this session — ' + transformed;
     out += '<div class="summary-section"><h4>What became clearer</h4><p>' + escapeHtml(text) + '</p></div>';
   }
 
@@ -928,7 +988,7 @@ function renderSummary(analysisRaw) {
   });
   if (betweenItems.length > 0) {
     out += '<div class="summary-section"><h4>What to carry into this week</h4><ul>';
-    betweenItems.forEach(function(t) { out += '<li>' + escapeHtml(String(t)) + '</li>'; });
+    betweenItems.forEach(function(t) { out += '<li>' + escapeHtml(toClientVoice(t)) + '</li>'; });
     out += '</ul></div>';
   }
 
@@ -947,7 +1007,7 @@ function renderSummary(analysisRaw) {
   });
   if (commitItems.length > 0) {
     out += '<div class="summary-section"><h4>Your commitments</h4><ul>';
-    commitItems.forEach(function(t) { out += '<li>' + escapeHtml(String(t)) + '</li>'; });
+    commitItems.forEach(function(t) { out += '<li>' + escapeHtml(toClientVoice(t)) + '</li>'; });
     out += '</ul></div>';
   }
 
@@ -968,8 +1028,8 @@ function renderSummary(analysisRaw) {
   if (goalRows.length > 0) {
     out += '<div class="summary-section"><h4>Goals this session moved forward</h4>';
     goalRows.forEach(function(gr) {
-      out += '<div class="summary-goal-title">' + escapeHtml(gr.title) + '</div>';
-      if (gr.rel) out += '<div class="summary-goal-rel">' + escapeHtml(gr.rel) + '</div>';
+      out += '<div class="summary-goal-title">' + escapeHtml(toClientVoice(gr.title)) + '</div>';
+      if (gr.rel) out += '<div class="summary-goal-rel">' + escapeHtml(toClientVoice(gr.rel)) + '</div>';
     });
     out += '</div>';
   }
