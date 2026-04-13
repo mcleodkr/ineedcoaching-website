@@ -764,47 +764,80 @@ window.toggleSummary = toggleSummary;
 async function loadGoals() {
   const container = $('goals-content');
   container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  const createForm = ''
+    + '<div class="card" style="margin-top:20px;">'
+    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;color:var(--navy);margin-bottom:12px;">Add a goal</div>'
+    + '<div class="form-row"><label for="new-goal-title">What would you like to work toward?</label>'
+    + '<input type="text" id="new-goal-title" placeholder="e.g. Speak up in one meeting this week"></div>'
+    + '<div class="form-row"><label for="new-goal-desc">A little more about it (optional)</label>'
+    + '<textarea id="new-goal-desc" rows="3" placeholder="What would success look like?"></textarea></div>'
+    + '<div style="display:flex;align-items:center;gap:10px;margin-top:8px;">'
+    + '<button class="btn btn-primary" onclick="addClientGoal()">Add Goal</button>'
+    + '<span class="save-msg" id="new-goal-msg"></span>'
+    + '</div>'
+    + '</div>';
   try {
     const res = await fetch(SUPABASE_URL + '/rest/v1/coach_goals?client_email=eq.' + encodeURIComponent(currentEmail) + '&order=created_at.desc&select=*', {
       headers: apiHeaders()
     });
     const data = await res.json();
     if (!Array.isArray(data) || data.length === 0) {
-      container.innerHTML = '<div class="empty"><p>Your coach will add goals here as you work together.</p></div>';
+      container.innerHTML = '<div class="empty"><p>Your coach will add goals here as you work together — or you can add your own below.</p></div>' + createForm;
       return;
     }
     let html = '';
     data.forEach(function(g) {
       if (!g) return;
       const status = g.status || 'not_started';
-      const inProgressActive = status === 'in_progress' ? 'active' : '';
-      const smallWinActive = status === 'small_win' ? 'active' : '';
-      const doneActive = status === 'completed' ? 'active' : '';
+      const marker = g.progress_marker || '';
+      const isCompleted = status === 'completed';
+      const isSmallWin = !isCompleted && marker === 'small_win';
+      const isInProgress = !isCompleted && !isSmallWin && status === 'in_progress';
+      const inProgressActive = isInProgress ? 'active' : '';
+      const smallWinActive = isSmallWin ? 'active' : '';
+      const doneActive = isCompleted ? 'active' : '';
       const target = g.target_date ? formatDate(g.target_date) : '';
+      let completionNote = '';
+      if (isCompleted && g.completed_by === 'client') {
+        completionNote = '<div style="margin-top:10px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-style:italic;color:var(--gold);">You completed this</div>';
+      } else if (isCompleted && g.completed_by === 'coach') {
+        completionNote = '<div style="margin-top:10px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-style:italic;color:var(--navy);">Completed with your coach</div>';
+      }
+      const gid = escapeHtml(g.id);
       html += '<div class="card">'
         + '<h3>' + escapeHtml(g.title || 'Goal') + '</h3>'
         + (target ? '<div class="meta">Target: ' + escapeHtml(target) + '</div>' : '')
         + (g.description ? '<p>' + escapeHtml(g.description) + '</p>' : '')
         + '<div class="goal-status-row">'
-        + '<button class="goal-status-btn ' + inProgressActive + '" onclick="updateGoal(\'' + escapeHtml(g.id) + '\', \'in_progress\')">Still working on it</button>'
-        + '<button class="goal-status-btn ' + smallWinActive + '" onclick="updateGoal(\'' + escapeHtml(g.id) + '\', \'in_progress\')">Small win &#127881;</button>'
-        + '<button class="goal-status-btn ' + doneActive + '" onclick="updateGoal(\'' + escapeHtml(g.id) + '\', \'completed\')">Done &#10003;</button>'
+        + '<button class="goal-status-btn ' + inProgressActive + '" onclick="updateGoal(\'' + gid + '\', \'still_working\')">Still working on it</button>'
+        + '<button class="goal-status-btn ' + smallWinActive + '" onclick="updateGoal(\'' + gid + '\', \'small_win\')">Small win &#127881;</button>'
+        + '<button class="goal-status-btn ' + doneActive + '" onclick="updateGoal(\'' + gid + '\', \'done\')">Done &#10003;</button>'
         + '</div>'
+        + completionNote
         + '</div>';
     });
-    container.innerHTML = html;
+    container.innerHTML = html + createForm;
   } catch (err) {
     console.error('[Goals] load error:', err);
-    container.innerHTML = '<div class="empty"><p>We had trouble loading your goals. Please refresh in a moment.</p></div>';
+    container.innerHTML = '<div class="empty"><p>We had trouble loading your goals. Please refresh in a moment.</p></div>' + createForm;
   }
 }
 
-async function updateGoal(goalId, newStatus) {
+async function updateGoal(goalId, action) {
+  // action: 'still_working' | 'small_win' | 'done'
+  let body;
+  if (action === 'done') {
+    body = { status: 'completed', completed_by: 'client', progress_marker: null };
+  } else if (action === 'small_win') {
+    body = { status: 'in_progress', completed_by: null, progress_marker: 'small_win' };
+  } else {
+    body = { status: 'in_progress', completed_by: null, progress_marker: null };
+  }
   try {
     const res = await fetch(SUPABASE_URL + '/rest/v1/coach_goals?id=eq.' + encodeURIComponent(goalId), {
       method: 'PATCH',
       headers: Object.assign({}, apiHeaders(), { 'Prefer': 'return=minimal' }),
-      body: JSON.stringify({ status: newStatus })
+      body: JSON.stringify(body)
     });
     if (!res.ok) throw new Error('Update failed');
     loadGoals();
@@ -814,6 +847,41 @@ async function updateGoal(goalId, newStatus) {
   }
 }
 window.updateGoal = updateGoal;
+
+async function addClientGoal() {
+  const titleEl = $('new-goal-title');
+  const descEl = $('new-goal-desc');
+  const msg = $('new-goal-msg');
+  const title = (titleEl && titleEl.value || '').trim();
+  const description = (descEl && descEl.value || '').trim();
+  if (!title) {
+    if (msg) { msg.textContent = 'Add a short title for your goal.'; msg.style.color = '#c44'; }
+    return;
+  }
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/coach_goals', {
+      method: 'POST',
+      headers: Object.assign({}, apiHeaders(), { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({
+        client_email: currentEmail,
+        title: title,
+        description: description || null,
+        status: 'not_started',
+        created_by: 'client',
+        coach_id: null
+      })
+    });
+    if (!res.ok) throw new Error('Create failed');
+    if (msg) { msg.textContent = 'Added.'; msg.style.color = 'var(--gold)'; }
+    if (titleEl) titleEl.value = '';
+    if (descEl) descEl.value = '';
+    loadGoals();
+  } catch (err) {
+    console.error('[Goals] create error:', err);
+    if (msg) { msg.textContent = 'We had trouble adding that. Please try again.'; msg.style.color = '#c44'; }
+  }
+}
+window.addClientGoal = addClientGoal;
 
 /* ================================================
    CHECK-INS

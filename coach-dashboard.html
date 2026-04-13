@@ -4895,7 +4895,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
   // Wire complete goal
   document.querySelectorAll('[data-client-goal-complete]').forEach(function(btn) {
     btn.addEventListener('click', async function() {
-      await supabasePatch('coach_goals', { id: 'eq.' + this.dataset.clientGoalComplete }, { status: 'completed' });
+      await supabasePatch('coach_goals', { id: 'eq.' + this.dataset.clientGoalComplete }, { status: 'completed', completed_by: 'coach' });
       openClientDetail(client.email);
     });
   });
@@ -6386,14 +6386,25 @@ function renderPostSessionAnalysis(a, container) {
             if (!g) return;
             var sc = statusColors[g.status] || 'var(--muted)';
             var sl = statusLabels[g.status] || g.status;
+            var clientBadge = g.created_by === 'client'
+              ? ' <span style="display:inline-block;font-size:0.58rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;background:#fdf9f1;border:1px solid #c49a3c;color:#c49a3c;padding:1px 7px;border-radius:50px;margin-left:4px;vertical-align:middle;">Client suggested</span>'
+              : '';
+            var completionNote = '';
+            if (g.status === 'completed' && g.completed_by === 'client') {
+              completionNote = '<div style="font-size:0.72rem;color:#c49a3c;font-style:italic;margin-top:4px;">Completed by client</div>';
+            } else if (g.status === 'completed' && g.completed_by === 'coach') {
+              completionNote = '<div style="font-size:0.72rem;color:var(--ink);margin-top:4px;">Completed by you</div>';
+            }
             gh += '<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;">'
               + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:' + (g.description ? '4px' : '0') + ';">'
               + '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:700;letter-spacing:0.04em;background:' + sc + ';color:#fff;">' + sl + '</span>'
               + '<span style="font-size:0.85rem;font-weight:600;color:var(--ink);">' + escapeHtml(g.title) + '</span>'
+              + clientBadge
               + '</div>'
               + (g.description ? '<div style="font-size:0.78rem;color:var(--muted);line-height:1.4;">' + escapeHtml(g.description) + '</div>' : '')
+              + completionNote
               + '<div style="font-size:0.72rem;color:var(--muted);font-style:italic;margin-top:4px;">'
-              + (g.source === 'coach_clarity' ? 'Suggested by Coach Clarity' : g.source === 'session' ? 'Added from session' : 'Added manually')
+              + (g.source === 'coach_clarity' ? 'Suggested by Coach Clarity' : g.source === 'session' ? 'Added from session' : g.created_by === 'client' ? 'Added by client' : 'Added manually')
               + ' on ' + (g.created_at ? new Date(g.created_at).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}) : '') + '</div>'
               + '</div>';
           });
@@ -7750,12 +7761,22 @@ async function loadDashGoals() {
         goals.forEach(function(g) {
           var targetStr = g.target_date ? new Date(g.target_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
           var pillStyle = statusColors[g.status] || statusColors.not_started;
+          var clientSuggestedBadge = g.created_by === 'client'
+            ? ' <span style="display:inline-block;font-size:0.62rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;background:#fdf9f1;border:1px solid #c49a3c;color:#c49a3c;padding:2px 8px;border-radius:50px;margin-left:6px;vertical-align:middle;">Client suggested</span>'
+            : '';
+          var completionNote = '';
+          if (g.status === 'completed' && g.completed_by === 'client') {
+            completionNote = '<div style="margin-top:8px;font-family:\'DM Sans\',sans-serif;font-size:0.75rem;font-style:italic;color:#c49a3c;">Completed by client</div>';
+          } else if (g.status === 'completed' && g.completed_by === 'coach') {
+            completionNote = '<div style="margin-top:8px;font-family:\'DM Sans\',sans-serif;font-size:0.75rem;color:var(--ink);">Completed by you</div>';
+          }
           html += '<div style="background:var(--cream);border-radius:var(--r-sm);padding:16px 18px;margin-bottom:8px;">'
             + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
             + '<div style="flex:1;min-width:180px;">'
-            + '<div style="font-weight:700;font-size:0.92rem;color:var(--ink);margin-bottom:4px;">' + escapeHtml(g.title) + '</div>'
+            + '<div style="font-weight:700;font-size:0.92rem;color:var(--ink);margin-bottom:4px;">' + escapeHtml(g.title) + clientSuggestedBadge + '</div>'
             + (g.description ? '<div style="font-size:0.85rem;color:var(--muted);line-height:1.5;margin-bottom:8px;">' + escapeHtml(g.description) + '</div>' : '')
-            + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+            + completionNote
+            + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;">'
             + '<span class="status-pill" style="font-size:0.68rem;padding:3px 10px;' + pillStyle + '">' + escapeHtml(statusLabels[g.status] || g.status) + '</span>'
             + (targetStr ? '<span style="font-size:0.78rem;color:var(--muted);">Due: ' + escapeHtml(targetStr) + '</span>' : '')
             + '</div></div>'
@@ -7831,7 +7852,7 @@ async function loadDashGoals() {
     // Wire complete buttons
     document.querySelectorAll('[data-goal-complete]').forEach(function(btn) {
       btn.addEventListener('click', async function() {
-        await supabasePatch('coach_goals', { id: 'eq.' + this.dataset.goalComplete }, { status: 'completed' });
+        await supabasePatch('coach_goals', { id: 'eq.' + this.dataset.goalComplete }, { status: 'completed', completed_by: 'coach' });
         loadDashGoals();
       });
     });
