@@ -138,33 +138,24 @@ Tone: practical, grounded, non-clinical, focused on clarity and movement.
 
 Dialogue format: The "dialogue" field is a single plain-text string (not an array). Format each line as "COACH: ..." or "CLIENT: ..." separated by \\n. Include 2-3 PAUSE annotations on their own lines formatted as "[PAUSE — WHAT THE COACH IS DOING: ...]" or "[PAUSE — WHY THIS MATTERS: ...]" separated by blank lines. Each approach dialogue must be 4-6 turns minimum. Show how the approach STAYS inside its lens over multiple exchanges. Do not rush to resolution. Language must be natural and conversational.
 
-OUTPUT QUALITY RULES — enforce before returning:
+SECTION ROLE SEPARATION — each section has one job and one job only:
 
-1. NO REPETITION: Each section serves a distinct purpose.
-- YOUR APPROACH SUMMARY: describe what the coach actually did and what it closed
-- WHAT THE COACH IS DOING: name the move in plain terms
-- THE MOVE: one concise sentence naming the move
-- WHAT THIS APPROACH IS DOING: the pattern or logic behind the approach
-- WHAT IT IS TRYING TO SHIFT: the intended change — use 'From: X / To: Y' format
-Do NOT repeat the same idea across these sections. Each must add new information.
+YOUR APPROACH SUMMARY: describe only what the coach did and what it prevented. Observable behavior only. No theory.
 
-2. ROLE CLARITY — critical:
-- COACH lines: guiding, questioning, reflecting — never internal processing
-- CLIENT lines: responding, processing, exploring — never directing or guiding
-- Every line must be clearly labeled and voice must match role exactly
-- Do not allow coach statements that sound like client internal dialogue
+WHAT THE COACH IS DOING (pause annotations): name the specific micro-move at that exact line. One sentence. Tactical. Example: 'The coach is slowing down before the frame lands so the client feels the weight first.'
 
-3. DIALOGUE INTEGRITY:
-- Tone must remain consistent throughout
-- Coach must stay inside the selected approach lens
-- No sudden shifts in style or language
-- Dialogue must feel like a real coaching conversation, not a script
+THE MOVE: one verb phrase only. Example: 'Move the client from internal justification to relational awareness.' No explanation. No theory.
 
-4. VALIDATE BEFORE RETURNING:
-- Are roles correctly labeled and consistent?
-- Does each section add new information not present in other sections?
-- Is there any repeated phrasing or idea? If yes, revise.
-- Does the dialogue feel natural?
+WHAT THIS APPROACH IS DOING: explain the psychological or behavioral MECHANISM — how this approach works, not what it produces. No overlap with 'what it is trying to shift'.
+
+WHAT IT IS TRYING TO SHIFT: two lines only in this exact format:
+From: [current state in client's own terms]
+To: [desired state in concrete behavioral terms]
+No sentences. No explanation. Just the two lines.
+
+WHEN YOU MIGHT USE THIS: 2-3 observable signals only. No explanation. Just what the coach would see or hear.
+
+ENFORCEMENT: Before returning output, check each section. If any two sections contain the same idea expressed differently, delete the weaker version and rewrite the stronger one to contain only what is unique to that section.
 
 GOLD STANDARD EXAMPLE — match this level of quality:
 
