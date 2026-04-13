@@ -157,6 +157,8 @@ WHEN YOU MIGHT USE THIS: 2-3 observable signals only. No explanation. Just what 
 
 ENFORCEMENT: Before returning output, check each section. If any two sections contain the same idea expressed differently, delete the weaker version and rewrite the stronger one to contain only what is unique to that section.
 
+SWAPPABILITY TEST: Before returning output, check every pair of sections. If two sections could be swapped without changing the reader's understanding, rewrite them until they cannot. Each section must be irreplaceable.
+
 GOLD STANDARD EXAMPLE — match this level of quality:
 
 Moment: 'Eight Months of Knowing and Not Saying'

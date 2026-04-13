@@ -6484,16 +6484,18 @@ function renderPostSessionAnalysis(a, container) {
 }
 
 var ALL_APPROACHES = [
-  'Thought Pattern Reframe',
-  'Perspective and Meaning Reframe',
-  'Emotion Regulation and Validation',
-  'Present-Moment Awareness',
-  'Solution-Focused Forward Movement',
-  'Motivation and Change Talk',
-  'Acceptance and Values-Based Action',
-  'Client-Led Exploration',
-  'Relational Pattern Awareness'
+  { name: 'Thought Pattern Reframe', hint: 'Challenge the belief directly' },
+  { name: 'Perspective and Meaning Reframe', hint: 'Shift the story' },
+  { name: 'Emotion Regulation and Validation', hint: 'Stay with feeling first' },
+  { name: 'Present-Moment Awareness', hint: 'Slow down before meaning' },
+  { name: 'Solution-Focused Forward Movement', hint: 'Find what already works' },
+  { name: 'Motivation and Change Talk', hint: 'Surface ambivalence' },
+  { name: 'Acceptance and Values-Based Action', hint: 'Name the cost of not changing' },
+  { name: 'Client-Led Exploration', hint: 'Stay with the question longer' },
+  { name: 'Relational Pattern Awareness', hint: 'Track impact on others' }
 ];
+var APPROACH_HINTS = {};
+ALL_APPROACHES.forEach(function(a) { APPROACH_HINTS[a.name] = a.hint; });
 
 window.selectApproachLab = async function(sid, approachName) {
   var container = document.getElementById('approach-lab-' + sid);
@@ -6586,7 +6588,9 @@ function renderApproachLab(data, container, ctx) {
     }
     var check = isSelected ? '\u2713 ' : '';
     var nameJs = name.replace(/'/g, "\\'");
-    return '<span style="' + style + '"' + hoverAttrs + ' onclick="selectApproachLab(\'' + sidJs + '\',\'' + nameJs + '\')">' + check + escapeHtml(name) + '</span>';
+    var hint = APPROACH_HINTS[name] || '';
+    var hintHtml = hint ? ' <span style="opacity:0.75;font-weight:400;font-size:0.72rem;">(' + escapeHtml(hint) + ')</span>' : '';
+    return '<span style="' + style + '"' + hoverAttrs + ' onclick="selectApproachLab(\'' + sidJs + '\',\'' + nameJs + '\')">' + check + escapeHtml(name) + hintHtml + '</span>';
   };
 
   // Intro line above selector box
@@ -6609,9 +6613,9 @@ function renderApproachLab(data, container, ctx) {
   html += '<div style="' + labelStyle + 'color:#9a9490;margin-bottom:4px;">Explore other approaches</div>';
   html += '<div style="' + bodyStyle + 'font-size:0.72rem;font-style:italic;color:#9a9490;margin-bottom:12px;">Select any approach to see this session through that lens</div>';
   html += '<div>';
-  ALL_APPROACHES.forEach(function(name) {
-    if (recommendedSet[name]) return;
-    html += renderPill(name, 'other', selectedApproach === name);
+  ALL_APPROACHES.forEach(function(a) {
+    if (recommendedSet[a.name]) return;
+    html += renderPill(a.name, 'other', selectedApproach === a.name);
   });
   html += '</div>';
 
@@ -6656,13 +6660,19 @@ function renderApproachLab(data, container, ctx) {
     }
 
     // ── Side-by-side comparison ──
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;border-top:1px solid #edeae4;padding-top:16px;margin-bottom:20px;">';
-    html += '<div>';
-    html += '<div style="' + labelStyle + 'color:#9a9490;margin-bottom:6px;">Your approach</div>';
-    html += '<div style="' + bodyStyle + 'font-size:0.85rem;font-style:italic;color:#5a5560;line-height:1.6;">' + escapeHtml(yourApproach || '\u2014') + '</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid #edeae4;padding-top:16px;margin-bottom:20px;">';
+    html += '<div style="border-right:2px solid #c49a3c;padding-right:20px;">';
+    html += '<div style="' + labelStyle + 'color:#9a9490;margin-bottom:8px;">Your approach</div>';
+    if (firstCoachLines.length) {
+      firstCoachLines.forEach(function(l) {
+        html += '<div style="' + bodyStyle + 'font-size:0.85rem;font-style:italic;color:#5a5560;line-height:1.6;margin-bottom:4px;">\u201C' + escapeHtml(l) + '\u201D</div>';
+      });
+    } else {
+      html += '<div style="' + bodyStyle + 'font-size:0.82rem;font-style:italic;color:#9a9490;">\u2014</div>';
+    }
     html += '</div>';
-    html += '<div>';
-    html += '<div style="' + labelStyle + 'color:#c49a3c;margin-bottom:6px;">Alternative approach</div>';
+    html += '<div style="background:#fdf9f1;padding:12px 16px;border-radius:6px;margin-left:20px;">';
+    html += '<div style="' + labelStyle + 'color:#c49a3c;margin-bottom:8px;">Alternative approach</div>';
     if (firstCoachLines.length) {
       firstCoachLines.forEach(function(l) {
         html += '<div style="' + bodyStyle + 'font-size:0.85rem;font-style:italic;color:#1a3a52;line-height:1.6;margin-bottom:4px;">\u201C' + escapeHtml(l) + '\u201D</div>';
