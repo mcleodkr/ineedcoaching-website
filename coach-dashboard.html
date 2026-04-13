@@ -10033,6 +10033,12 @@ async function loadJournalIntel(bodyId, clientEmail) {
       if (e.share_mode === 'full' && e.entry_text) {
         html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.92rem;color:#3a3540;line-height:1.7;white-space:pre-wrap;background:#fdf9f1;padding:14px 16px;border-radius:6px;margin-bottom:12px;">' + escapeHtml(e.entry_text) + '</div>';
       }
+      if (e.share_mode === 'full' && e.mirror_response) {
+        html += '<div style="margin-top:10px;border-top:1px solid #edeae4;padding-top:12px;margin-bottom:4px;">'
+          +     '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#c49a3c;margin-bottom:6px;">AI reflection received</div>'
+          +     '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:#1a3a52;font-style:italic;line-height:1.65;white-space:pre-wrap;">' + escapeHtml(e.mirror_response) + '</div>'
+          +   '</div>';
+      }
       if (ref) {
         html += '<div style="margin-top:10px;border-top:1px solid #edeae4;padding-top:12px;">'
           +     '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.74rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6a6560;margin-bottom:6px;">Their reflection</div>';

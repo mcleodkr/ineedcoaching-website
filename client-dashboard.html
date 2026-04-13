@@ -1732,7 +1732,8 @@ let journalState = {
   entryTitle: '',
   reflection: { clearer: '', unresolved: '', next: '' },
   shareMode: 'private',
-  matchedSignals: []
+  matchedSignals: [],
+  mirror: null
 };
 
 const SIGNAL_KEYWORDS = {
@@ -1765,7 +1766,8 @@ async function loadJournal() {
     entryTitle: '',
     reflection: { clearer: '', unresolved: '', next: '' },
     shareMode: 'private',
-    matchedSignals: []
+    matchedSignals: [],
+    mirror: null
   };
   await fetchJournalPrompt();
   renderJournal();
@@ -1808,6 +1810,8 @@ function renderJournal() {
     html += renderJournalWriting();
   } else if (journalState.stage === 'reflecting') {
     html += renderJournalReflection();
+  } else if (journalState.stage === 'mirroring') {
+    html += renderJournalMirroring();
   } else if (journalState.stage === 'sharing') {
     html += renderJournalSharing();
   } else if (journalState.stage === 'done') {
@@ -2145,18 +2149,117 @@ async function journalSaveReflection() {
   }
   journalState.matchedSignals = detectGrowthSignals();
   await persistGrowthSignals(journalState.matchedSignals);
-  journalState.stage = 'sharing';
+  journalState.mirror = null;
+  journalState.stage = 'mirroring';
   renderJournal();
+  fetchJournalMirror();
 }
 window.journalSaveReflection = journalSaveReflection;
 
 function journalSkipReflection() {
   captureReflectionState();
   journalState.matchedSignals = detectGrowthSignals();
+  journalState.mirror = null;
+  journalState.stage = 'mirroring';
+  renderJournal();
+  fetchJournalMirror();
+}
+window.journalSkipReflection = journalSkipReflection;
+
+async function fetchJournalMirror() {
+  const token = currentToken || localStorage.getItem(TOKEN_KEY);
+  if (!token) {
+    journalState.stage = 'sharing';
+    renderJournal();
+    return;
+  }
+  try {
+    const res = await fetch('/api/generate-journal-mirror', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({
+        client_email: currentEmail,
+        entry_text: journalState.entryText || '',
+        reflection_what_became_clearer: (journalState.reflection && journalState.reflection.clearer) || '',
+        reflection_what_still_unresolved: (journalState.reflection && journalState.reflection.unresolved) || '',
+        reflection_next_step: (journalState.reflection && journalState.reflection.next) || ''
+      })
+    });
+    const data = await res.json().catch(function() { return {}; });
+    journalState.mirror = {
+      text: (data && data.mirror_text) || '',
+      what_i_hear: (data && data.what_i_hear) || null,
+      what_may_be_shifting: (data && data.what_may_be_shifting) || null,
+      question_to_carry: (data && data.question_to_carry) || null
+    };
+    if (journalState.entryId && journalState.mirror.text) {
+      try {
+        await fetch(SUPABASE_URL + '/rest/v1/coach_journal_entries?id=eq.' + encodeURIComponent(journalState.entryId), {
+          method: 'PATCH',
+          headers: {
+            'apikey': ANON_KEY,
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({ mirror_response: journalState.mirror.text })
+        });
+      } catch (e) { console.error('[Journal] mirror persist failed', e); }
+    }
+  } catch (e) {
+    console.error('[Journal] mirror fetch failed', e);
+    journalState.mirror = {
+      text: 'Your words have been received. Take whatever feels right with you from this.',
+      what_i_hear: null,
+      what_may_be_shifting: null,
+      question_to_carry: null
+    };
+  }
+  if (journalState.stage === 'mirroring') renderJournal();
+}
+
+function journalAdvanceFromMirror() {
   journalState.stage = 'sharing';
   renderJournal();
 }
-window.journalSkipReflection = journalSkipReflection;
+window.journalAdvanceFromMirror = journalAdvanceFromMirror;
+
+function renderJournalMirroring() {
+  const m = journalState.mirror;
+  if (!m) {
+    return '<div class="card" style="background:#fdf9f1;border-left:3px solid #c49a3c;padding:28px 32px;">'
+      +    '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;color:var(--navy);margin-bottom:14px;">Reflecting on what you wrote...</div>'
+      +    '<div style="display:inline-block;width:22px;height:22px;border:2px solid #e8e4dc;border-top-color:#c49a3c;border-radius:50%;animation:spin 0.8s linear infinite;"></div>'
+      +    '<style>@keyframes spin{to{transform:rotate(360deg);}}</style>'
+      +  '</div>';
+  }
+  const hasAll = m.what_i_hear && m.what_may_be_shifting && m.question_to_carry;
+  let body = '';
+  if (hasAll) {
+    body = ''
+      + '<div style="margin-bottom:16px;">'
+      +   '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#c49a3c;margin-bottom:6px;">What I\'m hearing</div>'
+      +   '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.92rem;color:#1a3a52;line-height:1.65;">' + escapeHtml(m.what_i_hear) + '</div>'
+      + '</div>'
+      + '<div style="margin-bottom:16px;">'
+      +   '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#c49a3c;margin-bottom:6px;">What may be shifting</div>'
+      +   '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.92rem;color:#1a3a52;line-height:1.65;">' + escapeHtml(m.what_may_be_shifting) + '</div>'
+      + '</div>'
+      + '<div>'
+      +   '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#c49a3c;margin-bottom:6px;">A question to carry</div>'
+      +   '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-style:italic;color:var(--navy);line-height:1.6;">' + escapeHtml(m.question_to_carry) + '</div>'
+      + '</div>';
+  } else {
+    body = '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.92rem;color:#1a3a52;line-height:1.65;white-space:pre-wrap;">' + escapeHtml(m.text || 'Your words have been received.') + '</div>';
+  }
+  return '<div class="card" style="background:#fdf9f1;border-left:3px solid #c49a3c;padding:28px 32px;">'
+    +    '<h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:600;color:var(--navy);margin-bottom:18px;">A reflection back to you</h3>'
+    +    body
+    +  '</div>'
+    +  '<div style="margin-top:20px;display:flex;justify-content:flex-end;">'
+    +    '<button class="btn btn-primary" onclick="journalAdvanceFromMirror()" style="background:#c49a3c;color:#1a3a52;border:none;padding:11px 24px;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:600;cursor:pointer;">Continue</button>'
+    +  '</div>';
+}
 
 function journalSetShare(v) {
   journalState.shareMode = v;
