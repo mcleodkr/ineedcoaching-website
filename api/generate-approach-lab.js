@@ -142,6 +142,13 @@ SECTION ROLE SEPARATION — each section has one job and one job only:
 
 YOUR APPROACH SUMMARY: describe only what the coach did and what it prevented. Observable behavior only. No theory.
 
+YOUR APPROACH SUMMARY language rule: Never use certain language about what would or would not have happened. Replace:
+- 'would have' → 'may have'
+- 'would have let her' → 'may have let her'
+- 'which would have' → 'which could have'
+- 'this would have' → 'this may have'
+The coach made a real move. We are speculating about the alternative — always use conditional language.
+
 WHAT THE COACH IS DOING (pause annotations): name the specific micro-move at that exact line. One sentence. Tactical. Example: 'The coach is slowing down before the frame lands so the client feels the weight first.'
 
 THE MOVE: one verb phrase only. Example: 'Move the client from internal justification to relational awareness.' No explanation. No theory.
