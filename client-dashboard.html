@@ -1731,7 +1731,7 @@ let journalState = {
   entryText: '',
   entryTitle: '',
   reflection: { clearer: '', unresolved: '', next: '' },
-  shareMode: 'private',
+  shareMode: 'full',
   matchedSignals: [],
   mirror: null
 };
@@ -1765,7 +1765,7 @@ async function loadJournal() {
     entryText: '',
     entryTitle: '',
     reflection: { clearer: '', unresolved: '', next: '' },
-    shareMode: 'private',
+    shareMode: 'full',
     matchedSignals: [],
     mirror: null
   };
@@ -2011,7 +2011,10 @@ async function persistJournalEntry() {
     prompt_source: (journalState.prompt && journalState.prompt.source_type) || 'free',
     entry_text: journalState.entryText || '',
     entry_title: journalState.entryTitle || null,
-    share_mode: 'private'
+    // Default to shared with coach — the share step (stage 4) can still
+    // downgrade this to private or summary if the client actively chooses.
+    share_mode: 'full',
+    shared_with_coach: true
   };
   const res = await fetch(SUPABASE_URL + '/rest/v1/coach_journal_entries', {
     method: 'POST',
