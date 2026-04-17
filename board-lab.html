@@ -297,6 +297,10 @@ function renderForm() {
   const foot = el("div", "footer");
   foot.textContent = "The Boardroom Decision Lab · ineedcoaching.org · Private Beta";
   wrap.appendChild(foot);
+  const disclaimer = el("div");
+  disclaimer.style.cssText = "max-width: 640px; margin: 16px auto 0; padding: 0 20px; font-size: 11px; line-height: 1.6; color: var(--muted); text-align: center;";
+  disclaimer.textContent = "This tool is designed for individual decision analysis and aggregated pattern recognition. It is not a substitute for official board meetings. Consult your district\u2019s legal counsel regarding open meeting law compliance in your jurisdiction before using this tool with board members.";
+  wrap.appendChild(disclaimer);
 
   return wrap;
 }
