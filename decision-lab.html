@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Boardroom Decision Lab · ineedcoaching.org</title>
+<meta name="description" content="A research-informed decision lab for board members, superintendents, and campus leaders.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #1a3a52; --navy-deep: #0f2638; --gold: #c49a3c; --gold-soft: #e6c875;
+  --cream: #f7f5f1; --cream-warm: #faf6ed; --ink: #0f1b2d; --muted: #6b7280;
+  --border: #d4cdb8; --protects: #2f6b3e; --neutral: #c89d3c; --risks: #9b2c2c;
+  --serif: "Cormorant Garamond", Georgia, serif; --sans: "DM Sans", -apple-system, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); color: var(--ink); background: var(--cream); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+.nav { position: fixed; top: 0; left: 0; right: 0; background: rgba(26, 58, 82, 0.95); backdrop-filter: blur(10px); z-index: 100; padding: 14px 0; border-bottom: 1px solid rgba(196, 154, 60, 0.2); }
+.nav-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; display: flex; justify-content: space-between; align-items: center; }
+.nav-brand { color: var(--cream); font-family: var(--serif); font-size: 20px; font-weight: 600; text-decoration: none; }
+.nav-links { display: flex; gap: 28px; align-items: center; }
+.nav-links a { color: var(--cream); text-decoration: none; font-size: 14px; opacity: 0.8; transition: opacity .2s; }
+.nav-links a:hover { opacity: 1; }
+.nav-cta { background: var(--gold); color: var(--navy) !important; padding: 8px 16px; border-radius: 2px; font-weight: 600; opacity: 1 !important; }
+.main { padding-top: 80px; }
+.landing-hero { max-width: 1100px; margin: 0 auto; padding: 60px 24px 40px; display: grid; grid-template-columns: 1fr 420px; gap: 60px; align-items: start; }
+@media (max-width: 900px) { .landing-hero { grid-template-columns: 1fr; gap: 40px; padding: 40px 20px; } }
+.eyebrow { text-transform: uppercase; letter-spacing: 3px; font-size: 11px; color: var(--gold); margin-bottom: 20px; font-weight: 500; }
+.hero-title { font-family: var(--serif); font-size: 56px; line-height: 1.05; font-weight: 500; color: var(--navy); margin-bottom: 20px; letter-spacing: -0.5px; }
+.hero-title em { color: var(--gold); font-style: italic; }
+@media (max-width: 900px) { .hero-title { font-size: 40px; } }
+.hero-lead { font-family: var(--serif); font-size: 20px; line-height: 1.55; color: var(--ink); opacity: 0.85; margin-bottom: 32px; }
+.feature-list { list-style: none; }
+.feature-list li { display: flex; gap: 14px; margin-bottom: 18px; }
+.feature-check { flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: var(--navy); color: var(--cream); display: flex; align-items: center; justify-content: center; font-size: 12px; margin-top: 2px; }
+.feature-h { font-weight: 600; color: var(--navy); font-size: 15px; margin-bottom: 2px; }
+.feature-p { font-size: 14px; color: var(--muted); line-height: 1.5; }
+.why-card { background: #fff; border: 1px solid var(--border); padding: 20px; border-radius: 3px; margin-top: 30px; }
+.why-card-label { text-transform: uppercase; letter-spacing: 2px; font-size: 10px; color: var(--muted); margin-bottom: 8px; }
+.why-card p { font-size: 14px; color: var(--ink); line-height: 1.6; }
+.why-card em { color: var(--navy); font-family: var(--serif); font-style: italic; }
+.entry-card { background: var(--cream-warm); border-top: 4px solid var(--gold); padding: 32px; border-radius: 3px; box-shadow: 0 30px 60px -30px rgba(15, 27, 45, 0.25); position: sticky; top: 100px; }
+.entry-label { text-transform: uppercase; letter-spacing: 2px; font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+.entry-title { font-family: var(--serif); font-size: 28px; color: var(--navy); font-weight: 500; margin-bottom: 24px; }
+label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 8px; font-weight: 500; }
+input, select, textarea { width: 100%; padding: 12px 14px; border: 1px solid var(--border); background: #fff; border-radius: 2px; font-family: var(--sans); font-size: 15px; color: var(--ink); transition: border-color .15s; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--navy); }
+.field { margin-bottom: 16px; }
+.btn { cursor: pointer; border: none; font-family: var(--sans); font-size: 14px; transition: all .15s; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.btn-primary { background: var(--navy); color: var(--cream); padding: 14px 24px; border-radius: 2px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; font-size: 12px; }
+.btn-primary:hover { background: var(--navy-deep); }
+.btn-primary-full { width: 100%; }
+.btn-primary:disabled { opacity: 0.5; cursor: wait; }
+.btn-secondary { background: #fff; color: var(--navy); padding: 12px 22px; border: 1px solid var(--border); border-radius: 2px; font-weight: 500; }
+.btn-secondary:hover { border-color: var(--navy); }
+.btn-gold { background: var(--gold); color: #fff; padding: 14px 24px; border-radius: 2px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; font-size: 12px; cursor: pointer; border: none; font-family: var(--sans); }
+.btn-gold:hover { background: #a87d20; }
+.privacy-note { display: flex; gap: 8px; align-items: flex-start; padding-top: 16px; }
+.privacy-note span { font-size: 11px; color: var(--muted); line-height: 1.5; }
+.err { color: var(--risks); font-size: 13px; margin-bottom: 10px; }
+.step-container { max-width: 720px; margin: 0 auto; padding: 40px 24px; }
+.back-btn { background: none; color: var(--muted); font-size: 13px; margin-bottom: 24px; padding: 6px 0; opacity: 0.7; border: none; cursor: pointer; }
+.back-btn:hover { opacity: 1; }
+.step-eyebrow { text-transform: uppercase; letter-spacing: 3px; font-size: 11px; color: var(--gold); margin-bottom: 12px; font-weight: 500; }
+.step-title { font-family: var(--serif); font-size: 38px; line-height: 1.15; font-weight: 500; color: var(--navy); margin-bottom: 12px; }
+.step-subtitle { color: var(--muted); font-size: 15px; margin-bottom: 32px; }
+.options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.options-3 { grid-template-columns: 1fr 1fr 1fr; }
+.options-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+@media (max-width: 700px) { .options-grid, .options-3, .options-4 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 500px) { .options-grid, .options-3, .options-4 { grid-template-columns: 1fr; } }
+.opt { background: #fff; border: 1px solid var(--border); padding: 16px 18px; border-radius: 2px; font-size: 15px; color: var(--ink); font-family: var(--sans); cursor: pointer; text-align: left; transition: all .15s; display: flex; align-items: center; gap: 12px; }
+.opt:hover { border-color: var(--navy); }
+.opt.active { background: var(--navy); color: var(--cream); border-color: var(--navy); font-weight: 500; }
+.opt.active-gold { background: var(--gold); color: #fff; border-color: var(--gold); font-weight: 500; }
+.opt-box { width: 16px; height: 16px; border: 1.5px solid var(--border); border-radius: 2px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #fff; font-size: 11px; color: var(--navy); }
+.opt.active .opt-box, .opt.active-gold .opt-box { background: #fff; border-color: #fff; }
+textarea { resize: vertical; min-height: 80px; font-family: var(--sans); }
+.section-label { text-transform: uppercase; letter-spacing: 2px; font-size: 11px; color: var(--muted); margin-bottom: 12px; font-weight: 500; }
+.mirror-card { background: var(--cream-warm); border-left: 4px solid var(--gold); padding: 28px; margin-bottom: 24px; border-radius: 3px; }
+.mirror-label { text-transform: uppercase; letter-spacing: 2px; font-size: 10px; color: var(--muted); margin-bottom: 12px; font-weight: 500; }
+.mirror-text { font-family: var(--serif); font-size: 20px; line-height: 1.5; color: var(--navy); font-weight: 500; }
+.feedback-card { background: var(--cream-warm); border-left: 4px solid var(--gold); padding: 22px; margin-top: 24px; border-radius: 3px; animation: fadeIn .4s ease-out; }
+.feedback-text { font-family: var(--serif); font-size: 17px; line-height: 1.55; color: var(--navy); font-weight: 500; }
+.confidence-box { background: var(--cream-warm); border: 1px dashed var(--border); padding: 20px; margin-bottom: 20px; border-radius: 3px; }
+.confidence-q { font-family: var(--serif); font-size: 17px; color: var(--navy); margin-bottom: 14px; font-weight: 500; }
+.heat-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+@media (max-width: 700px) { .heat-bars { grid-template-columns: 1fr; } }
+.heat-bar { background: #fff; border: 1px solid var(--border); padding: 20px; border-radius: 3px; }
+.heat-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+.heat-label { font-family: var(--serif); font-size: 17px; color: var(--navy); font-weight: 500; }
+.heat-tier { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 100px; color: #fff; font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; }
+.heat-score { font-size: 13px; color: var(--muted); font-weight: 600; }
+.heat-progress { height: 7px; background: var(--border); border-radius: 4px; margin-bottom: 12px; overflow: hidden; }
+.heat-fill { height: 100%; border-radius: 4px; transition: width .4s; }
+.heat-note { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.legend-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 100px; color: #fff; font-size: 11px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; background: #fff; }
+.risks-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 700px) { .risks-grid { grid-template-columns: 1fr; } }
+.risk { padding: 14px 16px; border-radius: 3px; border: 1px solid var(--border); background: var(--cream-warm); opacity: 0.5; }
+.risk.active { opacity: 1; border-color: var(--risks); background: rgba(155, 44, 44, 0.05); }
+.risk-top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.risk-dot { width: 18px; height: 18px; border-radius: 50%; background: var(--border); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+.risk.active .risk-dot { background: var(--risks); }
+.risk-name { font-size: 13px; font-weight: 600; color: var(--navy); }
+.risk-desc { font-size: 12px; color: var(--muted); }
+.gaps-box { background: rgba(200, 157, 60, 0.08); border-left: 4px solid var(--neutral); padding: 24px; border-radius: 3px; margin-bottom: 32px; }
+.gaps-label { text-transform: uppercase; letter-spacing: 3px; font-size: 11px; color: var(--neutral); margin-bottom: 10px; font-weight: 600; }
+.gaps-intro { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+.gaps-list { list-style: none; }
+.gaps-list li { display: flex; gap: 12px; margin-bottom: 10px; font-family: var(--serif); font-size: 16px; color: var(--navy); }
+.reflection-box { background: var(--cream-warm); padding: 32px; border-radius: 3px; margin-bottom: 32px; }
+.reflection-label { text-transform: uppercase; letter-spacing: 3px; font-size: 11px; color: var(--gold); margin-bottom: 14px; font-weight: 600; }
+.reflection-box p { font-family: var(--serif); font-size: 17px; line-height: 1.65; color: var(--navy); margin-bottom: 18px; }
+.reflection-box p:last-child { margin-bottom: 0; }
+.summary-card { background: var(--navy); color: var(--cream); padding: 26px 28px; border-radius: 3px; margin-bottom: 36px; }
+.summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 600px) { .summary-grid { grid-template-columns: 1fr; gap: 16px; } }
+.summary-label { text-transform: uppercase; letter-spacing: 2px; font-size: 10px; opacity: 0.6; margin-bottom: 6px; }
+.summary-val { font-family: var(--serif); font-size: 18px; line-height: 1.4; }
+.whats-next { background: var(--navy); color: var(--cream); padding: 32px; border-radius: 3px; margin-top: 32px; }
+.wn-eyebrow { text-transform: uppercase; letter-spacing: 3px; font-size: 11px; color: var(--gold); margin-bottom: 12px; font-weight: 600; }
+.wn-title { font-family: var(--serif); font-size: 26px; font-weight: 500; margin-bottom: 16px; }
+.wn-lead { font-family: var(--serif); font-size: 16px; line-height: 1.6; margin-bottom: 24px; opacity: 0.9; }
+.wn-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+@media (max-width: 800px) { .wn-grid { grid-template-columns: 1fr; } }
+.wn-card { background: rgba(247, 245, 241, 0.08); padding: 18px; border-radius: 3px; }
+.wn-card-label { text-transform: uppercase; letter-spacing: 2px; font-size: 10px; color: var(--gold); margin-bottom: 8px; }
+.wn-card-desc { font-size: 13px; opacity: 0.9; margin-bottom: 14px; line-height: 1.5; }
+.wn-card a { color: var(--gold); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; text-decoration: none; cursor: pointer; }
+.spinner { width: 18px; height: 18px; border: 2.5px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.loading-row { display: flex; align-items: center; gap: 12px; padding: 24px; background: var(--cream-warm); border-radius: 3px; color: var(--muted); font-size: 14px; }
+.progress { display: flex; gap: 5px; align-items: center; margin-bottom: 32px; }
+.progress-step { height: 3px; width: 14px; background: var(--border); transition: all .2s; }
+.progress-step.current { width: 28px; background: var(--gold); }
+.progress-step.done { background: var(--gold); }
+.demo-btn { position: fixed; bottom: 20px; right: 20px; background: var(--navy); color: var(--cream); padding: 10px 16px; border-radius: 2px; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; cursor: pointer; opacity: 0.55; border: none; transition: opacity .2s; z-index: 50; font-family: var(--sans); }
+.demo-btn:hover { opacity: 1; }
+.footer { border-top: 1px solid var(--border); margin-top: 60px; padding: 20px 24px; max-width: 1100px; margin-left: auto; margin-right: auto; font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.cc-card { background: #fff; border: 1px solid var(--border); padding: 20px; border-radius: 3px; margin-bottom: 14px; }
+.cc-num { display: inline-block; font-family: var(--serif); font-size: 15px; color: var(--gold); font-weight: 600; margin-right: 8px; }
+.cc-q { font-family: var(--serif); font-size: 16px; color: var(--navy); font-weight: 500; margin-bottom: 14px; line-height: 1.4; }
+.cc-btns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.cc-btn { padding: 10px; border: 1px solid var(--border); border-radius: 2px; background: #fff; color: var(--ink); font-size: 13px; cursor: pointer; transition: all .15s; font-family: var(--sans); }
+.cc-btn.active-yes { background: var(--protects); color: #fff; border-color: var(--protects); }
+.cc-btn.active-partial { background: var(--neutral); color: #fff; border-color: var(--neutral); }
+.cc-btn.active-no { background: var(--risks); color: #fff; border-color: var(--risks); }
+.per-group-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px; }
+.per-group-row:last-child { border-bottom: none; }
+.pg-name { font-weight: 500; color: var(--navy); }
+.pg-btns { display: flex; gap: 6px; }
+.pg-btn { padding: 6px 14px; border: 1px solid var(--border); border-radius: 2px; background: #fff; color: var(--ink); font-size: 12px; cursor: pointer; font-family: var(--sans); }
+.pg-btn.active { background: var(--gold); color: #fff; border-color: var(--gold); }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/" class="nav-brand">ineedcoaching.org</a>
+    <div class="nav-links">
+      <a href="/coaches.html">Coaches</a>
+      <a href="/coach-courses.html">Courses</a>
+      <a href="/coaching-commons.html">Commons</a>
+      <a href="/decision-lab.html" class="nav-cta">Decision Lab</a>
+    </div>
+  </div>
+</nav>
+
+<main class="main" id="app"></main>
+<button class="demo-btn" id="demoBtn" onclick="DL.startDemoMode()">Demo Mode</button>
+
+<script>
+const SUPABASE_URL = "https://qroizygknxdjsstkezsf.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4";
+
+const DL = (function() {
+  let data = {};
+  let phase = "landing";
+
+  async function callClaude(prompt, maxTokens, expectJson) {
+    maxTokens = maxTokens || 1000; expectJson = !!expectJson;
+    try {
+      const res = await fetch(SUPABASE_URL + "/functions/v1/decision-lab-claude", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY },
+        body: JSON.stringify({ prompt: prompt, maxTokens: maxTokens, expectJson: expectJson })
+      });
+      if (!res.ok) { console.error("Edge function returned", res.status); return null; }
+      const j = await res.json();
+      return expectJson ? j.json : j.text;
+    } catch (e) { console.error("callClaude error:", e); return null; }
+  }
+
+  async function callApi(action, payload) {
+    payload = payload || {};
+    try {
+      const res = await fetch(SUPABASE_URL + "/functions/v1/decision-lab-api", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY },
+        body: JSON.stringify({ action: action, payload: payload })
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (e) { return null; }
+  }
+
+  const KEY = "decision_lab_session_v1";
+  function saveLocal() { try { localStorage.setItem(KEY, JSON.stringify({ data: data, phase: phase, ts: Date.now() })); } catch(e) {} }
+  function loadLocal() { try { const r = localStorage.getItem(KEY); return r ? JSON.parse(r) : null; } catch(e) { return null; } }
+  function clearLocal() { try { localStorage.removeItem(KEY); } catch(e) {} }
+
+  function getRoleLens(role) {
+    const m = {
+      "Board Member": { lens: "governance and policy" },
+      "Board President": { lens: "board leadership" },
+      "Superintendent": { lens: "district execution" },
+      "Cabinet / Central Office": { lens: "functional execution" },
+      "Principal / Campus Leader": { lens: "campus execution" }
+    };
+    return m[role] || { lens: "your leadership role" };
+  }
+
+  const DEMO = {
+    name: "Demo Leader", email: "demo@example.org", role: "Board Member",
+    districtContext: "Suburban", timeline: "This week",
+    scenario: "Budget shortfall", decisions: ["Reduce staffing", "Reallocate resources"],
+    confidence: "Moderate", concerns: ["Capacity strain", "Student impact", "Differential impact"],
+    claritySummary: "Here's what I'm hearing: You are facing a significant budget shortfall that demands action. You are considering reducing staffing while reallocating resources to preserve core programs. What's weighing on you most is how capacity strain and student impact will ripple differently across campuses. This decision sits at the intersection of instruction, staff morale, and community trust.",
+    pass1: { primary: "Partially", mostImportant: ["Instructional time", "Intervention & student support"], confidence: "Partially protected", feedback: "As a board member, you've named instructional time and intervention as what must be protected — yet you're only partially confident they will be. That gap isn't the budget; it's the decision itself." },
+    pass2: { mustRemain: ["Student access to support", "Equal access across campuses", "Safety and belonging"], confidence: "Partially discussed", feedback: "You've named three anchors that must hold. But 'partially discussed' is where non-negotiables go to die." },
+    pass3: { driver: "Mixed", sources: ["Quantitative data (scores, rates)", "Financial analysis", "Staff input / voice"], confidence: "Collected, partially reviewed", feedback: "Three evidence sources give you real triangulation. But the evidence hasn't yet done its job of pressure-testing urgency." },
+    pass4: { absorbers: ["Teachers", "Principals", "Students"], equippedPerGroup: { "Teachers": "Somewhat", "Principals": "Somewhat", "Students": "No" }, confidence: "Estimated only", feedback: "Three groups absorb this — students are least equipped. 'Estimated only' is the tell." },
+    pass5: { plan: "Somewhat defined", audiences: ["Families", "Staff", "Community"], confidence: "Partial draft", feedback: "Three audiences need to hear this. A partial draft means you're clear in your head but not yet on paper." },
+    filter: { studentsFeel: "Larger class sizes, less one-on-one support", teachersAbsorb: "More students per class, emotional weight", differentialGaps: "Title I campuses may lose intervention staff first", protecting: "Mixed", knowItWorks: "Intervention attendance, teacher retention at 30/60/90" },
+    confidenceCheck: { evidenceExamined: "Partially", nonNegotiablesDiscussed: "Partially", capacityAssessed: "Not yet", communicationDrafted: "Partially", differentialAnalyzed: "Not yet", stakeholderVoice: "Partially" },
+    finalAnalysis: {
+      scores: { instructionalProtection: 5, systemCapacity: 3, differentialImpact: 3, decisionQuality: 5, communicationClarity: 5 },
+      notes: {
+        instructionalProtection: "Intent is clear but 'partially protected' means the guardrails aren't tested yet.",
+        systemCapacity: "Students rated 'No' on equipped — and no one has directly assessed teacher/principal load.",
+        differentialImpact: "You flagged the concern but haven't analyzed by student group yet.",
+        decisionQuality: "Triangulated evidence exists but hasn't been interrogated against the urgency claim.",
+        communicationClarity: "Partial draft with three audiences. Silence erodes trust faster than hard news."
+      },
+      riskFlags: { shortTermism: true, initiativeOverload: false, differentialBlindSpots: true, opticsOverExecution: false },
+      namedGaps: [
+        "Direct capacity assessment never conducted with teachers, principals, or students",
+        "Differential impact analysis not done by student group (ELL, SPED, Title I)",
+        "Non-negotiables remain partially discussed — not named explicitly with the board",
+        "Stakeholder voice only partially included before the decision is finalized"
+      ],
+      paragraph1: "As a board member facing this decision within a week, you've done the harder work most boards skip — you've named what must be protected and flagged where your confidence is thin. The tension in your profile isn't between what you want and what the budget allows; it's between what you intend and what your process has actually verified. Your Suburban context means families will notice class size changes quickly, and 'partially discussed' non-negotiables tend to collapse under pressure when principals begin absorbing decisions they weren't part of shaping.",
+      paragraph2: "Before the vote, push for three things: a direct capacity conversation with principals (not a survey — a conversation), a differential analysis by student group showing which campuses absorb what, and communication language drafted by Thursday — not Monday. Research on district decision quality is consistent: the difference between decisions that hold and decisions that erode trust is not the action itself, but whether non-negotiables were named before tradeoffs were forced. You're close. Don't let the timeline cost you that margin."
+    }
+  };
+
+  function el(tag, className, text) {
+    const e = document.createElement(tag);
+    if (className) e.className = className;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  function mount(node) {
+    const app = document.getElementById("app");
+    app.innerHTML = "";
+    app.appendChild(node);
+    saveLocal();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function go(newPhase) { phase = newPhase; render(); }
+
+  const ORDER = ["scenario","decision","concerns","clarity","pass1","pass2","pass3","pass4","pass5","filter","confidence","final"];
+  function progressBar() {
+    const idx = ORDER.indexOf(phase);
+    if (idx < 0) return null;
+    const wrap = el("div", "progress");
+    for (let i = 0; i < 9; i++) {
+      const capped = Math.min(idx, 8);
+      wrap.appendChild(el("div", "progress-step" + (i < capped ? " done" : i === capped ? " current" : "")));
+    }
+    return wrap;
+  }
+
+  function backBtn(toPhase) {
+    const b = el("button", "back-btn", "← Back");
+    b.onclick = function() { go(toPhase); };
+    return b;
+  }
+
+  function shell(eyebrow, title, subtitle, bodyNode, backPhase) {
+    const root = el("div", "step-container");
+    const pb = progressBar();
+    if (pb) root.appendChild(pb);
+    if (backPhase) root.appendChild(backBtn(backPhase));
+    root.appendChild(el("div", "step-eyebrow", eyebrow));
+    root.appendChild(el("h2", "step-title", title));
+    if (subtitle) root.appendChild(el("p", "step-subtitle", subtitle));
+    root.appendChild(bodyNode);
+    return root;
+  }
+
+  function singleSelectGrid(options, currentValue, onSelect, variant) {
+    const gridClass = "options-grid" + (options.length === 3 ? " options-3" : options.length === 4 ? " options-4" : "");
+    const grid = el("div", gridClass);
+    options.forEach(function(o) {
+      const activeClass = variant === "gold" ? "active-gold" : "active";
+      const btn = el("button", "opt" + (currentValue === o ? " " + activeClass : ""));
+      btn.textContent = o;
+      btn.onclick = function() { onSelect(o); };
+      grid.appendChild(btn);
+    });
+    return grid;
+  }
+
+  function multiSelectGrid(options, currentValues, onToggle, variant) {
+    const grid = el("div", "options-grid");
+    options.forEach(function(o) {
+      const active = currentValues.indexOf(o) >= 0;
+      const activeClass = variant === "gold" ? "active-gold" : "active";
+      const btn = el("button", "opt" + (active ? " " + activeClass : ""));
+      btn.appendChild(el("div", "opt-box", active ? "✓" : ""));
+      btn.appendChild(el("span", null, o));
+      btn.onclick = function() { onToggle(o); };
+      grid.appendChild(btn);
+    });
+    return grid;
+  }
+
+  function renderLanding() {
+    const wrap = el("div");
+    const hero = el("div", "landing-hero");
+    const left = el("div");
+    left.appendChild(el("div", "eyebrow", "PRIVATE BETA · BY INVITATION"));
+    const h1 = el("h1", "hero-title");
+    h1.innerHTML = 'Catch the <em>leaps</em> before you make them.';
+    left.appendChild(h1);
+    left.appendChild(el("p", "hero-lead", "A guided decision lab for board members, superintendents, and campus leaders. It names the gaps between intention and process. Ten minutes. One decision. Clarity before the vote."));
+    const features = [
+      ["Role-aware analysis", "Board members, superintendents, and principals each get analysis calibrated to their lane."],
+      ["Five-pass framework", "Protect the core. Clarify non-negotiables. Demand evidence. Invest in capacity. Communicate with steadiness."],
+      ["Confidence checks", "The lab won't make claims your inputs don't support."],
+      ["Research-informed", "Grounded in instructional leadership, system coherence, and capacity-building research."]
+    ];
+    const ul = el("ul", "feature-list");
+    features.forEach(function(f) {
+      const li = el("li");
+      li.appendChild(el("div", "feature-check", "✓"));
+      const body = el("div");
+      body.appendChild(el("div", "feature-h", f[0]));
+      body.appendChild(el("div", "feature-p", f[1]));
+      li.appendChild(body);
+      ul.appendChild(li);
+    });
+    left.appendChild(ul);
+    const why = el("div", "why-card");
+    why.appendChild(el("div", "why-card-label", "WHY NOT JUST ASK CHATGPT?"));
+    const p = el("p");
+    p.innerHTML = 'Because general-purpose AI will give you an answer. This lab gives you a <em>process.</em> It refuses to make claims your inputs don\'t support, names your specific process gaps, and produces a brief you can hand to your board.';
+    why.appendChild(p);
+    left.appendChild(why);
+    hero.appendChild(left);
+    hero.appendChild(renderEntryCard());
+    wrap.appendChild(hero);
+    const footer = el("div", "footer");
+    footer.appendChild(el("span", null, "The Boardroom Decision Lab · ineedcoaching.org · Private Beta"));
+    wrap.appendChild(footer);
+    return wrap;
+  }
+
+  function renderEntryCard() {
+    const card = el("div", "entry-card");
+    const state = { name: "", email: "", role: "", districtContext: "", err: "" };
+
+    function repaint() {
+      card.innerHTML = "";
+      card.appendChild(el("div", "entry-label", "BEGIN SESSION"));
+      card.appendChild(el("h3", "entry-title", "Enter the lab"));
+      [
+        { label: "Your name", type: "text", key: "name", placeholder: "First and last" },
+        { label: "Email", type: "email", key: "email", placeholder: "you@district.org" }
+      ].forEach(function(f) {
+        const w = el("div", "field");
+        w.appendChild(el("label", null, f.label));
+        const input = document.createElement("input");
+        input.type = f.type; input.value = state[f.key]; input.placeholder = f.placeholder;
+        input.oninput = function(e) { state[f.key] = e.target.value; };
+        w.appendChild(input);
+        card.appendChild(w);
+      });
+      [
+        { label: "Role", key: "role", options: ["", "Board Member", "Board President", "Superintendent", "Cabinet / Central Office", "Principal / Campus Leader", "Other"] },
+        { label: "District context", key: "districtContext", options: ["", "Urban", "Suburban", "Rural", "Small-town", "Mixed"] }
+      ].forEach(function(f) {
+        const w = el("div", "field");
+        w.appendChild(el("label", null, f.label));
+        const sel = document.createElement("select");
+        f.options.forEach(function(o) {
+          const opt = document.createElement("option");
+          opt.value = o; opt.textContent = o || "Select...";
+          if (state[f.key] === o) opt.selected = true;
+          sel.appendChild(opt);
+        });
+        sel.onchange = function(e) { state[f.key] = e.target.value; };
+        w.appendChild(sel);
+        card.appendChild(w);
+      });
+      if (state.err) card.appendChild(el("div", "err", state.err));
+      const btn = el("button", "btn btn-primary btn-primary-full", "Begin →");
+      btn.onclick = function() {
+        if (!state.name.trim()) { state.err = "Please enter your name."; repaint(); return; }
+        if (!state.email.includes("@")) { state.err = "Please enter a valid email."; repaint(); return; }
+        if (!state.role) { state.err = "Please select your role."; repaint(); return; }
+        if (!state.districtContext) { state.err = "Please select your district context."; repaint(); return; }
+        data = { name: state.name, email: state.email, role: state.role, districtContext: state.districtContext, decisions: [], concerns: [] };
+        callApi("waitlist_add", { name: state.name, email: state.email, role: state.role, district_context: state.districtContext, interest: "individual" });
+        go("scenario");
+      };
+      card.appendChild(btn);
+      const privacy = el("div", "privacy-note");
+      privacy.appendChild(el("span", null, "🔒 Beta access. Your session is private."));
+      card.appendChild(privacy);
+    }
+    repaint();
+    return card;
+  }
+
+  function renderScenario() {
+    const body = el("div");
+    const state = { scenario: data.scenario || "", scenarioOther: data.scenarioOther || "", timeline: data.timeline || "" };
+    function repaint() {
+      body.innerHTML = "";
+      body.appendChild(singleSelectGrid(["Budget shortfall", "Staffing instability", "Discipline / safety issue", "Data pressure", "Public scrutiny", "Other"], state.scenario, function(o) { state.scenario = o; repaint(); }));
+      if (state.scenario === "Other") {
+        const ta = document.createElement("textarea");
+        ta.placeholder = "One or two lines..."; ta.maxLength = 160; ta.value = state.scenarioOther;
+        ta.oninput = function(e) { state.scenarioOther = e.target.value; };
+        ta.style.marginBottom = "16px";
+        body.appendChild(ta);
+      }
+      const hasScenario = state.scenario && (state.scenario !== "Other" || state.scenarioOther.trim());
+      if (hasScenario) {
+        const w = el("div");
+        w.style.marginTop = "24px";
+        w.appendChild(el("div", "section-label", "WHEN MUST THIS DECISION BE MADE?"));
+        const note = el("p", null, "Timeline shapes which passes matter most.");
+        note.style.cssText = "font-size: 13px; color: var(--muted); margin-bottom: 12px;";
+        w.appendChild(note);
+        w.appendChild(singleSelectGrid(["Today / this meeting", "This week", "This month", "This quarter or longer"], state.timeline, function(o) { state.timeline = o; repaint(); }, "gold"));
+        body.appendChild(w);
+      }
+      if (hasScenario && state.timeline) {
+        const btn = el("button", "btn btn-primary", "Continue →");
+        btn.style.marginTop = "24px";
+        btn.onclick = function() { data.scenario = state.scenario; data.scenarioOther = state.scenarioOther; data.timeline = state.timeline; go("decision"); };
+        body.appendChild(btn);
+      }
+    }
+    repaint();
+    return shell("STEP 1 OF 9", "What situation are you facing?", "Choose the pressure point. If none fit, describe it in a line.", body, null);
+  }
+
+  function renderDecision() {
+    const body = el("div");
+    const state = { decisions: (data.decisions || []).slice(), decisionOther: data.decisionOther || "", confidence: data.confidence || "" };
+    function repaint() {
+      body.innerHTML = "";
+      body.appendChild(multiSelectGrid(["Reduce staffing", "Cut programs / services", "Reallocate resources", "Add initiative / intervention", "Delay implementation", "Other"], state.decisions, function(o) {
+        const i = state.decisions.indexOf(o);
+        if (i >= 0) state.decisions.splice(i, 1); else state.decisions.push(o);
+        repaint();
+      }));
+      if (state.decisions.indexOf("Other") >= 0) {
+        const ta = document.createElement("textarea");
+        ta.placeholder = "Describe the action..."; ta.maxLength = 200; ta.value = state.decisionOther;
+        ta.oninput = function(e) { state.decisionOther = e.target.value; };
+        ta.style.marginBottom = "16px";
+        body.appendChild(ta);
+      }
+      const canCont = state.decisions.length > 0 && (state.decisions.indexOf("Other") < 0 || state.decisionOther.trim());
+      if (canCont) {
+        const w = el("div"); w.style.marginTop = "24px";
+        w.appendChild(el("div", "section-label", "OVERALL CONFIDENCE?"));
+        w.appendChild(singleSelectGrid(["High", "Moderate", "Low"], state.confidence, function(o) { state.confidence = o; repaint(); }, "gold"));
+        body.appendChild(w);
+      }
+      if (canCont && state.confidence) {
+        const btn = el("button", "btn btn-primary", "Continue →");
+        btn.style.marginTop = "24px";
+        btn.onclick = function() { data.decisions = state.decisions; data.decisionOther = state.decisionOther; data.confidence = state.confidence; go("concerns"); };
+        body.appendChild(btn);
+      }
+    }
+    repaint();
+    return shell("STEP 2 OF 9", "What action are you considering?", "Select all that apply.", body, "scenario");
+  }
+
+  function renderConcerns() {
+    const body = el("div");
+    const state = { concerns: (data.concerns || []).slice(), concernsOther: data.concernsOther || "" };
+    function repaint() {
+      body.innerHTML = "";
+      body.appendChild(multiSelectGrid(["Capacity strain", "Student impact", "Differential impact", "Communication clarity", "Reversibility", "Political fallout", "Legal/compliance risk", "Trust / morale", "Other"], state.concerns, function(o) {
+        const i = state.concerns.indexOf(o);
+        if (i >= 0) state.concerns.splice(i, 1); else state.concerns.push(o);
+        repaint();
+      }));
+      if (state.concerns.indexOf("Other") >= 0) {
+        const ta = document.createElement("textarea");
+        ta.placeholder = "Describe..."; ta.maxLength = 200; ta.value = state.concernsOther;
+        ta.oninput = function(e) { state.concernsOther = e.target.value; };
+        ta.style.marginBottom = "16px";
+        body.appendChild(ta);
+      }
+      const canCont = state.concerns.length > 0 && (state.concerns.indexOf("Other") < 0 || state.concernsOther.trim());
+      if (canCont) {
+        const btn = el("button", "btn btn-primary", "Continue →");
+        btn.style.marginTop = "24px";
+        btn.onclick = function() { data.concerns = state.concerns; data.concernsOther = state.concernsOther; go("clarity"); };
+        body.appendChild(btn);
+      }
+    }
+    repaint();
+    return shell("STEP 3 OF 9", "What concerns you most?", "Select all that apply.", body, "decision");
+  }
+
+  function renderClarity() {
+    const body = el("div");
+    const state = { summary: data.claritySummary || "", refining: false, refineText: "", refineCount: data.refineCount || 0, loading: !data.claritySummary, regenerating: false, history: (data.refinementHistory || []).slice() };
+    const scenarioText = data.scenario === "Other" ? data.scenarioOther : data.scenario;
+    const decisionText = data.decisions.filter(function(x) { return x !== "Other"; }).concat(data.decisionOther ? [data.decisionOther] : []).join(" + ");
+    const concernsText = data.concerns.filter(function(x) { return x !== "Other"; }).concat(data.concernsOther ? [data.concernsOther] : []).join(", ");
+
+    async function generate(refinement) {
+      const prompt = 'You are an executive leadership coach producing a brief "coach clarity" mirror.\n\nRole: ' + data.role + '\nDistrict: ' + data.districtContext + '\nScenario: ' + scenarioText + '\nAction(s): ' + decisionText + '\nConfidence: ' + data.confidence + '\nConcerns: ' + concernsText + '\n' + (refinement ? 'Additional context: ' + refinement : '') + '\n\nWrite 3-4 sentences. Start with "Here\'s what I\'m hearing:" Return ONLY the mirror.';
+      const text = await callClaude(prompt, 400);
+      return text || ("Here's what I'm hearing: You are facing " + scenarioText + ". You are considering " + decisionText + ". As a " + data.role + " in a " + data.districtContext + " context, this decision sits at the intersection of instruction, staff capacity, and community trust.");
+    }
+
+    async function initialGen() {
+      const text = await generate(null);
+      state.summary = text; state.loading = false; data.claritySummary = text;
+      repaint();
+    }
+
+    async function submitRefinement() {
+      if (!state.refineText.trim()) return;
+      state.regenerating = true;
+      state.history.push(state.refineText);
+      repaint();
+      const newText = await generate(state.refineText);
+      state.summary = newText; state.refineCount++;
+      data.claritySummary = newText; data.refinementHistory = state.history; data.refineCount = state.refineCount;
+      state.refining = false; state.refineText = ""; state.regenerating = false;
+      repaint();
+    }
+
+    function repaint() {
+      body.innerHTML = "";
+      if (state.loading) {
+        const row = el("div", "loading-row");
+        row.appendChild(el("div", "spinner"));
+        row.appendChild(el("span", null, "Listening carefully..."));
+        body.appendChild(row);
+        return;
+      }
+      const card = el("div", "mirror-card");
+      card.appendChild(el("div", "mirror-label", "MIRROR" + (state.refineCount > 0 ? " (REFINED " + state.refineCount + "×)" : "")));
+      if (state.regenerating) {
+        const row = el("div", "loading-row");
+        row.style.cssText = "background: transparent; padding: 0;";
+        row.appendChild(el("div", "spinner"));
+        row.appendChild(el("span", null, "Integrating..."));
+        card.appendChild(row);
+      } else {
+        card.appendChild(el("p", "mirror-text", state.summary));
+      }
+      body.appendChild(card);
+      if (state.regenerating) return;
+      const canRefine = state.refineCount < 2;
+      if (!state.refining) {
+        body.appendChild(el("div", "section-label", state.refineCount === 0 ? "DID I CAPTURE THIS ACCURATELY?" : "CLOSER THIS TIME?"));
+        const row = el("div"); row.style.cssText = "display: flex; gap: 12px; flex-wrap: wrap;";
+        const primary = el("button", "btn btn-primary", state.refineCount >= 2 ? "Close enough — let's begin" : "Yes, enter the Decision Lab");
+        primary.onclick = function() { go("pass1"); };
+        row.appendChild(primary);
+        if (canRefine) {
+          const sec = el("button", "btn btn-secondary", state.refineCount === 0 ? "Let me refine" : "One more refinement");
+          sec.onclick = function() { state.refining = true; repaint(); };
+          row.appendChild(sec);
+        }
+        body.appendChild(row);
+      } else {
+        const help = el("p", null, "Add context, correct anything, or clarify.");
+        help.style.cssText = "font-size: 13px; color: var(--muted); margin-bottom: 10px;";
+        body.appendChild(help);
+        const ta = document.createElement("textarea");
+        ta.placeholder = "What did I miss?"; ta.rows = 3; ta.value = state.refineText;
+        ta.oninput = function(e) { state.refineText = e.target.value; };
+        body.appendChild(ta);
+        const row = el("div"); row.style.cssText = "display: flex; gap: 10px; margin-top: 12px;";
+        const go1 = el("button", "btn btn-primary", "Revise →");
+        go1.onclick = submitRefinement;
+        row.appendChild(go1);
+        const cancel = el("button", "btn btn-secondary", "Cancel");
+        cancel.onclick = function() { state.refining = false; state.refineText = ""; repaint(); };
+        row.appendChild(cancel);
+        body.appendChild(row);
+      }
+    }
+    repaint();
+    if (state.loading) initialGen();
+    return shell("STEP 4 OF 9 · COACH CLARITY", "Before we analyze, let's make sure we've understood you.", null, body, "concerns");
+  }
+
+  function renderPass(config) {
+    const body = el("div");
+    const existing = data[config.key] || {};
+    const state = {
+      primary: existing.primary || existing.driver || existing.plan || "",
+      secondary: existing.mostImportant || existing.mustRemain || existing.sources || existing.absorbers || existing.audiences || (config.secondaryMulti ? [] : ""),
+      perGroup: existing.equippedPerGroup || {},
+      confidence: existing.confidence || "",
+      feedback: existing.feedback || "",
+      loading: false
+    };
+
+    async function genMicro() {
+      state.loading = true; repaint();
+      const decisionText = data.decisions.filter(function(x) { return x !== "Other"; }).concat(data.decisionOther ? [data.decisionOther] : []).join(" + ");
+      const roleInfo = getRoleLens(data.role);
+      const secondaryDesc = config.perGroupMode
+        ? Object.keys(state.perGroup).map(function(g) { return g + ": " + state.perGroup[g]; }).join("; ")
+        : (Array.isArray(state.secondary) ? state.secondary.join(", ") : state.secondary);
+      const prompt = 'You are an executive leadership coach giving deep micro-feedback.\n\nLEADER: ' + data.role + ' (' + roleInfo.lens + ')\nDISTRICT: ' + data.districtContext + '\nDECISION: ' + decisionText + '\nPASS ' + config.num + ': ' + config.title + '\nPRIMARY: ' + state.primary + '\nSECONDARY: ' + secondaryDesc + '\nCONFIDENCE: ' + state.confidence + '\n\nWrite 2-3 sentences in 3 MOVES: 1) ACKNOWLEDGE, 2) SHARP INSIGHT, 3) FORWARD CONNECTION. Return only the feedback.';
+      const text = await callClaude(prompt, 300);
+      state.feedback = text || "Your inputs reveal a tension that will shape your decision profile.";
+      state.loading = false;
+      const payload = { confidence: state.confidence, feedback: state.feedback };
+      if (config.perGroupMode) { payload.absorbers = state.secondary; payload.equippedPerGroup = state.perGroup; payload.primary = state.primary; }
+      else if (config.num === 3) { payload.driver = state.primary; payload.sources = state.secondary; }
+      else if (config.num === 5) { payload.plan = state.primary; payload.audiences = state.secondary; }
+      else if (config.num === 2) { payload.mustRemain = state.secondary; }
+      else { payload.primary = state.primary; payload.mostImportant = state.secondary; }
+      data[config.key] = payload;
+      repaint();
+    }
+
+    function repaint() {
+      body.innerHTML = "";
+      if (config.num !== 2 && config.primaryOpts && config.primaryOpts.length > 0) {
+        const w = el("div"); w.style.marginBottom = "24px";
+        w.appendChild(el("div", "section-label", config.primaryLabel));
+        w.appendChild(singleSelectGrid(config.primaryOpts, state.primary, function(o) { state.primary = o; state.feedback = ""; repaint(); }));
+        body.appendChild(w);
+      } else {
+        const p = el("p", null, "Select everything that must be preserved. These are your anchors against drift.");
+        p.style.cssText = "font-size: 15px; color: var(--muted); margin-bottom: 20px;";
+        body.appendChild(p);
+      }
+
+      const showSecondary = config.num === 2 || (config.primaryOpts && config.primaryOpts.length === 0) || state.primary;
+
+      if (showSecondary && !config.perGroupMode) {
+        const w = el("div"); w.style.marginBottom = "24px";
+        if (config.secondaryLabel) w.appendChild(el("div", "section-label", config.secondaryLabel));
+        if (config.secondaryMulti) {
+          w.appendChild(multiSelectGrid(config.secondaryOpts, state.secondary, function(o) {
+            const i = state.secondary.indexOf(o);
+            if (i >= 0) state.secondary.splice(i, 1); else state.secondary.push(o);
+            state.feedback = ""; repaint();
+          }, "gold"));
+        } else {
+          w.appendChild(singleSelectGrid(config.secondaryOpts, state.secondary, function(o) { state.secondary = o; state.feedback = ""; repaint(); }, "gold"));
+        }
+        body.appendChild(w);
+      }
+
+      if (showSecondary && config.perGroupMode) {
+        const sel = el("div"); sel.style.marginBottom = "20px";
+        sel.appendChild(el("div", "section-label", "WHO ABSORBS THIS? (SELECT ALL)"));
+        sel.appendChild(multiSelectGrid(config.secondaryOpts, state.secondary, function(o) {
+          const i = state.secondary.indexOf(o);
+          if (i >= 0) { state.secondary.splice(i, 1); delete state.perGroup[o]; }
+          else state.secondary.push(o);
+          state.feedback = ""; repaint();
+        }));
+        body.appendChild(sel);
+        if (state.secondary.length > 0) {
+          const eq = el("div"); eq.style.marginBottom = "20px";
+          eq.appendChild(el("div", "section-label", "IS EACH GROUP EQUIPPED?"));
+          const box = el("div", "cc-card");
+          state.secondary.forEach(function(g) {
+            const row = el("div", "per-group-row");
+            row.appendChild(el("div", "pg-name", g));
+            const btns = el("div", "pg-btns");
+            ["Yes", "Somewhat", "No"].forEach(function(o) {
+              const b = el("button", "pg-btn" + (state.perGroup[g] === o ? " active" : ""), o);
+              b.onclick = function() { state.perGroup[g] = o; state.feedback = ""; repaint(); };
+              btns.appendChild(b);
+            });
+            row.appendChild(btns);
+            box.appendChild(row);
+          });
+          eq.appendChild(box);
+          body.appendChild(eq);
+        }
+      }
+
+      const secondaryReady = config.perGroupMode
+        ? state.secondary.length > 0 && state.secondary.every(function(g) { return state.perGroup[g]; })
+        : (config.secondaryMulti ? state.secondary.length > 0 : !!state.secondary);
+
+      if (secondaryReady) {
+        const conf = el("div", "confidence-box");
+        conf.appendChild(el("div", "section-label", "CONFIDENCE CHECK"));
+        conf.appendChild(el("div", "confidence-q", config.confidenceQ));
+        conf.appendChild(singleSelectGrid(config.confidenceOpts, state.confidence, function(o) { state.confidence = o; state.feedback = ""; repaint(); }));
+        body.appendChild(conf);
+      }
+
+      const canGen = secondaryReady && state.confidence && !state.feedback;
+      if (canGen) {
+        const btn = document.createElement("button");
+        btn.className = "btn btn-primary";
+        btn.textContent = state.loading ? "Analyzing..." : "Get micro-feedback →";
+        btn.type = "button";
+        btn.onclick = genMicro;
+        if (state.loading) btn.disabled = true;
+        body.appendChild(btn);
+      }
+
+      if (state.feedback) {
+        const fc = el("div", "feedback-card");
+        fc.appendChild(el("p", "feedback-text", "✦ " + state.feedback));
+        body.appendChild(fc);
+        const next = el("button", "btn btn-gold", config.nextPhase === "filter" ? "Continue to Decision Filter →" : "Next pass →");
+        next.style.marginTop = "24px";
+        next.onclick = function() { go(config.nextPhase); };
+        body.appendChild(next);
+      }
+    }
+    repaint();
+    return shell("PASS " + config.num + " OF 5 · DECISION LAB", config.title, null, body, config.prevPhase);
+  }
+
+  function renderPass1() { return renderPass({ num: 1, key: "pass1", title: "Does this decision protect learning — or sacrifice it?", primaryLabel: "YOUR READ:", primaryOpts: ["Protecting", "Partially", "Sacrificing"], secondaryLabel: "WHAT MUST BE PROTECTED? (SELECT ALL)", secondaryOpts: ["Instructional time", "Intervention & student support", "Access to enrichment", "Relationships & belonging", "Staffing continuity"], secondaryMulti: true, confidenceQ: "How confident are you that what you marked is actually protected — not just intended to be?", confidenceOpts: ["Fully protected", "Partially protected", "Not yet verified"], nextPhase: "pass2", prevPhase: "clarity" }); }
+  function renderPass2() { return renderPass({ num: 2, key: "pass2", title: "What must remain true — no matter what?", primaryOpts: [], secondaryOpts: ["Instructional consistency", "Student access to support", "Staffing stability", "Equal access across campuses", "Safety and belonging", "Family trust and communication"], secondaryMulti: true, confidenceQ: "Have these been named and discussed aloud — or are they implicit?", confidenceOpts: ["Named explicitly", "Partially discussed", "Still implicit"], nextPhase: "pass3", prevPhase: "pass1" }); }
+  function renderPass3() { return renderPass({ num: 3, key: "pass3", title: "Is this driven by urgency — or grounded in evidence?", primaryLabel: "PRIMARY DRIVER:", primaryOpts: ["Urgency", "Mixed", "Evidence"], secondaryLabel: "WHICH EVIDENCE SOURCES HAVE BEEN EXAMINED? (SELECT ALL)", secondaryOpts: ["Quantitative data (scores, rates)", "Qualitative data (surveys, interviews)", "Classroom observations", "Staff input / voice", "Student input / voice", "Family / community input", "Financial analysis", "Research / external benchmarks", "Prior experience"], secondaryMulti: true, confidenceQ: "Has this evidence been deliberately compared and discussed — or collected but not yet interrogated?", confidenceOpts: ["Examined & discussed", "Collected, partially reviewed", "Not yet interrogated"], nextPhase: "pass4", prevPhase: "pass2" }); }
+  function renderPass4() { return renderPass({ num: 4, key: "pass4", title: "Who absorbs this decision — and can they carry it?", primaryOpts: [], secondaryOpts: ["Teachers", "Principals", "Support staff", "Central office", "Students", "Families"], secondaryMulti: true, perGroupMode: true, confidenceQ: "Has the capacity of these groups been directly assessed — or estimated from the outside?", confidenceOpts: ["Directly assessed", "Mixed", "Estimated only"], nextPhase: "pass5", prevPhase: "pass3" }); }
+  function renderPass5() { return renderPass({ num: 5, key: "pass5", title: "Will this create clarity — or confusion?", primaryLabel: "IS THE COMMUNICATION PLAN...", primaryOpts: ["Clear and proactive", "Somewhat defined", "Unclear"], secondaryLabel: "WHICH AUDIENCES NEED TO HEAR THIS? (SELECT ALL)", secondaryOpts: ["Families", "Staff", "Students", "Community", "Media / public", "Other boards / agencies"], secondaryMulti: true, confidenceQ: "Has the communication actually been drafted — or is it still conceptual?", confidenceOpts: ["Drafted & ready", "Partial draft", "Still conceptual"], nextPhase: "filter", prevPhase: "pass4" }); }
+
+  function renderFilter() {
+    const body = el("div");
+    const state = Object.assign({ studentsFeel: "", teachersAbsorb: "", differentialGaps: "", protecting: "", knowItWorks: "" }, data.filter || {});
+    const questions = [
+      { k: "studentsFeel", q: "What will students feel first?", ph: "Immediate, tangible experience..." },
+      { k: "teachersAbsorb", q: "What will teachers & principals have to absorb?", ph: "Workload, emotional, logistical..." },
+      { k: "differentialGaps", q: "What gaps could this widen — even unintentionally?", ph: "Which groups are most exposed?" },
+      { k: "protecting", q: "What are you actually protecting?", opts: ["Learning", "Operations", "Optics", "Mixed"] },
+      { k: "knowItWorks", q: "How will you know if this is working?", ph: "Signals, data points, feedback loops..." }
+    ];
+    function repaint() {
+      body.innerHTML = "";
+      questions.forEach(function(q, i) {
+        const card = el("div", "cc-card");
+        const head = el("div"); head.style.cssText = "display: flex; gap: 12px; margin-bottom: 12px;";
+        head.appendChild(el("div", "cc-num", "0" + (i + 1)));
+        const qt = el("div", "cc-q", q.q); qt.style.marginBottom = "0";
+        head.appendChild(qt);
+        card.appendChild(head);
+        if (q.opts) {
+          card.appendChild(singleSelectGrid(q.opts, state[q.k], function(o) { state[q.k] = o; repaint(); }));
+        } else {
+          const ta = document.createElement("textarea");
+          ta.rows = 2; ta.placeholder = q.ph; ta.value = state[q.k];
+          ta.oninput = function(e) { state[q.k] = e.target.value; };
+          ta.onblur = function() { repaint(); };
+          card.appendChild(ta);
+        }
+        body.appendChild(card);
+      });
+      const btn = el("button", "btn btn-primary", "Continue to Confidence Check →");
+      btn.style.marginTop = "24px";
+      btn.onclick = function() {
+        const missing = Object.keys(state).filter(function(k) { return !state[k] || !String(state[k]).trim(); });
+        if (missing.length > 0) {
+          alert("Please complete all 5 questions before continuing.");
+          return;
+        }
+        data.filter = state;
+        go("confidence");
+      };
+      body.appendChild(btn);
+    }
+    repaint();
+    return shell("STEP 7 OF 9 · DECISION FILTER", "Five honest questions.", "Short answers are fine.", body, "pass5");
+  }
+
+  function renderConfidence() {
+    const body = el("div");
+    const state = Object.assign({ evidenceExamined: "", nonNegotiablesDiscussed: "", capacityAssessed: "", communicationDrafted: "", differentialAnalyzed: "", stakeholderVoice: "" }, data.confidenceCheck || {});
+    const questions = [
+      { k: "evidenceExamined", q: "Has the evidence been examined from multiple sources?" },
+      { k: "nonNegotiablesDiscussed", q: "Have your non-negotiables been explicitly discussed with your team?" },
+      { k: "capacityAssessed", q: "Has the capacity of those absorbing this decision been directly assessed?" },
+      { k: "communicationDrafted", q: "Has the communication plan been drafted with specific language?" },
+      { k: "differentialAnalyzed", q: "Has differential impact been analyzed by student group?" },
+      { k: "stakeholderVoice", q: "Have the people most affected had meaningful voice in this decision?" }
+    ];
+    function repaint() {
+      body.innerHTML = "";
+      questions.forEach(function(q, i) {
+        const card = el("div", "cc-card");
+        const head = el("div"); head.style.cssText = "display: flex; gap: 12px; margin-bottom: 14px; align-items: flex-start;";
+        head.appendChild(el("div", "cc-num", String(i + 1)));
+        const qt = el("div", "cc-q", q.q); qt.style.marginBottom = "0";
+        head.appendChild(qt);
+        card.appendChild(head);
+        const btns = el("div", "cc-btns");
+        ["Yes", "Partially", "Not yet"].forEach(function(o) {
+          const cls = state[q.k] === o ? (o === "Yes" ? "cc-btn active-yes" : o === "Partially" ? "cc-btn active-partial" : "cc-btn active-no") : "cc-btn";
+          const b = el("button", cls, o);
+          b.onclick = function() { state[q.k] = o; repaint(); };
+          btns.appendChild(b);
+        });
+        card.appendChild(btns);
+        body.appendChild(card);
+      });
+      const note = el("div");
+      note.style.cssText = "margin-top: 20px; padding: 16px; background: var(--cream-warm); border: 1px dashed var(--border); border-radius: 3px; font-size: 13px; color: var(--muted);";
+      note.textContent = 'ⓘ "Not yet" answers become named gaps — not silent assumptions.';
+      body.appendChild(note);
+      const complete = Object.keys(state).every(function(k) { return !!state[k]; });
+      if (complete) {
+        const btn = el("button", "btn btn-primary", "Generate Decision Profile →");
+        btn.style.marginTop = "20px";
+        btn.onclick = function() { data.confidenceCheck = state; go("final"); };
+        body.appendChild(btn);
+      }
+    }
+    repaint();
+    return shell("STEP 8 OF 9 · CONFIDENCE CHECK", "Before we generate your profile, let's verify our ground.", null, body, "filter");
+  }
+
+  function renderFinal() {
+    async function genAnalysis() {
+      const scenarioText = data.scenario === "Other" ? data.scenarioOther : data.scenario;
+      const decisionText = data.decisions.filter(function(x) { return x !== "Other"; }).concat(data.decisionOther ? [data.decisionOther] : []).join(" + ");
+      const concernsText = data.concerns.filter(function(x) { return x !== "Other"; }).concat(data.concernsOther ? [data.concernsOther] : []).join(", ");
+      const roleInfo = getRoleLens(data.role);
+      const prompt = 'Generate a decision brief as JSON only.\n\nLEADER: ' + data.role + ' (' + roleInfo.lens + ')\nDISTRICT: ' + data.districtContext + '\nTIMELINE: ' + data.timeline + '\nSCENARIO: ' + scenarioText + '\nDECISION: ' + decisionText + '\nCONFIDENCE: ' + data.confidence + '\nCONCERNS: ' + concernsText + '\n\nPASSES:\n1: ' + JSON.stringify(data.pass1) + '\n2: ' + JSON.stringify(data.pass2) + '\n3: ' + JSON.stringify(data.pass3) + '\n4: ' + JSON.stringify(data.pass4) + '\n5: ' + JSON.stringify(data.pass5) + '\n\nFILTER: ' + JSON.stringify(data.filter) + '\nCONFIDENCE: ' + JSON.stringify(data.confidenceCheck) + '\n\nReturn ONLY:\n{\n  "scores": { "instructionalProtection": 0-10, "systemCapacity": 0-10, "differentialImpact": 0-10, "decisionQuality": 0-10, "communicationClarity": 0-10 },\n  "notes": { "instructionalProtection": "1 sentence", "systemCapacity": "1 sentence", "differentialImpact": "1 sentence", "decisionQuality": "1 sentence", "communicationClarity": "1 sentence" },\n  "riskFlags": { "shortTermism": bool, "initiativeOverload": bool, "differentialBlindSpots": bool, "opticsOverExecution": bool },\n  "namedGaps": ["gap 1", "gap 2"],\n  "paragraph1": "4-5 sentences through the ' + data.role + ' lens, referencing ' + data.districtContext + ' reality.",\n  "paragraph2": "4-5 sentences of research-aligned best practices."\n}\n\nSCORING: 7-10 Protects, 4-6 Neutral, 0-3 Risks. "Not yet" caps score at 6.';
+      const result = await callClaude(prompt, 3500, true);
+      if (result) {
+        data.finalAnalysis = result;
+        callApi("session_upsert", {
+          name: data.name, email: data.email, role: data.role, district_context: data.districtContext,
+          scenario: data.scenario, timeline: data.timeline, decisions: data.decisions, confidence: data.confidence,
+          concerns: data.concerns, clarity_summary: data.claritySummary,
+          pass1: data.pass1, pass2: data.pass2, pass3: data.pass3, pass4: data.pass4, pass5: data.pass5,
+          filter: data.filter, confidence_check: data.confidenceCheck, final_analysis: data.finalAnalysis, completed: true
+        });
+      }
+      render();
+    }
+
+    if (!data.finalAnalysis) {
+      const load = el("div", "step-container");
+      load.appendChild(el("div", "step-eyebrow", "ANALYZING"));
+      load.appendChild(el("h2", "step-title", "Building your decision profile..."));
+      ["Verifying process rigor", "Scoring instructional protection", "Assessing system capacity", "Detecting risk flags"].forEach(function(t) {
+        const row = el("div", "loading-row"); row.style.marginBottom = "10px";
+        row.appendChild(el("div", "spinner"));
+        row.appendChild(el("span", null, t));
+        load.appendChild(row);
+      });
+      genAnalysis();
+      return load;
+    }
+
+    const analysis = data.finalAnalysis;
+    const scenarioText = data.scenario === "Other" ? data.scenarioOther : data.scenario;
+    const decisionText = data.decisions.filter(function(x) { return x !== "Other"; }).concat(data.decisionOther ? [data.decisionOther] : []).join(" + ");
+    const main = el("div", "step-container"); main.style.maxWidth = "860px";
+    main.appendChild(el("div", "step-eyebrow", "STEP 9 OF 9 · YOUR BRIEF"));
+    const title = el("h2", "step-title", "Decision Profile"); title.style.fontSize = "44px";
+    main.appendChild(title);
+    main.appendChild(el("p", "step-subtitle", "A candid, process-calibrated read."));
+
+    const sc = el("div", "summary-card");
+    const sg = el("div", "summary-grid");
+    [[scenarioText, "SCENARIO"], [decisionText, "PROPOSED DECISION"]].forEach(function(pair) {
+      const c = el("div");
+      c.appendChild(el("div", "summary-label", pair[1]));
+      c.appendChild(el("div", "summary-val", pair[0]));
+      sg.appendChild(c);
+    });
+    sc.appendChild(sg);
+    main.appendChild(sc);
+
+    const hmSection = el("div"); hmSection.style.marginBottom = "36px";
+    const hmHead = el("div");
+    hmHead.style.cssText = "display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; align-items: center;";
+    const lbl = el("div", "section-label", "DIMENSIONAL PROFILE"); lbl.style.marginBottom = "0";
+    hmHead.appendChild(lbl);
+    const legend = el("div", "legend");
+    [["Protects 7–10", "var(--protects)"], ["Neutral 4–6", "var(--neutral)"], ["Risks 0–3", "var(--risks)"]].forEach(function(l) {
+      const pill = el("span", "legend-pill", l[0]);
+      pill.style.background = l[1];
+      pill.insertBefore(el("span", "legend-dot"), pill.firstChild);
+      legend.appendChild(pill);
+    });
+    hmHead.appendChild(legend);
+    hmSection.appendChild(hmHead);
+
+    const hmGrid = el("div", "heat-bars");
+    [["instructionalProtection", "Instructional Protection"], ["systemCapacity", "System Capacity"], ["differentialImpact", "Differential Impact"], ["decisionQuality", "Decision Quality"], ["communicationClarity", "Communication Clarity"]].forEach(function(item) {
+      const score = analysis.scores[item[0]];
+      const tier = score >= 7 ? "Protects" : score >= 4 ? "Neutral" : "Risks";
+      const color = score >= 7 ? "var(--protects)" : score >= 4 ? "var(--neutral)" : "var(--risks)";
+      const card = el("div", "heat-bar");
+      const top = el("div", "heat-top");
+      top.appendChild(el("div", "heat-label", item[1]));
+      const right = el("div"); right.style.cssText = "display: flex; align-items: center; gap: 8px;";
+      right.appendChild(el("span", "heat-score", score + "/10"));
+      const tb = el("span", "heat-tier", tier.toUpperCase()); tb.style.background = color;
+      right.appendChild(tb);
+      top.appendChild(right);
+      card.appendChild(top);
+      const prog = el("div", "heat-progress");
+      const fill = el("div", "heat-fill"); fill.style.width = (score * 10) + "%"; fill.style.background = color;
+      prog.appendChild(fill);
+      card.appendChild(prog);
+      card.appendChild(el("div", "heat-note", analysis.notes[item[0]]));
+      hmGrid.appendChild(card);
+    });
+    hmSection.appendChild(hmGrid);
+    main.appendChild(hmSection);
+
+    const rfWrap = el("div"); rfWrap.style.marginBottom = "36px";
+    rfWrap.appendChild(el("div", "section-label", "RISK FLAGS"));
+    const rfGrid = el("div", "risks-grid");
+    [["Short-termism", "shortTermism", "Solving the immediate while deepening long-term harm."], ["Initiative overload", "initiativeOverload", "Adding to stressed adults."], ["Differential blind spots", "differentialBlindSpots", "Treating schools the same when needs differ."], ["Optics over execution", "opticsOverExecution", "Announcing boldly, supporting weakly."]].forEach(function(r) {
+      const active = analysis.riskFlags[r[1]];
+      const card = el("div", "risk" + (active ? " active" : ""));
+      const top = el("div", "risk-top");
+      top.appendChild(el("div", "risk-dot", active ? "⚠" : "✓"));
+      top.appendChild(el("div", "risk-name", r[0]));
+      card.appendChild(top);
+      card.appendChild(el("div", "risk-desc", r[2]));
+      rfGrid.appendChild(card);
+    });
+    rfWrap.appendChild(rfGrid);
+    main.appendChild(rfWrap);
+
+    if (analysis.namedGaps && analysis.namedGaps.length > 0) {
+      const gaps = el("div", "gaps-box");
+      gaps.appendChild(el("div", "gaps-label", "NAMED PROCESS GAPS"));
+      gaps.appendChild(el("p", "gaps-intro", "Gaps your own confidence check revealed."));
+      const list = el("ul", "gaps-list");
+      analysis.namedGaps.forEach(function(g) {
+        const li = el("li");
+        const icon = el("span", null, "⚠"); icon.style.color = "var(--neutral)";
+        li.appendChild(icon);
+        li.appendChild(el("span", null, g));
+        list.appendChild(li);
+      });
+      gaps.appendChild(list);
+      main.appendChild(gaps);
+    }
+
+    const ref = el("div", "reflection-box");
+    ref.appendChild(el("div", "reflection-label", "REFLECTION BRIEF"));
+    ref.appendChild(el("p", null, analysis.paragraph1));
+    ref.appendChild(el("p", null, analysis.paragraph2));
+    main.appendChild(ref);
+
+    const actions = el("div");
+    actions.style.cssText = "display: flex; gap: 10px; flex-wrap: wrap; padding-top: 24px; border-top: 1px solid var(--border);";
+    const pdfBtn = el("button", "btn btn-gold", "↓ Download PDF brief");
+    pdfBtn.onclick = function() { downloadPDF(analysis, scenarioText, decisionText); };
+    actions.appendChild(pdfBtn);
+    const restart = el("button", "btn btn-secondary", "Start new session");
+    restart.onclick = function() { clearLocal(); data = { name: data.name, email: data.email, role: data.role, districtContext: data.districtContext, decisions: [], concerns: [] }; go("scenario"); };
+    actions.appendChild(restart);
+    main.appendChild(actions);
+
+    const wn = el("div", "whats-next");
+    wn.appendChild(el("div", "wn-eyebrow", "WHAT'S NEXT"));
+    wn.appendChild(el("h3", "wn-title", "You just did what most boards never do."));
+    wn.appendChild(el("p", "wn-lead", "The real power comes when your whole board runs this independently — and you see where you align, diverge, and assumed alignment that wasn't there."));
+    const wg = el("div", "wn-grid");
+    [["FOR YOUR BOARD", "Run this with all 7 members.", "Request board pricing →", "mailto:hello@ineedcoaching.org?subject=Board%20Pricing"], ["FOR YOUR DISTRICT", "Enterprise access for board, cabinet, principals.", "Request enterprise →", "mailto:hello@ineedcoaching.org?subject=Enterprise"], ["FOR YOU", "Book a 30-min debrief.", "Book a debrief →", "mailto:hello@ineedcoaching.org?subject=Debrief"]].forEach(function(c) {
+      const card = el("div", "wn-card");
+      card.appendChild(el("div", "wn-card-label", c[0]));
+      card.appendChild(el("div", "wn-card-desc", c[1]));
+      const a = document.createElement("a");
+      a.href = c[3]; a.textContent = c[2];
+      card.appendChild(a);
+      wg.appendChild(card);
+    });
+    wn.appendChild(wg);
+    main.appendChild(wn);
+    return main;
+  }
+
+  function downloadPDF(analysis, scenarioText, decisionText) {
+    const scores = analysis.scores;
+    function tier(s) { return s >= 7 ? "Protects" : s >= 4 ? "Neutral" : "Risks"; }
+    function tierColor(s) { return s >= 7 ? "#2F6B3E" : s >= 4 ? "#C89D3C" : "#9B2C2C"; }
+    function scoreRow(label, key) {
+      return '<tr><td style="padding:10px 0;border-bottom:1px solid #E5E0D2;"><strong>' + label + '</strong></td><td style="padding:10px 0;border-bottom:1px solid #E5E0D2;color:' + tierColor(scores[key]) + ';font-weight:600;">' + scores[key] + '/10</td><td style="padding:10px 0;border-bottom:1px solid #E5E0D2;"><span style="background:' + tierColor(scores[key]) + ';color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;">' + tier(scores[key]) + '</span></td><td style="padding:10px 0;border-bottom:1px solid #E5E0D2;font-size:13px;color:#555;">' + analysis.notes[key] + '</td></tr>';
+    }
+    const closeTag = "</scr" + "ipt>";
+    const printTag = "<scr" + "ipt>setTimeout(function(){window.print();},500);" + closeTag;
+    const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Decision Brief</title><style>@page{margin:0.75in}body{font-family:Georgia,serif;color:#1a3a52;line-height:1.55;max-width:7.5in;margin:0 auto;padding:0.5in 0;background:#faf6ed}h1{font-weight:500;font-size:34px;margin:0 0 8px}h2{font-weight:500;font-size:20px;margin:28px 0 14px}p{margin:0 0 12px;font-size:14px}.dark{padding:16px;border-radius:3px;background:#1a3a52;color:#f7f5f1;margin:14px 0}.ivory{padding:18px;border-radius:3px;background:#f5f1e8;margin:14px 0;border-left:4px solid #c49a3c}table{width:100%;border-collapse:collapse;margin:10px 0}.print-btn{position:fixed;top:20px;right:20px;padding:10px 20px;background:#1a3a52;color:#f7f5f1;border:none;border-radius:3px;cursor:pointer}@media print{.print-btn{display:none}body{background:#fff}}</style></head><body><button class="print-btn" onclick="window.print()">Save as PDF</button><h1>The Boardroom Decision Lab</h1><div style="font-size:11px;color:#666">' + (data.name || "—") + ' · ' + (data.role || "—") + ' · ' + new Date().toLocaleDateString() + '</div><div class="dark"><div><strong>Scenario:</strong> ' + scenarioText + '</div><div style="margin-top:8px"><strong>Decision:</strong> ' + decisionText + '</div></div><h2>Decision Profile</h2><table>' + scoreRow("Instructional Protection", "instructionalProtection") + scoreRow("System Capacity", "systemCapacity") + scoreRow("Differential Impact", "differentialImpact") + scoreRow("Decision Quality", "decisionQuality") + scoreRow("Communication Clarity", "communicationClarity") + '</table><h2>Reflection Brief</h2><div class="ivory"><p>' + analysis.paragraph1 + '</p><p>' + analysis.paragraph2 + '</p></div>' + printTag + '</body></html>';
+    const w = window.open("", "_blank");
+    if (w) { w.document.write(html); w.document.close(); } else alert("Please allow pop-ups.");
+  }
+
+  function render() {
+    const renderers = { landing: renderLanding, scenario: renderScenario, decision: renderDecision, concerns: renderConcerns, clarity: renderClarity, pass1: renderPass1, pass2: renderPass2, pass3: renderPass3, pass4: renderPass4, pass5: renderPass5, filter: renderFilter, confidence: renderConfidence, final: renderFinal };
+    mount((renderers[phase] || renderLanding)());
+    document.getElementById("demoBtn").style.display = phase === "landing" ? "block" : "none";
+  }
+
+  function startDemoMode() { data = Object.assign({}, DEMO); phase = "final"; render(); }
+
+  function init() {
+    const saved = loadLocal();
+    if (saved && saved.data && saved.data.name && saved.phase !== "landing") {
+      const hoursOld = (Date.now() - saved.ts) / 3600000;
+      if (hoursOld < 24 && confirm("Resume unfinished session?")) { data = saved.data; phase = saved.phase; }
+      else { clearLocal(); }
+    }
+    render();
+  }
+
+  return { init: init, startDemoMode: startDemoMode };
+})();
+
+document.addEventListener("DOMContentLoaded", DL.init);
+</script>
+</body>
+</html>
