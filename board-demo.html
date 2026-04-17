@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Board Alignment Demo · ineedcoaching.org</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root { --navy: #1a3a52; --navy-deep: #0f2638; --gold: #c49a3c; --cream: #f7f5f1; --cream-warm: #faf6ed; --ink: #0f1b2d; --muted: #6b7280; --border: #d4cdb8; --protects: #2f6b3e; --neutral: #c89d3c; --risks: #9b2c2c; --serif: "Cormorant Garamond", Georgia, serif; --sans: "DM Sans", sans-serif; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); color: var(--ink); background: var(--cream); line-height: 1.5; }
+.nav { position: fixed; top: 0; left: 0; right: 0; background: rgba(26, 58, 82, 0.95); backdrop-filter: blur(10px); z-index: 100; padding: 14px 0; border-bottom: 1px solid rgba(196, 154, 60, 0.2); }
+.nav-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; display: flex; justify-content: space-between; align-items: center; }
+.nav-brand { color: var(--cream); font-family: var(--serif); font-size: 20px; font-weight: 600; text-decoration: none; }
+.nav-links { display: flex; gap: 28px; align-items: center; }
+.nav-links a { color: var(--cream); text-decoration: none; font-size: 14px; opacity: 0.8; }
+.nav-cta { background: var(--gold); color: var(--navy) !important; padding: 8px 16px; border-radius: 2px; font-weight: 600; opacity: 1 !important; }
+.main { padding-top: 80px; max-width: 900px; margin: 0 auto; padding-left: 24px; padding-right: 24px; padding-bottom: 60px; }
+.demo-banner { background: var(--gold); color: var(--navy); padding: 12px 20px; text-align: center; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; position: fixed; top: 60px; left: 0; right: 0; z-index: 90; }
+.hero { padding: 60px 0 20px; }
+.eyebrow { text-transform: uppercase; letter-spacing: 3px; font-size: 11px; color: var(--gold); margin-bottom: 12px; font-weight: 500; }
+.hero h1 { font-family: var(--serif); font-size: 44px; line-height: 1.1; font-weight: 500; color: var(--navy); margin-bottom: 12px; letter-spacing: -0.5px; }
+.hero h1 em { color: var(--gold); font-style: italic; }
+.hero-sub { color: var(--muted); font-size: 15px; max-width: 620px; }
+.scenario-summary { background: var(--navy); color: var(--cream); padding: 24px 28px; border-radius: 3px; margin-bottom: 24px; }
+.sum-label { text-transform: uppercase; letter-spacing: 2px; font-size: 10px; opacity: 0.6; margin-bottom: 4px; }
+.sum-title { font-family: var(--serif); font-size: 24px; font-weight: 500; margin-bottom: 6px; }
+.sum-detail { font-size: 14px; opacity: 0.85; line-height: 1.5; }
+.sum-meta { display: flex; gap: 20px; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(247, 245, 241, 0.15); font-size: 12px; flex-wrap: wrap; opacity: 0.9; }
+.sum-meta strong { color: var(--gold); margin-right: 6px; }
+.participation { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }
+@media (max-width: 600px) { .participation { grid-template-columns: 1fr; } }
+.stat { background: #fff; border: 1px solid var(--border); padding: 20px; border-radius: 3px; text-align: center; }
+.stat-big { font-family: var(--serif); font-size: 40px; color: var(--navy); font-weight: 500; line-height: 1; margin-bottom: 6px; }
+.stat-label { text-transform: uppercase; letter-spacing: 2px; font-size: 10px; color: var(--muted); font-weight: 500; }
+.section { margin-bottom: 36px; }
+.section-head { margin-bottom: 18px; }
+.section-eyebrow { text-transform: uppercase; letter-spacing: 3px; font-size: 11px; color: var(--gold); margin-bottom: 8px; font-weight: 600; }
+.section-title { font-family: var(--serif); font-size: 28px; color: var(--navy); font-weight: 500; margin-bottom: 6px; }
+.section-sub { color: var(--muted); font-size: 14px; }
+.intent-card { background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--protects); padding: 24px; border-radius: 3px; margin-bottom: 10px; }
+.intent-text { font-family: var(--serif); font-size: 17px; color: var(--navy); line-height: 1.55; margin-bottom: 8px; }
+.intent-share { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); font-weight: 600; }
+.cluster { background: #fff; border: 1px solid var(--border); padding: 22px; border-radius: 3px; margin-bottom: 12px; }
+.cluster-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
+.cluster-label { font-family: var(--serif); font-size: 18px; color: var(--navy); font-weight: 500; }
+.cluster-count { font-size: 12px; color: var(--muted); background: var(--cream-warm); padding: 4px 12px; border-radius: 100px; font-weight: 500; }
+.cluster-desc { font-size: 14px; color: var(--ink); line-height: 1.6; opacity: 0.85; }
+.tension-card { background: rgba(200, 157, 60, 0.08); border-left: 4px solid var(--neutral); padding: 22px; border-radius: 3px; margin-bottom: 12px; }
+.tension-title { font-family: var(--serif); font-size: 18px; color: var(--navy); font-weight: 500; margin-bottom: 8px; }
+.tension-desc { font-size: 14px; color: var(--ink); line-height: 1.6; }
+.pathway-card { background: #fff; border: 1px solid var(--border); border-top: 3px solid var(--navy); padding: 22px; border-radius: 3px; margin-bottom: 12px; }
+.pathway-num { display: inline-block; width: 28px; height: 28px; background: var(--navy); color: var(--cream); border-radius: 50%; text-align: center; line-height: 28px; font-size: 13px; font-weight: 600; margin-right: 10px; }
+.pathway-title { font-family: var(--serif); font-size: 18px; color: var(--navy); font-weight: 500; display: inline; }
+.pathway-desc { font-size: 14px; color: var(--ink); line-height: 1.6; margin-top: 10px; }
+.readiness-card { background: var(--navy); color: var(--cream); padding: 28px; border-radius: 3px; margin-bottom: 24px; }
+.readiness-label { text-transform: uppercase; letter-spacing: 2px; font-size: 10px; color: var(--gold); font-weight: 600; margin-bottom: 8px; }
+.readiness-text { font-family: var(--serif); font-size: 20px; line-height: 1.5; }
+.facilitation { background: var(--cream-warm); padding: 28px; border-radius: 3px; margin-bottom: 24px; }
+.fac-label { text-transform: uppercase; letter-spacing: 3px; font-size: 11px; color: var(--gold); margin-bottom: 12px; font-weight: 600; }
+.fac-title { font-family: var(--serif); font-size: 24px; color: var(--navy); margin-bottom: 14px; font-weight: 500; }
+.fac-prompt { font-family: var(--serif); font-size: 17px; color: var(--navy); line-height: 1.55; padding: 14px 18px; background: #fff; border-left: 3px solid var(--gold); border-radius: 2px; margin-bottom: 10px; }
+.heat-row { display: grid; grid-template-columns: 180px 1fr 60px; gap: 14px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+@media (max-width: 600px) { .heat-row { grid-template-columns: 1fr; } }
+.heat-row:last-child { border-bottom: none; }
+.heat-label { font-family: var(--serif); font-size: 15px; color: var(--navy); font-weight: 500; }
+.heat-bar-outer { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; position: relative; }
+.heat-bar-inner { height: 100%; border-radius: 4px; transition: width .6s ease-out; }
+.heat-avg { font-size: 13px; color: var(--muted); text-align: right; font-weight: 600; }
+.footer { border-top: 1px solid var(--border); margin-top: 40px; padding-top: 20px; font-size: 12px; color: var(--muted); text-align: center; }
+.cta-card { background: var(--navy); color: var(--cream); padding: 36px; border-radius: 3px; margin-top: 40px; text-align: center; }
+.cta-card h3 { font-family: var(--serif); font-size: 28px; font-weight: 500; margin-bottom: 10px; }
+.cta-card p { opacity: 0.85; margin-bottom: 20px; font-size: 15px; }
+.cta-btn { background: var(--gold); color: var(--navy); padding: 14px 28px; border-radius: 2px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; font-size: 12px; text-decoration: none; display: inline-block; }
+.cta-btn:hover { background: #e6c875; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/" class="nav-brand">ineedcoaching.org</a>
+    <div class="nav-links">
+      <a href="/board-lab.html">Create scenario</a>
+      <a href="/decision-lab.html" class="nav-cta">Decision Lab</a>
+    </div>
+  </div>
+</nav>
+
+<div class="demo-banner">📊 Sample Dashboard · 7 Board Members · Demo Only</div>
+
+<main class="main" style="padding-top: 120px;">
+  <div id="app"></div>
+</main>
+
+<script>
+const app = document.getElementById("app");
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+// ============================================================
+// DEMO DATA - 7 Board Members, Budget Shortfall scenario
+// ============================================================
+const board = {
+  scenario: "Budget shortfall",
+  proposed_decision: "Reduce staffing by 12 FTE + reallocate intervention funds",
+  scenario_detail: "A $2.3M shortfall next fiscal year driven by declining enrollment and ESSER fund expiration. Proposal on the table: cut 12 FTE across campuses and redirect $600K of intervention funds to general operations.",
+  district_context: "Suburban",
+  timeline: "This month",
+  decision_stage: "Proposal on the table"
+};
+
+const memberCount = 7;
+const scoreAverages = {
+  instructionalProtection: 5.3,
+  systemCapacity: 3.7,
+  differentialImpact: 3.4,
+  decisionQuality: 5.1,
+  communicationClarity: 4.6
+};
+
+const aggregated = {
+  shared_intent: [
+    "Preserve student access to intervention services — especially for the students already furthest from the system.",
+    "Avoid a staffing cut that hollows out the instructional core even if the budget math works on paper.",
+    "Communicate any decision to families before rumors do the work for us."
+  ],
+  perspective_clusters: [
+    {
+      label: "Protect the classroom first",
+      member_count: 3,
+      description: "Three members frame the decision as primarily instructional. They emphasize that staffing cuts affecting core teachers and intervention staff will be felt in classrooms within weeks and are difficult to reverse. They want stricter guardrails around which positions can be considered."
+    },
+    {
+      label: "Solve the math, then explain",
+      member_count: 2,
+      description: "Two members emphasize fiscal responsibility as the primary obligation. They see the $2.3M gap as non-negotiable and believe any path forward requires structural reductions — but they want a clearer plan for how reductions translate to classroom experience."
+    },
+    {
+      label: "Equity-first review",
+      member_count: 2,
+      description: "Two members want the decision paused until a differential impact analysis is complete by campus. They are specifically concerned that Title I schools and ELL programs could absorb a disproportionate share of the cuts without anyone noticing until fall."
+    }
+  ],
+  tensions: [
+    {
+      title: "Speed versus thoroughness",
+      description: "The timeline requires a vote this month, but multiple members want analyses (differential impact, capacity assessment) that haven't been done yet. The board is being asked to decide without the evidence some members feel is essential."
+    },
+    {
+      title: "Intervention funds as protection versus flexibility",
+      description: "Reallocating intervention funds frees up $600K — but the members who prioritize equity see this as exactly the wrong place to cut. There is genuine, legitimate disagreement here about what 'protecting students' means."
+    },
+    {
+      title: "Staff voice in the decision",
+      description: "Several members note that principals and teachers have not been directly consulted about which positions are least mission-critical. This gap surfaces as a process integrity concern, not just a data concern."
+    }
+  ],
+  pathways_forward: [
+    {
+      title: "Commission differential impact analysis this week",
+      description: "Before the vote, have the cabinet produce a one-page analysis showing projected FTE loss by campus, by program, and by student population served. Even a rough analysis gives the board defensible ground."
+    },
+    {
+      title: "Separate the staffing vote from the intervention fund vote",
+      description: "These are two different decisions currently bundled. Voting on them separately lets members who support one but oppose the other be on record — and gives the superintendent clearer direction on which part has consensus."
+    },
+    {
+      title: "Communications plan drafted by Friday",
+      description: "Regardless of what the board decides, the communication must be ready before the vote. A drafted message to families, staff, and the community — with specific language on what is and isn't changing — prevents the narrative from running ahead of the decision."
+    }
+  ],
+  resolution_readiness: "This board is not ready to vote this week. There is substantial shared intent to protect students and communicate well, but members are operating from different information about who absorbs the cuts. One week of targeted work would move this from a divided vote to an aligned one.",
+  facilitation_prompts: [
+    "If we vote yes on this proposal and a Title I principal calls us in September saying they lost their only reading specialist, what do we say?",
+    "What would make us confident enough to vote — and what would need to change in the next 7 days to get us there?",
+    "If we split this into two votes — staffing reductions and intervention fund reallocation — would we pass both, one, or neither?"
+  ]
+};
+
+function render() {
+  const wrap = el("div");
+
+  // Hero
+  const hero = el("div", "hero");
+  hero.appendChild(el("div", "eyebrow", "BOARD ALIGNMENT DASHBOARD · SAMPLE"));
+  const h1 = el("h1");
+  h1.innerHTML = 'What <em>your</em> board could look like.';
+  hero.appendChild(h1);
+  hero.appendChild(el("div", "hero-sub", "A real example — 7 board members, same budget shortfall scenario, completed independently and anonymously. This is what the president sees back: shared intent, perspective clusters, honest tensions, pathways forward, and a facilitation brief."));
+  wrap.appendChild(hero);
+
+  // Scenario summary
+  const sc = el("div", "scenario-summary");
+  sc.appendChild(el("div", "sum-label", "SCENARIO"));
+  sc.appendChild(el("div", "sum-title", board.scenario + " · " + board.proposed_decision));
+  sc.appendChild(el("div", "sum-detail", board.scenario_detail));
+  const meta = el("div", "sum-meta");
+  const m1 = el("span"); m1.innerHTML = '<strong>District:</strong> ' + board.district_context; meta.appendChild(m1);
+  const m2 = el("span"); m2.innerHTML = '<strong>Timeline:</strong> ' + board.timeline; meta.appendChild(m2);
+  const m3 = el("span"); m3.innerHTML = '<strong>Stage:</strong> ' + board.decision_stage; meta.appendChild(m3);
+  sc.appendChild(meta);
+  wrap.appendChild(sc);
+
+  // Participation stats
+  const statsWrap = el("div", "participation");
+  [
+    [7, "Members completed"],
+    [0, "Still pending"],
+    ["100%", "Participation"]
+  ].forEach(function(pair) {
+    const s = el("div", "stat");
+    s.appendChild(el("div", "stat-big", String(pair[0])));
+    s.appendChild(el("div", "stat-label", pair[1]));
+    statsWrap.appendChild(s);
+  });
+  wrap.appendChild(statsWrap);
+
+  // Heat map
+  const heatSec = el("div", "section");
+  const hh = el("div", "section-head");
+  hh.appendChild(el("div", "section-eyebrow", "AVERAGE DIMENSIONAL PROFILE"));
+  hh.appendChild(el("div", "section-title", "Where the board lands on average"));
+  hh.appendChild(el("div", "section-sub", "Averaged scores across all 7 completed member briefs."));
+  heatSec.appendChild(hh);
+  const heatBox = el("div");
+  heatBox.style.cssText = "background: #fff; border: 1px solid var(--border); padding: 24px; border-radius: 3px;";
+  [
+    ["instructionalProtection", "Instructional Protection"],
+    ["systemCapacity", "System Capacity"],
+    ["differentialImpact", "Differential Impact"],
+    ["decisionQuality", "Decision Quality"],
+    ["communicationClarity", "Communication Clarity"]
+  ].forEach(function(item) {
+    const avg = scoreAverages[item[0]];
+    const color = avg >= 7 ? "var(--protects)" : avg >= 4 ? "var(--neutral)" : "var(--risks)";
+    const row = el("div", "heat-row");
+    row.appendChild(el("div", "heat-label", item[1]));
+    const bar = el("div", "heat-bar-outer");
+    const fill = el("div", "heat-bar-inner");
+    fill.style.width = (avg * 10) + "%";
+    fill.style.background = color;
+    bar.appendChild(fill);
+    row.appendChild(bar);
+    const avgLabel = el("div", "heat-avg", avg.toFixed(1) + "/10");
+    avgLabel.style.color = color;
+    row.appendChild(avgLabel);
+    heatBox.appendChild(row);
+  });
+  heatSec.appendChild(heatBox);
+  wrap.appendChild(heatSec);
+
+  // Shared intent
+  const siSec = el("div", "section");
+  const sih = el("div", "section-head");
+  sih.appendChild(el("div", "section-eyebrow", "SHARED INTENT"));
+  sih.appendChild(el("div", "section-title", "What nearly everyone wants"));
+  sih.appendChild(el("div", "section-sub", "The ground that's already common across your board. Name it aloud — don't assume it."));
+  siSec.appendChild(sih);
+  aggregated.shared_intent.forEach(function(statement) {
+    const card = el("div", "intent-card");
+    card.appendChild(el("div", "intent-text", statement));
+    card.appendChild(el("div", "intent-share", "SHARED ACROSS MEMBERS"));
+    siSec.appendChild(card);
+  });
+  wrap.appendChild(siSec);
+
+  // Perspective clusters
+  const pcSec = el("div", "section");
+  const pch = el("div", "section-head");
+  pch.appendChild(el("div", "section-eyebrow", "PERSPECTIVE CLUSTERS"));
+  pch.appendChild(el("div", "section-title", "How the board groups"));
+  pch.appendChild(el("div", "section-sub", "Patterns of emphasis — not factions. Each cluster represents genuine, legitimate framing."));
+  pcSec.appendChild(pch);
+  aggregated.perspective_clusters.forEach(function(c) {
+    const card = el("div", "cluster");
+    const head = el("div", "cluster-head");
+    head.appendChild(el("div", "cluster-label", c.label));
+    head.appendChild(el("div", "cluster-count", c.member_count + " member" + (c.member_count === 1 ? "" : "s")));
+    card.appendChild(head);
+    card.appendChild(el("div", "cluster-desc", c.description));
+    pcSec.appendChild(card);
+  });
+  wrap.appendChild(pcSec);
+
+  // Tensions
+  const tSec = el("div", "section");
+  const th = el("div", "section-head");
+  th.appendChild(el("div", "section-eyebrow", "HONEST TENSIONS"));
+  th.appendChild(el("div", "section-title", "The real disagreements"));
+  th.appendChild(el("div", "section-sub", "Not dysfunction — these are the genuine tradeoffs your board must navigate."));
+  tSec.appendChild(th);
+  aggregated.tensions.forEach(function(t) {
+    const card = el("div", "tension-card");
+    card.appendChild(el("div", "tension-title", "⚡ " + t.title));
+    card.appendChild(el("div", "tension-desc", t.description));
+    tSec.appendChild(card);
+  });
+  wrap.appendChild(tSec);
+
+  // Pathways
+  const pSec = el("div", "section");
+  const ph = el("div", "section-head");
+  ph.appendChild(el("div", "section-eyebrow", "PATHWAYS FORWARD"));
+  ph.appendChild(el("div", "section-title", "Where you could go"));
+  ph.appendChild(el("div", "section-sub", "Concrete options that honor the tensions instead of bulldozing them."));
+  pSec.appendChild(ph);
+  aggregated.pathways_forward.forEach(function(p, i) {
+    const card = el("div", "pathway-card");
+    const titleRow = el("div");
+    titleRow.appendChild(el("span", "pathway-num", String(i + 1)));
+    titleRow.appendChild(el("span", "pathway-title", p.title));
+    card.appendChild(titleRow);
+    card.appendChild(el("div", "pathway-desc", p.description));
+    pSec.appendChild(card);
+  });
+  wrap.appendChild(pSec);
+
+  // Readiness
+  const rd = el("div", "readiness-card");
+  rd.appendChild(el("div", "readiness-label", "RESOLUTION READINESS"));
+  rd.appendChild(el("div", "readiness-text", aggregated.resolution_readiness));
+  wrap.appendChild(rd);
+
+  // Facilitation
+  const fac = el("div", "facilitation");
+  fac.appendChild(el("div", "fac-label", "FACILITATION BRIEF"));
+  fac.appendChild(el("div", "fac-title", "Ask these at your next meeting"));
+  aggregated.facilitation_prompts.forEach(function(prompt) {
+    fac.appendChild(el("div", "fac-prompt", "→ " + prompt));
+  });
+  wrap.appendChild(fac);
+
+  // CTA
+  const cta = el("div", "cta-card");
+  cta.appendChild(el("h3", null, "Ready to do this with your board?"));
+  cta.appendChild(el("p", null, "Create a scenario, share one link, and see your board clearly."));
+  const btn = document.createElement("a");
+  btn.className = "cta-btn";
+  btn.href = "/board-lab.html";
+  btn.textContent = "Create a scenario →";
+  cta.appendChild(btn);
+  wrap.appendChild(cta);
+
+  const foot = el("div", "footer");
+  foot.textContent = "The Boardroom Decision Lab · Sample Dashboard · ineedcoaching.org";
+  wrap.appendChild(foot);
+
+  return wrap;
+}
+
+app.appendChild(render());
+</script>
+</body>
+</html>
