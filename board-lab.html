@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Board Alignment Lab · Create Scenario · ineedcoaching.org</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root { --navy: #1a3a52; --navy-deep: #0f2638; --gold: #c49a3c; --cream: #f7f5f1; --cream-warm: #faf6ed; --ink: #0f1b2d; --muted: #6b7280; --border: #d4cdb8; --serif: "Cormorant Garamond", Georgia, serif; --sans: "DM Sans", sans-serif; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); color: var(--ink); background: var(--cream); line-height: 1.5; }
+.nav { position: fixed; top: 0; left: 0; right: 0; background: rgba(26, 58, 82, 0.95); backdrop-filter: blur(10px); z-index: 100; padding: 14px 0; border-bottom: 1px solid rgba(196, 154, 60, 0.2); }
+.nav-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; display: flex; justify-content: space-between; align-items: center; }
+.nav-brand { color: var(--cream); font-family: var(--serif); font-size: 20px; font-weight: 600; text-decoration: none; }
+.nav-links { display: flex; gap: 28px; align-items: center; }
+.nav-links a { color: var(--cream); text-decoration: none; font-size: 14px; opacity: 0.8; }
+.nav-cta { background: var(--gold); color: var(--navy) !important; padding: 8px 16px; border-radius: 2px; font-weight: 600; opacity: 1 !important; }
+.main { padding-top: 80px; max-width: 720px; margin: 0 auto; padding-left: 24px; padding-right: 24px; padding-bottom: 60px; }
+.hero { padding: 60px 0 40px; }
+.eyebrow { text-transform: uppercase; letter-spacing: 3px; font-size: 11px; color: var(--gold); margin-bottom: 16px; font-weight: 500; }
+.hero h1 { font-family: var(--serif); font-size: 48px; line-height: 1.1; font-weight: 500; color: var(--navy); margin-bottom: 16px; letter-spacing: -0.5px; }
+.hero h1 em { color: var(--gold); font-style: italic; }
+.hero p { font-family: var(--serif); font-size: 19px; line-height: 1.55; color: var(--ink); opacity: 0.85; }
+.card { background: var(--cream-warm); border-top: 4px solid var(--gold); padding: 36px; border-radius: 3px; box-shadow: 0 20px 40px -20px rgba(15, 27, 45, 0.2); margin-bottom: 24px; }
+label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 8px; font-weight: 500; }
+input, select, textarea { width: 100%; padding: 12px 14px; border: 1px solid var(--border); background: #fff; border-radius: 2px; font-family: var(--sans); font-size: 15px; color: var(--ink); }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--navy); }
+.field { margin-bottom: 18px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
+textarea { resize: vertical; min-height: 80px; }
+.btn { cursor: pointer; border: none; font-family: var(--sans); padding: 14px 28px; border-radius: 2px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; font-size: 12px; }
+.btn-primary { background: var(--navy); color: var(--cream); width: 100%; }
+.btn-primary:hover { background: var(--navy-deep); }
+.btn-gold { background: var(--gold); color: #fff; }
+.btn-gold:hover { background: #a87d20; }
+.err { color: #9b2c2c; font-size: 13px; margin-bottom: 10px; }
+.section-title { font-family: var(--serif); font-size: 24px; color: var(--navy); margin-bottom: 8px; font-weight: 500; }
+.section-intro { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+.success-card { background: var(--navy); color: var(--cream); padding: 36px; border-radius: 3px; margin-bottom: 24px; }
+.success-card h2 { font-family: var(--serif); font-size: 32px; font-weight: 500; margin-bottom: 12px; }
+.success-card p { font-family: var(--serif); font-size: 17px; opacity: 0.9; margin-bottom: 24px; }
+.link-box { background: rgba(247, 245, 241, 0.1); padding: 18px; border-radius: 3px; margin-bottom: 14px; font-family: monospace; font-size: 13px; color: var(--cream); word-break: break-all; border: 1px dashed rgba(196, 154, 60, 0.3); }
+.copy-btn { background: var(--gold); color: #fff; padding: 10px 20px; border-radius: 2px; border: none; font-weight: 600; cursor: pointer; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; font-family: var(--sans); }
+.copy-btn:hover { background: #a87d20; }
+.copied { background: #2f6b3e !important; }
+.checklist { list-style: none; margin-top: 20px; }
+.checklist li { display: flex; gap: 12px; margin-bottom: 12px; font-size: 14px; line-height: 1.5; }
+.checklist li::before { content: "✓"; color: var(--gold); font-weight: 600; flex-shrink: 0; }
+.footer { border-top: 1px solid var(--border); margin-top: 40px; padding-top: 20px; font-size: 12px; color: var(--muted); text-align: center; }
+.spinner { width: 18px; height: 18px; border: 2.5px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block; margin-right: 8px; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.privacy-note { background: var(--cream-warm); border-left: 3px solid var(--gold); padding: 14px 18px; font-size: 13px; color: var(--muted); margin: 20px 0; line-height: 1.6; }
+.privacy-note strong { color: var(--navy); }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/" class="nav-brand">ineedcoaching.org</a>
+    <div class="nav-links">
+      <a href="/coaches.html">Coaches</a>
+      <a href="/decision-lab.html">Decision Lab</a>
+      <a href="/board-lab.html" class="nav-cta">Board Alignment</a>
+    </div>
+  </div>
+</nav>
+
+<main class="main">
+  <div id="app"></div>
+</main>
+
+<script>
+const SUPABASE_URL = "https://qroizygknxdjsstkezsf.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4";
+
+const app = document.getElementById("app");
+let state = {
+  step: "form",
+  loading: false,
+  error: "",
+  form: {
+    president_name: "",
+    president_email: "",
+    district_context: "",
+    scenario: "",
+    scenario_detail: "",
+    proposed_decision: "",
+    decision_stage: "",
+    timeline: "",
+    member_count_expected: ""
+  },
+  result: null
+};
+
+async function callApi(action, payload) {
+  const res = await fetch(SUPABASE_URL + "/functions/v1/decision-lab-api", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY },
+    body: JSON.stringify({ action, payload })
+  });
+  if (!res.ok) throw new Error("Server error");
+  return await res.json();
+}
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+async function submit() {
+  const f = state.form;
+  if (!f.president_name.trim()) { state.error = "Please enter your name."; render(); return; }
+  if (!f.president_email.includes("@")) { state.error = "Please enter a valid email."; render(); return; }
+  if (!f.district_context) { state.error = "Please select your district context."; render(); return; }
+  if (!f.scenario) { state.error = "Please select a scenario type."; render(); return; }
+  if (!f.timeline) { state.error = "Please select a timeline."; render(); return; }
+
+  state.loading = true;
+  state.error = "";
+  render();
+
+  try {
+    const memberCount = f.member_count_expected ? parseInt(f.member_count_expected, 10) : null;
+    const result = await callApi("board_create", { ...f, member_count_expected: memberCount });
+    if (result.error) throw new Error(result.error);
+    state.result = result.board;
+    state.step = "success";
+  } catch (e) {
+    state.error = "Could not create scenario. Please try again.";
+  }
+  state.loading = false;
+  render();
+}
+
+function copyLink() {
+  const link = getShareLink();
+  navigator.clipboard.writeText(link).then(function() {
+    const btn = document.getElementById("copyBtn");
+    btn.textContent = "✓ Copied!";
+    btn.classList.add("copied");
+    setTimeout(function() { btn.textContent = "Copy link"; btn.classList.remove("copied"); }, 2000);
+  });
+}
+
+function getShareLink() {
+  return window.location.origin + "/board-member.html?token=" + state.result.share_token;
+}
+
+function getDashboardLink() {
+  return window.location.origin + "/board-dashboard.html?id=" + state.result.id;
+}
+
+function renderForm() {
+  const wrap = el("div");
+
+  const hero = el("div", "hero");
+  hero.appendChild(el("div", "eyebrow", "BOARD ALIGNMENT LAB · FOR PRESIDENTS & SUPERINTENDENTS"));
+  const h1 = el("h1");
+  h1.innerHTML = 'Run this with your <em>whole</em> board.';
+  hero.appendChild(h1);
+  hero.appendChild(el("p", null, "Create a scenario. Share one link with your board. Each member runs it privately. You see the patterns — not names, not positions — just where you align, where you diverge, and where you've been assuming alignment that isn't there."));
+  wrap.appendChild(hero);
+
+  const card = el("div", "card");
+  card.appendChild(el("div", "section-title", "Create a Board Scenario"));
+  card.appendChild(el("div", "section-intro", "This takes 2 minutes. Board members will run the Individual Decision Lab with your scenario framed."));
+
+  // President name + email
+  const row1 = el("div", "row");
+  const nameF = el("div", "field");
+  nameF.appendChild(el("label", null, "Your name"));
+  const nameI = document.createElement("input");
+  nameI.type = "text"; nameI.value = state.form.president_name;
+  nameI.placeholder = "First and last";
+  nameI.oninput = function(e) { state.form.president_name = e.target.value; };
+  nameF.appendChild(nameI);
+  row1.appendChild(nameF);
+
+  const emailF = el("div", "field");
+  emailF.appendChild(el("label", null, "Your email"));
+  const emailI = document.createElement("input");
+  emailI.type = "email"; emailI.value = state.form.president_email;
+  emailI.placeholder = "you@district.org";
+  emailI.oninput = function(e) { state.form.president_email = e.target.value; };
+  emailF.appendChild(emailI);
+  row1.appendChild(emailF);
+  card.appendChild(row1);
+
+  // District context + member count
+  const row2 = el("div", "row");
+  const dcF = el("div", "field");
+  dcF.appendChild(el("label", null, "District context"));
+  const dcS = document.createElement("select");
+  ["", "Urban", "Suburban", "Rural", "Small-town", "Mixed"].forEach(function(o) {
+    const opt = document.createElement("option");
+    opt.value = o; opt.textContent = o || "Select...";
+    if (state.form.district_context === o) opt.selected = true;
+    dcS.appendChild(opt);
+  });
+  dcS.onchange = function(e) { state.form.district_context = e.target.value; };
+  dcF.appendChild(dcS);
+  row2.appendChild(dcF);
+
+  const mcF = el("div", "field");
+  mcF.appendChild(el("label", null, "Board members (approx)"));
+  const mcI = document.createElement("input");
+  mcI.type = "number"; mcI.min = "2"; mcI.max = "20"; mcI.value = state.form.member_count_expected;
+  mcI.placeholder = "7";
+  mcI.oninput = function(e) { state.form.member_count_expected = e.target.value; };
+  mcF.appendChild(mcI);
+  row2.appendChild(mcF);
+  card.appendChild(row2);
+
+  // Scenario
+  const scF = el("div", "field");
+  scF.appendChild(el("label", null, "Scenario type"));
+  const scS = document.createElement("select");
+  ["", "Budget shortfall", "Staffing instability", "Discipline / safety issue", "Data pressure", "Public scrutiny", "Curriculum decision", "Facilities / bond", "Other"].forEach(function(o) {
+    const opt = document.createElement("option");
+    opt.value = o; opt.textContent = o || "Select...";
+    if (state.form.scenario === o) opt.selected = true;
+    scS.appendChild(opt);
+  });
+  scS.onchange = function(e) { state.form.scenario = e.target.value; };
+  scF.appendChild(scS);
+  card.appendChild(scF);
+
+  // Scenario detail
+  const sdF = el("div", "field");
+  sdF.appendChild(el("label", null, "Scenario detail (optional, shared with members)"));
+  const sdT = document.createElement("textarea");
+  sdT.rows = 3;
+  sdT.value = state.form.scenario_detail;
+  sdT.placeholder = "2-3 sentences of context you want your board to have. Do not include your own position — let them respond fresh.";
+  sdT.oninput = function(e) { state.form.scenario_detail = e.target.value; };
+  sdF.appendChild(sdT);
+  card.appendChild(sdF);
+
+  // Proposed decision
+  const pdF = el("div", "field");
+  pdF.appendChild(el("label", null, "Proposed decision (optional)"));
+  const pdI = document.createElement("input");
+  pdI.type = "text"; pdI.value = state.form.proposed_decision;
+  pdI.placeholder = "e.g. Reduce staffing by 12 FTE + reallocate intervention funds";
+  pdI.oninput = function(e) { state.form.proposed_decision = e.target.value; };
+  pdF.appendChild(pdI);
+  card.appendChild(pdF);
+
+  // Stage + timeline
+  const row3 = el("div", "row");
+  const stF = el("div", "field");
+  stF.appendChild(el("label", null, "Decision stage"));
+  const stS = document.createElement("select");
+  ["", "Exploring options", "Proposal on the table", "Vote this week", "Already decided — debrief"].forEach(function(o) {
+    const opt = document.createElement("option");
+    opt.value = o; opt.textContent = o || "Select...";
+    if (state.form.decision_stage === o) opt.selected = true;
+    stS.appendChild(opt);
+  });
+  stS.onchange = function(e) { state.form.decision_stage = e.target.value; };
+  stF.appendChild(stS);
+  row3.appendChild(stF);
+
+  const tlF = el("div", "field");
+  tlF.appendChild(el("label", null, "Timeline"));
+  const tlS = document.createElement("select");
+  ["", "Today / this meeting", "This week", "This month", "This quarter or longer"].forEach(function(o) {
+    const opt = document.createElement("option");
+    opt.value = o; opt.textContent = o || "Select...";
+    if (state.form.timeline === o) opt.selected = true;
+    tlS.appendChild(opt);
+  });
+  tlS.onchange = function(e) { state.form.timeline = e.target.value; };
+  tlF.appendChild(tlS);
+  row3.appendChild(tlF);
+  card.appendChild(row3);
+
+  // Privacy note
+  const privacy = el("div", "privacy-note");
+  privacy.innerHTML = '<strong>Privacy by design.</strong> Members\' raw responses never reach you. You see aggregated patterns — shared intent, perspective clusters, tensions — never individual quotes or positions tied to names.';
+  card.appendChild(privacy);
+
+  if (state.error) card.appendChild(el("div", "err", state.error));
+
+  const btn = el("button", "btn btn-primary", state.loading ? "Creating..." : "Create Shareable Scenario →");
+  btn.onclick = submit;
+  if (state.loading) btn.disabled = true;
+  card.appendChild(btn);
+
+  wrap.appendChild(card);
+
+  const foot = el("div", "footer");
+  foot.textContent = "The Boardroom Decision Lab · ineedcoaching.org · Private Beta";
+  wrap.appendChild(foot);
+
+  return wrap;
+}
+
+function renderSuccess() {
+  const wrap = el("div");
+
+  const hero = el("div", "hero");
+  hero.appendChild(el("div", "eyebrow", "✓ SCENARIO CREATED"));
+  const h1 = el("h1");
+  h1.innerHTML = 'Share this with your <em>board.</em>';
+  hero.appendChild(h1);
+  hero.appendChild(el("p", null, "Every member clicks the same link. Each runs the Decision Lab privately. When they finish, you'll see the aggregated patterns in your dashboard."));
+  wrap.appendChild(hero);
+
+  // Share link card
+  const shareCard = el("div", "success-card");
+  shareCard.appendChild(el("h2", null, "Member Access Link"));
+  shareCard.appendChild(el("p", null, "Send this to all your board members. Any order, any time. They each complete individually."));
+  const linkBox = el("div", "link-box", getShareLink());
+  shareCard.appendChild(linkBox);
+  const copyBtn = el("button", "copy-btn", "Copy link");
+  copyBtn.id = "copyBtn";
+  copyBtn.onclick = copyLink;
+  shareCard.appendChild(copyBtn);
+  wrap.appendChild(shareCard);
+
+  // Dashboard card
+  const dashCard = el("div", "card");
+  dashCard.appendChild(el("div", "section-title", "Your Dashboard"));
+  dashCard.appendChild(el("div", "section-intro", "Bookmark this. When members complete, refresh to see aggregated patterns."));
+  const dashLink = el("div", "link-box", getDashboardLink());
+  dashLink.style.background = "#fff";
+  dashLink.style.color = "var(--ink)";
+  dashCard.appendChild(dashLink);
+  const dashBtn = el("a", "copy-btn");
+  dashBtn.href = getDashboardLink();
+  dashBtn.textContent = "Open dashboard →";
+  dashBtn.style.display = "inline-block";
+  dashBtn.style.textDecoration = "none";
+  dashCard.appendChild(dashBtn);
+  wrap.appendChild(dashCard);
+
+  // What happens next
+  const nextCard = el("div", "card");
+  nextCard.appendChild(el("div", "section-title", "What happens next"));
+  const ul = el("ul", "checklist");
+  [
+    "Send the member link via email or your board communication channel",
+    "Members complete the 9-step lab individually (~10 min each)",
+    "Once 3+ members complete, your dashboard will show aggregated patterns",
+    "When all members are done, you'll get a facilitation brief to run your discussion",
+    "Raw responses stay private — you see clusters and tensions, not names"
+  ].forEach(function(t) {
+    ul.appendChild(el("li", null, t));
+  });
+  nextCard.appendChild(ul);
+
+  const newBtn = el("button", "btn btn-gold", "Create another scenario");
+  newBtn.style.marginTop = "20px";
+  newBtn.onclick = function() {
+    state = { step: "form", loading: false, error: "", form: { president_name: state.form.president_name, president_email: state.form.president_email, district_context: state.form.district_context, scenario: "", scenario_detail: "", proposed_decision: "", decision_stage: "", timeline: "", member_count_expected: state.form.member_count_expected }, result: null };
+    render();
+  };
+  nextCard.appendChild(newBtn);
+  wrap.appendChild(nextCard);
+
+  return wrap;
+}
+
+function render() {
+  app.innerHTML = "";
+  app.appendChild(state.step === "success" ? renderSuccess() : renderForm());
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+render();
+</script>
+</body>
+</html>
