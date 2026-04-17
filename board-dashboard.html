@@ -342,6 +342,10 @@ function renderDashboard() {
 
     const heatBox = el("div");
     heatBox.style.cssText = "background: #fff; border: 1px solid var(--border); padding: 24px; border-radius: 3px;";
+    const legend = el("div");
+    legend.style.cssText = "background: var(--cream-warm); border-left: 3px solid var(--gold); padding: 16px 20px; margin-bottom: 16px; border-radius: 3px;";
+    legend.innerHTML = '<div style="text-transform: uppercase; letter-spacing: 2px; font-size: 11px; color: var(--gold); font-weight: 600; margin-bottom: 10px;">HOW TO READ THESE SCORES</div><p style="font-size: 14px; line-height: 1.6; color: var(--ink); margin: 0;">Each dimension is scored 0\u201310 based on how confidently the board\u2019s process protects it. <strong style="color: var(--protects);">Green (7\u201310):</strong> Protects this dimension. <strong style="color: var(--neutral);">Yellow (4\u20136):</strong> Neutral \u2014 needs watching. <strong style="color: var(--risks);">Red (0\u20133):</strong> At risk \u2014 this is where the decision could hurt.</p>';
+    heatBox.appendChild(legend);
     [
       ["instructionalProtection", "Instructional Protection"],
       ["systemCapacity", "System Capacity"],
