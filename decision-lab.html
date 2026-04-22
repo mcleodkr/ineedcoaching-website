@@ -420,7 +420,7 @@ const DL = (function() {
         if (!state.email.includes("@")) { state.err = "Please enter a valid email."; repaint(); return; }
         if (!state.role) { state.err = "Please select your role."; repaint(); return; }
         if (!state.districtContext) { state.err = "Please select your district context."; repaint(); return; }
-        data = { name: state.name, email: state.email, role: state.role, districtContext: state.districtContext, decisions: [], concerns: [] };
+        data = { name: state.name, email: state.email, role: state.role, districtContext: state.districtContext, decisions: [], concerns: [], refinementHistory: [], refineCount: 0, rawExpression: null, sessionId: null };
         callApi("waitlist_add", { name: state.name, email: state.email, role: state.role, district_context: state.districtContext, interest: "individual" });
         go("scenario");
       };
@@ -554,11 +554,29 @@ const DL = (function() {
     async function submitRefinement() {
       if (!state.refineText.trim()) return;
       state.regenerating = true;
-      state.history.push(state.refineText);
+      const thisRefinement = state.refineText;
+      state.history.push(thisRefinement);
       repaint();
-      const newText = await generate(state.refineText);
+      const newText = await generate(thisRefinement);
       state.summary = newText; state.refineCount++;
       data.claritySummary = newText; data.refinementHistory = state.history; data.refineCount = state.refineCount;
+      // Combine all refinements into raw_expression so the user's actual typed context is preserved
+      data.rawExpression = state.history.join("\n\n---\n\n");
+      // Persist the refinement immediately so it never gets lost
+      try {
+        const upsertPayload = {
+          name: data.name, email: data.email, role: data.role, district_context: data.districtContext,
+          scenario: data.scenario, timeline: data.timeline, decisions: data.decisions, confidence: data.confidence,
+          concerns: data.concerns,
+          clarity_summary: data.claritySummary,
+          raw_expression: data.rawExpression,
+          refinement_history: data.refinementHistory,
+          refine_count: data.refineCount
+        };
+        if (data.sessionId) upsertPayload.id = data.sessionId;
+        const result = await callApi("session_upsert", upsertPayload);
+        if (result && result.session && result.session.id) data.sessionId = result.session.id;
+      } catch (e) { console.error("Refinement save failed:", e); }
       state.refining = false; state.refineText = ""; state.regenerating = false;
       repaint();
     }
@@ -656,18 +674,23 @@ const DL = (function() {
 
     function repaint() {
       body.innerHTML = "";
-      if (config.num !== 2) {
+      const hasPrimaryStep = config.num !== 2 && config.primaryOpts && config.primaryOpts.length > 0;
+      if (hasPrimaryStep) {
         const w = el("div"); w.style.marginBottom = "24px";
         w.appendChild(el("div", "section-label", config.primaryLabel));
         w.appendChild(singleSelectGrid(config.primaryOpts, state.primary, function(o) { state.primary = o; state.feedback = ""; repaint(); }));
         body.appendChild(w);
-      } else {
+      } else if (config.num === 2) {
         const p = el("p", null, "Select everything that must be preserved. These are your anchors against drift.");
+        p.style.cssText = "font-size: 15px; color: var(--muted); margin-bottom: 20px;";
+        body.appendChild(p);
+      } else if (config.perGroupMode) {
+        const p = el("p", null, "Select the groups that will absorb this decision. For each, note whether they are equipped to carry it.");
         p.style.cssText = "font-size: 15px; color: var(--muted); margin-bottom: 20px;";
         body.appendChild(p);
       }
 
-      const showSecondary = config.num === 2 || state.primary;
+      const showSecondary = config.num === 2 || !hasPrimaryStep || state.primary;
 
       if (showSecondary && !config.perGroupMode) {
         const w = el("div"); w.style.marginBottom = "24px";
@@ -855,13 +878,27 @@ const DL = (function() {
       const result = await callClaude(prompt, 3500, true);
       if (result) {
         data.finalAnalysis = result;
-        callApi("session_upsert", {
+        const finalPayload = {
           name: data.name, email: data.email, role: data.role, district_context: data.districtContext,
           scenario: data.scenario, timeline: data.timeline, decisions: data.decisions, confidence: data.confidence,
-          concerns: data.concerns, clarity_summary: data.claritySummary,
+          concerns: data.concerns,
+          clarity_summary: data.claritySummary,
+          raw_expression: data.rawExpression || null,
+          refinement_history: data.refinementHistory || [],
+          refine_count: data.refineCount || 0,
           pass1: data.pass1, pass2: data.pass2, pass3: data.pass3, pass4: data.pass4, pass5: data.pass5,
-          filter: data.filter, confidence_check: data.confidenceCheck, final_analysis: data.finalAnalysis, completed: true
-        });
+          filter: data.filter, confidence_check: data.confidenceCheck, final_analysis: data.finalAnalysis,
+          completed: true
+        };
+        if (data.sessionId) finalPayload.id = data.sessionId;
+        const saveResult = await callApi("session_upsert", finalPayload);
+        if (saveResult && saveResult.session && saveResult.session.id) {
+          data.sessionId = saveResult.session.id;
+          // Send magic link email for re-access
+          try {
+            await callApi("send_brief_email", { session_id: data.sessionId });
+          } catch (e) { console.error("Email send failed (non-blocking):", e); }
+        }
       }
       render();
     }
@@ -973,8 +1010,15 @@ const DL = (function() {
 
     const ref = el("div", "reflection-box");
     ref.appendChild(el("div", "reflection-label", "REFLECTION BRIEF"));
-    ref.appendChild(el("p", null, analysis.paragraph1));
-    ref.appendChild(el("p", null, analysis.paragraph2));
+    // Clean up __________ placeholders so users read them as prompts, not broken text
+    function cleanBlanks(text) {
+      if (!text) return text;
+      return text
+        .replace(/_{5,}/g, "__________ (a blank you haven't filled in yet)")
+        .replace(/___ /g, "__________ (a blank you haven't filled in yet) ");
+    }
+    ref.appendChild(el("p", null, cleanBlanks(analysis.paragraph1)));
+    ref.appendChild(el("p", null, cleanBlanks(analysis.paragraph2)));
     main.appendChild(ref);
 
     const actions = el("div");
@@ -983,7 +1027,7 @@ const DL = (function() {
     pdfBtn.onclick = function() { downloadPDF(analysis, scenarioText, decisionText); };
     actions.appendChild(pdfBtn);
     const restart = el("button", "btn btn-secondary", "Start new session");
-    restart.onclick = function() { clearLocal(); data = { name: data.name, email: data.email, role: data.role, districtContext: data.districtContext, decisions: [], concerns: [] }; go("scenario"); };
+    restart.onclick = function() { clearLocal(); data = { name: data.name, email: data.email, role: data.role, districtContext: data.districtContext, decisions: [], concerns: [], refinementHistory: [], refineCount: 0, rawExpression: null, sessionId: null }; go("scenario"); };
     actions.appendChild(restart);
     main.appendChild(actions);
 
@@ -1007,17 +1051,168 @@ const DL = (function() {
   }
 
   function downloadPDF(analysis, scenarioText, decisionText) {
-    const scores = analysis.scores;
-    function tier(s) { return s >= 7 ? "Protects" : s >= 4 ? "Neutral" : "Risks"; }
-    function tierColor(s) { return s >= 7 ? "#2F6B3E" : s >= 4 ? "#C89D3C" : "#9B2C2C"; }
-    function scoreRow(label, key) {
-      return '<tr><td style="padding:10px 0;border-bottom:1px solid #E5E0D2;"><strong>' + label + '</strong></td><td style="padding:10px 0;border-bottom:1px solid #E5E0D2;color:' + tierColor(scores[key]) + ';font-weight:600;">' + scores[key] + '/10</td><td style="padding:10px 0;border-bottom:1px solid #E5E0D2;"><span style="background:' + tierColor(scores[key]) + ';color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;">' + tier(scores[key]) + '</span></td><td style="padding:10px 0;border-bottom:1px solid #E5E0D2;font-size:13px;color:#555;">' + analysis.notes[key] + '</td></tr>';
+    // Load jsPDF dynamically if not already loaded
+    function actuallyGenerate() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: "pt", format: "letter" });
+      const margin = 54; // 0.75 inch
+      const pageW = 612;
+      const pageH = 792;
+      const maxW = pageW - margin * 2;
+      let y = margin;
+
+      function tierColor(s) { return s >= 7 ? [47,107,62] : s >= 4 ? [200,157,60] : [155,44,44]; }
+      function tierLabel(s) { return s >= 7 ? "Protects" : s >= 4 ? "Neutral" : "Risks"; }
+
+      // Cream background header band
+      doc.setFillColor(250, 246, 237);
+      doc.rect(0, 0, pageW, 130, "F");
+
+      // Title
+      doc.setFont("times", "normal");
+      doc.setFontSize(28);
+      doc.setTextColor(26, 58, 82);
+      doc.text("The Boardroom Decision Lab", margin, margin + 10);
+
+      // Meta line
+      doc.setFontSize(10);
+      doc.setTextColor(107, 114, 128);
+      doc.setFont("helvetica", "normal");
+      doc.text((data.name || "—") + "  ·  " + (data.role || "—") + "  ·  " + new Date().toLocaleDateString(), margin, margin + 32);
+
+      y = margin + 70;
+
+      // Scenario/Decision navy box
+      doc.setFillColor(26, 58, 82);
+      doc.rect(margin, y, maxW, 58, "F");
+      doc.setTextColor(247, 245, 241);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text("SCENARIO", margin + 14, y + 18);
+      doc.setFont("helvetica", "normal");
+      doc.text(doc.splitTextToSize(scenarioText || "—", maxW - 28), margin + 14, y + 32);
+      doc.setFont("helvetica", "bold");
+      doc.text("PROPOSED DECISION", margin + 14, y + 46);
+      doc.setFont("helvetica", "normal");
+      const decLines = doc.splitTextToSize(decisionText || "—", maxW - 160);
+      doc.text(decLines, margin + 130, y + 46);
+
+      y += 78;
+
+      // Decision Profile header
+      doc.setFont("times", "normal");
+      doc.setFontSize(18);
+      doc.setTextColor(26, 58, 82);
+      doc.text("Decision Profile", margin, y);
+      y += 20;
+
+      // Scores table
+      doc.setFontSize(10);
+      const dims = [
+        ["Instructional Protection", "instructionalProtection"],
+        ["System Capacity", "systemCapacity"],
+        ["Differential Impact", "differentialImpact"],
+        ["Decision Quality", "decisionQuality"],
+        ["Communication Clarity", "communicationClarity"]
+      ];
+      dims.forEach(function(pair) {
+        const label = pair[0], key = pair[1];
+        const score = (analysis.scores && analysis.scores[key] != null) ? analysis.scores[key] : 0;
+        const note = (analysis.notes && analysis.notes[key]) || "";
+        const noteLines = doc.splitTextToSize(note, maxW - 220);
+        const rowH = Math.max(28, 14 + noteLines.length * 12);
+        // label
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(26, 58, 82);
+        doc.text(label, margin, y + 10);
+        // score + tier
+        const c = tierColor(score);
+        doc.setTextColor(c[0], c[1], c[2]);
+        doc.text(score + "/10", margin + 165, y + 10);
+        doc.setFont("helvetica", "normal");
+        doc.text(tierLabel(score).toUpperCase(), margin + 200, y + 10);
+        // note
+        doc.setTextColor(75, 85, 99);
+        doc.text(noteLines, margin + 260, y + 10);
+        // separator
+        doc.setDrawColor(229, 224, 210);
+        doc.line(margin, y + rowH, margin + maxW, y + rowH);
+        y += rowH;
+        if (y > pageH - 80) { doc.addPage(); y = margin; }
+      });
+
+      // Named gaps
+      if (analysis.namedGaps && analysis.namedGaps.length) {
+        y += 12;
+        if (y > pageH - 120) { doc.addPage(); y = margin; }
+        doc.setFont("times", "normal");
+        doc.setFontSize(14);
+        doc.setTextColor(26, 58, 82);
+        doc.text("Named Process Gaps", margin, y);
+        y += 16;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(26, 58, 82);
+        analysis.namedGaps.forEach(function(g) {
+          const lines = doc.splitTextToSize("• " + g, maxW - 20);
+          doc.text(lines, margin + 10, y);
+          y += lines.length * 12 + 6;
+          if (y > pageH - 80) { doc.addPage(); y = margin; }
+        });
+      }
+
+      // Reflection Brief
+      y += 16;
+      if (y > pageH - 200) { doc.addPage(); y = margin; }
+      doc.setFont("times", "normal");
+      doc.setFontSize(14);
+      doc.setTextColor(196, 154, 60);
+      doc.text("REFLECTION BRIEF", margin, y);
+      y += 18;
+
+      // Clean blanks in paragraphs
+      function cleanBlanks(t) {
+        if (!t) return "";
+        return t.replace(/_{5,}/g, "__________ (a blank you haven't filled in yet)").replace(/___ /g, "__________ (a blank you haven't filled in yet) ");
+      }
+
+      doc.setFont("times", "normal");
+      doc.setFontSize(11);
+      doc.setTextColor(26, 58, 82);
+      [analysis.paragraph1, analysis.paragraph2].forEach(function(para) {
+        if (!para) return;
+        const lines = doc.splitTextToSize(cleanBlanks(para), maxW);
+        lines.forEach(function(line) {
+          if (y > pageH - 60) { doc.addPage(); y = margin; }
+          doc.text(line, margin, y);
+          y += 15;
+        });
+        y += 10;
+      });
+
+      // Footer
+      const totalPages = doc.internal.getNumberOfPages();
+      for (let p = 1; p <= totalPages; p++) {
+        doc.setPage(p);
+        doc.setFontSize(8);
+        doc.setTextColor(107, 114, 128);
+        doc.text("ineedcoaching.org  ·  The Boardroom Decision Lab", margin, pageH - 30);
+        doc.text("Page " + p + " of " + totalPages, pageW - margin - 60, pageH - 30);
+      }
+
+      const filename = "decision-brief-" + (data.name || "session").replace(/\s+/g, "-").toLowerCase() + "-" + new Date().toISOString().slice(0, 10) + ".pdf";
+      doc.save(filename);
     }
-    const closeTag = "</scr" + "ipt>";
-    const printTag = "<scr" + "ipt>setTimeout(function(){window.print();},500);" + closeTag;
-    const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Decision Brief</title><style>@page{margin:0.75in}body{font-family:Georgia,serif;color:#1a3a52;line-height:1.55;max-width:7.5in;margin:0 auto;padding:0.5in 0;background:#faf6ed}h1{font-weight:500;font-size:34px;margin:0 0 8px}h2{font-weight:500;font-size:20px;margin:28px 0 14px}p{margin:0 0 12px;font-size:14px}.dark{padding:16px;border-radius:3px;background:#1a3a52;color:#f7f5f1;margin:14px 0}.ivory{padding:18px;border-radius:3px;background:#f5f1e8;margin:14px 0;border-left:4px solid #c49a3c}table{width:100%;border-collapse:collapse;margin:10px 0}.print-btn{position:fixed;top:20px;right:20px;padding:10px 20px;background:#1a3a52;color:#f7f5f1;border:none;border-radius:3px;cursor:pointer}@media print{.print-btn{display:none}body{background:#fff}}</style></head><body><button class="print-btn" onclick="window.print()">Save as PDF</button><h1>The Boardroom Decision Lab</h1><div style="font-size:11px;color:#666">' + (data.name || "—") + ' · ' + (data.role || "—") + ' · ' + new Date().toLocaleDateString() + '</div><div class="dark"><div><strong>Scenario:</strong> ' + scenarioText + '</div><div style="margin-top:8px"><strong>Decision:</strong> ' + decisionText + '</div></div><h2>Decision Profile</h2><table>' + scoreRow("Instructional Protection", "instructionalProtection") + scoreRow("System Capacity", "systemCapacity") + scoreRow("Differential Impact", "differentialImpact") + scoreRow("Decision Quality", "decisionQuality") + scoreRow("Communication Clarity", "communicationClarity") + '</table><h2>Reflection Brief</h2><div class="ivory"><p>' + analysis.paragraph1 + '</p><p>' + analysis.paragraph2 + '</p></div>' + printTag + '</body></html>';
-    const w = window.open("", "_blank");
-    if (w) { w.document.write(html); w.document.close(); } else alert("Please allow pop-ups.");
+
+    if (window.jspdf && window.jspdf.jsPDF) {
+      actuallyGenerate();
+    } else {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+      s.onload = actuallyGenerate;
+      s.onerror = function() { alert("Could not load PDF library. Please try again."); };
+      document.head.appendChild(s);
+    }
   }
 
   function render() {
