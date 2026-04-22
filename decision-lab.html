@@ -178,7 +178,7 @@ textarea { resize: vertical; min-height: 80px; font-family: var(--sans); }
 
 <script>
 const SUPABASE_URL = "https://qroizygknxdjsstkezsf.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4";
+const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
 
 const DL = (function() {
   let data = {};
@@ -656,7 +656,7 @@ const DL = (function() {
 
     function repaint() {
       body.innerHTML = "";
-      if (config.num !== 2 && config.primaryOpts && config.primaryOpts.length > 0) {
+      if (config.num !== 2) {
         const w = el("div"); w.style.marginBottom = "24px";
         w.appendChild(el("div", "section-label", config.primaryLabel));
         w.appendChild(singleSelectGrid(config.primaryOpts, state.primary, function(o) { state.primary = o; state.feedback = ""; repaint(); }));
@@ -667,7 +667,7 @@ const DL = (function() {
         body.appendChild(p);
       }
 
-      const showSecondary = config.num === 2 || (config.primaryOpts && config.primaryOpts.length === 0) || state.primary;
+      const showSecondary = config.num === 2 || state.primary;
 
       if (showSecondary && !config.perGroupMode) {
         const w = el("div"); w.style.marginBottom = "24px";
@@ -783,23 +783,17 @@ const DL = (function() {
           const ta = document.createElement("textarea");
           ta.rows = 2; ta.placeholder = q.ph; ta.value = state[q.k];
           ta.oninput = function(e) { state[q.k] = e.target.value; };
-          ta.onblur = function() { repaint(); };
           card.appendChild(ta);
         }
         body.appendChild(card);
       });
-      const btn = el("button", "btn btn-primary", "Continue to Confidence Check →");
-      btn.style.marginTop = "24px";
-      btn.onclick = function() {
-        const missing = Object.keys(state).filter(function(k) { return !state[k] || !String(state[k]).trim(); });
-        if (missing.length > 0) {
-          alert("Please complete all 5 questions before continuing.");
-          return;
-        }
-        data.filter = state;
-        go("confidence");
-      };
-      body.appendChild(btn);
+      const complete = Object.keys(state).every(function(k) { return state[k] && String(state[k]).trim(); });
+      if (complete) {
+        const btn = el("button", "btn btn-primary", "Continue to Confidence Check →");
+        btn.style.marginTop = "24px";
+        btn.onclick = function() { data.filter = state; go("confidence"); };
+        body.appendChild(btn);
+      }
     }
     repaint();
     return shell("STEP 7 OF 9 · DECISION FILTER", "Five honest questions.", "Short answers are fine.", body, "pass5");
