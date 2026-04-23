@@ -22,7 +22,7 @@
       "maxDuration": 30
     }
   },
-  "crons": [
+  "_crons_paused_2026_04_23_bot_abuse": [
     { "path": "/api/cron-interventions", "schedule": "0 9 * * *" }
   ],
   "rewrites": [
