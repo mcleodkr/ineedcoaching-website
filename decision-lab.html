@@ -626,7 +626,10 @@ const DL = (function() {
         const ta = document.createElement("textarea");
         ta.placeholder = "What did I miss?"; ta.rows = 3; ta.value = state.refineText;
         ta.oninput = function(e) { state.refineText = e.target.value; };
-        ta.onblur = function() { repaint(); };
+        ta.onblur = function(e) {
+          if (e.relatedTarget && e.relatedTarget.tagName === "BUTTON") return;
+          repaint();
+        };
         body.appendChild(ta);
         const row = el("div"); row.style.cssText = "display: flex; gap: 10px; margin-top: 12px;";
         const go1 = el("button", "btn btn-primary", "Revise →");
