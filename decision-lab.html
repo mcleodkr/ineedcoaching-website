@@ -1106,16 +1106,26 @@ const DL = (function() {
       doc.setTextColor(26, 58, 82);
       doc.text("Decision Profile", margin, y);
       y += 20;
-// Scoring legend
+
+      // Scoring legend
+      doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
-      doc.setFillColor(47, 107, 62); doc.circle(margin + 3, y - 3, 3, "F");
-      doc.setTextColor(75, 85, 99);
-      doc.text("Protects (7-10)", margin + 12, y);
-      doc.setFillColor(200, 157, 60); doc.circle(margin + 110, y - 3, 3, "F");
-      doc.text("Neutral (4-6)", margin + 119, y);
-      doc.setFillColor(155, 44, 44); doc.circle(margin + 200, y - 3, 3, "F");
-      doc.text("Risks (0-3)", margin + 209, y);
-      y += 20;
+      let lx = margin;
+      const legendY = y;
+      const legend = [
+        { label: "PROTECTS (7-10)", color: [47, 107, 62] },
+        { label: "NEUTRAL (4-6)", color: [200, 157, 60] },
+        { label: "RISKS (0-3)", color: [155, 44, 44] }
+      ];
+      legend.forEach(function(item) {
+        doc.setFillColor(item.color[0], item.color[1], item.color[2]);
+        doc.circle(lx + 4, legendY + 4, 3, "F");
+        doc.setTextColor(75, 85, 99);
+        doc.text(item.label, lx + 12, legendY + 6);
+        lx += doc.getTextWidth(item.label) + 30;
+      });
+      y += 18;
+
       // Scores table
       doc.setFontSize(10);
       const dims = [
