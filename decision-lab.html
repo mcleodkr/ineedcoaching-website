@@ -806,6 +806,7 @@ const DL = (function() {
           const ta = document.createElement("textarea");
           ta.rows = 2; ta.placeholder = q.ph; ta.value = state[q.k];
           ta.oninput = function(e) { state[q.k] = e.target.value; };
+          ta.onblur = function() { repaint(); };
           card.appendChild(ta);
         }
         body.appendChild(card);
@@ -1105,7 +1106,16 @@ const DL = (function() {
       doc.setTextColor(26, 58, 82);
       doc.text("Decision Profile", margin, y);
       y += 20;
-
+// Scoring legend
+      doc.setFontSize(9);
+      doc.setFillColor(47, 107, 62); doc.circle(margin + 3, y - 3, 3, "F");
+      doc.setTextColor(75, 85, 99);
+      doc.text("Protects (7-10)", margin + 12, y);
+      doc.setFillColor(200, 157, 60); doc.circle(margin + 110, y - 3, 3, "F");
+      doc.text("Neutral (4-6)", margin + 119, y);
+      doc.setFillColor(155, 44, 44); doc.circle(margin + 200, y - 3, 3, "F");
+      doc.text("Risks (0-3)", margin + 209, y);
+      y += 20;
       // Scores table
       doc.setFontSize(10);
       const dims = [
