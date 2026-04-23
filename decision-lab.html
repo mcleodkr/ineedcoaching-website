@@ -443,6 +443,7 @@ const DL = (function() {
         const ta = document.createElement("textarea");
         ta.placeholder = "One or two lines..."; ta.maxLength = 160; ta.value = state.scenarioOther;
         ta.oninput = function(e) { state.scenarioOther = e.target.value; };
+        ta.onblur = function() { repaint(); };
         ta.style.marginBottom = "16px";
         body.appendChild(ta);
       }
@@ -482,6 +483,7 @@ const DL = (function() {
         const ta = document.createElement("textarea");
         ta.placeholder = "Describe the action..."; ta.maxLength = 200; ta.value = state.decisionOther;
         ta.oninput = function(e) { state.decisionOther = e.target.value; };
+        ta.onblur = function() { repaint(); };
         ta.style.marginBottom = "16px";
         body.appendChild(ta);
       }
@@ -517,6 +519,7 @@ const DL = (function() {
         const ta = document.createElement("textarea");
         ta.placeholder = "Describe..."; ta.maxLength = 200; ta.value = state.concernsOther;
         ta.oninput = function(e) { state.concernsOther = e.target.value; };
+        ta.onblur = function() { repaint(); };
         ta.style.marginBottom = "16px";
         body.appendChild(ta);
       }
@@ -623,6 +626,7 @@ const DL = (function() {
         const ta = document.createElement("textarea");
         ta.placeholder = "What did I miss?"; ta.rows = 3; ta.value = state.refineText;
         ta.oninput = function(e) { state.refineText = e.target.value; };
+        ta.onblur = function() { repaint(); };
         body.appendChild(ta);
         const row = el("div"); row.style.cssText = "display: flex; gap: 10px; margin-top: 12px;";
         const go1 = el("button", "btn btn-primary", "Revise →");
