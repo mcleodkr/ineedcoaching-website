@@ -306,7 +306,16 @@ async function handleSignup(e) {
   e.preventDefault();
   hideError();
 
+  // EMERGENCY DISABLE (2026-04-23): form-spam bots creating profile rows and triggering welcome
+  // emails via cron-interventions.js. Block new coach signups until captcha / verification is in
+  // place.
+  showError('New coach signups are temporarily paused while we finish verification checks. Please check back soon.');
   var btn = document.getElementById('btn-submit');
+  btn.disabled = true;
+  btn.textContent = 'Signups paused';
+  return;
+
+  btn = document.getElementById('btn-submit');
   btn.disabled = true;
   btn.textContent = 'Creating your profile...';
 

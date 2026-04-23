@@ -274,6 +274,14 @@ async function submitSignup() {
 
   msg.textContent = '';
 
+  // EMERGENCY DISABLE (2026-04-23): form-spam bots creating explorer_profiles rows and triggering
+  // welcome emails via cron-interventions.js. Block all new signups until captcha / verification
+  // is in place.
+  msg.textContent = 'New signups are temporarily paused while we finish verification checks. Please check back soon.';
+  btn.disabled = true;
+  btn.textContent = 'Signups paused';
+  return;
+
   if (!email || !isValidEmail(email)) {
     msg.textContent = 'Please enter a valid email address.';
     return;
