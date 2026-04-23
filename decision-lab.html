@@ -442,31 +442,28 @@ const DL = (function() {
       if (state.scenario === "Other") {
         const ta = document.createElement("textarea");
         ta.placeholder = "One or two lines..."; ta.maxLength = 160; ta.value = state.scenarioOther;
-        ta.oninput = function(e) { state.scenarioOther = e.target.value; };
-        ta.onblur = function(e) {
-          if (e.relatedTarget && e.relatedTarget.tagName === "BUTTON") return;
-          repaint();
-        };
+        ta.oninput = function(e) { state.scenarioOther = e.target.value; updateVisibility(); };
         ta.style.marginBottom = "16px";
         body.appendChild(ta);
       }
-      const hasScenario = state.scenario && (state.scenario !== "Other" || state.scenarioOther.trim());
-      if (hasScenario) {
-        const w = el("div");
-        w.style.marginTop = "24px";
-        w.appendChild(el("div", "section-label", "WHEN MUST THIS DECISION BE MADE?"));
-        const note = el("p", null, "Timeline shapes which passes matter most.");
-        note.style.cssText = "font-size: 13px; color: var(--muted); margin-bottom: 12px;";
-        w.appendChild(note);
-        w.appendChild(singleSelectGrid(["Today / this meeting", "This week", "This month", "This quarter or longer"], state.timeline, function(o) { state.timeline = o; repaint(); }, "gold"));
-        body.appendChild(w);
+      const timelineSection = el("div");
+      timelineSection.style.marginTop = "24px";
+      timelineSection.appendChild(el("div", "section-label", "WHEN MUST THIS DECISION BE MADE?"));
+      const note = el("p", null, "Timeline shapes which passes matter most.");
+      note.style.cssText = "font-size: 13px; color: var(--muted); margin-bottom: 12px;";
+      timelineSection.appendChild(note);
+      timelineSection.appendChild(singleSelectGrid(["Today / this meeting", "This week", "This month", "This quarter or longer"], state.timeline, function(o) { state.timeline = o; repaint(); }, "gold"));
+      body.appendChild(timelineSection);
+      const continueBtn = el("button", "btn btn-primary", "Continue →");
+      continueBtn.style.marginTop = "24px";
+      continueBtn.onclick = function() { data.scenario = state.scenario; data.scenarioOther = state.scenarioOther; data.timeline = state.timeline; go("decision"); };
+      body.appendChild(continueBtn);
+      function updateVisibility() {
+        const hasScenario = state.scenario && (state.scenario !== "Other" || state.scenarioOther.trim());
+        timelineSection.style.display = hasScenario ? "" : "none";
+        continueBtn.style.display = (hasScenario && state.timeline) ? "" : "none";
       }
-      if (hasScenario && state.timeline) {
-        const btn = el("button", "btn btn-primary", "Continue →");
-        btn.style.marginTop = "24px";
-        btn.onclick = function() { data.scenario = state.scenario; data.scenarioOther = state.scenarioOther; data.timeline = state.timeline; go("decision"); };
-        body.appendChild(btn);
-      }
+      updateVisibility();
     }
     repaint();
     return shell("STEP 1 OF 9", "What situation are you facing?", "Choose the pressure point. If none fit, describe it in a line.", body, null);
@@ -485,27 +482,24 @@ const DL = (function() {
       if (state.decisions.indexOf("Other") >= 0) {
         const ta = document.createElement("textarea");
         ta.placeholder = "Describe the action..."; ta.maxLength = 200; ta.value = state.decisionOther;
-        ta.oninput = function(e) { state.decisionOther = e.target.value; };
-        ta.onblur = function(e) {
-          if (e.relatedTarget && e.relatedTarget.tagName === "BUTTON") return;
-          repaint();
-        };
+        ta.oninput = function(e) { state.decisionOther = e.target.value; updateVisibility(); };
         ta.style.marginBottom = "16px";
         body.appendChild(ta);
       }
-      const canCont = state.decisions.length > 0 && (state.decisions.indexOf("Other") < 0 || state.decisionOther.trim());
-      if (canCont) {
-        const w = el("div"); w.style.marginTop = "24px";
-        w.appendChild(el("div", "section-label", "OVERALL CONFIDENCE?"));
-        w.appendChild(singleSelectGrid(["High", "Moderate", "Low"], state.confidence, function(o) { state.confidence = o; repaint(); }, "gold"));
-        body.appendChild(w);
+      const confidenceSection = el("div"); confidenceSection.style.marginTop = "24px";
+      confidenceSection.appendChild(el("div", "section-label", "OVERALL CONFIDENCE?"));
+      confidenceSection.appendChild(singleSelectGrid(["High", "Moderate", "Low"], state.confidence, function(o) { state.confidence = o; repaint(); }, "gold"));
+      body.appendChild(confidenceSection);
+      const continueBtn = el("button", "btn btn-primary", "Continue →");
+      continueBtn.style.marginTop = "24px";
+      continueBtn.onclick = function() { data.decisions = state.decisions; data.decisionOther = state.decisionOther; data.confidence = state.confidence; go("concerns"); };
+      body.appendChild(continueBtn);
+      function updateVisibility() {
+        const canCont = state.decisions.length > 0 && (state.decisions.indexOf("Other") < 0 || state.decisionOther.trim());
+        confidenceSection.style.display = canCont ? "" : "none";
+        continueBtn.style.display = (canCont && state.confidence) ? "" : "none";
       }
-      if (canCont && state.confidence) {
-        const btn = el("button", "btn btn-primary", "Continue →");
-        btn.style.marginTop = "24px";
-        btn.onclick = function() { data.decisions = state.decisions; data.decisionOther = state.decisionOther; data.confidence = state.confidence; go("concerns"); };
-        body.appendChild(btn);
-      }
+      updateVisibility();
     }
     repaint();
     return shell("STEP 2 OF 9", "What action are you considering?", "Select all that apply.", body, "scenario");
@@ -524,21 +518,19 @@ const DL = (function() {
       if (state.concerns.indexOf("Other") >= 0) {
         const ta = document.createElement("textarea");
         ta.placeholder = "Describe..."; ta.maxLength = 200; ta.value = state.concernsOther;
-        ta.oninput = function(e) { state.concernsOther = e.target.value; };
-        ta.onblur = function(e) {
-          if (e.relatedTarget && e.relatedTarget.tagName === "BUTTON") return;
-          repaint();
-        };
+        ta.oninput = function(e) { state.concernsOther = e.target.value; updateVisibility(); };
         ta.style.marginBottom = "16px";
         body.appendChild(ta);
       }
-      const canCont = state.concerns.length > 0 && (state.concerns.indexOf("Other") < 0 || state.concernsOther.trim());
-      if (canCont) {
-        const btn = el("button", "btn btn-primary", "Continue →");
-        btn.style.marginTop = "24px";
-        btn.onclick = function() { data.concerns = state.concerns; data.concernsOther = state.concernsOther; go("clarity"); };
-        body.appendChild(btn);
+      const continueBtn = el("button", "btn btn-primary", "Continue →");
+      continueBtn.style.marginTop = "24px";
+      continueBtn.onclick = function() { data.concerns = state.concerns; data.concernsOther = state.concernsOther; go("clarity"); };
+      body.appendChild(continueBtn);
+      function updateVisibility() {
+        const canCont = state.concerns.length > 0 && (state.concerns.indexOf("Other") < 0 || state.concernsOther.trim());
+        continueBtn.style.display = canCont ? "" : "none";
       }
+      updateVisibility();
     }
     repaint();
     return shell("STEP 3 OF 9", "What concerns you most?", "Select all that apply.", body, "decision");
@@ -821,22 +813,20 @@ const DL = (function() {
         } else {
           const ta = document.createElement("textarea");
           ta.rows = 2; ta.placeholder = q.ph; ta.value = state[q.k];
-          ta.oninput = function(e) { state[q.k] = e.target.value; };
-          ta.onblur = function(e) {
-            if (e.relatedTarget && e.relatedTarget.tagName === "BUTTON") return;
-            repaint();
-          };
+          ta.oninput = function(e) { state[q.k] = e.target.value; updateVisibility(); };
           card.appendChild(ta);
         }
         body.appendChild(card);
       });
-      const complete = Object.keys(state).every(function(k) { return state[k] && String(state[k]).trim(); });
-      if (complete) {
-        const btn = el("button", "btn btn-primary", "Continue to Confidence Check →");
-        btn.style.marginTop = "24px";
-        btn.onclick = function() { data.filter = state; go("confidence"); };
-        body.appendChild(btn);
+      const continueBtn = el("button", "btn btn-primary", "Continue to Confidence Check →");
+      continueBtn.style.marginTop = "24px";
+      continueBtn.onclick = function() { data.filter = state; go("confidence"); };
+      body.appendChild(continueBtn);
+      function updateVisibility() {
+        const complete = Object.keys(state).every(function(k) { return state[k] && String(state[k]).trim(); });
+        continueBtn.style.display = complete ? "" : "none";
       }
+      updateVisibility();
     }
     repaint();
     return shell("STEP 7 OF 9 · DECISION FILTER", "Five honest questions.", "Short answers are fine.", body, "pass5");
