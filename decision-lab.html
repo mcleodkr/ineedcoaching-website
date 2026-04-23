@@ -443,7 +443,10 @@ const DL = (function() {
         const ta = document.createElement("textarea");
         ta.placeholder = "One or two lines..."; ta.maxLength = 160; ta.value = state.scenarioOther;
         ta.oninput = function(e) { state.scenarioOther = e.target.value; };
-        ta.onblur = function() { repaint(); };
+        ta.onblur = function(e) {
+          if (e.relatedTarget && e.relatedTarget.tagName === "BUTTON") return;
+          repaint();
+        };
         ta.style.marginBottom = "16px";
         body.appendChild(ta);
       }
@@ -483,7 +486,10 @@ const DL = (function() {
         const ta = document.createElement("textarea");
         ta.placeholder = "Describe the action..."; ta.maxLength = 200; ta.value = state.decisionOther;
         ta.oninput = function(e) { state.decisionOther = e.target.value; };
-        ta.onblur = function() { repaint(); };
+        ta.onblur = function(e) {
+          if (e.relatedTarget && e.relatedTarget.tagName === "BUTTON") return;
+          repaint();
+        };
         ta.style.marginBottom = "16px";
         body.appendChild(ta);
       }
@@ -519,7 +525,10 @@ const DL = (function() {
         const ta = document.createElement("textarea");
         ta.placeholder = "Describe..."; ta.maxLength = 200; ta.value = state.concernsOther;
         ta.oninput = function(e) { state.concernsOther = e.target.value; };
-        ta.onblur = function() { repaint(); };
+        ta.onblur = function(e) {
+          if (e.relatedTarget && e.relatedTarget.tagName === "BUTTON") return;
+          repaint();
+        };
         ta.style.marginBottom = "16px";
         body.appendChild(ta);
       }
@@ -813,7 +822,10 @@ const DL = (function() {
           const ta = document.createElement("textarea");
           ta.rows = 2; ta.placeholder = q.ph; ta.value = state[q.k];
           ta.oninput = function(e) { state[q.k] = e.target.value; };
-          ta.onblur = function() { repaint(); };
+          ta.onblur = function(e) {
+            if (e.relatedTarget && e.relatedTarget.tagName === "BUTTON") return;
+            repaint();
+          };
           card.appendChild(ta);
         }
         body.appendChild(card);
