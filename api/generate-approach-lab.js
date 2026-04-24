@@ -66,6 +66,32 @@ export default async function handler(req, res) {
 
     const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
+    // Parse optional ?regenerate=true to force a fresh Claude call
+    const regenerate = !!(req.query && (req.query.regenerate === 'true' || req.query.regenerate === '1'));
+
+    // Cache lookup — one row per (booking_id, selected_approach). NULL approach = default run.
+    let existingRow = null;
+    try {
+      const approachFilter = selectedApproach
+        ? 'eq.' + encodeURIComponent(selectedApproach)
+        : 'is.null';
+      const cacheRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/approach_lab_runs?booking_id=eq.${encodeURIComponent(bookingId)}&selected_approach=${approachFilter}&select=id,lab_output&limit=1`,
+        { headers }
+      );
+      const cacheRows = await cacheRes.json();
+      if (Array.isArray(cacheRows) && cacheRows.length) {
+        existingRow = cacheRows[0];
+      }
+    } catch (cacheErr) {
+      console.warn('[Approach Lab] cache read failed (non-fatal):', cacheErr.message);
+    }
+
+    if (existingRow && !regenerate) {
+      console.log('[Approach Lab] cache hit for booking', bookingId, 'approach', selectedApproach || '(default)');
+      return res.status(200).json(existingRow.lab_output);
+    }
+
     // STEP 1 — Fetch session data
     const notesRes = await fetch(
       `${SUPABASE_URL}/rest/v1/coach_session_notes?booking_id=eq.${bookingId}&select=raw_transcript,post_session_analysis,extraction_data&limit=1`,
@@ -258,9 +284,44 @@ GUARDRAILS:
       'Single Pass Approach Lab'
     );
 
-    return res.status(200).json({
+    const finalOutput = {
       moments: Array.isArray(labOutput.moments) ? labOutput.moments : [],
-    });
+    };
+
+    // Persist to approach_lab_runs — UPDATE when regenerating an existing row, INSERT when new.
+    // Wrapped in try/catch so a cache-write failure never breaks the user-facing response.
+    try {
+      if (existingRow) {
+        await fetch(
+          `${SUPABASE_URL}/rest/v1/approach_lab_runs?id=eq.${encodeURIComponent(existingRow.id)}`,
+          {
+            method: 'PATCH',
+            headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+            body: JSON.stringify({
+              lab_output: finalOutput,
+              created_at: new Date().toISOString(),
+            }),
+          }
+        );
+      } else {
+        await fetch(`${SUPABASE_URL}/rest/v1/approach_lab_runs`, {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: JSON.stringify({
+            booking_id: bookingId,
+            practitioner_id: coachId,
+            client_email: clientEmail || null,
+            selected_approach: selectedApproach || null,
+            lab_output: finalOutput,
+            product_context: 'coaching',
+          }),
+        });
+      }
+    } catch (upsertErr) {
+      console.warn('[Approach Lab] cache write failed (non-fatal):', upsertErr.message);
+    }
+
+    return res.status(200).json(finalOutput);
   } catch (e) {
     console.error('[generate-approach-lab] Error:', e);
     return res.status(500).json({ error: e.message });
