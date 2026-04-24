@@ -97,12 +97,11 @@ export default async function handler(req, res) {
           to: clientEmail,
           subject: `${coachName} sent you a pre-session check-in`,
           html: `<div style="font-family:'DM Sans',sans-serif;max-width:560px;margin:0 auto;padding:32px;color:#1a3a52;">
-            <h1 style="font-family:'Cormorant Garamond',Georgia,serif;font-size:1.6rem;color:#1a3a52;margin-bottom:16px;">${formName}</h1>
+            <h1 style="font-family:'Cormorant Garamond',Georgia,serif;font-size:1.6rem;color:#1a3a52;margin-bottom:16px;">Pre-session check-in</h1>
             <p style="font-size:0.95rem;line-height:1.6;color:#6b6b60;">Hi ${clientName || 'there'},</p>
-            <p style="font-size:0.95rem;line-height:1.6;color:#6b6b60;">${coachName} has sent you a pre-session check-in. Please take a few minutes to fill it out before your session.</p>
+            <p style="font-size:0.95rem;line-height:1.6;color:#6b6b60;">Before our session, I'd like to hear what's most alive for you right now. This brief check-in takes about 3 minutes and helps me come prepared to focus on what would be most useful for you.</p>
             <div style="margin:24px 0;"><a href="${checkinUrl}" style="display:inline-block;background:#c49a3c;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:0.95rem;">Complete Check-in</a></div>
-            <p style="font-size:0.82rem;color:#6b6b60;">Or copy this link: <a href="${checkinUrl}" style="color:#c49a3c;">${checkinUrl}</a></p>
-            <p style="font-size:0.82rem;color:#6b6b60;margin-top:24px;">— <a href="https://www.ineedcoaching.org" style="color:#c49a3c;text-decoration:none;font-weight:600;">ineedcoaching.org</a></p>
+            <p style="font-size:0.95rem;line-height:1.6;color:#1a3a52;margin-top:28px;">— ${coachName}</p>
           </div>`
         })
       });
