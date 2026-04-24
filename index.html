@@ -172,8 +172,8 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
 .coaches-scroll::-webkit-scrollbar { display: none; }
 .coach-card { flex: 0 0 280px; scroll-snap-align: start; background: var(--cream); border-radius: var(--r); overflow: hidden; transition: transform 0.25s, box-shadow 0.25s; text-decoration: none; color: var(--navy); }
 .coach-card:hover { transform: translateY(-6px); box-shadow: 0 16px 40px rgba(0,0,0,0.2); }
-.coach-card-photo { width: 100%; height: 180px; background: var(--navy); display: flex; align-items: center; justify-content: center; overflow: hidden; }
-.coach-card-photo img { width: 100%; height: 100%; object-fit: cover; }
+.coach-card-photo { width: 100%; aspect-ratio: 4 / 5; background: var(--navy); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.coach-card-photo img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
 .coach-card-initials { font-family: 'Playfair Display', serif; font-size: 2.8rem; font-weight: 900; color: var(--gold); }
 .coach-card-body { padding: 22px; }
 .coach-card-name { font-family: 'Playfair Display', serif; font-size: 1.05rem; margin-bottom: 4px; }

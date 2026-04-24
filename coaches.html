@@ -43,7 +43,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .card { background: var(--warm); border: 1.5px solid var(--border); border-radius: var(--r); overflow: hidden; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); opacity: 0; transform: translateY(20px); }
 .card.visible { opacity: 1; transform: translateY(0); }
 .card:hover { border-color: var(--gold); transform: translateY(-5px); box-shadow: 0 16px 40px rgba(196,154,60,0.1); }
-.card-photo { width: 100%; height: 200px; background: var(--navy); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.card-photo { width: 100%; aspect-ratio: 4 / 5; background: var(--navy); display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .card-photo img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
 .card-initials { font-family: 'Playfair Display', serif; font-size: 3rem; font-weight: 900; color: var(--gold); }
 .card-body { padding: 24px; }
