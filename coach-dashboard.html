@@ -6673,7 +6673,34 @@ async function runPostSessionAnalysis(bookingId, clientEmail, sessionNotes, form
   }
 }
 
+// Guard: attach clarity disclosure click delegation once — survives all innerHTML rebuilds
+// because it lives on <body>, which never re-renders. Native <details> toggle is
+// intercepted (preventDefault) and the open attribute is toggled manually, so a blocked
+// native toggle (whatever the cause) never leaves a disclosure stuck closed.
+function setupClarityDisclosureDelegation() {
+  if (document.body.dataset.clarityDelegated === '1') return;
+  document.body.dataset.clarityDelegated = '1';
+  document.addEventListener('click', function(e) {
+    var summary = e.target && e.target.closest && e.target.closest('summary');
+    if (!summary) return;
+    var details = summary.parentElement;
+    if (!details || details.tagName !== 'DETAILS') return;
+    e.preventDefault();
+    var willOpen = !details.hasAttribute('open');
+    if (willOpen) {
+      details.setAttribute('open', '');
+      summary.setAttribute('aria-expanded', 'true');
+    } else {
+      details.removeAttribute('open');
+      summary.setAttribute('aria-expanded', 'false');
+    }
+    var label = (summary.textContent || '').trim().slice(0, 80);
+    console.log('[clarity] expand clicked:', label, '->', willOpen ? 'open' : 'closed');
+  });
+}
+
 function renderPostSessionAnalysis(a, container) {
+  setupClarityDisclosureDelegation();
   try {
   // Helper: section card with title, subtitle, for-label, and optional id/collapsed
   function psCard(title, subtitle, forLabel, body, opts) {
