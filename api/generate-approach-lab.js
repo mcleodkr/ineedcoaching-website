@@ -43,6 +43,7 @@ async function callClaude(apiKey, model, maxTokens, system, userMessage, passNam
         return JSON.parse(trimmed.substring(0, lastClose + 1));
       } catch (e4) { continue; }
     }
+    console.error(`[ApproachLab ${passName}] JSON parse failed. raw length=${raw.length}, first 500 chars:`, raw.substring(0, 500));
     throw new Error(`ApproachLab ${passName} JSON parse error: ${e1.message}`);
   }
 }
@@ -278,7 +279,7 @@ GUARDRAILS:
     const labOutput = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
-      2500,
+      8000,
       LAB_SYSTEM,
       LAB_USER,
       'Single Pass Approach Lab'
@@ -324,6 +325,9 @@ GUARDRAILS:
     return res.status(200).json(finalOutput);
   } catch (e) {
     console.error('[generate-approach-lab] Error:', e);
+    if (e && e.message && e.message.indexOf('JSON parse error') !== -1) {
+      return res.status(502).json({ error: 'Generation returned malformed response. Please try again.' });
+    }
     return res.status(500).json({ error: e.message });
   }
 }
