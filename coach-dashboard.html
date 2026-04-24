@@ -2066,6 +2066,7 @@ var profileSpecialties = [];
 var profileCredentials = [];
 var profileCertifications = [];
 var profileServices = [];
+var editingServiceIdx = -1;
 
 function populateProfileForm() {
   var p = coachProfile;
@@ -2133,11 +2134,35 @@ function renderServices() {
   var html = '';
   profileServices.forEach(function(svc, idx) {
     var isActive = svc.active !== false;
-    var priceDisplay = svc.contact_pricing ? 'Contact for pricing' : (svc.price ? '$' + svc.price : 'Free');
+    if (editingServiceIdx === idx) {
+      html += '<div class="service-item" data-editing="1" style="border:1px solid var(--gold);">'
+        + '<div style="display:flex;flex-direction:column;gap:10px;">'
+        + '<div><label style="display:block;font-size:0.75rem;font-weight:600;color:var(--ink);margin-bottom:4px;">Service name</label>'
+        + '<input type="text" data-svc-edit-field="name" data-svc-idx="' + idx + '" value="' + escapeHtml(svc.name || '') + '" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--cream);"></div>'
+        + '<div><label style="display:block;font-size:0.75rem;font-weight:600;color:var(--ink);margin-bottom:4px;">Description</label>'
+        + '<textarea data-svc-edit-field="description" data-svc-idx="' + idx + '" rows="2" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--cream);resize:vertical;">' + escapeHtml(svc.description || '') + '</textarea></div>'
+        + '<div style="display:flex;gap:10px;flex-wrap:wrap;">'
+        + '<div style="flex:1;min-width:140px;"><label style="display:block;font-size:0.75rem;font-weight:600;color:var(--ink);margin-bottom:4px;">Price ($)</label>'
+        + '<input type="number" min="0" step="0.01" data-svc-edit-field="price" data-svc-idx="' + idx + '" value="' + (svc.price != null ? escapeHtml(String(svc.price)) : '') + '"' + (svc.contact_pricing ? ' disabled' : '') + ' style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--cream);"></div>'
+        + '<div style="flex:1;min-width:140px;"><label style="display:block;font-size:0.75rem;font-weight:600;color:var(--ink);margin-bottom:4px;">Duration</label>'
+        + '<input type="text" data-svc-edit-field="duration" data-svc-idx="' + idx + '" value="' + escapeHtml(svc.duration || '') + '" placeholder="e.g. 60 min" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--cream);"></div>'
+        + '</div>'
+        + '<label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;color:var(--ink);"><input type="checkbox" data-svc-edit-field="contact_pricing" data-svc-idx="' + idx + '"' + (svc.contact_pricing ? ' checked' : '') + '> Contact for pricing (hides price)</label>'
+        + '<div id="svc-edit-msg-' + idx + '" style="display:none;font-size:0.82rem;margin-top:4px;"></div>'
+        + '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px;">'
+        + '<button class="svc-edit-cancel" data-svc-idx="' + idx + '" style="padding:8px 16px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;cursor:pointer;">Cancel</button>'
+        + '<button class="svc-edit-save" data-svc-idx="' + idx + '" style="padding:8px 18px;background:var(--gold);color:#fff;border:none;border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:600;cursor:pointer;">Save</button>'
+        + '</div></div></div>';
+      return;
+    }
+    var priceDisplay = svc.contact_pricing ? 'Contact for pricing' : (svc.price != null && svc.price !== '' ? '$' + svc.price : 'Free');
     html += '<div class="service-item">'
       + '<div class="service-item-header">'
       + '<h3>' + escapeHtml(svc.name || 'Untitled') + '</h3>'
+      + '<div style="display:flex;align-items:center;gap:10px;">'
+      + '<button class="svc-edit-btn" data-svc-idx="' + idx + '" style="font-size:0.78rem;color:var(--ink);cursor:pointer;border:1px solid var(--border);background:none;font-weight:600;padding:4px 12px;border-radius:50px;">Edit</button>'
       + '<label class="toggle-switch"><input type="checkbox" data-svc-idx="' + idx + '" ' + (isActive ? 'checked' : '') + '><span class="toggle-slider"></span></label>'
+      + '</div>'
       + '</div>'
       + (svc.description ? '<p>' + escapeHtml(svc.description) + '</p>' : '')
       + '<div class="service-item-meta">'
@@ -2148,12 +2173,78 @@ function renderServices() {
   });
   c.innerHTML = html;
 
-  // Toggle handlers
-  c.querySelectorAll('input[data-svc-idx]').forEach(function(cb) {
+  // Active toggle handlers (only the top-level checkbox with toggle-switch parent)
+  c.querySelectorAll('.toggle-switch input[data-svc-idx]').forEach(function(cb) {
     cb.addEventListener('change', function() {
       var idx = parseInt(this.dataset.svcIdx);
       profileServices[idx].active = this.checked;
       saveServices();
+    });
+  });
+
+  // Edit button handlers
+  c.querySelectorAll('.svc-edit-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      editingServiceIdx = parseInt(this.dataset.svcIdx);
+      renderServices();
+    });
+  });
+
+  // Cancel handlers
+  c.querySelectorAll('.svc-edit-cancel').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      editingServiceIdx = -1;
+      renderServices();
+    });
+  });
+
+  // Contact-for-pricing checkbox inside edit form disables price input live
+  c.querySelectorAll('input[data-svc-edit-field="contact_pricing"]').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+      var idx = this.dataset.svcIdx;
+      var priceInput = c.querySelector('input[data-svc-edit-field="price"][data-svc-idx="' + idx + '"]');
+      if (priceInput) {
+        priceInput.disabled = this.checked;
+        if (this.checked) priceInput.value = '';
+      }
+    });
+  });
+
+  // Save handlers
+  c.querySelectorAll('.svc-edit-save').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      var idx = parseInt(this.dataset.svcIdx);
+      var svc = profileServices[idx];
+      if (!svc) return;
+      var nameInput = c.querySelector('input[data-svc-edit-field="name"][data-svc-idx="' + idx + '"]');
+      var descInput = c.querySelector('textarea[data-svc-edit-field="description"][data-svc-idx="' + idx + '"]');
+      var priceInput = c.querySelector('input[data-svc-edit-field="price"][data-svc-idx="' + idx + '"]');
+      var durationInput = c.querySelector('input[data-svc-edit-field="duration"][data-svc-idx="' + idx + '"]');
+      var contactPricingInput = c.querySelector('input[data-svc-edit-field="contact_pricing"][data-svc-idx="' + idx + '"]');
+      var msg = $('svc-edit-msg-' + idx);
+      var newName = nameInput ? nameInput.value.trim() : '';
+      if (!newName) {
+        if (msg) { msg.textContent = 'Service name is required.'; msg.style.color = '#b93a3a'; msg.style.display = 'block'; }
+        return;
+      }
+      var cp = contactPricingInput ? contactPricingInput.checked : false;
+      var priceVal = priceInput ? priceInput.value : '';
+      svc.name = newName;
+      svc.description = descInput ? descInput.value.trim() : '';
+      svc.duration = durationInput ? durationInput.value.trim() : '';
+      svc.contact_pricing = cp;
+      svc.price = cp ? null : (priceVal === '' ? null : parseFloat(priceVal));
+      this.disabled = true;
+      this.textContent = 'Saving...';
+      try {
+        await saveServices();
+        editingServiceIdx = -1;
+        renderServices();
+      } catch (e) {
+        if (msg) { msg.textContent = 'Could not save. ' + (e.message || '').slice(0, 120); msg.style.color = '#b93a3a'; msg.style.display = 'block'; }
+        this.disabled = false;
+        this.textContent = 'Save';
+      }
     });
   });
 }
