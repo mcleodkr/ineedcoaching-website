@@ -2596,6 +2596,8 @@ async function loadBookings() {
           actions += ' <button class="booking-checkin-btn" data-send-checkin="' + b.id + '" data-client-email="' + escapeHtml(b.client_email || '') + '" data-client-name="' + escapeHtml(clientName) + '" style="font-size:0.75rem;color:var(--ink);cursor:pointer;border:1px solid var(--ink);background:none;font-weight:700;padding:4px 10px;border-radius:50px;margin-left:4px;">Send check-in</button>';
           actions += ' <button class="booking-testimonial-btn" data-client-email="' + escapeHtml(b.client_email || '') + '" data-client-name="' + escapeHtml(clientName) + '" style="font-size:0.75rem;color:var(--gold);cursor:pointer;border:1px solid var(--gold);background:none;font-weight:700;padding:4px 10px;border-radius:50px;margin-left:4px;">Request Testimonial</button>';
         }
+        actions += ' <button class="booking-precheck-btn" data-precheck-booking-id="' + b.id + '" style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#fff;cursor:pointer;border:none;background:var(--gold);font-weight:500;padding:6px 14px;border-radius:50px;margin-left:4px;transition:background 0.15s ease;" onmouseenter="this.style.background=\'var(--gold-hover)\'" onmouseleave="if(!this.disabled)this.style.background=\'var(--gold)\'">Send pre-check-in</button>';
+        actions += ' <span class="booking-precheck-msg" id="precheck-msg-' + b.id + '" style="display:none;font-family:\'DM Sans\',sans-serif;font-size:0.75rem;margin-left:6px;"></span>';
         if (status === 'manual') {
           actions += ' <button class="booking-edit-btn" data-edit-session="' + b.id + '" style="font-size:0.75rem;color:var(--ink);cursor:pointer;border:1px solid var(--border);background:none;font-weight:600;padding:4px 10px;border-radius:50px;margin-left:4px;">Edit session</button>';
         }
@@ -2766,6 +2768,68 @@ async function loadBookings() {
 
       wireSendCheckinButtons();
       wireTestimonialButtons();
+
+      $('bookings-content').querySelectorAll('.booking-precheck-btn').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+          var id = this.dataset.precheckBookingId;
+          var booking = allBookings.find(function(b) { return b.id === id; });
+          var msgEl = document.getElementById('precheck-msg-' + id);
+          function showMsg(text, color) {
+            if (!msgEl) return;
+            msgEl.textContent = text;
+            msgEl.style.color = color;
+            msgEl.style.display = 'inline';
+          }
+          function clearMsg() {
+            if (!msgEl) return;
+            msgEl.textContent = '';
+            msgEl.style.display = 'none';
+          }
+          clearMsg();
+          if (!booking || !booking.zoom_link) {
+            showMsg('Add a Zoom link to this booking first', '#b93a3a');
+            return;
+          }
+          var originalText = this.textContent;
+          var originalBg = this.style.background;
+          this.disabled = true;
+          this.textContent = 'Sending…';
+          this.style.opacity = '0.75';
+          var btn = this;
+          try {
+            var res = await fetch(SUPABASE_URL + '/functions/v1/send-booking-precheck-in', {
+              method: 'POST',
+              headers: apiHeaders(),
+              body: JSON.stringify({ booking_id: id })
+            });
+            var data = {};
+            try { data = await res.json(); } catch (e) {}
+            if (!res.ok || !data.sent) {
+              var reason = (data && data.reason) || ('HTTP ' + res.status);
+              showMsg(String(reason).slice(0, 200), '#b93a3a');
+              btn.disabled = false;
+              btn.textContent = originalText;
+              btn.style.opacity = '1';
+              btn.style.background = originalBg || 'var(--gold)';
+              return;
+            }
+            btn.textContent = 'Sent ✓';
+            btn.style.background = 'var(--forest)';
+            btn.style.opacity = '1';
+            setTimeout(function() {
+              btn.textContent = originalText;
+              btn.style.background = originalBg || 'var(--gold)';
+              btn.disabled = false;
+            }, 3000);
+          } catch (e) {
+            showMsg((e && e.message ? e.message : 'Failed to send').slice(0, 200), '#b93a3a');
+            btn.disabled = false;
+            btn.textContent = originalText;
+            btn.style.opacity = '1';
+            btn.style.background = originalBg || 'var(--gold)';
+          }
+        });
+      });
 
       $('bookings-content').querySelectorAll('[data-edit-session]').forEach(function(btn) {
         btn.addEventListener('click', function() {
