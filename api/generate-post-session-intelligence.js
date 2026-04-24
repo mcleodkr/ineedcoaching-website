@@ -105,6 +105,37 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'No transcript or notes found for this booking' });
     }
 
+    // ── Load prior pattern map for longitudinal context ─────────────────
+    // Pulled once, reused across every meaning-reasoning pass so the model
+    // reasons against what's already known about this client instead of
+    // treating the session as standalone. Missing map is non-fatal — first
+    // sessions and clients who never ran the generator get a null map.
+    let priorPatternMap = null;
+    if (clientEmail) {
+      try {
+        const ppmRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/coach_client_patterns?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&select=pattern_map,session_count&limit=1`,
+          { headers: supabaseHeaders }
+        );
+        const ppmRows = await ppmRes.json();
+        if (Array.isArray(ppmRows) && ppmRows.length > 0 && ppmRows[0].pattern_map) {
+          priorPatternMap = ppmRows[0].pattern_map;
+          console.log(`[PostSession] Loaded pattern_map for client ${clientEmail}, session_count ${ppmRows[0].session_count ?? 'unknown'}`);
+        } else {
+          console.log(`[PostSession] No pattern_map for client ${clientEmail} — proceeding without longitudinal context`);
+        }
+      } catch (e) {
+        console.error('[PostSession] pattern_map lookup failed, proceeding without:', e.message);
+      }
+    }
+
+    const priorPatternContext = priorPatternMap ? `
+
+PRIOR PATTERN MAP FOR THIS CLIENT (from previous sessions):
+${JSON.stringify(priorPatternMap)}
+
+When analyzing this session, reason against this pattern map. For each observation, indicate whether it confirms an existing pattern, extends a pattern with new evidence, contradicts a pattern (the client is moving differently than before), or surfaces something new. Do not repeat the pattern map verbatim — use it as context for fresh observation.` : '';
+
     // Shared constraints for all synthesis passes
     const CONCISE = 'Every string value: 1-2 sentences max, under 40 words. Surface the signal, not the essay.';
     const JSON_ONLY = 'Return ONLY raw JSON. No markdown. No explanation. No preamble. Start with { and end with }.';
@@ -117,7 +148,7 @@ export default async function handler(req, res) {
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
       1500,
-      `You are an evidence extraction engine. Extract only what is explicitly present. Do not interpret. ${CONCISE} ${JSON_ONLY}`,
+      `You are an evidence extraction engine. Extract only what is explicitly present. Do not interpret. ${CONCISE} ${JSON_ONLY}${priorPatternContext}`,
       `Extract from this session: client_quotes (max 5 verbatim), commitments, emotional_shifts [{before,after}], themes, coach_interventions, tension_points, mentioned_goals. All arrays of short strings.
 
 ${sessionContent}`,
@@ -125,7 +156,7 @@ ${sessionContent}`,
     );
 
     // ── Pass 2a: Core Intelligence ──────────────────────────────────────
-    const synthesisSystem = `${IDENTITY} ${TONE} ${CONCISE} ${CLARITY} ${JSON_ONLY}`;
+    const synthesisSystem = `${IDENTITY} ${TONE} ${CONCISE} ${CLARITY} ${JSON_ONLY}${priorPatternContext}`;
 
     const coreOutput = await callClaude(
       ANTHROPIC_API_KEY,
@@ -150,7 +181,7 @@ Return ONLY this JSON:
       ? '\nGoals: ' + existingGoals.join(', ')
       : '';
 
-    const MIRROR_RULES = `You are Coach Clarity, a reflective partner for professional coaches. Your job is to eliminate ambiguity and show the coach exactly what happened, what they did, why it mattered, and why it worked. CRITICAL RULE: Never describe the client in sections designated for the coach. If a section is about the coach's approach, every sentence must have "you" as the subject. HARD LIMIT: Maximum 2 items per array. Maximum 15 words per string value. Return ONLY raw JSON starting with { and ending with }. ${TONE} ${CLARITY}`;
+    const MIRROR_RULES = `You are Coach Clarity, a reflective partner for professional coaches. Your job is to eliminate ambiguity and show the coach exactly what happened, what they did, why it mattered, and why it worked. CRITICAL RULE: Never describe the client in sections designated for the coach. If a section is about the coach's approach, every sentence must have "you" as the subject. HARD LIMIT: Maximum 2 items per array. Maximum 15 words per string value. Return ONLY raw JSON starting with { and ending with }. ${TONE} ${CLARITY}${priorPatternContext}`;
 
     // ── Pass 2b: Interventions + What Stood Out + Reflection ─────────────
     const pass2bOutput = await callClaude(
@@ -316,7 +347,7 @@ Return ONLY:
           ANTHROPIC_API_KEY,
           'claude-sonnet-4-6',
           800,
-          `You are a coaching reflection system. ${TONE} ${CONCISE} ${JSON_ONLY}`,
+          `You are a coaching reflection system. ${TONE} ${CONCISE} ${JSON_ONLY}${priorPatternContext}`,
           `Based on this session evidence, generate a coaching reflection. ${CONCISE}
 
 EVIDENCE: ${JSON.stringify(extractionOutput)}
@@ -359,7 +390,7 @@ If crisis_adjacent: return null.`,
           ANTHROPIC_API_KEY,
           'claude-sonnet-4-6',
           1000,
-          `You are Coach Clarity. Your role is to connect this session's evidence to the coach's established DNA patterns. Do not invent new patterns. Only surface patterns where clear evidence exists in this session. Return ONLY valid JSON.`,
+          `You are Coach Clarity. Your role is to connect this session's evidence to the coach's established DNA patterns. Do not invent new patterns. Only surface patterns where clear evidence exists in this session. Return ONLY valid JSON.${priorPatternContext}`,
           `Here are this coach's established DNA patterns:
 BIAS PROFILE: ${JSON.stringify(existingDNA.bias_profile?.slice(0, 3))}
 PATTERN ACTIVATION MAP: ${JSON.stringify(existingDNA.pattern_activation_map?.slice(0, 3))}
@@ -470,6 +501,9 @@ Limit to 2 suggestions max. If no strong fit exists return empty array.`,
     }
 
     formattedOutput.approaches_to_explore = pass3dOutput?.approaches_to_explore || null;
+
+    // Observability: was a prior pattern_map fed into the meaning-reasoning passes?
+    formattedOutput.pattern_map_referenced = !!priorPatternMap;
 
     // ── Save results to Supabase ────────────────────────────────────────
     if (bookingId) {
