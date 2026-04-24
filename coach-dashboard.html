@@ -4065,7 +4065,7 @@ function openAddClientModal() {
     modal = document.createElement('div');
     modal.id = 'add-client-modal';
     modal.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;';
-    modal.innerHTML = '<div style="background:var(--white);border-radius:var(--r);max-width:480px;width:90%;max-height:85vh;overflow-y:auto;padding:32px;position:relative;box-shadow:0 12px 40px rgba(0,0,0,0.15);">'
+    modal.innerHTML = '<div style="background:var(--white);border-radius:var(--r);max-width:520px;width:90%;max-height:85vh;overflow-y:auto;padding:32px;position:relative;box-shadow:0 12px 40px rgba(0,0,0,0.15);">'
       + '<button id="add-client-modal-close" style="position:absolute;top:14px;right:18px;background:none;border:none;font-size:1.4rem;color:var(--muted);cursor:pointer;">&times;</button>'
       + '<h2 style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:700;color:var(--ink);margin:0 0 6px 0;">Add a client</h2>'
       + '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:var(--muted);margin:0 0 22px 0;">For clients you work with off-platform. They will appear in your client list and transcripts can be uploaded against them.</p>'
@@ -4073,6 +4073,10 @@ function openAddClientModal() {
       + '<input type="text" id="add-client-name" placeholder="First Last" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--cream);"></div>'
       + '<div style="margin-bottom:14px;"><label style="display:block;font-family:\'DM Sans\',sans-serif;font-size:0.8rem;font-weight:600;color:var(--ink);margin-bottom:6px;">Client email <span style="color:var(--muted);font-weight:400;">(optional)</span></label>'
       + '<input type="email" id="add-client-email" placeholder="client@example.com" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--cream);"></div>'
+      + '<div style="margin-bottom:14px;"><label style="display:block;font-family:\'DM Sans\',sans-serif;font-size:0.8rem;font-weight:600;color:var(--ink);margin-bottom:6px;">Session date &amp; time <span style="color:#b93a3a;">*</span></label>'
+      + '<input type="datetime-local" id="add-client-datetime" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--cream);"></div>'
+      + '<div style="margin-bottom:14px;"><label style="display:block;font-family:\'DM Sans\',sans-serif;font-size:0.8rem;font-weight:600;color:var(--ink);margin-bottom:6px;">Zoom / meeting link <span style="color:var(--muted);font-weight:400;">(optional)</span></label>'
+      + '<input type="url" id="add-client-zoom" placeholder="https://zoom.us/j/..." style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--cream);"></div>'
       + '<div style="margin-bottom:18px;"><label style="display:block;font-family:\'DM Sans\',sans-serif;font-size:0.8rem;font-weight:600;color:var(--ink);margin-bottom:6px;">Notes <span style="color:var(--muted);font-weight:400;">(optional)</span></label>'
       + '<textarea id="add-client-notes" rows="3" placeholder="Anything you want to remember about this client" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--cream);resize:vertical;"></textarea></div>'
       + '<div id="add-client-error" style="display:none;color:#b93a3a;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;margin-bottom:12px;"></div>'
@@ -4090,6 +4094,8 @@ function openAddClientModal() {
   // Reset fields
   $('add-client-name').value = '';
   $('add-client-email').value = '';
+  $('add-client-datetime').value = '';
+  $('add-client-zoom').value = '';
   $('add-client-notes').value = '';
   $('add-client-error').style.display = 'none';
   $('add-client-error').textContent = '';
@@ -4102,6 +4108,8 @@ function openAddClientModal() {
 async function submitAddClient() {
   var name = $('add-client-name').value.trim();
   var email = $('add-client-email').value.trim();
+  var datetimeVal = $('add-client-datetime').value;
+  var zoomLink = $('add-client-zoom').value.trim();
   var extraNotes = $('add-client-notes').value.trim();
   var errorEl = $('add-client-error');
   var saveBtn = $('add-client-save');
@@ -4121,6 +4129,26 @@ async function submitAddClient() {
     return;
   }
 
+  if (!datetimeVal) {
+    errorEl.textContent = 'Session date & time is required.';
+    errorEl.style.display = 'block';
+    return;
+  }
+  var scheduledIso;
+  try {
+    scheduledIso = new Date(datetimeVal).toISOString();
+  } catch (e) {
+    errorEl.textContent = 'Invalid session date & time.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  if (zoomLink && !/^https?:\/\//i.test(zoomLink)) {
+    errorEl.textContent = 'Meeting link must start with http:// or https://';
+    errorEl.style.display = 'block';
+    return;
+  }
+
   saveBtn.disabled = true;
   saveBtn.textContent = 'Adding...';
 
@@ -4130,16 +4158,18 @@ async function submitAddClient() {
   var notesPayload = 'Name: ' + name + (extraNotes ? '\n' + extraNotes : '');
 
   try {
+    var body = {
+      coach_id: coachProfile.id,
+      client_email: effectiveEmail,
+      status: 'manual',
+      scheduled_at: scheduledIso,
+      notes: notesPayload
+    };
+    if (zoomLink) body.zoom_link = zoomLink;
     var res = await fetch(SUPABASE_URL + '/rest/v1/coach_bookings', {
       method: 'POST',
       headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
-      body: JSON.stringify({
-        coach_id: coachProfile.id,
-        client_email: effectiveEmail,
-        status: 'manual',
-        scheduled_at: new Date().toISOString(),
-        notes: notesPayload
-      })
+      body: JSON.stringify(body)
     });
     if (!res.ok) {
       var errBody = await res.text();
