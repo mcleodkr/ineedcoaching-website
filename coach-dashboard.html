@@ -7755,14 +7755,18 @@ function renderCoachingMirror(a, container) {
   if (fw && fw.length) {
     var fwBody = '';
     fw.forEach(function(f) {
+      var hasFwDisclosure = !!(f.build_on_this || f.use_next_time || f.mindful_of || f.be_careful_of);
       fwBody += '<div style="background:var(--cream);border-radius:8px;padding:16px;margin-bottom:10px;">'
         + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="font-weight:600;font-size:0.88rem;color:var(--ink);">' + escapeHtml(f.name || '') + '</span>' + frameworkBadge(f.presence_level || '') + '</div>'
         + '<div style="font-size:0.82rem;color:var(--muted);margin-bottom:6px;line-height:1.5;"><span style="font-weight:600;color:var(--ink);">What was observed:</span> ' + escapeHtml(f.what_was_observed || f.description || '') + '</div>'
         + (f.what_it_suggests || f.leverage_note ? '<div style="font-size:0.82rem;color:var(--muted);line-height:1.5;margin-bottom:8px;"><span style="font-weight:600;color:var(--ink);">What this may suggest:</span> ' + escapeHtml(f.what_it_suggests || f.leverage_note || '') + '</div>' : '')
-        + '<details style="cursor:pointer;"><summary style="font-size:0.75rem;font-weight:600;color:var(--gold);cursor:pointer;">Why this matters & what to watch for</summary><div style="padding:8px 0 0 0;font-size:0.82rem;color:var(--muted);line-height:1.6;">'
-        + (f.build_on_this || f.use_next_time ? '<div style="margin-bottom:6px;"><span style="font-weight:600;color:var(--ink);">One way you might build on this:</span> ' + escapeHtml(f.build_on_this || f.use_next_time || '') + '</div>' : '')
-        + (f.mindful_of || f.be_careful_of ? '<div><span style="font-weight:600;color:#b8860b;">Something to be mindful of:</span> ' + escapeHtml(f.mindful_of || f.be_careful_of || '') + '</div>' : '')
-        + '</div></details></div>';
+        + (hasFwDisclosure
+            ? '<details style="cursor:pointer;"><summary style="font-size:0.75rem;font-weight:600;color:var(--gold);cursor:pointer;">Why this matters & what to watch for</summary><div style="padding:8px 0 0 0;font-size:0.82rem;color:var(--muted);line-height:1.6;">'
+              + (f.build_on_this || f.use_next_time ? '<div style="margin-bottom:6px;"><span style="font-weight:600;color:var(--ink);">One way you might build on this:</span> ' + escapeHtml(f.build_on_this || f.use_next_time || '') + '</div>' : '')
+              + (f.mindful_of || f.be_careful_of ? '<div><span style="font-weight:600;color:#b8860b;">Something to be mindful of:</span> ' + escapeHtml(f.mindful_of || f.be_careful_of || '') + '</div>' : '')
+              + '</div></details>'
+            : '')
+        + '</div>';
     });
     h += mirrorSection('pm-frameworks', 'What This Session Revealed About Your Coaching', 'Patterns in how you guided this session. Surfaced by Coach Clarity so you can use them more intentionally.', 'Coach Clarity \u2192 For You', fwBody);
   }
