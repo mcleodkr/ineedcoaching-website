@@ -43,6 +43,8 @@
     { "source": "/coach-signup", "destination": "/coach-signup.html" },
     { "source": "/signup-success", "destination": "/signup-success.html" },
     { "source": "/proposal-builder", "destination": "/proposal-builder.html" },
-    { "source": "/intervention-plan", "destination": "/intervention-plan-panel.html" }
+    { "source": "/intervention-plan", "destination": "/intervention-plan-panel.html" },
+    { "source": "/article.html", "destination": "/api/article-render" },
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" }
   ]
 }
