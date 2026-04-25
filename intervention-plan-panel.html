@@ -632,13 +632,28 @@
   function renderSessionArc() {
     const arr = plan.session_arc || [];
     if (!arr.length) return '<div class="empty-cta">No session arc yet.</div>';
-    return arr.map(s =>
-      renderItem(
-        '<div class="item-title">Session ' + escapeHtml(String(s.session_number || '?')) + ' · ' + escapeHtml(s.label || 'tentative') + ' <span class="pill ' + (s.specificity || 'directional') + '">' + escapeHtml(s.specificity || 'directional') + '</span></div>'
-        + (s.focus ? '<div style="font-size:0.85rem;">' + escapeHtml(s.focus) + '</div>' : ''),
-        sourceTag(s.source_sessions)
-      )
-    ).join('');
+    const isLocked = plan && plan.status === 'locked';
+    return arr.map(function(s, i) {
+      const isNext = i === 0;
+      // Session 1 (next) gets the plan-this-session affordance when the IP is locked.
+      // Other arc cards stay non-interactive — coaches plan one session at a time.
+      const planBtn = (isLocked && isNext)
+        ? '<div style="margin-top:10px;text-align:right;"><button class="btn btn-secondary plan-session-btn" data-session-arc-index="0" style="padding:6px 14px;font-size:0.78rem;">Plan this session →</button></div>'
+        : '';
+      const inlineSlot = (isLocked && isNext)
+        ? '<div class="session-plan-slot" id="session-plan-slot-arc" style="margin-top:14px;"></div>'
+        : '';
+      const cardHighlight = isNext
+        ? 'background:rgba(196,154,60,0.06);border-left:3px solid var(--gold);padding-left:12px;'
+        : '';
+      return '<div class="item" style="' + cardHighlight + '">'
+        + '<div class="item-title">Session ' + escapeHtml(String(s.session_number || '?')) + ' · ' + escapeHtml(s.label || 'tentative') + ' <span class="pill ' + (s.specificity || 'directional') + '">' + escapeHtml(s.specificity || 'directional') + '</span></div>'
+        + (s.focus ? '<div style="font-size:0.85rem;">' + escapeHtml(s.focus) + '</div>' : '')
+        + (sourceTag(s.source_sessions) ? '<div class="item-meta">' + sourceTag(s.source_sessions) + '</div>' : '')
+        + planBtn
+        + inlineSlot
+        + '</div>';
+    }).join('');
   }
 
   function renderCoachCommitment() {
@@ -740,9 +755,15 @@
   }
 
   // Locked-mode wiring: prior_commitments status dropdowns, coach commitment
-  // click-to-edit, and per-section "+ Add coach note" affordances. Re-runs on
-  // every render() because the DOM is rebuilt wholesale on each save.
+  // click-to-edit, per-section "+ Add coach note" affordances, and the
+  // Session 1 "Plan this session" button. Re-runs on every render()
+  // because the DOM is rebuilt wholesale on each save.
   function wireLockedEditables() {
+    // 0. Session 1 "Plan this session" button → inline session plan render
+    document.querySelectorAll('.plan-session-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() { openSessionPlanForBooking(null); });
+    });
+
     // 1. Prior-commitments status dropdowns
     document.querySelectorAll('.commitment-status-select').forEach(function(sel) {
       sel.addEventListener('change', function() {
@@ -833,6 +854,146 @@
     });
   }
 
+  // ── Session plan support ────────────────────────────────────────────
+  // Picks the next upcoming booking for this client, generates a session
+  // plan against the locked IP, and renders the result inline below the
+  // Session 1 arc card. Same flow regardless of entry point (IP panel
+  // button or bookings-tab → ?plan_for_booking=...).
+  async function loadNextUpcomingBooking(preferredBookingId) {
+    try {
+      // If a specific booking_id was supplied (bookings-tab entry), prefer it.
+      if (preferredBookingId) {
+        const res = await fetch(SUPABASE_URL + '/rest/v1/coach_bookings?id=eq.' + encodeURIComponent(preferredBookingId) + '&select=id,session_at,duration_minutes,session_type&limit=1', { headers: apiHeaders() });
+        const rows = await res.json();
+        if (Array.isArray(rows) && rows.length) return rows[0];
+      }
+      // Otherwise auto-pick the soonest future booking for this client + coach.
+      const nowIso = new Date().toISOString();
+      const res = await fetch(SUPABASE_URL + '/rest/v1/coach_bookings?coach_id=eq.' + coachId + '&client_email=eq.' + encodeURIComponent(clientEmail) + '&session_at=gte.' + encodeURIComponent(nowIso) + '&select=id,session_at,duration_minutes,session_type&order=session_at.asc&limit=1', { headers: apiHeaders() });
+      const rows = await res.json();
+      return Array.isArray(rows) && rows.length ? rows[0] : null;
+    } catch (_) { return null; }
+  }
+
+  function fmtSessionDate(iso) {
+    if (!iso) return 'upcoming';
+    try { return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); }
+    catch (_) { return 'upcoming'; }
+  }
+
+  function renderSessionPlan(sp, clientDisplayName, sessionDateIso) {
+    if (!sp) return '<div class="error-box">No session plan returned.</div>';
+    const tf = sp.time_flow || {};
+    const cttArr = (sp.commitments_to_test || []).filter(Boolean);
+    const psArr = (sp.pre_session_signals || []).filter(Boolean);
+    const tpArr = (sp.turning_points || []).filter(Boolean);
+    const brArr = (sp.branches || []).filter(Boolean);
+    const bcArr = (sp.body_cues_to_watch || []).filter(Boolean);
+    const kqArr = (sp.key_questions || []).filter(Boolean);
+    return '<div class="session-plan-card" style="background:#fff;border:2px solid var(--gold);border-radius:10px;padding:20px 22px;margin-top:14px;box-shadow:0 2px 6px rgba(196,154,60,0.08);">'
+      + '<div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:12px;border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:14px;">'
+      + '<div>'
+      + '<div class="meta" style="margin-bottom:4px;">Session Plan</div>'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;color:var(--navy);font-weight:600;">' + escapeHtml(clientDisplayName || '') + ' · ' + escapeHtml(fmtSessionDate(sessionDateIso)) + '</div>'
+      + '</div>'
+      + '<div style="display:flex;gap:8px;">'
+      + '<button class="btn btn-secondary regen-session-plan" style="padding:6px 14px;font-size:0.78rem;">Regenerate</button>'
+      + '<button class="btn btn-tertiary close-session-plan" style="padding:6px 14px;font-size:0.78rem;">Close</button>'
+      + '</div>'
+      + '</div>'
+
+      + '<div class="meta" style="color:var(--gold);">Priority</div>'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.25rem;font-weight:600;color:var(--navy);line-height:1.4;margin:4px 0 18px;">' + escapeHtml(sp.today_priority || '') + '</div>'
+
+      + '<div class="meta" style="color:var(--gold);">Opening</div>'
+      + '<div style="font-size:0.95rem;line-height:1.5;margin:4px 0 18px;">' + escapeHtml(sp.opening || '') + '</div>'
+
+      + (kqArr.length ? '<div class="meta" style="color:var(--gold);">Key questions (in order of likely use)</div>'
+          + '<ol style="margin:6px 0 18px;padding-left:22px;font-size:0.9rem;line-height:1.5;">'
+          + kqArr.map(function(q) { return '<li style="margin-bottom:4px;">' + escapeHtml(q) + '</li>'; }).join('')
+          + '</ol>' : '')
+
+      + (sp.do_not_miss ? '<div class="meta" style="color:var(--gold);">Do not miss</div>'
+          + '<div style="font-family:\'Cormorant Garamond\',serif;font-style:italic;font-size:1.05rem;color:var(--navy);background:#fdf9f1;border-left:3px solid var(--gold);padding:10px 14px;margin:4px 0 18px;">' + escapeHtml(sp.do_not_miss) + '</div>' : '')
+
+      + (tpArr.length || brArr.length || bcArr.length ? '<div class="meta" style="color:var(--gold);">Work</div>' : '')
+      + (tpArr.length ? '<div style="font-size:0.85rem;font-weight:600;color:var(--ink);margin-top:6px;">Turning points</div>'
+          + '<ul style="margin:4px 0 10px;padding-left:22px;font-size:0.88rem;line-height:1.5;">'
+          + tpArr.map(function(tp) { return '<li><strong>If</strong> ' + escapeHtml(tp.trigger || '') + ' → <strong>then</strong> ' + escapeHtml(tp.move || '') + '</li>'; }).join('')
+          + '</ul>' : '')
+      + (brArr.length ? '<div style="font-size:0.85rem;font-weight:600;color:var(--ink);margin-top:6px;">Branches</div>'
+          + '<ul style="margin:4px 0 10px;padding-left:22px;font-size:0.88rem;line-height:1.5;">'
+          + brArr.map(function(b) { return '<li><strong>If</strong> ' + escapeHtml(b.if || '') + ' → <strong>then</strong> ' + escapeHtml(b.then || '') + '</li>'; }).join('')
+          + '</ul>' : '')
+      + (bcArr.length ? '<div style="font-size:0.85rem;font-weight:600;color:var(--ink);margin-top:6px;">Body cues to watch</div>'
+          + '<ul style="margin:4px 0 18px;padding-left:22px;font-size:0.88rem;line-height:1.5;">'
+          + bcArr.map(function(c) { return '<li>' + escapeHtml(c) + '</li>'; }).join('')
+          + '</ul>' : '<div style="margin-bottom:8px;"></div>')
+
+      + (cttArr.length ? '<div class="meta" style="color:var(--gold);">Commitments to check in on</div>'
+          + '<ul style="margin:4px 0 18px;padding-left:22px;font-size:0.88rem;line-height:1.5;list-style:none;">'
+          + cttArr.map(function(c) {
+              return '<li style="padding:8px 10px;background:#fdfcfa;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;">'
+                + '<div style="font-style:italic;color:var(--navy);">"' + escapeHtml(c.commitment_text || '') + '"</div>'
+                + '<div style="font-size:0.78rem;color:var(--muted);margin-top:4px;">status: <span class="pill ' + (c.current_status || 'untested') + '" style="vertical-align:middle;">' + escapeHtml(c.current_status || 'untested') + '</span>'
+                + (c.from_session_date ? ' · ' + escapeHtml(c.from_session_date) : '')
+                + '</div>'
+                + (c.how_to_check_in ? '<div style="font-size:0.85rem;margin-top:6px;color:var(--ink);"><strong>How to check in:</strong> ' + escapeHtml(c.how_to_check_in) + '</div>' : '')
+                + '</li>';
+            }).join('')
+          + '</ul>' : '')
+
+      + (psArr.length ? '<div class="meta" style="color:var(--gold);">Pre-session signals</div>'
+          + '<ul style="margin:4px 0 18px;padding-left:22px;font-size:0.88rem;line-height:1.5;">'
+          + psArr.map(function(s) { return '<li><strong>' + escapeHtml(s.type || '') + ':</strong> ' + escapeHtml(s.summary || '') + '</li>'; }).join('')
+          + '</ul>' : '')
+
+      + (sp.close_with ? '<div class="meta" style="color:var(--gold);">Close with</div>'
+          + '<div style="font-size:0.95rem;line-height:1.5;margin:4px 0 18px;">' + escapeHtml(sp.close_with) + '</div>' : '')
+
+      + '<div class="meta" style="color:var(--gold);">Time flow</div>'
+      + '<div style="font-size:0.85rem;line-height:1.6;margin:4px 0 6px;">'
+      + '<div><strong>Opening (' + (tf.opening?.minutes || 0) + ' min)</strong> · ' + escapeHtml(tf.opening?.summary || '') + '</div>'
+      + '<div><strong>Work (' + (tf.work?.minutes || 0) + ' min)</strong> · ' + escapeHtml(tf.work?.summary || '') + '</div>'
+      + '<div><strong>Close (' + (tf.close?.minutes || 0) + ' min)</strong> · ' + escapeHtml(tf.close?.summary || '') + '</div>'
+      + '</div>'
+
+      + '</div>';
+  }
+
+  // Open + render the session plan inline under the Session 1 arc card.
+  // Works for both entry points: button click in the panel, and ?plan_for_booking=
+  // query param from the bookings tab.
+  let _cachedClientDisplayName = null;
+  async function openSessionPlanForBooking(preferredBookingId) {
+    if (!plan || plan.status !== 'locked') return;
+    const slot = document.getElementById('session-plan-slot-arc');
+    if (!slot) return;
+    slot.innerHTML = '<div class="loader"><div class="spinner"></div><div>Generating session plan… this may take 30–50 seconds.</div></div>';
+    try {
+      const booking = await loadNextUpcomingBooking(preferredBookingId);
+      if (!booking) {
+        slot.innerHTML = '<div class="error-box">No upcoming booking found for this client. Schedule a session first, then return here.</div>';
+        return;
+      }
+      const res = await fetch('/api/generate-session-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ intervention_plan_id: plan.id, booking_id: booking.id, coach_id: coachId, client_email: clientEmail }),
+      });
+      const sp = await parseApiResponse(res, 'Session plan generation failed');
+      slot.innerHTML = renderSessionPlan(sp, _cachedClientDisplayName, booking.session_at);
+      slot.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Wire regenerate + close buttons
+      const regenBtn = slot.querySelector('.regen-session-plan');
+      if (regenBtn) regenBtn.addEventListener('click', function() { openSessionPlanForBooking(booking.id); });
+      const closeBtn = slot.querySelector('.close-session-plan');
+      if (closeBtn) closeBtn.addEventListener('click', function() { slot.innerHTML = ''; });
+    } catch (e) {
+      slot.innerHTML = '<div class="error-box">' + escapeHtml(e.message) + '</div>';
+    }
+  }
+
   // Pull most recent client_name from coach_checkin_responses — same source
   // the bookings tab and review cards already use. Falls back to email if
   // the client has no check-ins yet so the panel never renders blank.
@@ -860,10 +1021,20 @@
     sessionInfo = sessions || {};
     plan = loadedPlan;
     const displayName = clientName || clientEmail || 'Client';
+    _cachedClientDisplayName = displayName;
     $('client-heading').textContent = displayName;
     $('header-meta').textContent = clientEmail + ' · coach: ' + (profile.display_name || '');
     document.title = 'Intervention Plan · ' + displayName;
     render();
+    // Auto-trigger session plan when the bookings tab navigated here
+    // with ?plan_for_booking=<uuid>. Locked-IP-only — falls through silently
+    // if the IP is still in draft.
+    const planForBooking = params.get('plan_for_booking');
+    if (planForBooking && plan && plan.status === 'locked') {
+      // wireLockedEditables ran inside render(); the slot is in the DOM.
+      // Auto-fire the same flow the button click would.
+      openSessionPlanForBooking(planForBooking);
+    }
   })();
   </script>
 </body>

@@ -24,6 +24,9 @@
     "api/regenerate-intervention-plan-from-scratch.js": {
       "maxDuration": 300
     },
+    "api/generate-session-plan.js": {
+      "maxDuration": 120
+    },
     "api/generate-approach-lab.js": {
       "maxDuration": 60
     },

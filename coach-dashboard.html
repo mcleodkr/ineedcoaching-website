@@ -2630,6 +2630,11 @@ async function loadBookings() {
           actions += ' <button class="booking-testimonial-btn" data-client-email="' + escapeHtml(b.client_email || '') + '" data-client-name="' + escapeHtml(clientName) + '" style="font-size:0.75rem;color:var(--gold);cursor:pointer;border:1px solid var(--gold);background:none;font-weight:700;padding:4px 10px;border-radius:50px;margin-left:4px;">Request Testimonial</button>';
         }
         actions += ' <button class="booking-precheck-btn" data-precheck-booking-id="' + b.id + '" title="Email the client the Zoom meeting link for this session" style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#fff;cursor:pointer;border:none;background:var(--gold);font-weight:500;padding:6px 14px;border-radius:50px;margin-left:4px;transition:background 0.15s ease;" onmouseenter="this.style.background=\'var(--gold-hover)\'" onmouseleave="if(!this.disabled)this.style.background=\'var(--gold)\'">Send Zoom link</button>';
+        // Plan this session — opens the IP panel scoped to this booking, which
+        // auto-triggers /api/generate-session-plan and renders the result inline
+        // beneath the Session 1 arc card. Same render component as the IP panel
+        // entry point.
+        actions += ' <a class="booking-plan-session-btn" href="/intervention-plan?client_email=' + encodeURIComponent(b.client_email || '') + '&plan_for_booking=' + encodeURIComponent(b.id) + '" target="_blank" rel="noopener" title="Generate a tactical session plan for this booking" style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#fff;cursor:pointer;border:none;background:var(--navy);font-weight:500;padding:6px 14px;border-radius:50px;margin-left:4px;text-decoration:none;display:inline-block;transition:opacity 0.15s ease;" onmouseenter="this.style.opacity=\'0.85\'" onmouseleave="this.style.opacity=\'1\'">Plan this session</a>';
         actions += ' <span class="booking-precheck-msg" id="precheck-msg-' + b.id + '" style="display:none;font-family:\'DM Sans\',sans-serif;font-size:0.75rem;margin-left:6px;"></span>';
       }
       // Edit + Delete on every row — matches Services pattern
