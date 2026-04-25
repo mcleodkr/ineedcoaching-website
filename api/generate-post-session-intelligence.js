@@ -136,6 +136,31 @@ ${JSON.stringify(priorPatternMap)}
 
 When analyzing this session, reason against this pattern map. For each observation, indicate whether it confirms an existing pattern, extends a pattern with new evidence, contradicts a pattern (the client is moving differently than before), or surfaces something new. Do not repeat the pattern map verbatim — use it as context for fresh observation.` : '';
 
+    // ── Load active goals for the client ────────────────────────────────
+    // Used by the synthesis passes (so reasoning can connect to live goals)
+    // and by the goal-proposal pass (to score whether status flips are warranted).
+    let activeGoals = [];
+    if (clientEmail) {
+      try {
+        const agRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/coach_goals?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&status=in.(active,progressing,stalled,blocked)&select=id,title,description,status,target_date,created_at&order=created_at.desc`,
+          { headers: supabaseHeaders }
+        );
+        const agRows = await agRes.json();
+        if (Array.isArray(agRows)) activeGoals = agRows;
+        console.log(`[PostSession] Loaded ${activeGoals.length} active goals for client ${clientEmail}`);
+      } catch (e) {
+        console.error('[PostSession] active goals lookup failed, proceeding without:', e.message);
+      }
+    }
+
+    const activeGoalsContext = activeGoals.length ? `
+
+ACTIVE GOALS FOR THIS CLIENT (live, not from this session):
+${JSON.stringify(activeGoals.map(g => ({ id: g.id, title: g.title, description: g.description, status: g.status, target_date: g.target_date })))}
+
+When you observe evidence in this session, connect it to these goals if a connection exists. Note progress, stalling, or shifts that may warrant a status change — but do not change statuses here. The dedicated goal-proposal pass will surface those.` : '';
+
     // Shared constraints for all synthesis passes
     const CONCISE = 'Every string value: 1-2 sentences max, under 40 words. Surface the signal, not the essay.';
     const JSON_ONLY = 'Return ONLY raw JSON. No markdown. No explanation. No preamble. Start with { and end with }.';
@@ -156,7 +181,7 @@ ${sessionContent}`,
     );
 
     // ── Pass 2a: Core Intelligence ──────────────────────────────────────
-    const synthesisSystem = `${IDENTITY} ${TONE} ${CONCISE} ${CLARITY} ${JSON_ONLY}${priorPatternContext}`;
+    const synthesisSystem = `${IDENTITY} ${TONE} ${CONCISE} ${CLARITY} ${JSON_ONLY}${priorPatternContext}${activeGoalsContext}`;
 
     const coreOutput = await callClaude(
       ANTHROPIC_API_KEY,
@@ -347,7 +372,7 @@ Return ONLY:
           ANTHROPIC_API_KEY,
           'claude-sonnet-4-6',
           800,
-          `You are a coaching reflection system. ${TONE} ${CONCISE} ${JSON_ONLY}${priorPatternContext}`,
+          `You are a coaching reflection system. ${TONE} ${CONCISE} ${JSON_ONLY}${priorPatternContext}${activeGoalsContext}`,
           `Based on this session evidence, generate a coaching reflection. ${CONCISE}
 
 EVIDENCE: ${JSON.stringify(extractionOutput)}
@@ -504,6 +529,72 @@ Limit to 2 suggestions max. If no strong fit exists return empty array.`,
 
     // Observability: was a prior pattern_map fed into the meaning-reasoning passes?
     formattedOutput.pattern_map_referenced = !!priorPatternMap;
+
+    // ── Pass 3e: Goal Proposals + Status Updates (fault-tolerant) ───────
+    // Generates concrete pending review items: net-new goal candidates and
+    // suggested status flips on existing active goals. Output is written to
+    // post_session_analysis.goal_proposals / goal_status_updates and stays
+    // pending until the coach approves/edits/dismisses via approve-goal-proposal.
+    let pass3eOutput = { goal_proposals: [], goal_status_updates: [] };
+    if (clientEmail) {
+      try {
+        const proposalsRaw = await callClaude(
+          ANTHROPIC_API_KEY,
+          'claude-sonnet-4-6',
+          1200,
+          `You are Coach Clarity. Propose pending-review goal items for the coach. Two channels:
+1. goal_proposals — net-new goal candidates surfaced by THIS session's evidence (commitments, breakthroughs, behavioral intentions). Only propose goals with clear session-grounded justification.
+2. goal_status_updates — suggested status flips on existing active goals based on this session's evidence. Only suggest a flip when evidence is concrete.
+Allowed status values: proposed, active, progressing, stalled, blocked, revised, completed, archived.
+Coaching tone — never directive. Use "you might". No clinical labels. Return ONLY raw JSON.`,
+          `Active goals (status updates can only target these): ${JSON.stringify(activeGoals.map(g => ({ id: g.id, title: g.title, status: g.status, target_date: g.target_date })))}
+
+Session extraction: ${JSON.stringify(extractionOutput)}
+Session core: ${JSON.stringify({ key_insights: coreOutput?.key_insights, breakthrough: coreOutput?.breakthrough, pattern: coreOutput?.pattern, next_session: coreOutput?.next_session })}
+
+Return ONLY:
+{
+  "goal_proposals": [
+    {
+      "title": "short actionable goal title (under 12 words)",
+      "description": "1-2 sentences explaining the goal in client-facing terms",
+      "reasoning": "1-2 sentences grounding this proposal in specific session evidence",
+      "target_date_suggestion": null,
+      "session_evidence_quote": "verbatim or near-verbatim client quote from the session, or empty string"
+    }
+  ],
+  "goal_status_updates": [
+    {
+      "goal_id": "uuid from active goals list",
+      "current_status": "exact current status",
+      "proposed_status": "one of: active, progressing, stalled, blocked, revised, completed",
+      "reasoning": "1-2 sentences grounded in this session's evidence"
+    }
+  ]
+}
+
+Limits: max 3 goal_proposals, max 3 goal_status_updates. Return empty arrays if no concrete evidence exists. Do not invent.`,
+          'Pass 3e: Goal Proposals'
+        );
+        const proposals = Array.isArray(proposalsRaw?.goal_proposals) ? proposalsRaw.goal_proposals : [];
+        const statusUpdates = Array.isArray(proposalsRaw?.goal_status_updates) ? proposalsRaw.goal_status_updates : [];
+        const validStatuses = ['active','progressing','stalled','blocked','revised','completed'];
+        const activeGoalIds = new Set(activeGoals.map(g => g.id));
+        const stamped = (arr) => arr.map(item => ({ id: (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2,10)}`), handled: false, ...item }));
+        pass3eOutput.goal_proposals = stamped(proposals);
+        pass3eOutput.goal_status_updates = stamped(
+          statusUpdates.filter(u => activeGoalIds.has(u.goal_id) && validStatuses.includes(u.proposed_status))
+        );
+        console.log(`[Pass 3e] Goal proposals: ${pass3eOutput.goal_proposals.length}, status updates: ${pass3eOutput.goal_status_updates.length}`);
+      } catch (e) {
+        console.error('[Pass 3e: Goal Proposals] Failed, leaving empty:', e.message);
+      }
+    } else {
+      console.log('[Pass 3e] No clientEmail, skipping goal proposals.');
+    }
+
+    formattedOutput.goal_proposals = pass3eOutput.goal_proposals;
+    formattedOutput.goal_status_updates = pass3eOutput.goal_status_updates;
 
     // ── Save results to Supabase ────────────────────────────────────────
     if (bookingId) {

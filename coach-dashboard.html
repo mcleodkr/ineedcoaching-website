@@ -4415,8 +4415,8 @@ async function openClientDetail(email) {
 }
 
 function renderClientDetail(client, goals, intakeResponses, checkinResponses, messages, notesByBooking, checkinForms) {
-  var statusLabels = { not_started: 'Not Started', in_progress: 'In Progress', completed: 'Completed' };
-  var statusColors = { not_started: 'background:rgba(107,107,96,0.15);color:var(--muted)', in_progress: 'background:#c49a3c;color:#fff', completed: 'background:#2d6a4f;color:#fff' };
+  var statusLabels = { not_started: 'Not Started', in_progress: 'In Progress', proposed: 'Proposed', active: 'Active', progressing: 'Progressing', stalled: 'Stalled', blocked: 'Blocked', revised: 'Revised', completed: 'Completed', archived: 'Archived' };
+  var statusColors = { not_started: 'background:rgba(107,107,96,0.15);color:var(--muted)', in_progress: 'background:#c49a3c;color:#fff', proposed: 'background:rgba(107,107,96,0.15);color:var(--muted)', active: 'background:rgba(26,58,82,0.12);color:var(--ink)', progressing: 'background:#c49a3c;color:#fff', stalled: 'background:#b8860b;color:#fff', blocked: 'background:#c44;color:#fff', revised: 'background:#7b5ea7;color:#fff', completed: 'background:#2d6a4f;color:#fff', archived: 'background:rgba(107,107,96,0.25);color:var(--muted)' };
   var firstStr = client.firstSession ? new Date(client.firstSession).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A';
 
   var html = '';
@@ -6699,6 +6699,145 @@ function setupClarityDisclosureDelegation() {
   });
 }
 
+// Pending review helpers (Coach Clarity goal proposals & status updates)
+// renderPendingProposalCard returns HTML for one pending item — a goal_proposal
+// (kind='goal') or a goal_status_update (kind='status'). Buttons carry data-*
+// attributes that wirePendingProposalButtons reads to call /api/approve-goal-proposal.
+function renderPendingProposalCard(p, kind, bookingId) {
+  if (!p || !p.id) return '';
+  var pid = escapeHtml(p.id);
+  var kindLabel = kind === 'status' ? 'Status Change' : 'New Goal';
+  var titleLine = '';
+  var bodyLine = '';
+  if (kind === 'status') {
+    var fromTo = escapeHtml((p.current_status || '?')) + ' → ' + escapeHtml((p.proposed_status || '?'));
+    titleLine = 'Suggested status: <strong>' + fromTo + '</strong>';
+    bodyLine = p.reasoning ? escapeHtml(p.reasoning) : '';
+  } else {
+    titleLine = '<strong>' + escapeHtml(p.title || 'Untitled goal') + '</strong>';
+    bodyLine = p.reasoning ? escapeHtml(p.reasoning) : (p.description ? escapeHtml(p.description) : '');
+  }
+  var quoteLine = (kind === 'goal' && p.session_evidence_quote)
+    ? '<div style="font-size:0.74rem;color:var(--muted);font-style:italic;margin-top:6px;border-left:2px solid #c49a3c;padding-left:8px;">"' + escapeHtml(p.session_evidence_quote) + '"</div>'
+    : '';
+  var editForm = '';
+  if (kind === 'goal') {
+    editForm = '<div class="pending-edit-form" data-pending-edit="' + pid + '" style="display:none;margin-top:8px;padding:10px;background:#fff;border:1px solid var(--border);border-radius:6px;">'
+      + '<input type="text" class="pending-edit-title" placeholder="Goal title" value="' + escapeHtml(p.title || '') + '" style="width:100%;padding:6px 8px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;border:1px solid var(--border);border-radius:4px;margin-bottom:6px;">'
+      + '<textarea class="pending-edit-description" placeholder="Description" rows="2" style="width:100%;padding:6px 8px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;border:1px solid var(--border);border-radius:4px;resize:vertical;">' + escapeHtml(p.description || '') + '</textarea>'
+      + '<div style="display:flex;gap:6px;margin-top:6px;">'
+      + '<button class="pending-edit-save" data-pid="' + pid + '" data-kind="goal" data-booking-id="' + escapeHtml(bookingId) + '" style="background:#1a3a52;color:#fff;border:none;padding:5px 12px;border-radius:4px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;cursor:pointer;">Save & approve</button>'
+      + '<button class="pending-edit-cancel" data-pid="' + pid + '" style="background:transparent;color:var(--muted);border:1px solid var(--border);padding:5px 12px;border-radius:4px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;cursor:pointer;">Cancel</button>'
+      + '</div></div>';
+  }
+  return '<div class="pending-proposal-card" data-pending-id="' + pid + '" style="background:#fff;border:1px solid #e8d8b3;border-radius:6px;padding:10px 12px;margin-bottom:8px;">'
+    + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">'
+    + '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;background:rgba(196,154,60,0.15);color:#c49a3c;">' + kindLabel + '</span>'
+    + '<span style="font-size:0.83rem;color:var(--ink);">' + titleLine + '</span>'
+    + '</div>'
+    + (bodyLine ? '<div style="font-size:0.78rem;color:var(--muted);line-height:1.4;">' + bodyLine + '</div>' : '')
+    + quoteLine
+    + editForm
+    + '<div class="pending-proposal-actions" style="display:flex;gap:6px;margin-top:8px;">'
+    + '<button class="pending-approve-btn" data-pid="' + pid + '" data-kind="' + kind + '" data-booking-id="' + escapeHtml(bookingId) + '" style="background:#2d6a4f;color:#fff;border:none;padding:5px 12px;border-radius:4px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;cursor:pointer;">Approve</button>'
+    + (kind === 'goal' ? '<button class="pending-edit-btn" data-pid="' + pid + '" style="background:transparent;color:var(--ink);border:1px solid var(--border);padding:5px 12px;border-radius:4px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;cursor:pointer;">Edit</button>' : '')
+    + '<button class="pending-dismiss-btn" data-pid="' + pid + '" data-kind="' + kind + '" data-booking-id="' + escapeHtml(bookingId) + '" style="background:transparent;color:var(--muted);border:1px solid var(--border);padding:5px 12px;border-radius:4px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;cursor:pointer;">Dismiss</button>'
+    + '</div>'
+    + '</div>';
+}
+
+function wirePendingProposalButtons(scopeEl, container) {
+  if (!scopeEl) return;
+  var clientEmail = container.dataset.clientEmail || '';
+  function callApprove(payload, btn, successText) {
+    btn.disabled = true;
+    var origText = btn.textContent;
+    btn.textContent = '...';
+    return fetch('/api/approve-goal-proposal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+      .then(function(result) {
+        if (!result.ok) {
+          btn.textContent = 'Error';
+          btn.disabled = false;
+          console.error('[approve-goal-proposal]', result.data);
+          return null;
+        }
+        var card = btn.closest('.pending-proposal-card');
+        if (card) {
+          card.style.transition = 'opacity 0.3s';
+          card.style.opacity = '0.4';
+          var actions = card.querySelector('.pending-proposal-actions');
+          if (actions) actions.innerHTML = '<span style="font-size:0.78rem;color:#2d6a4f;">' + successText + '</span>';
+          setTimeout(function() {
+            card.style.display = 'none';
+            // Hide outer pending block if no cards remain visible
+            var block = scopeEl.querySelector('.pending-review-block');
+            if (block) {
+              var visible = Array.prototype.slice.call(block.querySelectorAll('.pending-proposal-card')).filter(function(c) { return c.style.display !== 'none'; });
+              if (!visible.length) block.style.display = 'none';
+            }
+          }, 600);
+        }
+        return result.data;
+      });
+  }
+  scopeEl.querySelectorAll('.pending-approve-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      callApprove({
+        proposal_id: this.dataset.pid,
+        booking_id: this.dataset.bookingId,
+        coach_id: coachProfile.id,
+        client_email: clientEmail,
+        action: 'approve'
+      }, this, '✓ Approved');
+    });
+  });
+  scopeEl.querySelectorAll('.pending-dismiss-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      callApprove({
+        proposal_id: this.dataset.pid,
+        booking_id: this.dataset.bookingId,
+        coach_id: coachProfile.id,
+        client_email: clientEmail,
+        action: 'dismiss'
+      }, this, '✓ Dismissed');
+    });
+  });
+  scopeEl.querySelectorAll('.pending-edit-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var pid = this.dataset.pid;
+      var form = scopeEl.querySelector('.pending-edit-form[data-pending-edit="' + pid + '"]');
+      if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    });
+  });
+  scopeEl.querySelectorAll('.pending-edit-cancel').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var pid = this.dataset.pid;
+      var form = scopeEl.querySelector('.pending-edit-form[data-pending-edit="' + pid + '"]');
+      if (form) form.style.display = 'none';
+    });
+  });
+  scopeEl.querySelectorAll('.pending-edit-save').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var pid = this.dataset.pid;
+      var form = scopeEl.querySelector('.pending-edit-form[data-pending-edit="' + pid + '"]');
+      var titleEl = form ? form.querySelector('.pending-edit-title') : null;
+      var descEl = form ? form.querySelector('.pending-edit-description') : null;
+      callApprove({
+        proposal_id: pid,
+        booking_id: this.dataset.bookingId,
+        coach_id: coachProfile.id,
+        client_email: clientEmail,
+        action: 'edit',
+        edits: { title: titleEl ? titleEl.value : undefined, description: descEl ? descEl.value : undefined }
+      }, this, '✓ Approved with edits');
+    });
+  });
+}
+
 function renderPostSessionAnalysis(a, container) {
   setupClarityDisclosureDelegation();
   try {
@@ -7110,47 +7249,75 @@ function renderPostSessionAnalysis(a, container) {
     });
   });
 
-  // Live goals fetch
+  // Live goals fetch + pending review (Coach Clarity goal proposals)
   (async function() {
+    var goalsEl = container.querySelector('#psi-goals .live-goals-slot');
+    if (!goalsEl) return;
+
+    var bookingId = container.dataset.bookingId || '';
+    var clientEmail = container.dataset.clientEmail || '';
+
+    // Build pending review block from this session's analysis
+    var pendingProposals = (a && Array.isArray(a.goal_proposals) ? a.goal_proposals : []).filter(function(p) { return p && !p.handled; });
+    var pendingStatusUpdates = (a && Array.isArray(a.goal_status_updates) ? a.goal_status_updates : []).filter(function(p) { return p && !p.handled; });
+    var pendingHtml = '';
+    if (pendingProposals.length || pendingStatusUpdates.length) {
+      pendingHtml += '<div class="pending-review-block" style="background:#fdf9f1;border:1px solid #c49a3c;border-radius:8px;padding:12px 14px;margin-bottom:14px;">';
+      pendingHtml += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;"><span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#c49a3c;">Pending Review</span><span style="font-size:0.72rem;color:var(--muted);">· Coach Clarity suggestions from this session</span></div>';
+      pendingProposals.forEach(function(p) {
+        pendingHtml += renderPendingProposalCard(p, 'goal', bookingId);
+      });
+      pendingStatusUpdates.forEach(function(p) {
+        pendingHtml += renderPendingProposalCard(p, 'status', bookingId);
+      });
+      pendingHtml += '</div>';
+    }
+
+    // Live goals fetch (existing flow, hardened to render even on empty)
+    var liveHtml = '';
     try {
-      var liveGoalsRes = await fetch(SUPABASE_URL + '/rest/v1/coach_goals?coach_id=eq.' + coachProfile.id + '&client_email=eq.' + encodeURIComponent(container.dataset.clientEmail) + '&order=created_at.desc&select=*', { headers: apiHeaders() });
+      var liveGoalsRes = await fetch(SUPABASE_URL + '/rest/v1/coach_goals?coach_id=eq.' + coachProfile.id + '&client_email=eq.' + encodeURIComponent(clientEmail) + '&order=created_at.desc&select=*', { headers: apiHeaders() });
       var liveGoals = await liveGoalsRes.json();
       if (liveGoals && liveGoals.length) {
-        var goalsEl = container.querySelector('#psi-goals .live-goals-slot');
-        if (goalsEl) {
-          var gh = '';
-          var statusLabels = { not_started: 'NOT STARTED', in_progress: 'IN PROGRESS', completed: 'COMPLETED' };
-          var statusColors = { not_started: 'var(--muted)', in_progress: 'var(--gold)', completed: '#2d6a4f' };
-          liveGoals.forEach(function(g) {
-            if (!g) return;
-            var sc = statusColors[g.status] || 'var(--muted)';
-            var sl = statusLabels[g.status] || g.status;
-            var clientBadge = g.created_by === 'client'
-              ? ' <span style="display:inline-block;font-size:0.58rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;background:#fdf9f1;border:1px solid #c49a3c;color:#c49a3c;padding:1px 7px;border-radius:50px;margin-left:4px;vertical-align:middle;">Client suggested</span>'
-              : '';
-            var completionNote = '';
-            if (g.status === 'completed' && g.completed_by === 'client') {
-              completionNote = '<div style="font-size:0.72rem;color:#c49a3c;font-style:italic;margin-top:4px;">Completed by client</div>';
-            } else if (g.status === 'completed' && g.completed_by === 'coach') {
-              completionNote = '<div style="font-size:0.72rem;color:var(--ink);margin-top:4px;">Completed by you</div>';
-            }
-            gh += '<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;">'
-              + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:' + (g.description ? '4px' : '0') + ';">'
-              + '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:700;letter-spacing:0.04em;background:' + sc + ';color:#fff;">' + sl + '</span>'
-              + '<span style="font-size:0.85rem;font-weight:600;color:var(--ink);">' + escapeHtml(g.title) + '</span>'
-              + clientBadge
-              + '</div>'
-              + (g.description ? '<div style="font-size:0.78rem;color:var(--muted);line-height:1.4;">' + escapeHtml(g.description) + '</div>' : '')
-              + completionNote
-              + '<div style="font-size:0.72rem;color:var(--muted);font-style:italic;margin-top:4px;">'
-              + (g.source === 'coach_clarity' ? 'Suggested by Coach Clarity' : g.source === 'session' ? 'Added from session' : g.created_by === 'client' ? 'Added by client' : 'Added manually')
-              + ' on ' + (g.created_at ? new Date(g.created_at).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}) : '') + '</div>'
-              + '</div>';
-          });
-          goalsEl.innerHTML = '<div style="font-size:0.75rem;font-weight:600;color:var(--muted);margin-bottom:8px;">Current Goals</div>' + gh;
-        }
+        var gh = '';
+        var statusLabels = { not_started: 'NOT STARTED', in_progress: 'IN PROGRESS', proposed: 'PROPOSED', active: 'ACTIVE', progressing: 'PROGRESSING', stalled: 'STALLED', blocked: 'BLOCKED', revised: 'REVISED', completed: 'COMPLETED', archived: 'ARCHIVED' };
+        var statusColors = { not_started: 'var(--muted)', in_progress: 'var(--gold)', proposed: 'var(--muted)', active: '#1a3a52', progressing: 'var(--gold)', stalled: '#b8860b', blocked: '#c44', revised: '#7b5ea7', completed: '#2d6a4f', archived: '#9a9490' };
+        liveGoals.forEach(function(g) {
+          if (!g) return;
+          var sc = statusColors[g.status] || 'var(--muted)';
+          var sl = statusLabels[g.status] || g.status;
+          var clientBadge = g.created_by === 'client'
+            ? ' <span style="display:inline-block;font-size:0.58rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;background:#fdf9f1;border:1px solid #c49a3c;color:#c49a3c;padding:1px 7px;border-radius:50px;margin-left:4px;vertical-align:middle;">Client suggested</span>'
+            : '';
+          var aiBadge = g.proposed_by === 'ai'
+            ? ' <span style="display:inline-block;font-size:0.58rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;background:rgba(196,154,60,0.15);border:1px solid #c49a3c;color:#c49a3c;padding:1px 7px;border-radius:50px;margin-left:4px;vertical-align:middle;">AI proposed</span>'
+            : '';
+          var completionNote = '';
+          if (g.status === 'completed' && g.completed_by === 'client') {
+            completionNote = '<div style="font-size:0.72rem;color:#c49a3c;font-style:italic;margin-top:4px;">Completed by client</div>';
+          } else if (g.status === 'completed' && g.completed_by === 'coach') {
+            completionNote = '<div style="font-size:0.72rem;color:var(--ink);margin-top:4px;">Completed by you</div>';
+          }
+          gh += '<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;">'
+            + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:' + (g.description ? '4px' : '0') + ';">'
+            + '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:700;letter-spacing:0.04em;background:' + sc + ';color:#fff;">' + sl + '</span>'
+            + '<span style="font-size:0.85rem;font-weight:600;color:var(--ink);">' + escapeHtml(g.title) + '</span>'
+            + clientBadge
+            + aiBadge
+            + '</div>'
+            + (g.description ? '<div style="font-size:0.78rem;color:var(--muted);line-height:1.4;">' + escapeHtml(g.description) + '</div>' : '')
+            + completionNote
+            + '<div style="font-size:0.72rem;color:var(--muted);font-style:italic;margin-top:4px;">'
+            + (g.source === 'coach_clarity' ? 'Suggested by Coach Clarity' : g.source === 'session' ? 'Added from session' : g.created_by === 'client' ? 'Added by client' : 'Added manually')
+            + ' on ' + (g.created_at ? new Date(g.created_at).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}) : '') + '</div>'
+            + '</div>';
+        });
+        liveHtml = '<div style="font-size:0.75rem;font-weight:600;color:var(--muted);margin-bottom:8px;">Current Goals</div>' + gh;
       }
     } catch(e) { /* silently fall back to analysis JSON goals */ }
+
+    goalsEl.innerHTML = pendingHtml + liveHtml;
+    wirePendingProposalButtons(goalsEl, container);
   })();
 
   // Wire suggested goal Add/Dismiss buttons
@@ -8442,8 +8609,8 @@ async function loadDashGoals() {
     $('goals-loading').style.display = 'none';
     $('goals-content').classList.remove('hidden');
 
-    var statusLabels = { not_started: 'Not Started', in_progress: 'In Progress', completed: 'Completed' };
-    var statusColors = { not_started: 'background:rgba(107,107,96,0.15);color:var(--muted)', in_progress: 'background:#c49a3c;color:#fff', completed: 'background:#2d6a4f;color:#fff' };
+    var statusLabels = { not_started: 'Not Started', in_progress: 'In Progress', proposed: 'Proposed', active: 'Active', progressing: 'Progressing', stalled: 'Stalled', blocked: 'Blocked', revised: 'Revised', completed: 'Completed', archived: 'Archived' };
+    var statusColors = { not_started: 'background:rgba(107,107,96,0.15);color:var(--muted)', in_progress: 'background:#c49a3c;color:#fff', proposed: 'background:rgba(107,107,96,0.15);color:var(--muted)', active: 'background:rgba(26,58,82,0.12);color:var(--ink)', progressing: 'background:#c49a3c;color:#fff', stalled: 'background:#b8860b;color:#fff', blocked: 'background:#c44;color:#fff', revised: 'background:#7b5ea7;color:#fff', completed: 'background:#2d6a4f;color:#fff', archived: 'background:rgba(107,107,96,0.25);color:var(--muted)' };
 
     // Build name lookup, priority lowest → highest:
     //   1. clientsData (Clients tab — already deduped from confirmed bookings)
