@@ -293,10 +293,33 @@ export default async function handler(req, res) {
 
     // Persist as draft, round 0
     const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
+
+    // Pre-generate the new id so we can archive prior unarchived non-locked
+    // plans pointing at it BEFORE the new row is inserted. Locked plans are
+    // never auto-archived here — only the explicit "Regenerate from latest
+    // sessions" flow archives a locked plan. This prevents stale draft
+    // accumulation (the 6-plans-per-client problem) without ever discarding
+    // a plan a coach committed to.
+    const newPlanId = globalThis.crypto.randomUUID();
+    const enc = encodeURIComponent(client_email);
+    const archiveRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/intervention_plans?coach_id=eq.${coach_id}&client_email=eq.${enc}&status=neq.locked&archived_at=is.null`,
+      {
+        method: 'PATCH',
+        headers: { ...headers, Prefer: 'return=minimal' },
+        body: JSON.stringify({ archived_at: new Date().toISOString(), archived_for_plan_id: newPlanId }),
+      }
+    );
+    if (!archiveRes.ok) {
+      const archErr = await archiveRes.text();
+      console.warn('[InterventionPlan] prior-draft archive failed (continuing):', archErr.slice(0, 300));
+    }
+
     const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/intervention_plans`, {
       method: 'POST',
       headers: { ...headers, Prefer: 'return=representation' },
       body: JSON.stringify({
+        id: newPlanId,
         coach_id,
         client_email,
         status: 'draft',

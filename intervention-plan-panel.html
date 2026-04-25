@@ -315,7 +315,10 @@
   }
 
   async function loadActivePlan() {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/intervention_plans?coach_id=eq.' + coachId + '&client_email=eq.' + encodeURIComponent(clientEmail) + '&archived_at=is.null&order=created_at.desc&limit=1', { headers: apiHeaders() });
+    // locked plans sort first via locked_at (drafts have NULL locked_at,
+    // pushed to bottom by nullslast); created_at.desc is the secondary
+    // tiebreaker so the most recent draft surfaces when no locked plan exists.
+    const res = await fetch(SUPABASE_URL + '/rest/v1/intervention_plans?coach_id=eq.' + coachId + '&client_email=eq.' + encodeURIComponent(clientEmail) + '&archived_at=is.null&order=locked_at.desc.nullslast,created_at.desc&limit=1', { headers: apiHeaders() });
     if (!res.ok) return null;
     const rows = await res.json();
     return Array.isArray(rows) && rows.length ? rows[0] : null;
@@ -566,18 +569,24 @@
     const STATUS_OPTIONS = ['kept','broken','ambiguous','untested'];
     return arr.map(function(c, idx) {
       const status = c.status || 'untested';
+      // Status control lives on the metadata row, not next to the title.
+      // Keeps every commitment row visually identical regardless of title length.
       const statusEl = isLocked
-        ? ('<select class="commitment-status-select" data-commitment-idx="' + idx + '" style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;font-weight:600;padding:3px 8px;border-radius:50px;border:1px solid var(--border);background:#fff;cursor:pointer;">'
+        ? ('<select class="commitment-status-select" data-commitment-idx="' + idx + '" style="font-family:\'DM Sans\',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;padding:2px 22px 2px 10px;border-radius:50px;border:1px solid var(--border);background:#fff;cursor:pointer;color:var(--ink);">'
             + STATUS_OPTIONS.map(function(opt) {
               return '<option value="' + opt + '"' + (opt === status ? ' selected' : '') + '>' + opt + '</option>';
             }).join('')
             + '</select>')
         : ('<span class="pill ' + status + '">' + escapeHtml(status) + '</span>');
       const sLabel = sessionLabel(c.source_session);
-      const sourceMeta = sLabel ? ('From ' + escapeHtml(sLabel)) : 'Source session unavailable';
+      const sourceText = sLabel ? ('From ' + escapeHtml(sLabel)) : 'Source session unavailable';
+      const metaRow = '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">'
+        + statusEl
+        + '<span style="color:var(--muted);font-size:0.74rem;">' + sourceText + '</span>'
+        + '</div>';
       return renderItem(
-        '<div class="item-title">' + escapeHtml(c.commitment_text) + ' ' + statusEl + '</div>',
-        sourceMeta
+        '<div class="item-title">' + escapeHtml(c.commitment_text) + '</div>',
+        metaRow
       );
     }).join('');
   }
