@@ -27,6 +27,11 @@ async function callClaude(apiKey, model, maxTokens, system, userMessage, passNam
     throw new Error(`${passName} Claude API error ${res.status}`);
   }
   const data = await res.json();
+  if (data.stop_reason === 'max_tokens') {
+    const rawLen = (data.content?.[0]?.text || '').length;
+    console.error(`[${passName}] Output truncated at max_tokens. raw length: ${rawLen}`);
+    throw new Error(`${passName} output exceeded token limit — try shorter feedback or simpler revision`);
+  }
   let rawText = data.content?.[0]?.text || '';
   rawText = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
   const match = rawText.match(/\{[\s\S]*\}/);
@@ -269,7 +274,7 @@ ${PLAN_SCHEMA_INSTRUCTIONS}`;
     const planRaw = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
-      8000,
+      16000,
       REVISE_GUARDRAILS,
       userPayload,
       `InterventionPlan: Revise round ${round}`
