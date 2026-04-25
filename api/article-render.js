@@ -20,6 +20,10 @@ const SUPABASE_URL = process.env.SUPABASE_URL || 'https://qroizygknxdjsstkezsf.s
 const ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
 const SITE_BASE = 'https://www.ineedcoaching.org';
 
+// Audiences this site is allowed to render. Anything else (recovery,
+// therapy_consumer, future values) 404s — keeps content scoped to ineedcoaching.
+const ALLOWED_AUDIENCES = new Set(['consumer', 'coach']);
+
 // Category slugs for landing pages under /category/<slug>.html.
 // Keep in sync with /scripts/build-category-pages.cjs and the inline copy in /api/article-render.js (this file).
 const CATEGORY_SLUGS = {
@@ -28,10 +32,7 @@ const CATEGORY_SLUGS = {
   'Anxiety & Overthinking': 'anxiety-overthinking',
   'Relationships & Boundaries': 'relationships-boundaries',
   'Burnout & Exhaustion': 'burnout-exhaustion',
-  'Self-Discovery & Identity': 'self-discovery-identity',
-  'Sobriety & Recovery': 'sobriety-recovery',
-  'Depression & Low Mood': 'depression-low-mood',
-  'Trauma & Healing': 'trauma-healing'
+  'Self-Discovery & Identity': 'self-discovery-identity'
 };
 
 function escapeHtml(s) {
@@ -142,10 +143,9 @@ function buildFaqSchema(faqArray) {
   };
 }
 
-// Build the inlined HTML for <div class="article-wrap"> — everything between
-// the article-tag at the top and the three-doors CTA at the bottom.
-// Audience-conditional: consumer articles get the Burnout Reset CTA band and
-// the three-doors footer; coach articles end cleanly at related articles.
+// Build the inlined HTML for <div class="article-wrap"> — from the article-tag
+// at the top down to the closing CTA banner at the bottom. Single banner on
+// both audiences (Find Your Person therapist match) — see hotfix notes.
 function buildArticleBody(article) {
   const tagCategory = article.category || 'Coaching';
   const tagSlug = CATEGORY_SLUGS[tagCategory];
@@ -220,45 +220,22 @@ function buildArticleBody(article) {
     }
   }
 
-  // Audience-conditional CTAs. These are consumer-wellness products (Burnout
-  // Reset, Sprixle, Find Your Person therapist match) — wrong audience
-  // messaging on coach-facing content. Hide entirely on coach articles.
-  if (article.audience === 'consumer') {
-    html +=
-      '<div class="burnout-cta-band">' +
-        '<div class="burnout-cta-eyebrow">Free 5-Day Program</div>' +
-        '<div class="burnout-cta-heading">The Burnout Reset</div>' +
-        '<div class="burnout-cta-desc">A guided journey to step back, disengage from what is not working, and find your way forward.</div>' +
-        '<a href="https://www.ineedtherapy.org/burnout-reset.html" class="burnout-cta-btn" target="_blank">Start the Reset &rarr;</a>' +
-      '</div>';
-  }
-
   // Related articles slot — populated client-side, audience-scoped via Phase 1 fix
   html += '<div id="related-articles-slot"></div>';
 
-  if (article.audience === 'consumer') {
-    html +=
-      '<div class="three-doors">' +
-        '<a href="https://www.ineedtherapy.org/burnout-reset.html" class="door-card" target="_blank">' +
-          '<span class="door-icon">&#x1F525;</span>' +
-          '<div class="door-label">Reset</div>' +
-          '<div class="door-title">Burnout Reset</div>' +
-          '<div class="door-desc">A 5-day guided journey to disengage from what is not working.</div>' +
-        '</a>' +
-        '<a href="https://www.sprixle.com" class="door-card" target="_blank">' +
-          '<span class="door-icon">&#x2728;</span>' +
-          '<div class="door-label">Journal</div>' +
-          '<div class="door-title">Sprixle</div>' +
-          '<div class="door-desc">Private journaling, pattern tracking, and AI companion. Free to start.</div>' +
-        '</a>' +
-        '<a href="https://www.ineedtherapy.org/find-a-match.html" class="door-card" target="_blank">' +
-          '<span class="door-icon">&#x1F91D;</span>' +
-          '<div class="door-label">Connect</div>' +
-          '<div class="door-title">Find Your Person</div>' +
-          '<div class="door-desc">Post what you need anonymously and let providers reach out directly.</div>' +
-        '</a>' +
-      '</div>';
-  }
+  // Closing CTA — single Find Your Person banner on both audiences.
+  // ineedcoaching.org's own dashboard journal covers what Sprixle did
+  // externally, and Burnout Reset is an external program; both were
+  // competing with in-house features. Find Your Person points to a
+  // complementary service (therapist matching) that ineedcoaching.org
+  // doesn't offer, so it's safe to surface to readers of either audience.
+  html +=
+    '<div class="closing-cta-band">' +
+      '<div class="closing-cta-eyebrow">Need a therapist instead?</div>' +
+      '<div class="closing-cta-heading">Find Your Person</div>' +
+      '<div class="closing-cta-desc">Post what you need anonymously and let providers reach out directly.</div>' +
+      '<a href="https://www.ineedtherapy.org/find-a-match.html" class="closing-cta-btn" target="_blank">Find Your Person &rarr;</a>' +
+    '</div>';
 
   return html;
 }
@@ -414,13 +391,13 @@ a.article-tag:hover { background: rgba(184,101,74,0.2); color: var(--terracotta)
 .faq-item[open] summary::after { content: '\\2212'; }
 .faq-item .faq-answer { padding-top: 12px; font-size: 0.95rem; line-height: 1.75; color: var(--text-body); }
 
-.burnout-cta-band { background: var(--dark-green); margin: 60px -40px; padding: 56px 48px; border-radius: var(--r); text-align: center; position: relative; overflow: hidden; }
-.burnout-cta-band::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 30% 50%, rgba(184,101,74,0.12) 0%, transparent 60%); pointer-events: none; }
-.burnout-cta-eyebrow { font-family: 'DM Sans', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--terracotta); margin-bottom: 14px; position: relative; }
-.burnout-cta-heading { font-family: 'Cormorant Garamond', serif; font-size: clamp(1.6rem, 3.5vw, 2.4rem); font-weight: 700; line-height: 1.2; color: var(--white); margin-bottom: 14px; position: relative; }
-.burnout-cta-desc { font-size: 1rem; line-height: 1.7; color: #f0f0f0; max-width: 520px; margin: 0 auto 28px; position: relative; }
-.burnout-cta-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--white); color: var(--dark-green); padding: 14px 32px; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 700; text-decoration: none; transition: all 0.2s; position: relative; }
-.burnout-cta-btn:hover { background: #f0f0f0; transform: translateY(-2px); }
+.closing-cta-band { background: var(--dark-green); margin: 60px -40px 0; padding: 56px 48px; border-radius: var(--r); text-align: center; position: relative; overflow: hidden; }
+.closing-cta-band::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 30% 50%, rgba(184,101,74,0.12) 0%, transparent 60%); pointer-events: none; }
+.closing-cta-eyebrow { font-family: 'DM Sans', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--terracotta); margin-bottom: 14px; position: relative; }
+.closing-cta-heading { font-family: 'Cormorant Garamond', serif; font-size: clamp(1.6rem, 3.5vw, 2.4rem); font-weight: 700; line-height: 1.2; color: var(--white); margin-bottom: 14px; position: relative; }
+.closing-cta-desc { font-size: 1rem; line-height: 1.7; color: #f0f0f0; max-width: 520px; margin: 0 auto 28px; position: relative; }
+.closing-cta-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--white); color: var(--dark-green); padding: 14px 32px; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 700; text-decoration: none; transition: all 0.2s; position: relative; }
+.closing-cta-btn:hover { background: #f0f0f0; transform: translateY(-2px); }
 
 .related-section { margin: 52px 0; }
 .related-section-label { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 700; color: var(--text-dark); margin-bottom: 24px; }
@@ -431,13 +408,6 @@ a.article-tag:hover { background: rgba(184,101,74,0.2); color: var(--terracotta)
 .related-card-title { font-family: 'Cormorant Garamond', serif; font-size: 1.05rem; font-weight: 700; color: var(--text-dark); line-height: 1.3; margin-bottom: 8px; }
 .related-card-desc { font-size: 0.78rem; color: var(--text-muted); line-height: 1.55; }
 
-.three-doors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 60px; }
-.door-card { padding: 32px 22px; background: var(--dark-green); border: none; border-radius: var(--r); text-decoration: none; text-align: center; transition: all 0.25s; display: block; }
-.door-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.15); }
-.door-icon { font-size: 1.8rem; display: block; margin-bottom: 12px; }
-.door-label { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--terracotta); margin-bottom: 6px; }
-.door-title { font-family: 'Cormorant Garamond', serif; font-size: 1.05rem; font-weight: 700; color: var(--white); margin-bottom: 8px; }
-.door-desc { font-size: 0.78rem; color: #f0f0f0; line-height: 1.55; }
 
 footer { background: var(--dark-green); padding: 32px 52px; display: flex; justify-content: space-between; align-items: center; margin-top: 80px; }
 .f-logo { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; font-weight: 700; color: var(--white); text-decoration: none; }
@@ -456,10 +426,9 @@ footer { background: var(--dark-green); padding: 32px 52px; display: flex; justi
   .nav-links { gap: 12px; flex-wrap: wrap; }
   .nav-links a { font-size: 0.68rem; }
   .article-wrap { padding: 100px 20px 60px; }
-  .three-doors { grid-template-columns: 1fr; }
   .related-grid { grid-template-columns: 1fr; }
   .article-hero { height: 280px; }
-  .burnout-cta-band { margin: 48px -20px; padding: 40px 24px; }
+  .closing-cta-band { margin: 48px -20px 0; padding: 40px 24px; }
   .pull-quote { padding: 18px 0 18px 20px; }
   .pull-quote p { font-size: 1.25rem; }
   footer { padding: 24px 20px; flex-direction: column; gap: 10px; text-align: center; }
@@ -833,7 +802,16 @@ export default async function handler(req, res) {
       return res.send(notFoundHtml());
     }
 
-    const html = buildHtmlResponse(rows[0]);
+    // Audience guard: this site only renders consumer + coach articles.
+    // recovery → ineedrecovery.org, therapy_consumer → future ineedtherapy.org
+    // consumer surface. Anything else (current or future) safely 404s here.
+    const article = rows[0];
+    if (!ALLOWED_AUDIENCES.has(article.audience)) {
+      res.status(404).setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.send(notFoundHtml());
+    }
+
+    const html = buildHtmlResponse(article);
     res.status(200);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=86400');

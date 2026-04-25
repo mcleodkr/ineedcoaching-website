@@ -48,25 +48,12 @@ const CATEGORIES = [
     slug: 'self-discovery-identity',
     keywords: 'self-discovery, identity, life transition, finding yourself',
     copy: "Articles for people in transition — career, role, life stage — who are trying to figure out who they are now, separate from who they've been."
-  },
-  {
-    name: 'Sobriety & Recovery',
-    slug: 'sobriety-recovery',
-    keywords: 'sobriety, recovery, AA, addiction recovery, relapse',
-    copy: "Articles on sobriety, recovery, and the long work after the decision. Honest writing about relapse, sponsors, AA, and building a life that doesn't require numbing."
-  },
-  {
-    name: 'Depression & Low Mood',
-    slug: 'depression-low-mood',
-    keywords: 'depression articles, low mood, persistent sadness, depression help',
-    copy: 'Articles on depression and persistent low mood — what helps, what doesn\'t, and how to tell the difference between a season and something needing more support.'
-  },
-  {
-    name: 'Trauma & Healing',
-    slug: 'trauma-healing',
-    keywords: 'trauma articles, healing from trauma, trauma recovery, integration',
-    copy: 'Articles on trauma, healing, and the slow integration work. What good treatment looks like, why it takes time, and what tells you something is moving.'
   }
+  // Sobriety & Recovery, Depression & Low Mood, and Trauma & Healing categories
+  // were removed after data moves: 12 sobriety articles → recovery audience
+  // (ineedrecovery.org), 7 clinical articles → therapy_consumer audience
+  // (future ineedtherapy.org consumer surface). The corresponding landing
+  // pages were deleted; do not regenerate them from this script.
 ];
 
 // HTML-escape for attribute and text values

@@ -22,8 +22,7 @@ const STATIC_PAGES = [
 
 const CATEGORY_SLUGS = [
   'coaching-growth', 'finding-support', 'anxiety-overthinking',
-  'relationships-boundaries', 'burnout-exhaustion', 'self-discovery-identity',
-  'sobriety-recovery', 'depression-low-mood', 'trauma-healing'
+  'relationships-boundaries', 'burnout-exhaustion', 'self-discovery-identity'
 ];
 
 function escapeXml(s) {
