@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Intervention Plan · Coach Clarity</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #1a3a52;
+      --gold: #c49a3c;
+      --cream: #f7f4ee;
+      --bg: #f7f5f1;
+      --white: #ffffff;
+      --border: #e8e4dc;
+      --ink: #1a1a1a;
+      --muted: #6b6b60;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 18px;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.5;
+    }
+    h1, h2, h3 {
+      font-family: 'Cormorant Garamond', serif;
+      color: var(--navy);
+      font-weight: 600;
+      margin: 0 0 8px;
+    }
+    h1 { font-size: 1.85rem; }
+    h2 { font-size: 1.35rem; }
+    h3 { font-size: 1.05rem; }
+    .panel {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 28px 22px 80px;
+    }
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .top-bar a {
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-decoration: none;
+    }
+    .top-bar a:hover { color: var(--ink); }
+    .meta {
+      font-size: 0.78rem;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 22px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .card h3 {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--navy);
+    }
+    .item {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 8px;
+      background: #fdfcfa;
+    }
+    .item:last-child { margin-bottom: 0; }
+    .item-title { font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+    .item-meta { font-size: 0.74rem; color: var(--muted); margin-top: 6px; }
+    .quote {
+      font-style: italic;
+      color: var(--muted);
+      border-left: 2px solid var(--gold);
+      padding-left: 10px;
+      margin-top: 6px;
+      font-size: 0.85rem;
+    }
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 50px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .pill.high { background: #c44; color: #fff; }
+    .pill.medium { background: var(--gold); color: #fff; }
+    .pill.low { background: rgba(107,107,96,0.15); color: var(--muted); }
+    .pill.testing { background: rgba(196,154,60,0.18); color: var(--gold); }
+    .pill.strengthening { background: #2d6a4f; color: #fff; }
+    .pill.weakening { background: #b8860b; color: #fff; }
+    .pill.kept { background: #2d6a4f; color: #fff; }
+    .pill.broken { background: #c44; color: #fff; }
+    .pill.ambiguous { background: #b8860b; color: #fff; }
+    .pill.untested { background: rgba(107,107,96,0.18); color: var(--muted); }
+    .pill.specific { background: var(--navy); color: #fff; }
+    .pill.contingent { background: var(--gold); color: #fff; }
+    .pill.directional { background: rgba(107,107,96,0.18); color: var(--muted); }
+    .btn {
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 9px 18px;
+      border-radius: 6px;
+      border: none;
+    }
+    .btn-primary { background: var(--gold); color: #fff; }
+    .btn-primary:hover { background: #b08930; }
+    .btn-secondary { background: transparent; color: var(--navy); border: 1px solid var(--navy); }
+    .btn-secondary:hover { background: rgba(26,58,82,0.05); }
+    .btn-tertiary { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .revision-prompt {
+      background: #fdf9f1;
+      border: 1px solid var(--gold);
+      border-radius: 8px;
+      padding: 16px 18px;
+      margin-bottom: 18px;
+    }
+    .revision-prompt p {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.1rem;
+      font-style: italic;
+      color: var(--navy);
+      margin: 0 0 12px;
+      line-height: 1.45;
+    }
+    .revision-prompt textarea {
+      width: 100%;
+      min-height: 90px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      resize: vertical;
+      background: #fff;
+    }
+    .revision-actions { display: flex; gap: 10px; margin-top: 12px; }
+    .updated-badge {
+      display: inline-block;
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: var(--gold);
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 50px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    .empty-cta {
+      background: rgba(196,154,60,0.08);
+      border: 1px dashed var(--gold);
+      border-radius: 6px;
+      padding: 16px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+    .editable {
+      cursor: text;
+      border: 1px dashed transparent;
+      padding: 6px 8px;
+      border-radius: 4px;
+      transition: border 0.15s ease;
+    }
+    .editable:hover { border-color: var(--border); background: #fdfcfa; }
+    .edit-input, .edit-textarea {
+      width: 100%;
+      padding: 8px 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      border: 1px solid var(--gold);
+      border-radius: 4px;
+      background: #fff;
+    }
+    .save-section-btn {
+      margin-top: 6px;
+      background: var(--navy);
+      color: #fff;
+      border: none;
+      padding: 5px 12px;
+      border-radius: 4px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+    #status-banner {
+      padding: 14px 18px;
+      border-radius: 8px;
+      margin-bottom: 18px;
+      font-size: 0.92rem;
+    }
+    .status-draft { background: rgba(196,154,60,0.1); color: #8a6a20; border: 1px solid rgba(196,154,60,0.4); }
+    .status-locked { background: rgba(45,106,79,0.1); color: #1a4a3a; border: 1px solid rgba(45,106,79,0.4); }
+    .loader {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    .spinner {
+      display: inline-block;
+      width: 28px;
+      height: 28px;
+      border: 3px solid rgba(196,154,60,0.2);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-box {
+      background: #fff5f5;
+      border: 1px solid #c44;
+      color: #8a2222;
+      padding: 14px 18px;
+      border-radius: 6px;
+      margin-bottom: 18px;
+      font-size: 0.88rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <div class="top-bar">
+      <div>
+        <h1>Intervention Plan</h1>
+        <div class="meta" id="header-meta">Loading…</div>
+      </div>
+      <a href="/coach-dashboard.html" id="back-link">← Back to dashboard</a>
+    </div>
+    <div id="content">
+      <div class="loader">
+        <div class="spinner"></div>
+        <div>Loading plan…</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  const SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+  const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+  const TOKEN_KEY = 'sb_access_token';
+
+  const params = new URLSearchParams(location.search);
+  const clientEmail = params.get('client_email') || '';
+  let coachId = null;
+  let plan = null;
+
+  function $(id) { return document.getElementById(id); }
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+    });
+  }
+  function apiHeaders() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    return {
+      apikey: ANON_KEY,
+      Authorization: token ? ('Bearer ' + token) : ('Bearer ' + ANON_KEY),
+      'Content-Type': 'application/json',
+    };
+  }
+  function showError(msg) {
+    $('content').innerHTML = '<div class="error-box">' + escapeHtml(msg) + '</div>';
+  }
+
+  async function loadCoachProfile() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) { window.location.href = '/coach-dashboard.html'; return null; }
+    const userRes = await fetch(SUPABASE_URL + '/auth/v1/user', { headers: { apikey: ANON_KEY, Authorization: 'Bearer ' + token } });
+    if (!userRes.ok) { window.location.href = '/coach-dashboard.html'; return null; }
+    const user = await userRes.json();
+    const email = user.email;
+    const profRes = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles?user_email=eq.' + encodeURIComponent(email.toLowerCase()) + '&select=id,display_name', { headers: apiHeaders() });
+    const profRows = await profRes.json();
+    if (!Array.isArray(profRows) || profRows.length === 0) {
+      showError('No coach profile found for ' + email);
+      return null;
+    }
+    return profRows[0];
+  }
+
+  async function loadActivePlan() {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/intervention_plans?coach_id=eq.' + coachId + '&client_email=eq.' + encodeURIComponent(clientEmail) + '&archived_at=is.null&order=created_at.desc&limit=1', { headers: apiHeaders() });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return Array.isArray(rows) && rows.length ? rows[0] : null;
+  }
+
+  async function generatePlan() {
+    $('content').innerHTML = '<div class="loader"><div class="spinner"></div><div>Generating intervention plan… this may take 60–90 seconds.</div></div>';
+    try {
+      const res = await fetch('/api/generate-intervention-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coach_id: coachId, client_email: clientEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Generation failed');
+      plan = data;
+      render();
+    } catch (e) {
+      showError(e.message);
+    }
+  }
+
+  async function revisePlan(feedback) {
+    if (!plan) return;
+    $('content').innerHTML = '<div class="loader"><div class="spinner"></div><div>Refining plan… this may take 60–90 seconds.</div></div>';
+    try {
+      const res = await fetch('/api/revise-intervention-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan_id: plan.id, coach_feedback: feedback, round: plan.generation_round + 1 }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Revision failed');
+      plan = data;
+      render();
+    } catch (e) {
+      showError(e.message);
+    }
+  }
+
+  async function lockPlan() {
+    if (!plan) return;
+    try {
+      const res = await fetch('/api/lock-intervention-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan_id: plan.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Lock failed');
+      plan = data;
+      render();
+    } catch (e) { showError(e.message); }
+  }
+
+  async function regenerateFromScratch() {
+    if (!confirm('Regenerate the plan from latest sessions? The current plan will be archived.')) return;
+    $('content').innerHTML = '<div class="loader"><div class="spinner"></div><div>Regenerating plan from scratch…</div></div>';
+    try {
+      const res = await fetch('/api/regenerate-intervention-plan-from-scratch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coach_id: coachId, client_email: clientEmail, archive_plan_id: plan ? plan.id : null }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Regenerate failed');
+      plan = data;
+      render();
+    } catch (e) { showError(e.message); }
+  }
+
+  async function saveSection(section, newValue) {
+    if (!plan) return;
+    try {
+      const res = await fetch('/api/intervention-plan-section', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan_id: plan.id, section, new_value: newValue, edited_by: coachId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Save failed');
+      plan = data;
+      render();
+    } catch (e) { alert(e.message); }
+  }
+
+  function renderItem(content, meta) {
+    return '<div class="item">' + content + (meta ? '<div class="item-meta">' + meta + '</div>' : '') + '</div>';
+  }
+
+  function sourceTag(sources) {
+    if (!Array.isArray(sources) || !sources.length) return '';
+    return 'Source: ' + sources.length + ' session' + (sources.length === 1 ? '' : 's');
+  }
+
+  function renderSection(title, body, opts) {
+    opts = opts || {};
+    return '<div class="card"' + (opts.id ? ' id="' + opts.id + '"' : '') + '>'
+      + '<h3>' + escapeHtml(title) + (opts.changed ? '<span class="updated-badge">Updated</span>' : '') + '</h3>'
+      + body
+      + '</div>';
+  }
+
+  function renderExternalConditions() {
+    const arr = plan.external_conditions || [];
+    if (!arr.length) return '<div class="empty-cta">No external conditions surfaced from sessions.</div>';
+    return arr.map(c =>
+      renderItem(
+        '<div class="item-title">' + escapeHtml(c.description) + ' <span class="pill ' + (c.impact_level || 'medium') + '">' + escapeHtml(c.impact_level || 'medium') + '</span></div>'
+        + (c.evidence_quote ? '<div class="quote">"' + escapeHtml(c.evidence_quote) + '"</div>' : ''),
+        sourceTag(c.source_sessions)
+      )
+    ).join('');
+  }
+
+  function renderHypotheses() {
+    const arr = plan.working_hypotheses || [];
+    if (!arr.length) return '<div class="empty-cta">No working hypotheses yet.</div>';
+    return arr.map(h =>
+      renderItem(
+        '<div class="item-title">' + escapeHtml(h.pattern) + ' <span class="pill ' + (h.status || 'testing') + '">' + escapeHtml(h.status || 'testing') + '</span></div>'
+        + (Array.isArray(h.drivers) && h.drivers.length ? '<div style="font-size:0.85rem;color:var(--muted);">Drivers: ' + h.drivers.map(escapeHtml).join('; ') + '</div>' : '')
+        + (h.expressions && (h.expressions.slow_pattern || h.expressions.fast_pattern) ? '<div style="font-size:0.82rem;margin-top:6px;">'
+          + (h.expressions.slow_pattern ? '<div><strong>Slow:</strong> ' + escapeHtml(h.expressions.slow_pattern) + '</div>' : '')
+          + (h.expressions.fast_pattern ? '<div><strong>Fast:</strong> ' + escapeHtml(h.expressions.fast_pattern) + '</div>' : '')
+          + '</div>' : '')
+        + (h.evidence_quote ? '<div class="quote">"' + escapeHtml(h.evidence_quote) + '"</div>' : ''),
+        sourceTag(h.source_sessions)
+      )
+    ).join('');
+  }
+
+  function renderFrames() {
+    const arr = plan.strategic_frames || [];
+    if (!arr.length) return '<div class="empty-cta">No strategic frames yet.</div>';
+    return arr.map(f =>
+      renderItem(
+        '<div class="item-title">' + escapeHtml(f.name) + '</div>'
+        + (f.description ? '<div style="font-size:0.85rem;">' + escapeHtml(f.description) + '</div>' : '')
+        + (f.primary_tool ? '<div style="font-size:0.82rem;margin-top:6px;"><strong>Primary tool:</strong> ' + escapeHtml(f.primary_tool) + '</div>' : '')
+        + (Array.isArray(f.fallback_paths) && f.fallback_paths.length ? '<div style="font-size:0.82rem;margin-top:6px;"><strong>Fallback paths:</strong><ul style="margin:4px 0 0;padding-left:20px;">' + f.fallback_paths.map(fp => '<li>If ' + escapeHtml(fp.trigger) + ' → ' + (Array.isArray(fp.actions) ? fp.actions.map(escapeHtml).join('; ') : '') + '</li>').join('') + '</ul></div>' : ''),
+        sourceTag(f.source_sessions)
+      )
+    ).join('');
+  }
+
+  function renderBehavioralTargets() {
+    const arr = plan.behavioral_targets || [];
+    if (!arr.length) return '<div class="empty-cta">No behavioral targets yet.</div>';
+    return arr.map(t =>
+      renderItem(
+        '<div class="item-title">' + escapeHtml(t.target) + '</div>'
+        + (t.frequency ? '<div style="font-size:0.82rem;"><strong>Frequency:</strong> ' + escapeHtml(t.frequency) + '</div>' : '')
+        + (t.context ? '<div style="font-size:0.82rem;"><strong>Context:</strong> ' + escapeHtml(t.context) + '</div>' : '')
+        + (t.linked_goal_id ? '<div style="font-size:0.78rem;color:var(--gold);margin-top:4px;">Linked to active goal</div>' : ''),
+        sourceTag(t.source_sessions)
+      )
+    ).join('');
+  }
+
+  function renderCommitments() {
+    const arr = plan.prior_commitments || [];
+    if (!arr.length) return '<div class="empty-cta">No prior commitments enumerated.</div>';
+    return arr.map(c =>
+      renderItem(
+        '<div class="item-title">' + escapeHtml(c.commitment_text) + ' <span class="pill ' + (c.status || 'untested') + '">' + escapeHtml(c.status || 'untested') + '</span></div>',
+        'Source session: ' + escapeHtml(c.source_session)
+      )
+    ).join('');
+  }
+
+  function renderModalitySequence() {
+    const arr = plan.modality_sequence || [];
+    if (!arr.length) return '<div class="empty-cta">No modality selected. <button class="btn btn-secondary" style="margin-top:10px;" onclick="alert(\'Inline modality selection ships with the locked-mode flow.\')">Select modality</button></div>';
+    return arr.map(m =>
+      renderItem(
+        '<div class="item-title">Stage ' + (m.stage || '?') + ' · ' + escapeHtml(m.modality) + '</div>'
+        + (m.goal ? '<div style="font-size:0.85rem;color:var(--muted);">' + escapeHtml(m.goal) + '</div>' : '')
+        + (Array.isArray(m.techniques) && m.techniques.length ? '<div style="font-size:0.82rem;margin-top:6px;"><strong>Techniques:</strong> ' + m.techniques.map(escapeHtml).join('; ') + '</div>' : '')
+        + (Array.isArray(m.source_evidence) && m.source_evidence.length ? '<div style="font-size:0.82rem;margin-top:6px;"><strong>Evidence:</strong>' + m.source_evidence.map(se => '<div class="quote">"' + escapeHtml(se.quote) + '"</div>').join('') + '</div>' : ''),
+        ''
+      )
+    ).join('');
+  }
+
+  function renderProgressMarkers() {
+    const arr = plan.progress_markers || [];
+    if (!arr.length) return '<div class="empty-cta">No progress markers yet.</div>';
+    return arr.map(p =>
+      renderItem(
+        '<div class="item-title">' + escapeHtml(p.marker) + ' <span class="pill" style="background:rgba(26,58,82,0.12);color:var(--navy);">' + escapeHtml(p.type || 'behavioral') + '</span></div>',
+        sourceTag(p.source_sessions)
+      )
+    ).join('');
+  }
+
+  function renderRiskWatchouts() {
+    const arr = plan.risk_watchouts || [];
+    if (!arr.length) return '<div class="empty-cta">No risk watchouts surfaced.</div>';
+    return arr.map(r =>
+      renderItem(
+        '<div class="item-title">' + escapeHtml(r.pattern) + '</div>'
+        + (r.detection_signal ? '<div style="font-size:0.82rem;"><strong>Detection:</strong> ' + escapeHtml(r.detection_signal) + '</div>' : '')
+        + (r.response_strategy ? '<div style="font-size:0.82rem;"><strong>Response:</strong> ' + escapeHtml(r.response_strategy) + '</div>' : ''),
+        'Source: ' + escapeHtml(r.source || 'session')
+      )
+    ).join('');
+  }
+
+  function renderSessionArc() {
+    const arr = plan.session_arc || [];
+    if (!arr.length) return '<div class="empty-cta">No session arc yet.</div>';
+    return arr.map(s =>
+      renderItem(
+        '<div class="item-title">Session ' + escapeHtml(String(s.session_number || '?')) + ' · ' + escapeHtml(s.label || 'tentative') + ' <span class="pill ' + (s.specificity || 'directional') + '">' + escapeHtml(s.specificity || 'directional') + '</span></div>'
+        + (s.focus ? '<div style="font-size:0.85rem;">' + escapeHtml(s.focus) + '</div>' : ''),
+        sourceTag(s.source_sessions)
+      )
+    ).join('');
+  }
+
+  function renderCoachCommitment() {
+    const c = plan.coach_commitment || {};
+    if (!c.text) return '<div class="empty-cta">No coach commitment yet.</div>';
+    return renderItem(
+      '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-style:italic;color:var(--navy);">' + escapeHtml(c.text) + '</div>',
+      Array.isArray(c.derived_from) && c.derived_from.length ? 'Derived from: ' + c.derived_from.join(', ') : ''
+    );
+  }
+
+  function revisionPromptText(round) {
+    if (round === 0) {
+      return 'Looking at this plan: Are there modalities or techniques from your Approach Lab to feature? Anything from Coach DNA about your patterns with this client that shifts how you\'d approach the next phase? Or does this already capture what you see?';
+    }
+    return 'One more look: does this capture what you see? Anything else before we lock it in?';
+  }
+
+  function render() {
+    if (!plan) {
+      $('content').innerHTML = '<div class="card" style="text-align:center;padding:40px 24px;">'
+        + '<h2 style="margin-bottom:12px;">No plan yet for this client</h2>'
+        + '<p style="color:var(--muted);margin-bottom:18px;">Coach Clarity will read all post-session analysis, the pattern map, active goals, approach lab runs, and your coach DNA to draft a longitudinal plan.</p>'
+        + '<button class="btn btn-primary" id="generate-btn">Create intervention plan</button>'
+        + '</div>';
+      $('generate-btn').onclick = generatePlan;
+      return;
+    }
+
+    const isDraft = plan.status === 'draft';
+    const round = plan.generation_round || 0;
+    const canRevise = isDraft && round < 2;
+
+    let html = '';
+    html += '<div id="status-banner" class="' + (isDraft ? 'status-draft' : 'status-locked') + '">'
+      + (isDraft ? 'Draft · round ' + round + ' of up to 2 revisions' : 'Locked · all sections are now editable inline. Edits append to the audit trail.')
+      + '</div>';
+
+    if (canRevise) {
+      html += '<div class="revision-prompt">'
+        + '<p>' + escapeHtml(revisionPromptText(round)) + '</p>'
+        + '<textarea id="revision-feedback" placeholder="Type your refinement here…"></textarea>'
+        + '<div class="revision-actions">'
+        + '<button class="btn btn-secondary" id="revise-btn">Revise with feedback</button>'
+        + '<button class="btn btn-primary" id="lock-btn">Lock as-is</button>'
+        + '</div></div>';
+    } else if (isDraft && round === 2) {
+      html += '<div class="revision-prompt"><p>This plan is now yours. Lock this version, then edit any section freely or move to session planning.</p>'
+        + '<div class="revision-actions"><button class="btn btn-primary" id="lock-btn">Lock plan</button></div></div>';
+    }
+
+    html += renderSection('External conditions', renderExternalConditions(), { id: 'sec-external_conditions' });
+    html += renderSection('Working hypotheses', renderHypotheses(), { id: 'sec-working_hypotheses' });
+    html += renderSection('Strategic frames', renderFrames(), { id: 'sec-strategic_frames' });
+    html += renderSection('Behavioral targets', renderBehavioralTargets(), { id: 'sec-behavioral_targets' });
+    html += renderSection('Prior commitments', renderCommitments(), { id: 'sec-prior_commitments' });
+    html += renderSection('Modality sequence', renderModalitySequence(), { id: 'sec-modality_sequence' });
+    html += renderSection('Progress markers', renderProgressMarkers(), { id: 'sec-progress_markers' });
+    html += renderSection('Risk watchouts', renderRiskWatchouts(), { id: 'sec-risk_watchouts' });
+    html += renderSection('Session arc', renderSessionArc(), { id: 'sec-session_arc' });
+    html += renderSection('Coach commitment', renderCoachCommitment(), { id: 'sec-coach_commitment' });
+
+    if (!isDraft) {
+      html += '<div style="margin-top:24px;text-align:center;">'
+        + '<button class="btn btn-tertiary" id="regen-btn">Regenerate from latest sessions</button>'
+        + '</div>';
+    }
+
+    $('content').innerHTML = html;
+
+    if (canRevise || (isDraft && round === 2)) {
+      const lockBtn = $('lock-btn');
+      if (lockBtn) lockBtn.onclick = lockPlan;
+    }
+    if (canRevise) {
+      $('revise-btn').onclick = function() {
+        const fb = $('revision-feedback').value.trim();
+        if (!fb) return alert('Add feedback before revising.');
+        revisePlan(fb);
+      };
+    }
+    if (!isDraft) {
+      const regenBtn = $('regen-btn');
+      if (regenBtn) regenBtn.onclick = regenerateFromScratch;
+    }
+  }
+
+  (async function init() {
+    if (!clientEmail) { showError('Missing client_email in URL.'); return; }
+    const profile = await loadCoachProfile();
+    if (!profile) return;
+    coachId = profile.id;
+    $('header-meta').textContent = clientEmail + ' · coach: ' + (profile.display_name || '');
+    plan = await loadActivePlan();
+    render();
+  })();
+  </script>
+</body>
+</html>

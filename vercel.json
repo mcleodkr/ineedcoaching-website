@@ -15,6 +15,15 @@
     "api/generate-client-pattern-map.js": {
       "maxDuration": 120
     },
+    "api/generate-intervention-plan.js": {
+      "maxDuration": 180
+    },
+    "api/revise-intervention-plan.js": {
+      "maxDuration": 180
+    },
+    "api/regenerate-intervention-plan-from-scratch.js": {
+      "maxDuration": 180
+    },
     "api/generate-approach-lab.js": {
       "maxDuration": 60
     },
@@ -30,6 +39,7 @@
     { "source": "/coach/:slug", "destination": "/coach-profile.html?slug=:slug" },
     { "source": "/coach-signup", "destination": "/coach-signup.html" },
     { "source": "/signup-success", "destination": "/signup-success.html" },
-    { "source": "/proposal-builder", "destination": "/proposal-builder.html" }
+    { "source": "/proposal-builder", "destination": "/proposal-builder.html" },
+    { "source": "/intervention-plan", "destination": "/intervention-plan-panel.html" }
   ]
 }
