@@ -487,10 +487,11 @@ footer { padding: 48px 80px 32px; background: var(--navy); border-top: 1px solid
   </div>
   <div class="filter-pills" id="filter-pills">
     <button class="filter-pill active" data-cat="all">All</button>
-    <button class="filter-pill" data-cat="Coaching and Growth">Coaching and Growth</button>
-    <button class="filter-pill" data-cat="Getting Clients">Getting Clients</button>
-    <button class="filter-pill" data-cat="Niche and Positioning">Niche and Positioning</button>
-    <button class="filter-pill" data-cat="Business of Coaching">Business of Coaching</button>
+    <button class="filter-pill" data-cat="Coaching & Growth">Coaching & Growth</button>
+    <button class="filter-pill" data-cat="Finding Support">Finding Support</button>
+    <button class="filter-pill" data-cat="Anxiety & Overthinking">Anxiety & Overthinking</button>
+    <button class="filter-pill" data-cat="Burnout & Exhaustion">Burnout & Exhaustion</button>
+    <button class="filter-pill" data-cat="Self-Discovery & Identity">Self-Discovery & Identity</button>
   </div>
   <div class="articles-grid" id="articles-grid">
     <p style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:0.85rem;">Loading articles...</p>
@@ -778,7 +779,7 @@ var allArticles = [];
 async function loadArticles() {
   var grid = document.getElementById('articles-grid');
   try {
-    var res = await fetch(SUPABASE_URL + '/rest/v1/articles?audience=eq.coach&order=created_at.desc&limit=50&select=title,slug,meta_description,category', {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/articles?audience=eq.consumer&order=created_at.desc&limit=50&select=title,slug,meta_description,category', {
       headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
     });
     allArticles = await res.json();

@@ -476,7 +476,7 @@ function esc(s) { var d = document.createElement('div'); d.textContent = s || ''
 
 async function loadArticles() {
   try {
-    var res = await fetch(SUPABASE_URL + '/rest/v1/articles?or=(audience.eq.coach,audience.eq.coaching-consumer)&select=title,slug,meta_description,category&order=created_at.desc&limit=200', {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/articles?or=(audience.eq.coach,audience.eq.consumer)&select=title,slug,meta_description,category&order=created_at.desc&limit=200', {
       headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
     });
     _allArticles = await res.json();
