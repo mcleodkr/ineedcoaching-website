@@ -119,6 +119,22 @@ export default async function handler(req, res) {
     }
     const updated = await patchRes.json();
     const row = Array.isArray(updated) ? updated[0] : updated;
+
+    // Log one analytics row per Save event with the list of fields touched.
+    // Best-effort — do not block or rollback on logging failure.
+    fetch(`${SUPABASE_URL}/rest/v1/session_plan_actions`, {
+      method: 'POST',
+      headers: { ...headers, Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        session_plan_id: plan_id,
+        coach_id: edited_by || existing.coach_id || null,
+        client_email: existing.client_email || null,
+        booking_id: existing.booking_id || null,
+        action: 'edit',
+        edited_fields: editEntries.map(e => e.field),
+      }),
+    }).catch(e => console.error('[update-session-plan] analytics log failed:', e.message));
+
     return res.status(200).json({ ...row, ...(row?.coaching_data || {}) });
   } catch (e) {
     console.error('[update-session-plan] Error:', e);

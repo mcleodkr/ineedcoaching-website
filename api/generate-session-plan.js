@@ -495,6 +495,27 @@ export default async function handler(req, res) {
     const row = Array.isArray(inserted) ? inserted[0] : inserted;
     console.log(`[SessionPlan] Created plan ${row?.id} for booking ${booking_id}`);
 
+    // Log the revise action for usage analytics. session_plan_id points at
+    // the NEW plan (the durable artifact resulting from the action); the
+    // prior plan id is captured in metadata for chain-walks. Best-effort —
+    // do not block the response on logging failure.
+    if (revision_context && row?.id) {
+      fetch(`${SUPABASE_URL}/rest/v1/session_plan_actions`, {
+        method: 'POST',
+        headers: { ...headers, Prefer: 'return=minimal' },
+        body: JSON.stringify({
+          session_plan_id: row.id,
+          coach_id,
+          client_email,
+          booking_id,
+          action: 'revise',
+          revision_context,
+          revision_context_length: revision_context.length,
+          metadata: { prior_plan_id: priorPlan?.id || null, intervention_plan_id },
+        }),
+      }).catch(e => console.error('[SessionPlan] analytics log failed:', e.message));
+    }
+
     // Return the unified shape the panel renders directly — top-level columns
     // plus coaching_data spread so the UI doesn't need to know the storage split.
     return res.status(200).json({
