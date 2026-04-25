@@ -115,6 +115,63 @@ const SESSION_PLAN_SCHEMA = `Schema:
 
 const CACHED_SYSTEM = SESSION_PLAN_GUARDRAILS + '\n\n' + SESSION_PLAN_SCHEMA;
 
+// Pretty-prints the prior session plan as a human-readable block for the
+// model. Used only on Revise (chunk 6.7 accumulate-mode) — sits OUTSIDE the
+// cached prefix so cache hits on the system block survive across revisions.
+function formatPriorPlanBlock(prior) {
+  const lines = ['PRIOR SESSION PLAN (the coach is revising this, not starting over):', ''];
+  const cd = prior.coaching_data || {};
+  if (cd.today_priority) {
+    lines.push('Priority: ' + cd.today_priority);
+    lines.push('');
+  }
+  if (prior.opening) {
+    lines.push('Opening:');
+    lines.push(prior.opening);
+    lines.push('');
+  }
+  if (Array.isArray(prior.key_questions) && prior.key_questions.length) {
+    lines.push('Key questions:');
+    prior.key_questions.forEach(function(q) { lines.push('- ' + q); });
+    lines.push('');
+  }
+  if (cd.do_not_miss) {
+    lines.push('Do not miss: ' + cd.do_not_miss);
+    lines.push('');
+  }
+  if (Array.isArray(prior.turning_points) && prior.turning_points.length) {
+    lines.push('Turning points:');
+    prior.turning_points.forEach(function(tp) {
+      lines.push('- If ' + (tp && tp.trigger || '') + ' → ' + (tp && tp.move || ''));
+    });
+    lines.push('');
+  }
+  if (Array.isArray(prior.branches) && prior.branches.length) {
+    lines.push('Branches:');
+    prior.branches.forEach(function(b) {
+      lines.push('- If ' + (b && b.if || '') + ' → ' + (b && b.then || ''));
+    });
+    lines.push('');
+  }
+  if (Array.isArray(prior.body_cues_to_watch) && prior.body_cues_to_watch.length) {
+    lines.push('Body cues to watch:');
+    prior.body_cues_to_watch.forEach(function(c) { lines.push('- ' + c); });
+    lines.push('');
+  }
+  if (cd.close_with) {
+    lines.push('Close with: ' + cd.close_with);
+    lines.push('');
+  }
+  if (prior.time_flow && typeof prior.time_flow === 'object') {
+    const tf = prior.time_flow;
+    lines.push('Time flow:');
+    if (tf.opening) lines.push('- Opening (' + (tf.opening.minutes || '?') + ' min): ' + (tf.opening.summary || ''));
+    if (tf.work) lines.push('- Work (' + (tf.work.minutes || '?') + ' min): ' + (tf.work.summary || ''));
+    if (tf.close) lines.push('- Close (' + (tf.close.minutes || '?') + ' min): ' + (tf.close.summary || ''));
+  }
+  return lines.join('\n').trim();
+}
+
 function ipSuggestsSomatic(ip) {
   if (!ip) return false;
   const modality = JSON.stringify(ip.modality_sequence || []);
@@ -356,7 +413,10 @@ export default async function handler(req, res) {
     let priorPlan = null;
     let priorLookupTolerated = false;
     try {
-      const priorRes = await fetch(`${SUPABASE_URL}/rest/v1/session_plans?booking_id=eq.${booking_id}&archived_at=is.null&select=id,coach_edits&limit=1`, {
+      // Widened SELECT in chunk 6.7 — Revise now needs the full prior plan
+      // content to feed into the accumulate prompt, not just id + coach_edits
+      // for the dup-guard.
+      const priorRes = await fetch(`${SUPABASE_URL}/rest/v1/session_plans?booking_id=eq.${booking_id}&archived_at=is.null&select=id,coach_edits,opening,key_questions,turning_points,branches,body_cues_to_watch,time_flow,coaching_data&limit=1`, {
         headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
       });
       if (priorRes.ok) {
@@ -390,25 +450,37 @@ export default async function handler(req, res) {
 
     console.log(`[SessionPlan] Generating for booking ${booking_id} on locked IP ${intervention_plan_id} — checkin: ${!!ctx.checkin}, journal: ${ctx.journal_entries.length}, goals: ${ctx.active_goals.length}, revision: ${!!revision_context}`);
 
-    // Revision context is appended OUTSIDE the cached block as a second
-    // system entry so the cached prefix still hashes the same and warm
-    // cache reads continue to work.
+    // Revise (chunk 6.7) switched from reset-mode to accumulate-mode: the
+    // prior session plan is fed into the prompt as fresh context so the model
+    // layers the new revision_context onto the existing plan instead of
+    // building from scratch. The prior-plan block sits OUTSIDE the cached
+    // prefix because it changes per revision; the cached system carries only
+    // the static guardrails + schema.
+    const hasPriorContent = !!(priorPlan && (priorPlan.opening || (Array.isArray(priorPlan.key_questions) && priorPlan.key_questions.length)));
+    const priorPlanBlock = (revision_context && hasPriorContent) ? formatPriorPlanBlock(priorPlan) : '';
+
     const systemBlocks = [
       { type: 'text', text: CACHED_SYSTEM, cache_control: { type: 'ephemeral' } },
     ];
     if (revision_context) {
       systemBlocks.push({
         type: 'text',
-        text: `Coach has requested a revision. Their stated reason: ${revision_context}\n\nUse this to inform what should change in the revised plan; preserve what the coach has not flagged as needing change.`,
+        text: hasPriorContent
+          ? `The coach is revising an existing session plan, not generating from scratch. The prior session plan appears in the user message above. The coach's stated reason for this revision is: "${revision_context}"\n\nYour task: integrate the coach's revision context with the prior session plan. Preserve what still serves the session — keep questions, turning points, and branches that align with the new context. Modify or replace what no longer serves. Add new material where the revision context calls for content that wasn't there before.\n\nIf the revision context is directive (e.g., "scrap the prior framing and start with X"), follow it. If the revision context is additive (e.g., "integrate principles of ACT" or "client relapsed this week"), layer the new framing onto the existing plan rather than replacing it wholesale.\n\nOutput the full revised session plan, including any preserved-from-prior content. Do not output a diff or partial update.`
+          : `Coach has requested a revision. Their stated reason: ${revision_context}\n\nUse this to inform what should change in the revised plan; preserve what the coach has not flagged as needing change.`,
       });
     }
+
+    const userPayload = priorPlanBlock
+      ? `${buildUserPayload(ctx)}\n\n${priorPlanBlock}`
+      : buildUserPayload(ctx);
 
     const planRaw = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
       4000,
       systemBlocks,
-      buildUserPayload(ctx),
+      userPayload,
       revision_context ? 'SessionPlan: Revision' : 'SessionPlan: Generation'
     );
 
@@ -511,6 +583,7 @@ export default async function handler(req, res) {
           action: 'revise',
           revision_context,
           revision_context_length: revision_context.length,
+          had_prior_plan: hasPriorContent,
           metadata: { prior_plan_id: priorPlan?.id || null, intervention_plan_id },
         }),
       }).catch(e => console.error('[SessionPlan] analytics log failed:', e.message));
