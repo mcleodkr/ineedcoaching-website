@@ -106,7 +106,10 @@ nav {
   background: rgba(184,101,74,0.1);
   padding: 5px 14px; border-radius: 20px;
   margin-bottom: 24px;
+  text-decoration: none;
 }
+a.article-tag { transition: background 0.15s ease, color 0.15s ease; }
+a.article-tag:hover { background: rgba(184,101,74,0.2); color: var(--terracotta); }
 
 /* TITLE */
 .article-title {
@@ -692,6 +695,20 @@ footer {
 const SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
 const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
 
+// Category slugs for landing pages under /category/<slug>.html.
+// Hard-coded — keep in sync with scripts/build-category-pages.cjs.
+const CATEGORY_SLUGS = {
+  'Coaching & Growth': 'coaching-growth',
+  'Finding Support': 'finding-support',
+  'Anxiety & Overthinking': 'anxiety-overthinking',
+  'Relationships & Boundaries': 'relationships-boundaries',
+  'Burnout & Exhaustion': 'burnout-exhaustion',
+  'Self-Discovery & Identity': 'self-discovery-identity',
+  'Sobriety & Recovery': 'sobriety-recovery',
+  'Depression & Low Mood': 'depression-low-mood',
+  'Trauma & Healing': 'trauma-healing'
+};
+
 function getSlug() {
   return new URLSearchParams(window.location.search).get('slug') || '';
 }
@@ -942,8 +959,14 @@ async function loadArticle() {
 
     var html = '';
 
-    // 1. Title and meta
-    html += '<div class="article-tag">' + (article.category || 'Coaching') + '</div>';
+    // 1. Title and meta — category badge links to /category/<slug>.html when slug is mapped
+    var tagCategory = article.category || 'Coaching';
+    var tagSlug = CATEGORY_SLUGS[tagCategory];
+    if (tagSlug) {
+      html += '<a class="article-tag" href="/category/' + tagSlug + '.html">' + tagCategory + '</a>';
+    } else {
+      html += '<div class="article-tag">' + tagCategory + '</div>';
+    }
     html += '<h1 class="article-title">' + article.title + '</h1>';
     html += '<div class="article-meta">' + (article.meta_description || '') + '</div>';
 
