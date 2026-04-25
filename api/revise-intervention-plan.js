@@ -70,6 +70,7 @@ HARD GUARDRAILS — violation drops items at validation time, so respect them at
 8. Tactical specificity inverse to distance. Session N+1 = "specific". Session N+2 = "contingent". Session N+3 and beyond = "directional". Use the labels exactly.
 9. Commitments enumerate from prior sessions. For each commitment found in prior sessions, set status by whether subsequent sessions reference it as kept, broken, or ambiguous. Default to "untested" when no later session references it.
 10. Approach Lab runs and Coach DNA are first-class inputs. Weave relevant techniques from approach_lab_runs into modality_sequence. Weave relevant pattern_activation_map and blind_spots from coach_dna into risk_watchouts and coach_commitment without the coach prompting.
+11. Adaptive behavioral target cap under high-impact external conditions. If any external_conditions item has impact_level: "high", return at most 3 behavioral_targets in the plan, prioritizing those linked to an active goal_id or supporting the highest-impact external condition directly. Stacking multiple simultaneous practice demands under high-impact external conditions (medication change, active recovery, acute life event) contradicts the state-dependent capacity frame and increases the risk of practice non-compliance being misread as resistance. When in doubt, fewer well-anchored targets are better than many.
 
 TONE: Coaching language only. No clinical labels. No directive phrasing. Use "you might", "this may", "one possible direction".
 
@@ -151,7 +152,12 @@ function validatePlan(planRaw, validBookingIds, activeGoalIds) {
           .filter(se => se && okBookings.has(String(se.session_id)))
           .map(se => ({ session_id: se.session_id, quote: se.quote || '' })),
       }))
-      .filter(m => m.source_evidence.length > 0),
+      .filter(m => m.source_evidence.length > 0)
+      // Stage numbering is structural, not a model decision. Overwrite by
+      // index after all other validation so we never persist '1, 2, 3, 1'
+      // sequences (Claude has produced these). Mirrors the session_arc
+      // specificity index override below.
+      .map((m, i) => ({ ...m, stage: i + 1 })),
     progress_markers: filterBySources(planRaw.progress_markers).map(i => ({
       marker: i.marker || '',
       type: ['internal','behavioral','relational'].includes(i.type) ? i.type : 'behavioral',
