@@ -316,6 +316,34 @@
     return Array.isArray(rows) && rows.length ? rows[0] : null;
   }
 
+  // Safe response parser. Vercel's gateway returns HTML on 502/504 — never JSON —
+  // so blindly calling res.json() throws an "Unexpected token" parse error and
+  // hides the actual status code. This reads body text once, surfaces the HTTP
+  // status, and special-cases 504 (the typical Claude-overrun symptom) with a
+  // user-actionable message instead of a stack trace.
+  async function parseApiResponse(res, defaultErrorMsg) {
+    if (res.ok) {
+      try { return await res.json(); }
+      catch (e) { throw new Error('Server returned malformed JSON.'); }
+    }
+    let bodyText = '';
+    try { bodyText = await res.text(); } catch (_) {}
+    if (res.status === 504 || res.status === 502) {
+      throw new Error('Server timeout — your revision is taking longer than expected. Try simpler feedback or try again.');
+    }
+    // Try to extract a JSON error message from server-shaped errors
+    try {
+      const j = JSON.parse(bodyText);
+      if (j && j.error) throw new Error(j.error);
+    } catch (parseErr) {
+      // Re-throw if it was a real error message, otherwise fall through to status code
+      if (parseErr instanceof Error && parseErr.message && parseErr.message !== 'Unexpected end of JSON input' && !parseErr.message.startsWith('Unexpected token')) {
+        throw parseErr;
+      }
+    }
+    throw new Error(defaultErrorMsg + ' (status ' + res.status + ')');
+  }
+
   async function generatePlan() {
     $('content').innerHTML = '<div class="loader"><div class="spinner"></div><div>Generating intervention plan… this may take 60–90 seconds.</div></div>';
     try {
@@ -324,9 +352,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ coach_id: coachId, client_email: clientEmail }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Generation failed');
-      plan = data;
+      plan = await parseApiResponse(res, 'Generation failed');
       render();
     } catch (e) {
       showError(e.message);
@@ -342,9 +368,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan_id: plan.id, coach_feedback: feedback, round: plan.generation_round + 1 }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Revision failed');
-      plan = data;
+      plan = await parseApiResponse(res, 'Revision failed');
       render();
     } catch (e) {
       showError(e.message);
@@ -359,9 +383,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan_id: plan.id }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Lock failed');
-      plan = data;
+      plan = await parseApiResponse(res, 'Lock failed');
       render();
     } catch (e) { showError(e.message); }
   }
@@ -375,9 +397,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ coach_id: coachId, client_email: clientEmail, archive_plan_id: plan ? plan.id : null }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Regenerate failed');
-      plan = data;
+      plan = await parseApiResponse(res, 'Regenerate failed');
       render();
     } catch (e) { showError(e.message); }
   }
@@ -390,9 +410,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan_id: plan.id, section, new_value: newValue, edited_by: coachId }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Save failed');
-      plan = data;
+      plan = await parseApiResponse(res, 'Save failed');
       render();
     } catch (e) { alert(e.message); }
   }

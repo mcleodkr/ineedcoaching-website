@@ -16,13 +16,13 @@
       "maxDuration": 120
     },
     "api/generate-intervention-plan.js": {
-      "maxDuration": 180
+      "maxDuration": 300
     },
     "api/revise-intervention-plan.js": {
-      "maxDuration": 180
+      "maxDuration": 300
     },
     "api/regenerate-intervention-plan-from-scratch.js": {
-      "maxDuration": 180
+      "maxDuration": 300
     },
     "api/generate-approach-lab.js": {
       "maxDuration": 60
