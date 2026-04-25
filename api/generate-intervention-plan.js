@@ -33,6 +33,15 @@ async function callClaude(apiKey, model, maxTokens, system, userMessage, passNam
     console.error(`[${passName}] Output truncated at max_tokens. raw length: ${rawLen}`);
     throw new Error(`${passName} output exceeded token limit — try shorter feedback or simpler revision`);
   }
+  // Cache observability — cache_read_input_tokens > 0 confirms a hit on the
+  // ephemeral system block. Logged so the Vercel runtime log shows whether
+  // back-to-back calls in a coach session are cheap (warm cache) or fresh.
+  console.log(`[${passName}] Cache stats:`, {
+    cache_creation_input_tokens: data.usage?.cache_creation_input_tokens || 0,
+    cache_read_input_tokens: data.usage?.cache_read_input_tokens || 0,
+    input_tokens: data.usage?.input_tokens,
+    output_tokens: data.usage?.output_tokens,
+  });
   let rawText = data.content?.[0]?.text || '';
   rawText = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
   const match = rawText.match(/\{[\s\S]*\}/);
@@ -249,8 +258,16 @@ ${JSON.stringify(ctx.approach_lab_runs.map(r => ({ approach_name: r.selected_app
 COACH DNA (signal patterns):
 ${ctx.coach_dna ? JSON.stringify({ bias_profile: ctx.coach_dna.bias_profile?.slice?.(0, 5), pattern_activation_map: ctx.coach_dna.pattern_activation_map?.slice?.(0, 5), blind_spots: ctx.coach_dna.blind_spots?.slice?.(0, 3), growth_edges: ctx.coach_dna.growth_edges?.slice?.(0, 3) }) : 'not yet generated'}
 
-${PLAN_SCHEMA_INSTRUCTIONS}`;
+`;
 }
+
+// Single cached system block. Combines guardrails + schema so the merged
+// length clears Anthropic's 1024-token minimum for sonnet-class cache writes
+// (guardrails alone is ~764 tokens, schema alone is ~392 tokens; merged
+// they're ~1156). Identical bytes used in both generate and revise endpoints
+// so the two share the same cache key — back-to-back calls in a coach
+// session pay the cache-read discount on subsequent rounds.
+const CACHED_SYSTEM = PLAN_GUARDRAILS + '\n\n' + PLAN_SCHEMA_INSTRUCTIONS;
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -282,7 +299,7 @@ export default async function handler(req, res) {
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
       16000,
-      PLAN_GUARDRAILS,
+      [{ type: 'text', text: CACHED_SYSTEM, cache_control: { type: 'ephemeral' } }],
       buildUserPayload(ctx),
       'InterventionPlan: Generation'
     );

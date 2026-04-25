@@ -32,6 +32,15 @@ async function callClaude(apiKey, model, maxTokens, system, userMessage, passNam
     console.error(`[${passName}] Output truncated at max_tokens. raw length: ${rawLen}`);
     throw new Error(`${passName} output exceeded token limit — try shorter feedback or simpler revision`);
   }
+  // Cache observability — cache_read_input_tokens > 0 confirms a hit on the
+  // ephemeral system block. Logged so the Vercel runtime log shows whether
+  // back-to-back calls in a coach session are cheap (warm cache) or fresh.
+  console.log(`[${passName}] Cache stats:`, {
+    cache_creation_input_tokens: data.usage?.cache_creation_input_tokens || 0,
+    cache_read_input_tokens: data.usage?.cache_read_input_tokens || 0,
+    input_tokens: data.usage?.input_tokens,
+    output_tokens: data.usage?.output_tokens,
+  });
   let rawText = data.content?.[0]?.text || '';
   rawText = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
   const match = rawText.match(/\{[\s\S]*\}/);
@@ -43,7 +52,28 @@ async function callClaude(apiKey, model, maxTokens, system, userMessage, passNam
   }
 }
 
-const REVISE_GUARDRAILS = `You are Coach Clarity, refining an intervention plan after the coach has provided feedback. Read the original plan, the original context (sessions / patterns / goals / approach lab / coach DNA), and the coach feedback. Apply the feedback faithfully. The same hard guardrails from generation still apply — every item with a source_sessions field must reference real booking_ids; modalities require source_evidence; strategic_frames whose primary_tool is set must define fallback_paths; specificity is determined by session distance; commitments enumerate from prior sessions with status set by subsequent evidence. Use hedge language for hypotheses. Coaching tone only. Return ONLY raw JSON in the same schema. Do not strip sections you weren't asked to change — return the full plan, even if many sections are unchanged.`;
+// Byte-identical to generate-intervention-plan.js's PLAN_GUARDRAILS so the
+// system block hashes to the same cache key in both endpoints. A coach who
+// runs Round 0 → Revise 1 → Revise 2 hits the cached prefix on rounds 1+2.
+// Revise-specific framing ("you are refining; preserve unchanged sections")
+// goes in the user message so the system block stays cacheable across calls.
+const PLAN_GUARDRAILS = `You are Coach Clarity, generating a longitudinal intervention plan for a coach working with one client. Read everything you are given. Output strictly valid JSON matching the schema below.
+
+HARD GUARDRAILS — violation drops items at validation time, so respect them at generation:
+1. Every output item that has a source_sessions field must populate it with real booking_ids drawn from the supplied sessions list. Items with empty source_sessions will be dropped. Do not fabricate evidence to satisfy this rule — return fewer, better items.
+2. Friction points carry forward verbatim. Surface every friction_points item from every session inside external_conditions. You may not paraphrase risks more gently than the source session expressed them. If a source session names a medication change (e.g. self-weaning Zoloft) or substance use (e.g. edibles), reproduce that language with minimal change in external_conditions.
+3. When external_conditions contain medication changes, substance use, or major life disruption, downgrade non-compliance interpretations elsewhere in the plan. Treat behavioral failure as state-dependent capacity, not skill resistance. Increase emphasis on tracking versus correcting in modality_sequence and progress_markers.
+4. Working hypotheses use hedge language only — phrases like "consistent with", "current pattern suggests", "appears to". Never declarative drives/causes language. The status field is one of: testing | strengthening | weakening. No confidence percentages.
+5. Modality requires defense. If you cannot ground a proposed modality in concrete session evidence, omit it. The frontend renders an empty modality_sequence with a "Select modality" CTA, which is a better outcome than a fabricated modality.
+6. Every strategic_frame whose primary_tool is non-empty must define at least one fallback_path. If no fallback exists, drop the frame.
+7. Pattern integration when sessions name different patterns. If session 1 names pattern A and session 2 names pattern B, integrate them as expressions of an underlying driver in working_hypotheses, OR explicitly call out the pattern shift in source_evidence. Never silently ignore older sessions.
+8. Tactical specificity inverse to distance. Session N+1 = "specific". Session N+2 = "contingent". Session N+3 and beyond = "directional". Use the labels exactly.
+9. Commitments enumerate from prior sessions. For each commitment found in prior sessions, set status by whether subsequent sessions reference it as kept, broken, or ambiguous. Default to "untested" when no later session references it.
+10. Approach Lab runs and Coach DNA are first-class inputs. Weave relevant techniques from approach_lab_runs into modality_sequence. Weave relevant pattern_activation_map and blind_spots from coach_dna into risk_watchouts and coach_commitment without the coach prompting.
+
+TONE: Coaching language only. No clinical labels. No directive phrasing. Use "you might", "this may", "one possible direction".
+
+Return ONLY raw JSON. No markdown. No preamble. Start with { and end with }.`;
 
 const PLAN_SCHEMA_INSTRUCTIONS = `Schema:
 {
@@ -153,33 +183,61 @@ function validatePlan(planRaw, validBookingIds, activeGoalIds) {
   };
 }
 
-async function fetchAllContext(SUPABASE_URL, SUPABASE_KEY, coach_id, client_email) {
+// Minimal revise context — the prior plan ALREADY contains source-cited
+// synthesis of every session, the pattern map, and the coach DNA. Reloading
+// all of that on every revise round was the ~30K-token tax that periodically
+// produced 504s. We need just enough to validate citations (valid_session_ids,
+// active_goals) and the prior plan to refine. Approach Lab and Coach DNA are
+// loaded conditionally only when the coach feedback explicitly references them.
+async function fetchMinimalReviseContext(SUPABASE_URL, SUPABASE_KEY, coachId, clientEmail) {
   const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
-  const enc = encodeURIComponent(client_email);
-  const [sessionsRes, patternRes, goalsRes, approachRes, dnaRes] = await Promise.all([
-    fetch(`${SUPABASE_URL}/rest/v1/coach_session_notes?client_email=eq.${enc}&post_session_analysis=not.is.null&select=booking_id,created_at,post_session_analysis&order=created_at.desc`, { headers }),
-    fetch(`${SUPABASE_URL}/rest/v1/coach_client_patterns?coach_id=eq.${coach_id}&client_email=eq.${enc}&select=pattern_map,session_count&limit=1`, { headers }),
-    fetch(`${SUPABASE_URL}/rest/v1/coach_goals?coach_id=eq.${coach_id}&client_email=eq.${enc}&status=in.(active,progressing,stalled,blocked)&select=id,title,description,status,target_date`, { headers }),
-    fetch(`${SUPABASE_URL}/rest/v1/approach_lab_runs?coach_id=eq.${coach_id}&client_email=eq.${enc}&select=*&order=created_at.desc&limit=10`, { headers }),
-    fetch(`${SUPABASE_URL}/rest/v1/coach_dna_profiles?coach_id=eq.${coach_id}&select=signal_patterns&limit=1`, { headers }),
+  const enc = encodeURIComponent(clientEmail);
+  const [sessionsRes, goalsRes] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/coach_session_notes?client_email=eq.${enc}&post_session_analysis=not.is.null&select=booking_id&order=created_at.asc`, { headers }),
+    fetch(`${SUPABASE_URL}/rest/v1/coach_goals?coach_id=eq.${coachId}&client_email=eq.${enc}&status=in.(active,progressing,stalled,blocked)&select=id,title,status`, { headers }),
   ]);
-  const sessionsRaw = await sessionsRes.json().catch(() => []);
-  const patternRows = await patternRes.json().catch(() => []);
+  const sessionsRows = await sessionsRes.json().catch(() => []);
   const goalsRows = await goalsRes.json().catch(() => []);
-  let approachRows = [];
-  try { approachRows = await approachRes.json(); if (!Array.isArray(approachRows)) approachRows = []; } catch (_) {}
-  const dnaRows = await dnaRes.json().catch(() => []);
-  const sessions = (Array.isArray(sessionsRaw) ? sessionsRaw : [])
-    .filter(s => s && s.booking_id && s.post_session_analysis)
-    .map(s => ({ booking_id: s.booking_id, session_date: s.created_at || null, analysis: s.post_session_analysis }));
   return {
-    sessions,
-    pattern_map: patternRows?.[0]?.pattern_map || null,
+    valid_session_ids: (Array.isArray(sessionsRows) ? sessionsRows : []).map(s => s && s.booking_id).filter(Boolean),
     active_goals: Array.isArray(goalsRows) ? goalsRows : [],
-    approach_lab_runs: approachRows,
-    coach_dna: dnaRows?.[0]?.signal_patterns || null,
   };
 }
+
+// Keyword detectors — intentionally simple. A real semantic classifier could
+// decide better, but isn't worth building until we see the keyword approach
+// miss in practice. False positives just load extra context (no quality harm);
+// false negatives mean the model lacks supporting material the coach asked for.
+function shouldLoadApproachLab(coachFeedback) {
+  return /\b(approach lab|lab run|dbt|ifs|emdr|cbt|gestalt|act|specific (modality|technique|skill))\b/i.test(coachFeedback || '');
+}
+function shouldLoadCoachDNA(coachFeedback) {
+  return /\b(coach dna|my pattern|blind spot|my bias|my tendency|my habit)\b/i.test(coachFeedback || '');
+}
+
+async function fetchApproachLabRuns(SUPABASE_URL, SUPABASE_KEY, coachId, clientEmail) {
+  const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
+  const enc = encodeURIComponent(clientEmail);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/approach_lab_runs?coach_id=eq.${coachId}&client_email=eq.${enc}&select=*&order=created_at.desc&limit=10`, { headers });
+    if (!res.ok) return [];
+    const rows = await res.json();
+    return Array.isArray(rows) ? rows : [];
+  } catch (_) { return []; }
+}
+async function fetchCoachDNA(SUPABASE_URL, SUPABASE_KEY, coachId) {
+  const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/coach_dna_profiles?coach_id=eq.${coachId}&select=signal_patterns&limit=1`, { headers });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return rows?.[0]?.signal_patterns || null;
+  } catch (_) { return null; }
+}
+
+// Single cached system block — byte-identical to generate-intervention-plan.js
+// so the two endpoints share the same cache key.
+const CACHED_SYSTEM = PLAN_GUARDRAILS + '\n\n' + PLAN_SCHEMA_INSTRUCTIONS;
 
 function diffSections(before, after) {
   const changed = [];
@@ -229,7 +287,18 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: `Expected round ${existing.generation_round + 1}, got ${round}` });
     }
 
-    const ctx = await fetchAllContext(SUPABASE_URL, SUPABASE_KEY, existing.coach_id, existing.client_email);
+    const ctx = await fetchMinimalReviseContext(SUPABASE_URL, SUPABASE_KEY, existing.coach_id, existing.client_email);
+
+    // Conditional augmentation: only pull approach lab / coach DNA when the
+    // coach feedback explicitly references them. Logs the decision so we can
+    // see in Vercel runtime which path each revision took.
+    let approachLabRuns = null;
+    let coachDna = null;
+    const wantApproach = shouldLoadApproachLab(coach_feedback);
+    const wantDna = shouldLoadCoachDNA(coach_feedback);
+    if (wantApproach) approachLabRuns = await fetchApproachLabRuns(SUPABASE_URL, SUPABASE_KEY, existing.coach_id, existing.client_email);
+    if (wantDna) coachDna = await fetchCoachDNA(SUPABASE_URL, SUPABASE_KEY, existing.coach_id);
+    console.log(`[revise] feedback-driven loaders: approach_lab=${wantApproach}, coach_dna=${wantDna}`);
 
     const beforePlan = {
       external_conditions: existing.external_conditions,
@@ -244,43 +313,39 @@ export default async function handler(req, res) {
       coach_commitment: existing.coach_commitment,
     };
 
-    const userPayload = `Refine the existing intervention plan based on the coach's feedback below.
+    // The prior plan is the synthesized form of all earlier session evidence —
+    // refining against it (plus the coach's feedback) is sufficient. The
+    // schema instructions live in the cached system block; the user message
+    // carries only what's new per call (prior plan, feedback, validation
+    // anchors, conditional approach lab / coach DNA when keyword-matched).
+    const approachLabBlock = approachLabRuns ? `\nAPPROACH LAB RUNS:\n${JSON.stringify(approachLabRuns.map(r => ({ approach_name: r.selected_approach || r.approach_name, moments: r.result?.moments?.slice?.(0, 3), created_at: r.created_at })))}\n` : '';
+    const coachDnaBlock = coachDna ? `\nCOACH DNA:\n${JSON.stringify({ bias_profile: coachDna.bias_profile?.slice?.(0, 5), pattern_activation_map: coachDna.pattern_activation_map?.slice?.(0, 5), blind_spots: coachDna.blind_spots?.slice?.(0, 3), growth_edges: coachDna.growth_edges?.slice?.(0, 3) })}\n` : '';
+
+    const userPayload = `Refine the existing intervention plan based on the coach's feedback below. You are revising — apply the feedback faithfully, but DO NOT strip sections you weren't asked to change. Return the FULL plan, even if many sections are unchanged.
+
+PRIOR PLAN (full — already contains source-cited synthesis from all sessions, pattern map, and coach DNA):
+${JSON.stringify(beforePlan)}
 
 COACH FEEDBACK (round ${round}):
 ${coach_feedback}
 
-EXISTING PLAN:
-${JSON.stringify(beforePlan)}
+VALID SESSION BOOKING IDS (every source_sessions reference must be in this list):
+${JSON.stringify(ctx.valid_session_ids)}
 
-ORIGINAL CONTEXT — re-reason against this, not just the existing plan:
-
-SESSIONS (${ctx.sessions.length}):
-${JSON.stringify(ctx.sessions.map(s => ({ booking_id: s.booking_id, session_date: s.session_date, analysis: { key_insights: s.analysis?.key_insights, core_focus: s.analysis?.core_focus, breakthrough: s.analysis?.breakthrough, pattern: s.analysis?.pattern, friction_points: s.analysis?.friction_points, commitments: s.analysis?.commitments, coaching_interventions: s.analysis?.coaching_interventions, missed_windows: s.analysis?.missed_windows, patterns_and_your_role: s.analysis?.patterns_and_your_role, next_session: s.analysis?.next_session } })))}
-
-CLIENT PATTERN MAP:
-${ctx.pattern_map ? JSON.stringify(ctx.pattern_map) : 'not yet generated'}
-
-ACTIVE GOALS:
+ACTIVE GOALS (every linked_goal_id must be in this list):
 ${JSON.stringify(ctx.active_goals)}
-
-APPROACH LAB RUNS:
-${JSON.stringify(ctx.approach_lab_runs.map(r => ({ approach_name: r.selected_approach || r.approach_name, moments: r.result?.moments?.slice?.(0, 3), created_at: r.created_at })))}
-
-COACH DNA:
-${ctx.coach_dna ? JSON.stringify({ bias_profile: ctx.coach_dna.bias_profile?.slice?.(0, 5), pattern_activation_map: ctx.coach_dna.pattern_activation_map?.slice?.(0, 5), blind_spots: ctx.coach_dna.blind_spots?.slice?.(0, 3), growth_edges: ctx.coach_dna.growth_edges?.slice?.(0, 3) }) : 'not yet generated'}
-
-${PLAN_SCHEMA_INSTRUCTIONS}`;
+${approachLabBlock}${coachDnaBlock}`;
 
     const planRaw = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
       16000,
-      REVISE_GUARDRAILS,
+      [{ type: 'text', text: CACHED_SYSTEM, cache_control: { type: 'ephemeral' } }],
       userPayload,
       `InterventionPlan: Revise round ${round}`
     );
 
-    const validBookingIds = ctx.sessions.map(s => s.booking_id);
+    const validBookingIds = ctx.valid_session_ids;
     const activeGoalIds = ctx.active_goals.map(g => g.id);
     const newPlan = validatePlan(planRaw, validBookingIds, activeGoalIds);
     const sectionsChanged = diffSections(beforePlan, newPlan);
