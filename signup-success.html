@@ -65,12 +65,58 @@ footer { padding: 40px 80px; border-top: 1px solid rgba(255,255,255,0.1); backgr
   .success-steps { padding: 24px 20px; }
 }
 </style>
+<style data-MOBILE_NAV_HAMBURGER_v1>
+/* Mobile hamburger nav */
+@media (max-width: 900px) {
+  #nav-hamburger { display: flex !important; }
+  #nav-links-container {
+    position: fixed;
+    top: 60px;
+    left: 0;
+    right: 0;
+    background: rgba(26, 58, 82, 0.98);
+    backdrop-filter: blur(14px);
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0 !important;
+    padding: 16px 24px 24px !important;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    transform: translateY(-110%);
+    transition: transform 0.25s ease;
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
+  }
+  #nav-links-container.nav-open { transform: translateY(0); }
+  #nav-links-container > a {
+    display: block;
+    padding: 14px 8px !important;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    text-align: left;
+  }
+  #nav-links-container > a[style*="background:#c49a3c"],
+  #nav-links-container > a[style*="background: #c49a3c"],
+  #nav-links-container > a[style*="background:var(--gold)"] {
+    margin-top: 8px;
+    border-radius: 8px !important;
+    text-align: center;
+    border-bottom: none;
+  }
+  #nav-hamburger.is-open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  #nav-hamburger.is-open span:nth-child(2) { opacity: 0; }
+  #nav-hamburger.is-open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+}
+</style>
 </head>
 <body>
 
 <nav style="position:fixed;top:0;left:0;right:0;z-index:300;display:flex;align-items:center;justify-content:space-between;padding:14px 52px;background:rgba(26,58,82,0.95);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,0.1);">
   <a href="/" style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:#f7f4ee;text-decoration:none;"><span style="color:#c49a3c;font-style:italic;">i</span>need<span style="color:#c49a3c;font-style:italic;">coaching</span>.org</a>
-  <div style="display:flex;align-items:center;gap:22px;">
+  <button id="nav-hamburger" aria-label="Open menu" aria-expanded="false" style="display:none;background:none;border:none;cursor:pointer;padding:8px;flex-direction:column;gap:5px;">
+    <span style="width:24px;height:2px;background:#f7f4ee;border-radius:2px;transition:transform 0.2s;"></span>
+    <span style="width:24px;height:2px;background:#f7f4ee;border-radius:2px;transition:opacity 0.2s;"></span>
+    <span style="width:24px;height:2px;background:#f7f4ee;border-radius:2px;transition:transform 0.2s;"></span>
+  </button>
+  <div id="nav-links-container" style="display:flex;align-items:center;gap:22px;">
     <a href="/coaches.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Coaches</a>
     <a href="/sessions.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Sessions</a>
     <a href="/coach-courses.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Courses</a>
@@ -117,5 +163,35 @@ footer { padding: 40px 80px; border-top: 1px solid rgba(255,255,255,0.1); backgr
   <p class="footer-crisis">Not a crisis service &mdash; In crisis? Call or text 988</p>
 </footer>
 
+<script data-MOBILE_NAV_HAMBURGER_v1>
+(function() {
+  var btn = document.getElementById('nav-hamburger');
+  var menu = document.getElementById('nav-links-container');
+  if (!btn || !menu) return;
+  btn.addEventListener('click', function() {
+    var isOpen = menu.classList.toggle('nav-open');
+    btn.classList.toggle('is-open', isOpen);
+    btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    btn.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
+  });
+  menu.querySelectorAll('a').forEach(function(a) {
+    a.addEventListener('click', function() {
+      menu.classList.remove('nav-open');
+      btn.classList.remove('is-open');
+      btn.setAttribute('aria-expanded', 'false');
+      btn.setAttribute('aria-label', 'Open menu');
+    });
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && menu.classList.contains('nav-open')) {
+      menu.classList.remove('nav-open');
+      btn.classList.remove('is-open');
+      btn.setAttribute('aria-expanded', 'false');
+      btn.setAttribute('aria-label', 'Open menu');
+      btn.focus();
+    }
+  });
+})();
+</script>
 </body>
 </html>
