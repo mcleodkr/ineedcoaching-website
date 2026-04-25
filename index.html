@@ -14,19 +14,58 @@
 <meta name="twitter:description" content="A coaching marketplace where real people find each other.">
 <link rel="canonical" href="https://www.ineedcoaching.org/">
 <script>
-// Auth callback forwarding: if Supabase redirects here with tokens, capture and forward to dashboard
+// Auth callback forwarding: if Supabase redirects here with tokens, capture
+// and route the user to the dashboard that matches their role.
+//
+// Routing rule: a coach_profiles row for this email => coach. Anyone else
+// (explorer, brand-new signup, lookup failure) routes to client-dashboard.
+// client-dashboard is the safer default — sending a coach there is a minor
+// inconvenience; sending a client to coach-dashboard is brand-damaging.
 (function() {
   var hash = window.location.hash;
-  if (hash && hash.indexOf('access_token=') !== -1) {
-    var params = new URLSearchParams(hash.substring(1));
-    var token = params.get('access_token');
-    var refreshToken = params.get('refresh_token');
-    if (token) {
-      localStorage.setItem('sb_access_token', token);
-      if (refreshToken) localStorage.setItem('sb_refresh_token', refreshToken);
-      window.location.replace('/coach-dashboard.html');
-    }
+  if (!hash || hash.indexOf('access_token=') === -1) return;
+
+  var params = new URLSearchParams(hash.substring(1));
+  var token = params.get('access_token');
+  var refreshToken = params.get('refresh_token');
+  if (!token) return;
+
+  localStorage.setItem('sb_access_token', token);
+  if (refreshToken) localStorage.setItem('sb_refresh_token', refreshToken);
+
+  function decodeJwt(t) {
+    try {
+      var payload = t.split('.')[1];
+      var b64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+      var pad = b64.length % 4; if (pad) b64 += '='.repeat(4 - pad);
+      return JSON.parse(atob(b64));
+    } catch (e) { return null; }
   }
+
+  var claims = decodeJwt(token);
+  var email = claims && claims.email;
+  if (!email) {
+    window.location.replace('/client-dashboard.html');
+    return;
+  }
+
+  var SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+  var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+
+  fetch(SUPABASE_URL + '/rest/v1/coach_profiles?user_email=eq.' + encodeURIComponent(email) + '&select=id&limit=1', {
+    headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + token }
+  })
+  .then(function(r) { return r.ok ? r.json() : []; })
+  .then(function(rows) {
+    if (Array.isArray(rows) && rows.length > 0) {
+      window.location.replace('/coach-dashboard.html');
+    } else {
+      window.location.replace('/client-dashboard.html');
+    }
+  })
+  .catch(function() {
+    window.location.replace('/client-dashboard.html');
+  });
 })();
 </script>
 <script type="application/ld+json">
@@ -527,10 +566,6 @@ footer { padding: 48px 80px 32px; background: var(--navy); border-top: 1px solid
 </footer>
 
 <script>
-if (window.location.hash && window.location.hash.indexOf('access_token') !== -1) {
-  window.location.replace('/coach-dashboard.html' + window.location.hash);
-}
-
 var SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
 var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
 
