@@ -5154,6 +5154,8 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
         var hasExisting = noteData && noteData.post_session_analysis;
         if (analysisContainer) {
           if (hasExisting && !analysisContainer.innerHTML.trim()) {
+            analysisContainer.dataset.bookingId = sid;
+            analysisContainer.dataset.clientEmail = noteData.client_email || client.email;
             renderPostSessionAnalysis(noteData.post_session_analysis, analysisContainer);
             // Also populate Coaching Mirror tab
             var mirrorContainer = $('coaching-mirror-' + sid);

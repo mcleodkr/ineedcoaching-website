@@ -548,6 +548,7 @@ Limit to 2 suggestions max. If no strong fit exists return empty array.`,
 Allowed status values: proposed, active, progressing, stalled, blocked, revised, completed, archived.
 Coaching tone — never directive. Use "you might". No clinical labels. Return ONLY raw JSON.`,
           `Active goals (status updates can only target these): ${JSON.stringify(activeGoals.map(g => ({ id: g.id, title: g.title, status: g.status, target_date: g.target_date })))}
+${activeGoals.length === 0 ? 'IMPORTANT: There are zero active goals for this client. goal_status_updates MUST be []. Do not invent goal_ids. Only goal_proposals may be populated.' : 'A goal_status_update is valid ONLY when its goal_id exactly matches one of the ids above. Never invent or guess a goal_id. If no listed goal warrants a flip based on this session, return [].'}
 
 Session extraction: ${JSON.stringify(extractionOutput)}
 Session core: ${JSON.stringify({ key_insights: coreOutput?.key_insights, breakthrough: coreOutput?.breakthrough, pattern: coreOutput?.pattern, next_session: coreOutput?.next_session })}
@@ -577,15 +578,39 @@ Limits: max 3 goal_proposals, max 3 goal_status_updates. Return empty arrays if 
           'Pass 3e: Goal Proposals'
         );
         const proposals = Array.isArray(proposalsRaw?.goal_proposals) ? proposalsRaw.goal_proposals : [];
-        const statusUpdates = Array.isArray(proposalsRaw?.goal_status_updates) ? proposalsRaw.goal_status_updates : [];
+        const rawStatusUpdates = Array.isArray(proposalsRaw?.goal_status_updates) ? proposalsRaw.goal_status_updates : [];
         const validStatuses = ['active','progressing','stalled','blocked','revised','completed'];
-        const activeGoalIds = new Set(activeGoals.map(g => g.id));
+        const activeGoalIds = new Set(activeGoals.map(g => String(g.id)));
         const stamped = (arr) => arr.map(item => ({ id: (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2,10)}`), handled: false, ...item }));
+
+        // Hard guard: if there are zero active goals, no status update can be
+        // valid — the model has nothing to update against. Drop everything
+        // and skip the per-id check entirely. This is the safety net the
+        // tightened prompt is supposed to obviate, but never trust the model.
+        let acceptedStatusUpdates = [];
+        if (activeGoals.length === 0) {
+          if (rawStatusUpdates.length > 0) {
+            console.warn(`[Pass 3e] Dropped ${rawStatusUpdates.length} status update(s) — client has zero active goals. Hallucinated goal_ids:`, rawStatusUpdates.map(u => u?.goal_id));
+          }
+        } else {
+          const dropped = [];
+          acceptedStatusUpdates = rawStatusUpdates.filter(u => {
+            const idMatch = u && activeGoalIds.has(String(u.goal_id));
+            const statusOk = u && validStatuses.includes(u.proposed_status);
+            if (!idMatch || !statusOk) {
+              dropped.push({ goal_id: u?.goal_id, proposed_status: u?.proposed_status, reason: !idMatch ? 'goal_id not in active list' : 'invalid proposed_status' });
+              return false;
+            }
+            return true;
+          });
+          if (dropped.length) {
+            console.warn(`[Pass 3e] Dropped ${dropped.length} invalid status update(s):`, dropped);
+          }
+        }
+
         pass3eOutput.goal_proposals = stamped(proposals);
-        pass3eOutput.goal_status_updates = stamped(
-          statusUpdates.filter(u => activeGoalIds.has(u.goal_id) && validStatuses.includes(u.proposed_status))
-        );
-        console.log(`[Pass 3e] Goal proposals: ${pass3eOutput.goal_proposals.length}, status updates: ${pass3eOutput.goal_status_updates.length}`);
+        pass3eOutput.goal_status_updates = stamped(acceptedStatusUpdates);
+        console.log(`[Pass 3e] Goal proposals: ${pass3eOutput.goal_proposals.length}, status updates: ${pass3eOutput.goal_status_updates.length} (active goals available: ${activeGoals.length})`);
       } catch (e) {
         console.error('[Pass 3e: Goal Proposals] Failed, leaving empty:', e.message);
       }
