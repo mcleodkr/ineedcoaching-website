@@ -6,6 +6,7 @@
 <title>Welcome | ineedcoaching.org</title>
 <meta name="description" content="Sign in or create your account on ineedcoaching.org">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <style>
 :root {
   --navy: #1a3a52; --gold: #c49a3c; --gold-lt: #faf3e0; --warm: #faf8f4;
@@ -83,7 +84,8 @@ footer { padding: 28px 52px; border-top: 1px solid var(--border); display: flex;
     <p class="welcome-sub">Sign in with a magic link. No password needed.</p>
     <form class="welcome-form" id="magicForm" onsubmit="return false;">
       <input type="email" id="magic-email" placeholder="Your email address" required>
-      <button type="button" id="magic-btn" onclick="sendMagicLink()">Send magic link</button>
+      <div class="cf-turnstile" data-sitekey="0x4AAAAAADDKlWVIhl7kMkdC" data-callback="onTurnstileVerified" data-theme="dark" style="margin: 4px 0;"></div>
+      <button type="button" id="magic-btn" onclick="sendMagicLink()" disabled>Send magic link</button>
     </form>
     <div class="welcome-msg" id="magic-msg"></div>
     <p class="welcome-footer">Part of the <a href="https://www.ineedtherapy.org">ineedtherapy.org</a> ecosystem</p>
@@ -118,12 +120,25 @@ const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
   }
 })();
 
+// Cloudflare Turnstile callback. Single-use token — Supabase Auth verifies it
+// server-side via the secret key configured on project qroizygknxdjsstkezsf.
+window.__turnstileToken = null;
+window.onTurnstileVerified = function (token) {
+  window.__turnstileToken = token;
+  var btn = document.getElementById('magic-btn');
+  if (btn) btn.disabled = false;
+};
+
 async function sendMagicLink() {
   var email = document.getElementById('magic-email').value.trim();
   var msg = document.getElementById('magic-msg');
   var btn = document.getElementById('magic-btn');
 
   if (!email) { msg.textContent = 'Please enter your email.'; return; }
+  if (!window.__turnstileToken) {
+    msg.textContent = 'Verification needed before continuing.';
+    return;
+  }
 
   btn.disabled = true;
   btn.textContent = 'Sending...';
@@ -138,6 +153,7 @@ async function sendMagicLink() {
       },
       body: JSON.stringify({
         email: email,
+        gotrue_meta_security: { captcha_token: window.__turnstileToken },
         options: {
           emailRedirectTo: 'https://www.ineedcoaching.org/dashboard.html'
         }
@@ -150,12 +166,17 @@ async function sendMagicLink() {
     } else {
       var err = await res.json().catch(function() { return {}; });
       msg.textContent = err.msg || err.message || 'Something went wrong. Please try again.';
-      btn.disabled = false;
+      // Token is single-use — reset the widget so the next attempt has a fresh one.
+      if (window.turnstile) window.turnstile.reset();
+      window.__turnstileToken = null;
+      btn.disabled = true;
       btn.textContent = 'Send magic link';
     }
   } catch(e) {
     msg.textContent = 'Network error. Please try again.';
-    btn.disabled = false;
+    if (window.turnstile) window.turnstile.reset();
+    window.__turnstileToken = null;
+    btn.disabled = true;
     btn.textContent = 'Send magic link';
   }
 }

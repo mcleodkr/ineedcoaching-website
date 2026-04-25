@@ -7,6 +7,7 @@
 <meta name="description" content="Manage your coaching profile, bookings, testimonials, and recommendations on ineedcoaching.org">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <style>
 :root {
   --ink: #1a2e3b;
@@ -476,7 +477,8 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
     <p class="login-sub">Sign in with your email to manage your profile.</p>
     <form id="login-form">
       <input type="email" id="login-email" placeholder="you@example.com" required>
-      <button type="submit" class="login-btn" id="login-submit">Send magic link</button>
+      <div class="cf-turnstile" data-sitekey="0x4AAAAAADDKlWVIhl7kMkdC" data-callback="onTurnstileVerified" style="margin: 8px 0;"></div>
+      <button type="submit" class="login-btn" id="login-submit" disabled>Send magic link</button>
     </form>
     <div class="login-msg" id="login-msg"></div>
   </div>
@@ -1830,21 +1832,41 @@ function safeHTML(id, html) { var el = $(id); if (el) el.innerHTML = html; }
   var btn = $('login-submit');
   if (!form || !btn) { document.addEventListener('DOMContentLoaded', attachLoginForm); return; }
 
+  // Cloudflare Turnstile callback \u2014 single-use token verified server-side by
+  // Supabase Auth. Submit stays disabled until the widget resolves.
+  window.__turnstileToken = window.__turnstileToken || null;
+  window.onTurnstileVerified = function (token) {
+    window.__turnstileToken = token;
+    var b = document.getElementById('login-submit');
+    if (b) b.disabled = false;
+  };
+
   async function handleLogin(e) {
     if (e) e.preventDefault();
     var email = $('login-email').value.trim();
     if (!email) return;
     var msg = $('login-msg');
+    if (!window.__turnstileToken) {
+      msg.textContent = 'Verification needed before continuing.';
+      msg.style.color = '#c44';
+      return;
+    }
     btn.disabled = true;
     btn.textContent = 'Sending...';
     msg.textContent = '';
+    var succeeded = false;
     try {
       var res = await fetch(SUPABASE_URL + '/auth/v1/otp', {
         method: 'POST',
         headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email, redirect_to: 'https://www.ineedcoaching.org/coach-dashboard.html' })
+        body: JSON.stringify({
+          email: email,
+          gotrue_meta_security: { captcha_token: window.__turnstileToken },
+          redirect_to: 'https://www.ineedcoaching.org/coach-dashboard.html'
+        })
       });
       if (res.ok || res.status === 200) {
+        succeeded = true;
         msg.textContent = 'Check your email \u2014 your link is on the way.';
         msg.style.color = '#c49a3c';
       } else {
@@ -1856,8 +1878,16 @@ function safeHTML(id, html) { var el = $(id); if (el) el.innerHTML = html; }
       msg.textContent = 'Network error. Please try again.';
       msg.style.color = '#c44';
     }
-    btn.disabled = false;
-    btn.textContent = 'Send magic link';
+    if (succeeded) {
+      btn.textContent = 'Link sent';
+      // Leave disabled \u2014 the next step is "check email", not "retry"
+    } else {
+      // Token is single-use \u2014 reset the widget so the next attempt has a fresh one
+      if (window.turnstile) window.turnstile.reset();
+      window.__turnstileToken = null;
+      btn.disabled = true;
+      btn.textContent = 'Send magic link';
+    }
   }
 
   form.addEventListener('submit', handleLogin);

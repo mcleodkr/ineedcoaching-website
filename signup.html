@@ -6,6 +6,7 @@
 <title>Get Started | ineedcoaching.org</title>
 <meta name="description" content="Create your free ineedcoaching.org account and find your coaching space.">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
@@ -235,7 +236,8 @@
           </select>
         </div>
 
-        <button type="button" class="submit" id="submit-btn" onclick="submitSignup()">Create my account</button>
+        <div class="cf-turnstile" data-sitekey="0x4AAAAAADDKlWVIhl7kMkdC" data-callback="onTurnstileVerified" style="margin: 4px 0 14px;"></div>
+        <button type="button" class="submit" id="submit-btn" onclick="submitSignup()" disabled>Create my account</button>
       </form>
 
       <p class="fine">No password needed &mdash; we&rsquo;ll send you a magic link.</p>
@@ -264,6 +266,16 @@ function isValidEmail(s) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 }
 
+// Cloudflare Turnstile callback — single-use token verified by Supabase Auth
+// server-side. Replaces the 2026-04-23 emergency signup pause; bots are now
+// blocked at the captcha layer instead of by gating all signups outright.
+window.__turnstileToken = null;
+window.onTurnstileVerified = function (token) {
+  window.__turnstileToken = token;
+  var btn = document.getElementById('submit-btn');
+  if (btn) btn.disabled = false;
+};
+
 async function submitSignup() {
   var firstName = (document.getElementById('first_name').value || '').trim();
   var lastName  = (document.getElementById('last_name').value || '').trim();
@@ -274,16 +286,12 @@ async function submitSignup() {
 
   msg.textContent = '';
 
-  // EMERGENCY DISABLE (2026-04-23): form-spam bots creating explorer_profiles rows and triggering
-  // welcome emails via cron-interventions.js. Block all new signups until captcha / verification
-  // is in place.
-  msg.textContent = 'New signups are temporarily paused while we finish verification checks. Please check back soon.';
-  btn.disabled = true;
-  btn.textContent = 'Signups paused';
-  return;
-
   if (!email || !isValidEmail(email)) {
     msg.textContent = 'Please enter a valid email address.';
+    return;
+  }
+  if (!window.__turnstileToken) {
+    msg.textContent = 'Verification needed before continuing.';
     return;
   }
 
@@ -301,6 +309,7 @@ async function submitSignup() {
       body: JSON.stringify({
         email: email,
         create_user: true,
+        gotrue_meta_security: { captcha_token: window.__turnstileToken },
         options: {
           emailRedirectTo: 'https://www.ineedcoaching.org/dashboard.html'
         }
@@ -311,7 +320,10 @@ async function submitSignup() {
       var err = await otpRes.json().catch(function() { return {}; });
       console.error('OTP error', err);
       msg.textContent = 'We had trouble sending your link. Please try again.';
-      btn.disabled = false;
+      // Token is single-use — reset the widget so the next attempt has a fresh one.
+      if (window.turnstile) window.turnstile.reset();
+      window.__turnstileToken = null;
+      btn.disabled = true;
       btn.textContent = originalLabel;
       return;
     }
@@ -347,7 +359,9 @@ async function submitSignup() {
   } catch (e) {
     console.error('Signup error', e);
     msg.textContent = 'We had trouble sending your link. Please try again.';
-    btn.disabled = false;
+    if (window.turnstile) window.turnstile.reset();
+    window.__turnstileToken = null;
+    btn.disabled = true;
     btn.textContent = originalLabel;
   }
 }
