@@ -172,7 +172,7 @@ async function fetchAllContext(SUPABASE_URL, SUPABASE_KEY, coach_id, client_emai
   const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
   const enc = encodeURIComponent(client_email);
   const [sessionsRes, patternRes, goalsRes, approachRes, dnaRes] = await Promise.all([
-    fetch(`${SUPABASE_URL}/rest/v1/coach_session_notes?client_email=eq.${enc}&select=booking_id,session_date,post_session_analysis&order=session_date.desc.nullslast`, { headers }),
+    fetch(`${SUPABASE_URL}/rest/v1/coach_session_notes?client_email=eq.${enc}&post_session_analysis=not.is.null&select=booking_id,created_at,post_session_analysis&order=created_at.desc`, { headers }),
     fetch(`${SUPABASE_URL}/rest/v1/coach_client_patterns?coach_id=eq.${coach_id}&client_email=eq.${enc}&select=pattern_map,session_count,last_analyzed&limit=1`, { headers }),
     fetch(`${SUPABASE_URL}/rest/v1/coach_goals?coach_id=eq.${coach_id}&client_email=eq.${enc}&status=in.(active,progressing,stalled,blocked)&select=id,title,description,status,target_date`, { headers }),
     fetch(`${SUPABASE_URL}/rest/v1/approach_lab_runs?coach_id=eq.${coach_id}&client_email=eq.${enc}&select=*&order=created_at.desc&limit=10`, { headers }),
@@ -192,7 +192,7 @@ async function fetchAllContext(SUPABASE_URL, SUPABASE_KEY, coach_id, client_emai
     .filter(s => s && s.booking_id && s.post_session_analysis)
     .map(s => ({
       booking_id: s.booking_id,
-      session_date: s.session_date || null,
+      session_date: s.created_at || null,
       analysis: s.post_session_analysis,
     }));
 
