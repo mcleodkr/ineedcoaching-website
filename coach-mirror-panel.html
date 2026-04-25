@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coach Mirror · Coach Clarity</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Match intervention-plan-panel.html token set so the two surfaces
+       feel like siblings; only the warm tints diverge to flag this page
+       as coach-only. */
+    :root {
+      --navy: #1a3a52;
+      --gold: #c49a3c;
+      --cream: #f7f4ee;
+      --bg: #f7f5f1;
+      --white: #ffffff;
+      --border: #e8e4dc;
+      --ink: #1a1a1a;
+      --muted: #6b6b60;
+      /* Coach-only warm tints — used to distinguish Mirror from Pattern Map. */
+      --warm-bg: #fdf6e8;
+      --warm-card: #fffaf0;
+      --warm-border: #e8d9b0;
+      --warm-eyebrow: #a07a1a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 18px;
+      background: var(--warm-bg);
+      color: var(--ink);
+      line-height: 1.5;
+    }
+    h1, h2, h3 {
+      font-family: 'Cormorant Garamond', serif;
+      color: var(--navy);
+      font-weight: 600;
+      margin: 0 0 8px;
+    }
+    h1 { font-size: 1.85rem; }
+    h2 { font-size: 1.35rem; }
+    h3 { font-size: 1.05rem; }
+    .panel {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 28px 22px 80px;
+    }
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--warm-border);
+    }
+    .top-bar a {
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-decoration: none;
+    }
+    .top-bar a:hover { color: var(--ink); }
+    .meta {
+      font-size: 0.78rem;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .privacy-banner {
+      background: rgba(196,154,60,0.10);
+      border: 1px solid var(--warm-border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 22px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      color: var(--ink);
+    }
+    .privacy-banner .lock {
+      font-size: 1rem;
+    }
+    .privacy-banner strong {
+      font-weight: 700;
+    }
+    .session-card {
+      background: var(--warm-card);
+      border: 1px solid var(--warm-border);
+      border-radius: 10px;
+      padding: 22px 24px;
+      margin-bottom: 18px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .session-card-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--warm-border);
+    }
+    .session-card-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--navy);
+    }
+    .session-card-eyebrow {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--warm-eyebrow);
+    }
+    .reflection-block {
+      margin-bottom: 18px;
+    }
+    .reflection-block:last-child { margin-bottom: 0; }
+    .reflection-label {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--warm-eyebrow);
+      margin-bottom: 8px;
+    }
+    .reflection-text {
+      font-size: 0.96rem;
+      line-height: 1.6;
+      color: var(--ink);
+      margin-bottom: 6px;
+    }
+    .reflection-meta {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.55;
+      padding-left: 12px;
+      border-left: 2px solid var(--warm-border);
+      margin-top: 6px;
+    }
+    .reflection-meta-label {
+      font-weight: 600;
+      color: var(--warm-eyebrow);
+      margin-right: 4px;
+    }
+    .missed-section {
+      margin-top: 4px;
+    }
+    .missed-section-label {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--navy);
+      margin-bottom: 10px;
+    }
+    details.missed-window {
+      border: 1px solid var(--warm-border);
+      border-radius: 8px;
+      background: #fefcf6;
+      margin-bottom: 10px;
+      padding: 12px 14px;
+    }
+    details.missed-window:last-child { margin-bottom: 0; }
+    details.missed-window > summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    details.missed-window > summary::-webkit-details-marker { display: none; }
+    details.missed-window > summary .caret {
+      font-size: 0.78rem;
+      color: var(--warm-eyebrow);
+      margin-top: 3px;
+      flex-shrink: 0;
+      transition: transform 0.15s ease;
+    }
+    details.missed-window[open] > summary .caret {
+      transform: rotate(90deg);
+    }
+    .missed-summary-body {
+      flex: 1;
+    }
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 50px;
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    .pill.signal {
+      background: rgba(196,154,60,0.18);
+      color: var(--warm-eyebrow);
+    }
+    .missed-what-opened {
+      font-size: 0.92rem;
+      color: var(--ink);
+      line-height: 1.55;
+      margin-top: 4px;
+    }
+    .missed-detail-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--warm-border);
+      font-size: 0.86rem;
+      line-height: 1.55;
+    }
+    .missed-detail-row {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .missed-detail-label {
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--warm-eyebrow);
+    }
+    .missed-detail-value {
+      color: var(--ink);
+    }
+    .empty-section {
+      font-style: italic;
+      color: var(--muted);
+      font-size: 0.86rem;
+      padding: 6px 0;
+    }
+    .loader {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    .spinner {
+      display: inline-block;
+      width: 28px;
+      height: 28px;
+      border: 3px solid rgba(196,154,60,0.2);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-box {
+      background: #fff5f5;
+      border: 1px solid #c44;
+      color: #8a2222;
+      padding: 14px 18px;
+      border-radius: 6px;
+      margin-bottom: 18px;
+      font-size: 0.88rem;
+    }
+    .empty-card {
+      background: var(--white);
+      border: 1px dashed var(--warm-border);
+      border-radius: 10px;
+      padding: 36px 24px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.55;
+    }
+    .empty-card strong {
+      color: var(--navy);
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.15rem;
+      display: block;
+      margin-bottom: 8px;
+    }
+    @media (max-width: 600px) {
+      .panel { padding: 20px 14px 60px; }
+      .top-bar { flex-direction: column; align-items: flex-start; }
+      .session-card { padding: 18px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <div class="top-bar">
+      <div>
+        <div class="meta" style="margin-bottom:6px;">Coach Mirror</div>
+        <h1 id="client-heading">Loading…</h1>
+        <div class="meta" id="header-meta" style="text-transform:none;letter-spacing:0;font-size:0.82rem;color:var(--muted);">&nbsp;</div>
+      </div>
+      <a href="/coach-dashboard.html" id="back-link">← Back to dashboard</a>
+    </div>
+
+    <div class="privacy-banner">
+      <span class="lock">🔒</span>
+      <span><strong>For your eyes only.</strong> Built from your Coach Clarity reflections — never visible to clients.</span>
+    </div>
+
+    <div id="content">
+      <div class="loader">
+        <div class="spinner"></div>
+        <div>Loading reflections…</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  const SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+  const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+  const TOKEN_KEY = 'sb_access_token';
+
+  const params = new URLSearchParams(location.search);
+  const clientEmail = params.get('client_email') || '';
+  let coachId = null;
+
+  function $(id) { return document.getElementById(id); }
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+    });
+  }
+  function apiHeaders() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    return {
+      apikey: ANON_KEY,
+      Authorization: token ? ('Bearer ' + token) : ('Bearer ' + ANON_KEY),
+      'Content-Type': 'application/json',
+    };
+  }
+  function showError(msg) {
+    $('content').innerHTML = '<div class="error-box">' + escapeHtml(msg) + '</div>';
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '';
+    try {
+      return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch (_) { return ''; }
+  }
+
+  async function loadCoachProfile() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) { window.location.href = '/coach-dashboard.html'; return null; }
+    const userRes = await fetch(SUPABASE_URL + '/auth/v1/user', { headers: { apikey: ANON_KEY, Authorization: 'Bearer ' + token } });
+    if (!userRes.ok) { window.location.href = '/coach-dashboard.html'; return null; }
+    const user = await userRes.json();
+    const email = user.email;
+    const profRes = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles?user_email=eq.' + encodeURIComponent(email.toLowerCase()) + '&select=id,display_name', { headers: apiHeaders() });
+    const profRows = await profRes.json();
+    if (!Array.isArray(profRows) || profRows.length === 0) {
+      showError('No coach profile found for ' + email);
+      return null;
+    }
+    return profRows[0];
+  }
+
+  async function loadClientName(email) {
+    if (!email) return null;
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/explorer_profiles?email=eq.' + encodeURIComponent(email) + '&select=display_name&limit=1', { headers: apiHeaders() });
+      if (!res.ok) return null;
+      const rows = await res.json();
+      return Array.isArray(rows) && rows.length ? (rows[0].display_name || null) : null;
+    } catch (_) { return null; }
+  }
+
+  async function loadMirror() {
+    const res = await fetch('/api/coach-mirror', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ coach_id: coachId, client_email: clientEmail }),
+    });
+    if (!res.ok) {
+      let detail = '';
+      try { const j = await res.json(); detail = j.error || ''; } catch (_) {}
+      throw new Error('Failed to load Coach Mirror' + (detail ? ': ' + detail : '') + ' (status ' + res.status + ')');
+    }
+    return res.json();
+  }
+
+  function renderReflectionBlock(label, block) {
+    if (!block || typeof block !== 'object') return '';
+    // The Coach Clarity schema uses observation/suggestion as the primary text
+    // and adds why_it_matters / use_with_care as secondary context. Be tolerant
+    // of shape drift — render whatever non-empty text fields show up.
+    const primary = block.observation || block.suggestion || block.text || '';
+    const why = block.why_it_matters || '';
+    const use = block.use_with_care || '';
+    if (!primary && !why && !use) return '';
+    let html = '<div class="reflection-block">';
+    html += '<div class="reflection-label">' + escapeHtml(label) + '</div>';
+    if (primary) {
+      html += '<div class="reflection-text">' + escapeHtml(primary) + '</div>';
+    }
+    if (why) {
+      html += '<div class="reflection-meta"><span class="reflection-meta-label">Why it matters:</span>' + escapeHtml(why) + '</div>';
+    }
+    if (use) {
+      html += '<div class="reflection-meta"><span class="reflection-meta-label">Use with care:</span>' + escapeHtml(use) + '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function renderMissedWindow(mw) {
+    if (!mw || typeof mw !== 'object') return '';
+    const signal = mw.signal_type || '';
+    const what = mw.what_opened || mw.what_was_said || '';
+    const did = mw.what_you_did || '';
+    const stayed = mw.if_you_stayed || '';
+    const cost = mw.what_this_cost || '';
+    const alt = mw.alternative_intervention || '';
+    let html = '<details class="missed-window">';
+    html += '<summary>';
+    html += '<span class="caret">▶</span>';
+    html += '<div class="missed-summary-body">';
+    if (signal) html += '<span class="pill signal">' + escapeHtml(signal) + '</span>';
+    if (what) html += '<div class="missed-what-opened">' + escapeHtml(what) + '</div>';
+    html += '</div></summary>';
+    html += '<div class="missed-detail-grid">';
+    if (did) {
+      html += '<div class="missed-detail-row"><span class="missed-detail-label">What you did</span>'
+        + '<span class="missed-detail-value">' + escapeHtml(did) + '</span></div>';
+    }
+    if (stayed) {
+      html += '<div class="missed-detail-row"><span class="missed-detail-label">If you stayed</span>'
+        + '<span class="missed-detail-value">' + escapeHtml(stayed) + '</span></div>';
+    }
+    if (cost) {
+      html += '<div class="missed-detail-row"><span class="missed-detail-label">What this cost</span>'
+        + '<span class="missed-detail-value">' + escapeHtml(cost) + '</span></div>';
+    }
+    if (alt) {
+      html += '<div class="missed-detail-row"><span class="missed-detail-label">Alternative intervention</span>'
+        + '<span class="missed-detail-value">' + escapeHtml(alt) + '</span></div>';
+    }
+    html += '</div></details>';
+    return html;
+  }
+
+  function renderSession(session, totalSessions) {
+    const dateLabel = formatDate(session.date);
+    const ordinal = session.ordinal || null;
+    const titleBits = [];
+    if (ordinal) titleBits.push('Session ' + ordinal);
+    if (dateLabel) titleBits.push(dateLabel);
+    const title = titleBits.join(' · ') || 'Session';
+
+    let html = '<div class="session-card">';
+    html += '<div class="session-card-header">';
+    html += '<div class="session-card-title">' + escapeHtml(title) + '</div>';
+    html += '<div class="session-card-eyebrow">For your eyes only</div>';
+    html += '</div>';
+
+    const reflection = session.coaching_reflection || {};
+    const reflectionHtml =
+      renderReflectionBlock('What stood out for you', reflection.what_stood_out) +
+      renderReflectionBlock('One thing to consider', reflection.one_thing_to_consider) +
+      renderReflectionBlock('What seemed effective', reflection.what_seemed_effective);
+    if (reflectionHtml) {
+      html += reflectionHtml;
+    } else {
+      html += '<div class="empty-section">No coaching reflection captured for this session.</div>';
+    }
+
+    const missed = Array.isArray(session.missed_windows) ? session.missed_windows : [];
+    if (missed.length) {
+      html += '<div class="missed-section">';
+      html += '<div class="missed-section-label">Missed windows</div>';
+      missed.forEach(function(mw) { html += renderMissedWindow(mw); });
+      html += '</div>';
+    }
+
+    html += '</div>';
+    return html;
+  }
+
+  function renderEmpty() {
+    $('content').innerHTML =
+      '<div class="empty-card">'
+      + '<strong>No reflections to show yet.</strong>'
+      + 'Coach Mirror surfaces what Coach Clarity captured from each session — coaching reflection and missed windows. '
+      + 'Once you have a session with Coach Clarity analysis, it shows up here.'
+      + '</div>';
+  }
+
+  function render(payload) {
+    const sessions = (payload && Array.isArray(payload.sessions)) ? payload.sessions : [];
+    if (!sessions.length) { renderEmpty(); return; }
+    const html = sessions.map(function(s) { return renderSession(s, sessions.length); }).join('');
+    $('content').innerHTML = html;
+  }
+
+  async function init() {
+    if (!clientEmail) { showError('Missing client_email parameter.'); return; }
+    const profile = await loadCoachProfile();
+    if (!profile) return;
+    coachId = profile.id;
+
+    const clientName = await loadClientName(clientEmail);
+    $('client-heading').textContent = clientName || clientEmail;
+    if (clientName && clientEmail !== clientName) {
+      $('header-meta').textContent = clientEmail;
+    }
+
+    try {
+      const data = await loadMirror();
+      const sessionCount = (data && Array.isArray(data.sessions)) ? data.sessions.length : 0;
+      $('header-meta').textContent =
+        (clientName && clientEmail !== clientName ? clientEmail + ' · ' : '')
+        + sessionCount + ' session' + (sessionCount === 1 ? '' : 's') + ' analyzed';
+      render(data);
+    } catch (e) {
+      showError(e.message || 'Could not load Coach Mirror.');
+    }
+  }
+
+  init();
+  </script>
+</body>
+</html>

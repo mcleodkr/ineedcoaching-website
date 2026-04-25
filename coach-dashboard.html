@@ -4853,6 +4853,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
     + '</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
     + '<a href="/intervention-plan?client_email=' + encodeURIComponent(client.email) + '" target="_blank" rel="noopener" style="background:#1a3a52;color:#ffffff;border:none;border-radius:4px;padding:8px 18px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-block;transition:background 0.12s ease;">Open intervention plan</a>'
+    + '<a href="/coach-mirror?client_email=' + encodeURIComponent(client.email) + '" target="_blank" rel="noopener" title="Per-session reflection and missed windows — for your eyes only" style="background:#a07a1a;color:#ffffff;border:none;border-radius:4px;padding:8px 18px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-block;transition:background 0.12s ease;">Open Coach Mirror</a>'
     + '<button id="generate-pattern-map-btn" data-client-email="' + escapeHtml(client.email) + '" data-body-id="' + pmBodyId + '" style="background:#c49a3c;color:#ffffff;border:none;border-radius:4px;padding:8px 18px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:500;cursor:pointer;white-space:nowrap;transition:background 0.12s ease;">Generate Pattern Map</button>'
     + '</div>'
     + '</div>'

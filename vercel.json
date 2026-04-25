@@ -44,6 +44,7 @@
     { "source": "/signup-success", "destination": "/signup-success.html" },
     { "source": "/proposal-builder", "destination": "/proposal-builder.html" },
     { "source": "/intervention-plan", "destination": "/intervention-plan-panel.html" },
+    { "source": "/coach-mirror", "destination": "/coach-mirror-panel.html" },
     { "source": "/article.html", "destination": "/api/article-render" },
     { "source": "/sitemap.xml", "destination": "/api/sitemap" }
   ]
