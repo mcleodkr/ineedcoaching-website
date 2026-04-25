@@ -185,6 +185,19 @@ function validatePlan(planRaw, validBookingIds, activeGoalIds) {
         : [],
     } : { text: '', derived_from: [] },
   };
+  // Belt-and-braces enforcement of guardrail 11. When any external condition
+  // is high-impact, behavioral_targets are sorted with linked_goal_id items
+  // first (Array.prototype.sort is stable, preserving original order within
+  // each group), then truncated to 3. Server-side cap so prompt drift never
+  // produces a 7-target plan under acute conditions.
+  const hasHighImpact = (out.external_conditions || []).some(ec => ec && ec.impact_level === 'high');
+  if (hasHighImpact && Array.isArray(out.behavioral_targets) && out.behavioral_targets.length > 3) {
+    out.behavioral_targets = out.behavioral_targets.slice().sort(function(a, b) {
+      const aLinked = a && a.linked_goal_id ? 1 : 0;
+      const bLinked = b && b.linked_goal_id ? 1 : 0;
+      return bLinked - aLinked;
+    }).slice(0, 3);
+  }
   return out;
 }
 
