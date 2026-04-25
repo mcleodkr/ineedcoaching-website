@@ -21,7 +21,7 @@ export default async function handler(req, res) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 2000,
         system: `You are a coaching education expert. Generate quiz questions from the provided content. Return ONLY valid JSON with no markdown, no backticks, just raw JSON: { "title": "string", "questions": [ { "type": "multiple_choice" or "true_false", "question": "string", "options": ["string"] (4 options for mc, ["True","False"] for tf), "correct_answer": "string", "explanation": "string" } ] }. Generate exactly ${questionCount} thoughtful practical questions.`,
         messages: [{ role: 'user', content: 'Generate quiz questions from this content:\n\n' + content.substring(0, 6000) }],

@@ -43,7 +43,7 @@ export default async function handler(req, res) {
         'content-type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 2048,
         system: `You are a content writer for a professional coaching platform. Write articles that are practical, warm, and actionable. Use coaching language — forward-focused, strength-based, empowering. Avoid clinical or academic tone. Write for potential coaching clients who are exploring personal or professional growth.
 
