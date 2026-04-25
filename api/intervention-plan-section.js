@@ -7,6 +7,9 @@ const ALLOWED_SECTIONS = new Set([
   'external_conditions','working_hypotheses','strategic_frames','behavioral_targets',
   'prior_commitments','modality_sequence','progress_markers','risk_watchouts',
   'session_arc','coach_commitment',
+  // coach_notes uses append-only semantics below — new_value is one note object,
+  // not the full array. Treated separately from coach_edits[] audit trail.
+  'coach_notes',
 ]);
 
 export default async function handler(req, res) {
@@ -36,8 +39,10 @@ export default async function handler(req, res) {
 
     const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
 
-    // Load existing plan to verify lock + capture previous_value for the audit row
-    const planRes = await fetch(`${SUPABASE_URL}/rest/v1/intervention_plans?id=eq.${plan_id}&select=id,status,coach_edits,${section}&limit=1`, {
+    // Load existing plan to verify lock + capture previous_value for the audit row.
+    // Always select coach_notes too so the append path below can read the current
+    // array regardless of which section was passed.
+    const planRes = await fetch(`${SUPABASE_URL}/rest/v1/intervention_plans?id=eq.${plan_id}&select=id,status,coach_edits,coach_notes,${section}&limit=1`, {
       headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
     });
     const planRows = await planRes.json();
@@ -49,21 +54,41 @@ export default async function handler(req, res) {
       return res.status(409).json({ error: 'Plan must be locked before inline edits. Use revise-intervention-plan during draft.' });
     }
 
-    const previousValue = existing[section];
-    const editEntry = {
-      section,
-      edited_at: new Date().toISOString(),
-      edited_by: edited_by || null,
-      previous_value: previousValue,
-      new_value,
-    };
-    const updatedEdits = Array.isArray(existing.coach_edits) ? existing.coach_edits.concat([editEntry]) : [editEntry];
-
-    const patchBody = {
-      [section]: new_value,
-      coach_edits: updatedEdits,
-      generated_by_ai: false,
-    };
+    let patchBody;
+    if (section === 'coach_notes') {
+      // Append-only semantics: new_value is one note object, not the full array.
+      // Server reads current array and appends so concurrent notes never race.
+      // Note: coach_notes is its own audit trail — we deliberately do NOT touch
+      // coach_edits[] or flip generated_by_ai for note additions, since the
+      // AI-authored sections themselves are unchanged.
+      const incoming = (new_value && typeof new_value === 'object' && !Array.isArray(new_value)) ? new_value : null;
+      if (!incoming || !incoming.note || !incoming.section) {
+        return res.status(400).json({ error: 'coach_notes new_value must be { section, note, created_at?, edited_by? }' });
+      }
+      const stamped = {
+        section: String(incoming.section),
+        note: String(incoming.note),
+        created_at: incoming.created_at || new Date().toISOString(),
+        edited_by: incoming.edited_by || edited_by || null,
+      };
+      const currentNotes = Array.isArray(existing.coach_notes) ? existing.coach_notes : [];
+      patchBody = { coach_notes: currentNotes.concat([stamped]) };
+    } else {
+      const previousValue = existing[section];
+      const editEntry = {
+        section,
+        edited_at: new Date().toISOString(),
+        edited_by: edited_by || null,
+        previous_value: previousValue,
+        new_value,
+      };
+      const updatedEdits = Array.isArray(existing.coach_edits) ? existing.coach_edits.concat([editEntry]) : [editEntry];
+      patchBody = {
+        [section]: new_value,
+        coach_edits: updatedEdits,
+        generated_by_ai: false,
+      };
+    }
 
     const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/intervention_plans?id=eq.${plan_id}`, {
       method: 'PATCH',

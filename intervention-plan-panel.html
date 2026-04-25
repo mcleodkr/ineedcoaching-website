@@ -274,6 +274,10 @@
   const clientEmail = params.get('client_email') || '';
   let coachId = null;
   let plan = null;
+  // bookingId → { ordinal, dateLabel } — populated by loadClientSessions().
+  // Keeps raw uuids out of the UI and lets prior_commitments / source tags
+  // render "session 1 · Apr 12, 2026" instead of leaking database ids.
+  let sessionInfo = {};
 
   function $(id) { return document.getElementById(id); }
   function escapeHtml(s) {
@@ -315,6 +319,33 @@
     if (!res.ok) return null;
     const rows = await res.json();
     return Array.isArray(rows) && rows.length ? rows[0] : null;
+  }
+
+  // Build a bookingId → { ordinal, dateLabel } map so the UI can display
+  // "session 1 · Apr 12, 2026" instead of raw uuids. Ordinals are 1-based
+  // and reset per-client in chronological order (oldest = session 1).
+  async function loadClientSessions() {
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/coach_session_notes?client_email=eq.' + encodeURIComponent(clientEmail) + '&select=booking_id,created_at&order=created_at.asc', { headers: apiHeaders() });
+      if (!res.ok) return {};
+      const rows = await res.json();
+      const map = {};
+      (Array.isArray(rows) ? rows : []).forEach(function(r, i) {
+        if (!r || !r.booking_id) return;
+        map[r.booking_id] = {
+          ordinal: i + 1,
+          dateLabel: r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null,
+        };
+      });
+      return map;
+    } catch (_) { return {}; }
+  }
+
+  function sessionLabel(bookingId) {
+    const info = sessionInfo[bookingId];
+    if (!info) return null;
+    if (info.dateLabel) return 'session ' + info.ordinal + ' · ' + info.dateLabel;
+    return 'session ' + info.ordinal;
   }
 
   // Safe response parser. Vercel's gateway returns HTML on 502/504 — never JSON —
@@ -422,14 +453,52 @@
 
   function sourceTag(sources) {
     if (!Array.isArray(sources) || !sources.length) return '';
+    // Prefer human-readable session ordinals when the session map is loaded.
+    const labels = sources.map(function(id) {
+      const info = sessionInfo[id];
+      return info ? ('session ' + info.ordinal) : null;
+    }).filter(Boolean);
+    if (labels.length === sources.length && labels.length > 0) {
+      return 'From ' + labels.join(', ');
+    }
     return 'Source: ' + sources.length + ' session' + (sources.length === 1 ? '' : 's');
+  }
+
+  // Sections that support coach notes when the plan is locked.
+  const NOTEABLE_SECTIONS = new Set([
+    'external_conditions','working_hypotheses','strategic_frames','behavioral_targets',
+    'modality_sequence','progress_markers','risk_watchouts','session_arc',
+  ]);
+
+  function renderCoachNotesForSection(sectionKey) {
+    const notes = (Array.isArray(plan.coach_notes) ? plan.coach_notes : []).filter(function(n) { return n && n.section === sectionKey; });
+    if (!notes.length) return '';
+    return '<div class="coach-notes-block" style="margin-top:12px;">' + notes.map(function(n) {
+      const when = n.created_at ? new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      return '<div class="coach-note" style="background:#fdf9f1;border-left:3px solid var(--gold);padding:10px 12px;margin-bottom:6px;border-radius:0 6px 6px 0;">'
+        + '<div style="font-size:0.62rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;">Coach note' + (when ? ' · ' + escapeHtml(when) : '') + '</div>'
+        + '<div style="font-size:0.88rem;color:var(--ink);line-height:1.45;white-space:pre-wrap;">' + escapeHtml(n.note || '') + '</div>'
+        + '</div>';
+    }).join('') + '</div>';
+  }
+
+  function renderAddNoteAffordance(sectionKey) {
+    return '<div class="add-note-slot" data-section-slot="' + escapeHtml(sectionKey) + '" style="margin-top:10px;">'
+      + '<button class="btn-add-note" data-add-note="' + escapeHtml(sectionKey) + '" style="background:transparent;color:var(--muted);border:1px dashed var(--border);padding:6px 12px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;cursor:pointer;">+ Add coach note</button>'
+      + '</div>';
   }
 
   function renderSection(title, body, opts) {
     opts = opts || {};
+    const sectionKey = opts.sectionKey || null;
+    const isLocked = plan && plan.status === 'locked';
+    const notesHtml = (isLocked && sectionKey && NOTEABLE_SECTIONS.has(sectionKey)) ? renderCoachNotesForSection(sectionKey) : '';
+    const addNoteHtml = (isLocked && sectionKey && NOTEABLE_SECTIONS.has(sectionKey)) ? renderAddNoteAffordance(sectionKey) : '';
     return '<div class="card"' + (opts.id ? ' id="' + opts.id + '"' : '') + '>'
       + '<h3>' + escapeHtml(title) + (opts.changed ? '<span class="updated-badge">Updated</span>' : '') + '</h3>'
       + body
+      + notesHtml
+      + addNoteHtml
       + '</div>';
   }
 
@@ -493,12 +562,24 @@
   function renderCommitments() {
     const arr = plan.prior_commitments || [];
     if (!arr.length) return '<div class="empty-cta">No prior commitments enumerated.</div>';
-    return arr.map(c =>
-      renderItem(
-        '<div class="item-title">' + escapeHtml(c.commitment_text) + ' <span class="pill ' + (c.status || 'untested') + '">' + escapeHtml(c.status || 'untested') + '</span></div>',
-        'Source session: ' + escapeHtml(c.source_session)
-      )
-    ).join('');
+    const isLocked = plan && plan.status === 'locked';
+    const STATUS_OPTIONS = ['kept','broken','ambiguous','untested'];
+    return arr.map(function(c, idx) {
+      const status = c.status || 'untested';
+      const statusEl = isLocked
+        ? ('<select class="commitment-status-select" data-commitment-idx="' + idx + '" style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;font-weight:600;padding:3px 8px;border-radius:50px;border:1px solid var(--border);background:#fff;cursor:pointer;">'
+            + STATUS_OPTIONS.map(function(opt) {
+              return '<option value="' + opt + '"' + (opt === status ? ' selected' : '') + '>' + opt + '</option>';
+            }).join('')
+            + '</select>')
+        : ('<span class="pill ' + status + '">' + escapeHtml(status) + '</span>');
+      const sLabel = sessionLabel(c.source_session);
+      const sourceMeta = sLabel ? ('From ' + escapeHtml(sLabel)) : 'Source session unavailable';
+      return renderItem(
+        '<div class="item-title">' + escapeHtml(c.commitment_text) + ' ' + statusEl + '</div>',
+        sourceMeta
+      );
+    }).join('');
   }
 
   function renderModalitySequence() {
@@ -553,9 +634,19 @@
 
   function renderCoachCommitment() {
     const c = plan.coach_commitment || {};
-    if (!c.text) return '<div class="empty-cta">No coach commitment yet.</div>';
+    const isLocked = plan && plan.status === 'locked';
+    if (!c.text && !isLocked) return '<div class="empty-cta">No coach commitment yet.</div>';
+    const baseStyle = 'font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-style:italic;color:var(--navy);';
+    let body;
+    if (isLocked) {
+      // Click-to-edit. Hover hint via dotted underline; cursor:text signals editability.
+      const hint = c.text ? escapeHtml(c.text) : '<span style="color:var(--muted);font-style:normal;">Click to add a commitment statement…</span>';
+      body = '<div id="cc-editable" data-cc-edit="1" style="' + baseStyle + 'cursor:text;border-bottom:1px dashed transparent;padding:4px 2px;transition:border-color 0.15s ease;" onmouseover="this.style.borderBottomColor=\'var(--gold)\'" onmouseout="this.style.borderBottomColor=\'transparent\'">' + hint + '</div>';
+    } else {
+      body = '<div style="' + baseStyle + '">' + escapeHtml(c.text || '') + '</div>';
+    }
     return renderItem(
-      '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-style:italic;color:var(--navy);">' + escapeHtml(c.text) + '</div>',
+      body,
       Array.isArray(c.derived_from) && c.derived_from.length ? 'Derived from: ' + c.derived_from.join(', ') : ''
     );
   }
@@ -584,7 +675,9 @@
 
     let html = '';
     html += '<div id="status-banner" class="' + (isDraft ? 'status-draft' : 'status-locked') + '">'
-      + (isDraft ? 'Draft · round ' + round + ' of up to 2 revisions' : 'Locked · all sections are now editable inline. Edits append to the audit trail.')
+      + (isDraft
+          ? 'Draft · round ' + round + ' of up to 2 revisions'
+          : 'Locked · your commitment statement, prior commitment statuses, and per-section coach notes are editable. For larger changes, click Regenerate from latest sessions to create a new version.')
       + '</div>';
 
     if (canRevise) {
@@ -600,16 +693,16 @@
         + '<div class="revision-actions"><button class="btn btn-primary" id="lock-btn">Lock plan</button></div></div>';
     }
 
-    html += renderSection('External conditions', renderExternalConditions(), { id: 'sec-external_conditions' });
-    html += renderSection('Working hypotheses', renderHypotheses(), { id: 'sec-working_hypotheses' });
-    html += renderSection('Strategic frames', renderFrames(), { id: 'sec-strategic_frames' });
-    html += renderSection('Behavioral targets', renderBehavioralTargets(), { id: 'sec-behavioral_targets' });
-    html += renderSection('Prior commitments', renderCommitments(), { id: 'sec-prior_commitments' });
-    html += renderSection('Modality sequence', renderModalitySequence(), { id: 'sec-modality_sequence' });
-    html += renderSection('Progress markers', renderProgressMarkers(), { id: 'sec-progress_markers' });
-    html += renderSection('Risk watchouts', renderRiskWatchouts(), { id: 'sec-risk_watchouts' });
-    html += renderSection('Session arc', renderSessionArc(), { id: 'sec-session_arc' });
-    html += renderSection('Coach commitment', renderCoachCommitment(), { id: 'sec-coach_commitment' });
+    html += renderSection('External conditions', renderExternalConditions(), { id: 'sec-external_conditions', sectionKey: 'external_conditions' });
+    html += renderSection('Working hypotheses', renderHypotheses(), { id: 'sec-working_hypotheses', sectionKey: 'working_hypotheses' });
+    html += renderSection('Strategic frames', renderFrames(), { id: 'sec-strategic_frames', sectionKey: 'strategic_frames' });
+    html += renderSection('Behavioral targets', renderBehavioralTargets(), { id: 'sec-behavioral_targets', sectionKey: 'behavioral_targets' });
+    html += renderSection('Prior commitments', renderCommitments(), { id: 'sec-prior_commitments', sectionKey: 'prior_commitments' });
+    html += renderSection('Modality sequence', renderModalitySequence(), { id: 'sec-modality_sequence', sectionKey: 'modality_sequence' });
+    html += renderSection('Progress markers', renderProgressMarkers(), { id: 'sec-progress_markers', sectionKey: 'progress_markers' });
+    html += renderSection('Risk watchouts', renderRiskWatchouts(), { id: 'sec-risk_watchouts', sectionKey: 'risk_watchouts' });
+    html += renderSection('Session arc', renderSessionArc(), { id: 'sec-session_arc', sectionKey: 'session_arc' });
+    html += renderSection('Coach commitment', renderCoachCommitment(), { id: 'sec-coach_commitment', sectionKey: 'coach_commitment' });
 
     if (!isDraft) {
       html += '<div style="margin-top:24px;text-align:center;">'
@@ -633,7 +726,102 @@
     if (!isDraft) {
       const regenBtn = $('regen-btn');
       if (regenBtn) regenBtn.onclick = regenerateFromScratch;
+      wireLockedEditables();
     }
+  }
+
+  // Locked-mode wiring: prior_commitments status dropdowns, coach commitment
+  // click-to-edit, and per-section "+ Add coach note" affordances. Re-runs on
+  // every render() because the DOM is rebuilt wholesale on each save.
+  function wireLockedEditables() {
+    // 1. Prior-commitments status dropdowns
+    document.querySelectorAll('.commitment-status-select').forEach(function(sel) {
+      sel.addEventListener('change', function() {
+        const idx = parseInt(this.dataset.commitmentIdx, 10);
+        if (Number.isNaN(idx)) return;
+        const current = Array.isArray(plan.prior_commitments) ? plan.prior_commitments.slice() : [];
+        if (!current[idx]) return;
+        current[idx] = Object.assign({}, current[idx], { status: this.value });
+        // Optimistic visual feedback
+        const orig = this.style.borderColor;
+        this.style.borderColor = 'var(--gold)';
+        saveSection('prior_commitments', current).finally(function() {
+          // render() re-renders, so this element will be replaced; defensive reset
+          if (sel.style) sel.style.borderColor = orig;
+        });
+      });
+    });
+
+    // 2. Coach commitment click-to-edit
+    const ccEl = document.querySelector('[data-cc-edit="1"]');
+    if (ccEl) {
+      ccEl.addEventListener('click', function() {
+        const current = (plan.coach_commitment && plan.coach_commitment.text) || '';
+        const ta = document.createElement('textarea');
+        ta.value = current;
+        ta.rows = 4;
+        ta.style.cssText = 'width:100%;padding:8px 10px;font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-style:italic;color:var(--navy);border:1px solid var(--gold);border-radius:6px;resize:vertical;background:#fff;';
+        ccEl.replaceWith(ta);
+        ta.focus();
+        ta.setSelectionRange(ta.value.length, ta.value.length);
+        let saved = false;
+        ta.addEventListener('blur', async function() {
+          if (saved) return;
+          saved = true;
+          const next = ta.value.trim();
+          if (next === current.trim()) {
+            // No change — restore display by re-rendering the section
+            render();
+            return;
+          }
+          const saving = document.createElement('div');
+          saving.textContent = 'Saving…';
+          saving.style.cssText = 'font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:var(--gold);font-style:italic;';
+          ta.replaceWith(saving);
+          const newCommitment = Object.assign({}, (plan.coach_commitment || {}), { text: next });
+          // Preserve derived_from if present, else empty array
+          if (!Array.isArray(newCommitment.derived_from)) newCommitment.derived_from = [];
+          await saveSection('coach_commitment', newCommitment);
+        });
+      });
+    }
+
+    // 3. + Add coach note per section
+    document.querySelectorAll('[data-add-note]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        const section = this.dataset.addNote;
+        const slot = this.closest('.add-note-slot');
+        if (!slot) return;
+        const ta = document.createElement('textarea');
+        ta.placeholder = 'Add a note for this section…';
+        ta.rows = 3;
+        ta.style.cssText = 'width:100%;padding:8px 10px;font-family:\'DM Sans\',sans-serif;font-size:0.88rem;border:1px solid var(--gold);border-radius:6px;resize:vertical;background:#fff;';
+        slot.innerHTML = '';
+        slot.appendChild(ta);
+        ta.focus();
+        let saved = false;
+        ta.addEventListener('blur', async function() {
+          if (saved) return;
+          saved = true;
+          const v = ta.value.trim();
+          if (!v) {
+            render();
+            return;
+          }
+          const saving = document.createElement('div');
+          saving.textContent = 'Saving note…';
+          saving.style.cssText = 'font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:var(--gold);font-style:italic;';
+          slot.innerHTML = '';
+          slot.appendChild(saving);
+          await saveSection('coach_notes', {
+            section: section,
+            note: v,
+            created_at: new Date().toISOString(),
+            edited_by: coachId,
+          });
+        });
+      });
+    });
   }
 
   // Pull most recent client_name from coach_checkin_responses — same source
@@ -654,12 +842,18 @@
     const profile = await loadCoachProfile();
     if (!profile) return;
     coachId = profile.id;
-    const clientName = await loadClientName();
+    // Run name + sessions + active-plan loads in parallel — none depend on each other.
+    const [clientName, sessions, loadedPlan] = await Promise.all([
+      loadClientName(),
+      loadClientSessions(),
+      loadActivePlan(),
+    ]);
+    sessionInfo = sessions || {};
+    plan = loadedPlan;
     const displayName = clientName || clientEmail || 'Client';
     $('client-heading').textContent = displayName;
     $('header-meta').textContent = clientEmail + ' · coach: ' + (profile.display_name || '');
     document.title = 'Intervention Plan · ' + displayName;
-    plan = await loadActivePlan();
     render();
   })();
   </script>
