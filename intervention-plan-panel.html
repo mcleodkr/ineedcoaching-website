@@ -251,8 +251,9 @@
   <div class="panel">
     <div class="top-bar">
       <div>
-        <h1>Intervention Plan</h1>
-        <div class="meta" id="header-meta">Loading…</div>
+        <div class="meta" style="margin-bottom:6px;">Intervention Plan</div>
+        <h1 id="client-heading">Loading…</h1>
+        <div class="meta" id="header-meta" style="text-transform:none;letter-spacing:0;font-size:0.82rem;color:var(--muted);">&nbsp;</div>
       </div>
       <a href="/coach-dashboard.html" id="back-link">← Back to dashboard</a>
     </div>
@@ -635,12 +636,29 @@
     }
   }
 
+  // Pull most recent client_name from coach_checkin_responses — same source
+  // the bookings tab and review cards already use. Falls back to email if
+  // the client has no check-ins yet so the panel never renders blank.
+  async function loadClientName() {
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/coach_checkin_responses?client_email=eq.' + encodeURIComponent(clientEmail) + '&select=client_name&order=created_at.desc&limit=1', { headers: apiHeaders() });
+      if (!res.ok) return null;
+      const rows = await res.json();
+      const name = Array.isArray(rows) && rows.length ? (rows[0].client_name || '').trim() : '';
+      return name || null;
+    } catch (_) { return null; }
+  }
+
   (async function init() {
     if (!clientEmail) { showError('Missing client_email in URL.'); return; }
     const profile = await loadCoachProfile();
     if (!profile) return;
     coachId = profile.id;
+    const clientName = await loadClientName();
+    const displayName = clientName || clientEmail || 'Client';
+    $('client-heading').textContent = displayName;
     $('header-meta').textContent = clientEmail + ' · coach: ' + (profile.display_name || '');
+    document.title = 'Intervention Plan · ' + displayName;
     plan = await loadActivePlan();
     render();
   })();
