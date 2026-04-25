@@ -157,6 +157,25 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
   border-radius: 2px 2px 0 0;
 }
 
+/* CATEGORY FILTER PILLS — audience-aware, mirrors homepage .filter-pill style */
+.articles-filter-pills-wrap { max-width: 1100px; margin: 0 auto; padding: 16px 24px 0; }
+.articles-filter-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.articles-filter-pills .filter-pill {
+  padding: 8px 18px;
+  border-radius: 50px;
+  border: 1.5px solid var(--border);
+  background: var(--warm);
+  color: var(--muted);
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 36px;
+}
+.articles-filter-pills .filter-pill:hover { border-color: var(--gold); color: var(--navy); }
+.articles-filter-pills .filter-pill.active { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+
 /* GRID */
 .page-content {
   max-width: 1100px;
@@ -327,6 +346,7 @@ footer {
   .search-bar { padding: 16px 20px; }
   .grid { grid-template-columns: 1fr; }
   .tabs-wrap { padding: 20px 18px 0; }
+  .articles-filter-pills-wrap { padding: 14px 18px 0; }
   .page-content { padding: 24px 18px 60px; }
   .footer-grid { grid-template-columns: 1fr; gap: 28px; }
   footer { padding: 40px 24px 24px; }
@@ -428,6 +448,11 @@ footer {
   </div>
 </div>
 
+<!-- CATEGORY FILTER PILLS (audience-aware, rendered by JS) -->
+<div class="articles-filter-pills-wrap">
+  <div class="articles-filter-pills" id="articles-filter-pills"></div>
+</div>
+
 <!-- ARTICLES GRID -->
 <section class="page-content">
   <div class="grid" id="articles-grid">
@@ -479,6 +504,36 @@ var _currentTab = 'individual';
 
 var COACH_CATEGORIES = ['Coaching and Growth', 'Coaching & Growth', 'Getting Clients', 'Niche and Positioning', 'Business of Coaching', 'For Providers', 'Coaching Tools', 'Client Retention', 'Credibility and Trust', 'Practice Growth', 'AI and Documentation'];
 
+// Audience-specific filter pills. Top categories by article count — values
+// must match the exact DB `category` strings (note ampersand, not "and").
+var CONSUMER_PILL_CATEGORIES = [
+  'Coaching & Growth',
+  'Finding Support',
+  'Anxiety & Overthinking',
+  'Relationships & Boundaries',
+  'Burnout & Exhaustion',
+  'Self-Discovery & Identity'
+];
+var COACH_PILL_CATEGORIES = [
+  'Business of Coaching',
+  'Coaching & Growth',
+  'Client Retention',
+  'Getting Clients',
+  'For Providers'
+];
+var _currentCategory = 'all';
+
+function renderFilterPills() {
+  var container = document.getElementById('articles-filter-pills');
+  if (!container) return;
+  var categories = _currentTab === 'coach' ? COACH_PILL_CATEGORIES : CONSUMER_PILL_CATEGORIES;
+  var html = '<button class="filter-pill ' + (_currentCategory === 'all' ? 'active' : '') + '" data-cat="all">All</button>';
+  html += categories.map(function(cat) {
+    return '<button class="filter-pill ' + (_currentCategory === cat ? 'active' : '') + '" data-cat="' + esc(cat) + '">' + esc(cat) + '</button>';
+  }).join('');
+  container.innerHTML = html;
+}
+
 function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
 async function loadArticles() {
@@ -495,8 +550,10 @@ async function loadArticles() {
 
 function switchTab(tab) {
   _currentTab = tab;
+  _currentCategory = 'all';
   document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
   document.querySelector('.tab[data-tab="' + tab + '"]').classList.add('active');
+  renderFilterPills();
   filterArticles();
 }
 
@@ -507,6 +564,7 @@ function filterArticles() {
     var isCoachCat = COACH_CATEGORIES.some(function(cc) { return cc.toLowerCase() === cat; });
     if (_currentTab === 'coach' && !isCoachCat) return false;
     if (_currentTab === 'individual' && isCoachCat) return false;
+    if (_currentCategory !== 'all' && a.category !== _currentCategory) return false;
     if (search) {
       var title = (a.title || '').toLowerCase();
       var desc = (a.meta_description || '').toLowerCase();
@@ -538,12 +596,28 @@ function renderArticles(articles) {
   }, 50);
 }
 
-// Reflect _currentTab in the active state before the grid renders
+// Reflect _currentTab in the active state before the grid renders, and
+// paint the audience-appropriate pills.
 (function() {
   document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
   var t = document.querySelector('.tab[data-tab="' + _currentTab + '"]');
   if (t) t.classList.add('active');
+  renderFilterPills();
 })();
+
+// Pill click → set _currentCategory, re-render pills + grid
+(function() {
+  var container = document.getElementById('articles-filter-pills');
+  if (!container) return;
+  container.addEventListener('click', function(e) {
+    var pill = e.target.closest('.filter-pill');
+    if (!pill) return;
+    _currentCategory = pill.dataset.cat || 'all';
+    renderFilterPills();
+    filterArticles();
+  });
+})();
+
 loadArticles();
 
 // IntersectionObserver scroll reveal
