@@ -878,11 +878,13 @@ document.addEventListener('click', function(e) {
   }
 });
 
-async function loadRelatedArticles(category, currentSlug) {
+async function loadRelatedArticles(category, currentSlug, audience) {
   var slot = document.getElementById('related-articles-slot');
   if (!slot) return;
   try {
-    var res = await fetch(SUPABASE_URL + '/rest/v1/articles?category=eq.' + encodeURIComponent(category) + '&slug=neq.' + encodeURIComponent(currentSlug) + '&select=title,slug,meta_description,category&limit=3&order=created_at.desc', {
+    var url = SUPABASE_URL + '/rest/v1/articles?category=eq.' + encodeURIComponent(category) + '&slug=neq.' + encodeURIComponent(currentSlug) + '&select=title,slug,meta_description,category&limit=3&order=created_at.desc';
+    if (audience) url += '&audience=eq.' + encodeURIComponent(audience);
+    var res = await fetch(url, {
       headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
     });
     var articles = await res.json();
@@ -1053,9 +1055,9 @@ async function loadArticle() {
     // Load quiz embed
     loadQuizEmbed(article);
 
-    // Load related articles
+    // Load related articles, scoped to the same audience to prevent cross-pollination
     if (article.category) {
-      loadRelatedArticles(article.category, article.slug);
+      loadRelatedArticles(article.category, article.slug, article.audience);
     }
 
   } catch(e) {

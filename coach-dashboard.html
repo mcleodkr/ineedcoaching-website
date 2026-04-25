@@ -253,6 +253,19 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
   .prop-right { align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
 }
 
+/* COACH ARTICLES WIDGET (Building your practice) */
+.coach-articles-widget { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 28px 32px; margin-top: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+.caw-header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.caw-title { font-family: 'Cormorant Garamond', serif; font-size: 1.15rem; font-weight: 600; color: var(--navy); margin: 0; }
+.caw-link { font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 600; color: var(--gold); text-decoration: none; letter-spacing: 0.02em; }
+.caw-link:hover { color: var(--gold-hover, #a87d1f); }
+.caw-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.caw-list .caw-loading, .caw-list .caw-empty { grid-column: 1/-1; color: var(--muted); font-size: 0.85rem; padding: 12px 0; }
+.caw-card { display: block; padding: 16px 18px; background: #fafaf6; border: 1px solid var(--border); border-radius: 10px; text-decoration: none; transition: border-color 0.15s ease, transform 0.15s ease; }
+.caw-card:hover { border-color: var(--gold); transform: translateY(-2px); }
+.caw-card-cat { font-family: 'DM Sans', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
+.caw-card-title { font-family: 'Cormorant Garamond', serif; font-size: 1rem; font-weight: 600; color: var(--ink); line-height: 1.35; }
+
 /* DRAFT ARTICLES */
 .draft-article-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 28px; margin-bottom: 16px; transition: border-color 0.2s; }
 .draft-article-card:hover { border-color: var(--gold); }
@@ -540,7 +553,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       <a href="/coaches.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Coaches</a>
       <a href="/sessions.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Sessions</a>
       <a href="/coach-courses.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Courses</a>
-      <a href="/#articles" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Articles</a>
+      <a href="/articles.html?audience=coach" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Articles</a>
       <a href="/coaching-commons.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Commons</a>
       <a href="/coach-dashboard.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Dashboard</a>
       <span id="nav-coach-name" class="nav-coach-name"></span>
@@ -1388,6 +1401,16 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       </div>
       <div id="clients-list-view" class="hidden"></div>
       <div id="clients-detail-view" class="hidden"></div>
+      <!-- Coach articles widget — surfaced below the client list on the default landing -->
+      <div class="coach-articles-widget" id="coach-articles-widget">
+        <div class="caw-header">
+          <h3 class="caw-title">Building your practice</h3>
+          <a class="caw-link" href="/articles.html?audience=coach">Browse all &rarr;</a>
+        </div>
+        <div class="caw-list" id="coach-articles-list">
+          <p class="caw-loading">Loading articles…</p>
+        </div>
+      </div>
     </div>
 
     <!-- FORMS TAB -->
@@ -1643,6 +1666,32 @@ let currentToken = null;
 let currentUser = null;
 let coachProfile = null;
 var notesByBooking = {};
+
+// "Building your practice" widget — surfaces 6 most-recent coach articles on the Clients tab
+async function loadCoachArticlesWidget() {
+  var slot = document.getElementById('coach-articles-list');
+  if (!slot) return;
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/articles?audience=eq.coach&order=created_at.desc&limit=6&select=title,slug,category', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
+    });
+    if (!res.ok) throw new Error('failed: ' + res.status);
+    var articles = await res.json();
+    if (!Array.isArray(articles) || articles.length === 0) {
+      slot.innerHTML = '<p class="caw-empty">More articles coming soon.</p>';
+      return;
+    }
+    function escapeHtml(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+    slot.innerHTML = articles.map(function(a) {
+      return '<a class="caw-card" href="/article.html?slug=' + encodeURIComponent(a.slug) + '">' +
+        '<div class="caw-card-cat">' + escapeHtml(a.category || 'Coaching') + '</div>' +
+        '<div class="caw-card-title">' + escapeHtml(a.title || '') + '</div>' +
+        '</a>';
+    }).join('');
+  } catch (e) {
+    slot.innerHTML = '<p class="caw-empty">Articles unavailable right now.</p>';
+  }
+}
 
 // Stash of the last client detail bundle so the Pattern Map re-render
 // can re-call renderClientDetail without re-fetching from Supabase.
@@ -2057,6 +2106,9 @@ async function init() {
     clientsBtn._loaded = true;
     loadClientsTab();
   }
+
+  // "Building your practice" widget — independent of the clients fetch
+  loadCoachArticlesWidget();
 
   // Check for Stripe return
   var stripeParam = new URLSearchParams(window.location.search).get('stripe');

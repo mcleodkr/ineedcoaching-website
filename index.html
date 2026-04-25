@@ -238,6 +238,9 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
 .article-card .card-title { font-size: 0.95rem; font-weight: 700; color: var(--navy); line-height: 1.4; margin-bottom: 8px; }
 .article-card .card-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.6; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .article-card .card-read { font-size: 0.75rem; font-weight: 700; color: var(--gold); }
+.articles-browse-all { max-width: 1100px; margin: 32px auto 0; text-align: center; }
+.articles-browse-all-link { display: inline-block; font-size: 0.88rem; font-weight: 700; color: var(--gold); text-decoration: none; letter-spacing: 0.02em; padding: 14px 28px; border: 1.5px solid var(--gold); border-radius: 50px; transition: all 0.2s; }
+.articles-browse-all-link:hover { background: var(--gold); color: var(--navy); }
 
 /* ═══════════ THE COMMONS ═══════════ */
 .commons-section { padding: 80px 80px; background: var(--navy); }
@@ -377,7 +380,7 @@ footer { padding: 48px 80px 32px; background: var(--navy); border-top: 1px solid
     <a href="/coaches.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Coaches</a>
     <a href="/sessions.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Sessions</a>
     <a href="/coach-courses.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Courses</a>
-    <a href="/#articles" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Articles</a>
+    <a href="/articles.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Articles</a>
     <a href="/coaching-commons.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Commons</a>
     <a href="/coach-dashboard.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Dashboard</a>
     <a href="/coach-signup.html" style="font-size:0.78rem;font-weight:700;background:#c49a3c;color:#1a3a52;padding:8px 18px;border-radius:50px;text-decoration:none;">List Your Practice</a>
@@ -496,6 +499,9 @@ footer { padding: 48px 80px 32px; background: var(--navy); border-top: 1px solid
   <div class="articles-grid" id="articles-grid">
     <p style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:0.85rem;">Loading articles...</p>
   </div>
+  <div class="articles-browse-all">
+    <a href="/articles.html" class="articles-browse-all-link">Browse all articles &rarr;</a>
+  </div>
 </section>
 
 <!-- ═══════════ THE COMMONS ═══════════ -->
@@ -550,7 +556,7 @@ footer { padding: 48px 80px 32px; background: var(--navy); border-top: 1px solid
       <a href="/coaches.html">Find a Coach</a>
       <a href="/sessions.html">Browse Sessions</a>
       <a href="/coach-courses.html">Courses</a>
-      <a href="/#articles">Articles</a>
+      <a href="/articles.html">Read Articles</a>
       <a href="/coaching-commons.html">The Commons</a>
     </div>
     <div class="footer-col">

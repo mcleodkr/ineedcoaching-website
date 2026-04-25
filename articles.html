@@ -470,13 +470,20 @@ var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 var _allArticles = [];
 var _currentTab = 'individual';
 
+// Honor ?audience=coach to deep-link the For Coaches tab from external entry points
+// (coach dashboard nav, dashboard widget "Browse all", etc.)
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('audience') === 'coach') _currentTab = 'coach';
+})();
+
 var COACH_CATEGORIES = ['Coaching and Growth', 'Coaching & Growth', 'Getting Clients', 'Niche and Positioning', 'Business of Coaching', 'For Providers', 'Coaching Tools', 'Client Retention', 'Credibility and Trust', 'Practice Growth', 'AI and Documentation'];
 
 function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
 async function loadArticles() {
   try {
-    var res = await fetch(SUPABASE_URL + '/rest/v1/articles?or=(audience.eq.coach,audience.eq.consumer)&select=title,slug,meta_description,category&order=created_at.desc&limit=200', {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/articles?or=(audience.eq.coach,audience.eq.consumer)&select=title,slug,meta_description,category&order=created_at.desc&limit=400', {
       headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
     });
     _allArticles = await res.json();
@@ -531,6 +538,12 @@ function renderArticles(articles) {
   }, 50);
 }
 
+// Reflect _currentTab in the active state before the grid renders
+(function() {
+  document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+  var t = document.querySelector('.tab[data-tab="' + _currentTab + '"]');
+  if (t) t.classList.add('active');
+})();
 loadArticles();
 
 // IntersectionObserver scroll reveal
