@@ -759,10 +759,13 @@
   // Session 1 "Plan this session" button. Re-runs on every render()
   // because the DOM is rebuilt wholesale on each save.
   function wireLockedEditables() {
-    // 0. Session 1 "Plan this session" button → inline session plan render
+    // 0. Session 1 "Plan this session" button → inline session plan render.
+    // Plus the read-only auto-load that surfaces an existing plan from DB
+    // (no AI cost on revisits — matches the chunk 6.5 hotfix).
     document.querySelectorAll('.plan-session-btn').forEach(function(btn) {
       btn.addEventListener('click', function() { openSessionPlanForBooking(null); });
     });
+    autoLoadExistingSessionPlan();
 
     // 1. Prior-commitments status dropdowns
     document.querySelectorAll('.commitment-status-select').forEach(function(sel) {
@@ -897,7 +900,8 @@
       + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;color:var(--navy);font-weight:600;">' + escapeHtml(clientDisplayName || '') + ' · ' + escapeHtml(fmtSessionDate(sessionDateIso)) + '</div>'
       + '</div>'
       + '<div style="display:flex;gap:8px;">'
-      + '<button class="btn btn-secondary regen-session-plan" style="padding:6px 14px;font-size:0.78rem;">Regenerate</button>'
+      + '<button class="btn btn-secondary edit-session-plan" style="padding:6px 14px;font-size:0.78rem;">Edit</button>'
+      + '<button class="btn btn-secondary revise-session-plan" style="padding:6px 14px;font-size:0.78rem;">Revise with new context</button>'
       + '<button class="btn btn-tertiary close-session-plan" style="padding:6px 14px;font-size:0.78rem;">Close</button>'
       + '</div>'
       + '</div>'
@@ -961,37 +965,229 @@
       + '</div>';
   }
 
-  // Open + render the session plan inline under the Session 1 arc card.
-  // Works for both entry points: button click in the panel, and ?plan_for_booking=
-  // query param from the bookings tab.
   let _cachedClientDisplayName = null;
-  async function openSessionPlanForBooking(preferredBookingId) {
+
+  // Read-only lookup. Hits the partial unique index — at most one active row
+  // per booking. Spreads coaching_data so the renderer has flat field access.
+  async function loadExistingSessionPlan(bookingId) {
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/session_plans?booking_id=eq.' + encodeURIComponent(bookingId) + '&archived_at=is.null&select=*&limit=1', { headers: apiHeaders() });
+      if (!res.ok) return null;
+      const rows = await res.json();
+      if (!Array.isArray(rows) || !rows.length) return null;
+      const row = rows[0];
+      return Object.assign({}, row, row.coaching_data || {});
+    } catch (_) { return null; }
+  }
+
+  // Auto-load on page render. If a plan already exists for the next upcoming
+  // booking (or the booking specified by ?plan_for_booking=), surface it
+  // directly instead of asking the coach to click Generate again. No AI cost
+  // on revisits. Generation only fires on explicit button click.
+  async function autoLoadExistingSessionPlan() {
     if (!plan || plan.status !== 'locked') return;
     const slot = document.getElementById('session-plan-slot-arc');
     if (!slot) return;
-    slot.innerHTML = '<div class="loader"><div class="spinner"></div><div>Generating session plan… this may take 30–50 seconds.</div></div>';
+    const planForBooking = params.get('plan_for_booking');
+    const booking = await loadNextUpcomingBooking(planForBooking);
+    if (!booking) return; // No upcoming booking — leave the button visible; coach action is "Schedule a session"
+    const existing = await loadExistingSessionPlan(booking.id);
+    if (!existing) return; // No plan yet — leave the "Plan this session →" button visible
+    // Hide the generate button; the rendered plan replaces it.
+    const planBtn = document.querySelector('.plan-session-btn');
+    if (planBtn) planBtn.style.display = 'none';
+    slot.innerHTML = renderSessionPlan(existing, _cachedClientDisplayName, booking.scheduled_at);
+    wireSessionPlanCard(slot, booking, existing);
+    if (planForBooking) slot.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // Explicit-click entry: fires generate (or revision when revisionContext set).
+  // The hotfix means this is the ONLY path that costs AI tokens.
+  async function generateSessionPlan(preferredBookingId, revisionContext) {
+    if (!plan || plan.status !== 'locked') return;
+    const slot = document.getElementById('session-plan-slot-arc');
+    if (!slot) return;
+    const loadingMsg = revisionContext ? 'Revising session plan with new context…' : 'Generating session plan…';
+    slot.innerHTML = '<div class="loader"><div class="spinner"></div><div>' + escapeHtml(loadingMsg) + ' this may take 30–50 seconds.</div></div>';
     try {
       const booking = await loadNextUpcomingBooking(preferredBookingId);
       if (!booking) {
-        slot.innerHTML = '<div class="error-box">No upcoming booking found for this client. Schedule a session first, then return here.</div>';
+        slot.innerHTML = '<div class="error-box">No upcoming booking found. Schedule a session first, then return here.</div>';
         return;
       }
+      const reqBody = { intervention_plan_id: plan.id, booking_id: booking.id, coach_id: coachId, client_email: clientEmail };
+      if (revisionContext) reqBody.revision_context = revisionContext;
       const res = await fetch('/api/generate-session-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ intervention_plan_id: plan.id, booking_id: booking.id, coach_id: coachId, client_email: clientEmail }),
+        body: JSON.stringify(reqBody),
       });
       const sp = await parseApiResponse(res, 'Session plan generation failed');
+      const planBtn = document.querySelector('.plan-session-btn');
+      if (planBtn) planBtn.style.display = 'none';
       slot.innerHTML = renderSessionPlan(sp, _cachedClientDisplayName, booking.scheduled_at);
       slot.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      // Wire regenerate + close buttons
-      const regenBtn = slot.querySelector('.regen-session-plan');
-      if (regenBtn) regenBtn.addEventListener('click', function() { openSessionPlanForBooking(booking.id); });
-      const closeBtn = slot.querySelector('.close-session-plan');
-      if (closeBtn) closeBtn.addEventListener('click', function() { slot.innerHTML = ''; });
+      wireSessionPlanCard(slot, booking, sp);
     } catch (e) {
       slot.innerHTML = '<div class="error-box">' + escapeHtml(e.message) + '</div>';
     }
+  }
+
+  // Backwards-compat alias retained because wireLockedEditables binds it
+  // to the .plan-session-btn click handler. Always an explicit fresh-generate.
+  function openSessionPlanForBooking(preferredBookingId) {
+    return generateSessionPlan(preferredBookingId, null);
+  }
+
+  function wireSessionPlanCard(slot, booking, sp) {
+    const editBtn = slot.querySelector('.edit-session-plan');
+    if (editBtn) editBtn.onclick = function() { enterSessionPlanEditMode(slot, sp, booking); };
+    const reviseBtn = slot.querySelector('.revise-session-plan');
+    if (reviseBtn) reviseBtn.onclick = function() { showReviseModal(booking); };
+    const closeBtn = slot.querySelector('.close-session-plan');
+    if (closeBtn) closeBtn.onclick = function() {
+      slot.innerHTML = '';
+      const planBtn = document.querySelector('.plan-session-btn');
+      if (planBtn) planBtn.style.display = '';
+    };
+  }
+
+  // ── Edit mode ──────────────────────────────────────────────────────
+  // Six fields editable inline: today_priority, opening, do_not_miss,
+  // close_with (single-line / textarea), key_questions and body_cues_to_watch
+  // (string-array list editor with add/remove). turning_points / branches /
+  // time_flow stay read-only for v1 — Revise is the path for restructuring.
+  function enterSessionPlanEditMode(slot, sp, booking) {
+    function rowText(field, label, value, multiline) {
+      if (multiline) {
+        return '<div><div class="meta" style="color:var(--gold);margin-bottom:4px;">' + escapeHtml(label) + '</div>'
+          + '<textarea data-edit-field="' + field + '" rows="3" style="width:100%;padding:8px 10px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;border:1px solid var(--gold);border-radius:6px;resize:vertical;background:#fff;">' + escapeHtml(value || '') + '</textarea></div>';
+      }
+      return '<div><div class="meta" style="color:var(--gold);margin-bottom:4px;">' + escapeHtml(label) + '</div>'
+        + '<input type="text" data-edit-field="' + field + '" value="' + escapeHtml(value || '') + '" style="width:100%;padding:8px 10px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;border:1px solid var(--gold);border-radius:6px;background:#fff;" /></div>';
+    }
+    function rowList(field, label, values) {
+      const items = (values || []).map(function(v, i) {
+        return '<div class="edit-list-row" data-list-field="' + field + '" data-list-idx="' + i + '" style="display:flex;gap:6px;margin-bottom:6px;">'
+          + '<input type="text" value="' + escapeHtml(v || '') + '" style="flex:1;padding:6px 10px;font-family:\'DM Sans\',sans-serif;font-size:0.88rem;border:1px solid var(--border);border-radius:4px;background:#fff;" />'
+          + '<button class="edit-list-remove" type="button" style="padding:4px 10px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:0.8rem;">×</button>'
+          + '</div>';
+      }).join('');
+      return '<div data-edit-list="' + field + '"><div class="meta" style="color:var(--gold);margin-bottom:4px;">' + escapeHtml(label) + '</div>'
+        + '<div class="edit-list-items">' + items + '</div>'
+        + '<button class="edit-list-add" type="button" data-list-add="' + field + '" style="margin-top:4px;padding:5px 12px;background:transparent;color:var(--muted);border:1px dashed var(--border);border-radius:4px;cursor:pointer;font-size:0.78rem;">+ Add item</button>'
+        + '</div>';
+    }
+    const html = '<div class="session-plan-card" style="background:#fff;border:2px solid var(--gold);border-radius:10px;padding:20px 22px;margin-top:14px;box-shadow:0 2px 6px rgba(196,154,60,0.08);">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:14px;">'
+      + '<div><div class="meta">Editing session plan</div><div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;color:var(--navy);font-weight:600;">' + escapeHtml(_cachedClientDisplayName || '') + ' · ' + escapeHtml(fmtSessionDate(booking.scheduled_at)) + '</div></div>'
+      + '<div style="display:flex;gap:8px;">'
+      + '<button class="btn btn-primary" id="sp-save-btn" style="padding:6px 14px;font-size:0.78rem;">Save</button>'
+      + '<button class="btn btn-tertiary" id="sp-cancel-btn" style="padding:6px 14px;font-size:0.78rem;">Cancel</button>'
+      + '</div></div>'
+      + '<div style="display:flex;flex-direction:column;gap:14px;">'
+      + rowText('today_priority', 'Priority (one sentence)', sp.today_priority, true)
+      + rowText('opening', 'Opening', sp.opening, true)
+      + rowList('key_questions', 'Key questions', sp.key_questions)
+      + rowText('do_not_miss', 'Do not miss', sp.do_not_miss, true)
+      + rowList('body_cues_to_watch', 'Body cues to watch', sp.body_cues_to_watch)
+      + rowText('close_with', 'Close with', sp.close_with, true)
+      + '<div style="font-size:0.74rem;color:var(--muted);font-style:italic;">Turning points, branches, and time flow stay read-only for direct edit. Use Revise with new context to restructure those.</div>'
+      + '</div></div>';
+    slot.innerHTML = html;
+
+    // Wire add/remove on lists
+    slot.querySelectorAll('.edit-list-add').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        const field = btn.dataset.listAdd;
+        const list = slot.querySelector('[data-edit-list="' + field + '"] .edit-list-items');
+        const idx = list.querySelectorAll('.edit-list-row').length;
+        const row = document.createElement('div');
+        row.className = 'edit-list-row';
+        row.dataset.listField = field;
+        row.dataset.listIdx = String(idx);
+        row.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;';
+        row.innerHTML = '<input type="text" value="" style="flex:1;padding:6px 10px;font-family:\'DM Sans\',sans-serif;font-size:0.88rem;border:1px solid var(--border);border-radius:4px;background:#fff;" />'
+          + '<button class="edit-list-remove" type="button" style="padding:4px 10px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:0.8rem;">×</button>';
+        list.appendChild(row);
+        row.querySelector('input').focus();
+        row.querySelector('.edit-list-remove').addEventListener('click', function() { row.remove(); });
+      });
+    });
+    slot.querySelectorAll('.edit-list-remove').forEach(function(btn) {
+      btn.addEventListener('click', function() { btn.closest('.edit-list-row').remove(); });
+    });
+
+    slot.querySelector('#sp-cancel-btn').onclick = function() {
+      slot.innerHTML = renderSessionPlan(sp, _cachedClientDisplayName, booking.scheduled_at);
+      wireSessionPlanCard(slot, booking, sp);
+    };
+
+    slot.querySelector('#sp-save-btn').onclick = async function() {
+      const updates = {};
+      slot.querySelectorAll('[data-edit-field]').forEach(function(el) {
+        updates[el.dataset.editField] = el.value;
+      });
+      ['key_questions','body_cues_to_watch'].forEach(function(field) {
+        const rows = slot.querySelectorAll('[data-edit-list="' + field + '"] .edit-list-row input');
+        const arr = Array.prototype.slice.call(rows).map(function(i) { return i.value.trim(); }).filter(Boolean);
+        updates[field] = arr;
+      });
+      const saveBtn = slot.querySelector('#sp-save-btn');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      try {
+        const res = await fetch('/api/update-session-plan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan_id: sp.id, updates: updates, edited_by: coachId }),
+        });
+        const newSp = await parseApiResponse(res, 'Save failed');
+        slot.innerHTML = renderSessionPlan(newSp, _cachedClientDisplayName, booking.scheduled_at);
+        wireSessionPlanCard(slot, booking, newSp);
+      } catch (e) {
+        alert(e.message);
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+      }
+    };
+  }
+
+  // ── Revise modal ───────────────────────────────────────────────────
+  function showReviseModal(booking) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.42);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
+    overlay.innerHTML = '<div style="background:#fff;border-radius:10px;padding:24px;max-width:560px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.2);">'
+      + '<h2 style="font-family:\'Cormorant Garamond\',serif;color:var(--navy);font-size:1.4rem;margin:0 0 6px;font-weight:600;">Revise with new context</h2>'
+      + '<p style="font-size:0.88rem;color:var(--muted);margin:0 0 14px;line-height:1.5;">What has changed since this plan was generated? Coach Clarity uses this context to revise — preserving what you have not flagged, updating what you have.</p>'
+      + '<textarea id="revise-context-input" rows="5" placeholder="e.g. Client mentioned a job change in their check-in, and journal entries show a new pattern of avoidance with their partner…" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.92rem;resize:vertical;box-sizing:border-box;"></textarea>'
+      + '<div style="font-size:0.74rem;color:var(--muted);margin-top:6px;" id="revise-context-counter">0 / 20 minimum (context required for revision)</div>'
+      + '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;">'
+      + '<button class="btn btn-tertiary" id="revise-cancel-btn" style="padding:8px 16px;font-size:0.85rem;">Cancel</button>'
+      + '<button class="btn btn-primary" id="revise-submit-btn" style="padding:8px 16px;font-size:0.85rem;" disabled>Revise plan</button>'
+      + '</div></div>';
+    document.body.appendChild(overlay);
+
+    const ta = overlay.querySelector('#revise-context-input');
+    const counter = overlay.querySelector('#revise-context-counter');
+    const submitBtn = overlay.querySelector('#revise-submit-btn');
+    ta.addEventListener('input', function() {
+      const len = ta.value.trim().length;
+      counter.textContent = len + ' / 20 minimum (context required for revision)';
+      submitBtn.disabled = len < 20;
+    });
+    overlay.querySelector('#revise-cancel-btn').onclick = function() {
+      document.body.removeChild(overlay);
+    };
+    submitBtn.onclick = async function() {
+      const ctx = ta.value.trim();
+      if (ctx.length < 20) return;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Revising…';
+      document.body.removeChild(overlay);
+      generateSessionPlan(booking.id, ctx);
+    };
+    ta.focus();
   }
 
   // Pull most recent client_name from coach_checkin_responses — same source
@@ -1026,15 +1222,10 @@
     $('header-meta').textContent = clientEmail + ' · coach: ' + (profile.display_name || '');
     document.title = 'Intervention Plan · ' + displayName;
     render();
-    // Auto-trigger session plan when the bookings tab navigated here
-    // with ?plan_for_booking=<uuid>. Locked-IP-only — falls through silently
-    // if the IP is still in draft.
-    const planForBooking = params.get('plan_for_booking');
-    if (planForBooking && plan && plan.status === 'locked') {
-      // wireLockedEditables ran inside render(); the slot is in the DOM.
-      // Auto-fire the same flow the button click would.
-      openSessionPlanForBooking(planForBooking);
-    }
+    // Note: ?plan_for_booking=<uuid> from the bookings tab is handled inside
+    // autoLoadExistingSessionPlan (called from wireLockedEditables). The
+    // chunk 6.5 hotfix removed auto-generate; the panel now reads existing
+    // plans from DB and only fires generate on explicit button click.
   })();
   </script>
 </body>

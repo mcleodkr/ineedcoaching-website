@@ -330,6 +330,7 @@ export default async function handler(req, res) {
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
     const { intervention_plan_id, booking_id, coach_id, client_email } = body;
+    const revision_context = (typeof body.revision_context === 'string' && body.revision_context.trim()) ? body.revision_context.trim() : null;
     if (!intervention_plan_id || !booking_id || !coach_id || !client_email) {
       return res.status(400).json({ error: 'Missing required fields: intervention_plan_id, booking_id, coach_id, client_email' });
     }
@@ -346,21 +347,67 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Booking not found' });
     }
 
-    console.log(`[SessionPlan] Generating for booking ${booking_id} on locked IP ${intervention_plan_id} — checkin: ${!!ctx.checkin}, journal: ${ctx.journal_entries.length}, goals: ${ctx.active_goals.length}`);
+    const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
+
+    // Look up the prior active plan for this booking. The partial unique
+    // index allows at most one — Revise must archive it before INSERT.
+    let priorPlan = null;
+    if (revision_context) {
+      const priorRes = await fetch(`${SUPABASE_URL}/rest/v1/session_plans?booking_id=eq.${booking_id}&archived_at=is.null&select=id,coach_edits&limit=1`, {
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+      });
+      const priorRows = await priorRes.json().catch(() => []);
+      priorPlan = Array.isArray(priorRows) && priorRows[0] ? priorRows[0] : null;
+    }
+
+    console.log(`[SessionPlan] Generating for booking ${booking_id} on locked IP ${intervention_plan_id} — checkin: ${!!ctx.checkin}, journal: ${ctx.journal_entries.length}, goals: ${ctx.active_goals.length}, revision: ${!!revision_context}`);
+
+    // Revision context is appended OUTSIDE the cached block as a second
+    // system entry so the cached prefix still hashes the same and warm
+    // cache reads continue to work.
+    const systemBlocks = [
+      { type: 'text', text: CACHED_SYSTEM, cache_control: { type: 'ephemeral' } },
+    ];
+    if (revision_context) {
+      systemBlocks.push({
+        type: 'text',
+        text: `Coach has requested a revision. Their stated reason: ${revision_context}\n\nUse this to inform what should change in the revised plan; preserve what the coach has not flagged as needing change.`,
+      });
+    }
 
     const planRaw = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
       4000,
-      [{ type: 'text', text: CACHED_SYSTEM, cache_control: { type: 'ephemeral' } }],
+      systemBlocks,
       buildUserPayload(ctx),
-      'SessionPlan: Generation'
+      revision_context ? 'SessionPlan: Revision' : 'SessionPlan: Generation'
     );
 
     const validated = validateSessionPlan(planRaw, ctx);
 
-    const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
+    // Pre-generate new id so the archive PATCH can point archived_for_plan_id
+    // at the (yet-uninserted) new row. Same archive-then-insert pattern as
+    // the IP regenerate-from-scratch flow. If insert fails after archive
+    // succeeds, rollback by un-archiving.
+    const newPlanId = globalThis.crypto.randomUUID();
+
+    if (revision_context && priorPlan) {
+      const archRes = await fetch(`${SUPABASE_URL}/rest/v1/session_plans?id=eq.${priorPlan.id}`, {
+        method: 'PATCH',
+        headers: { ...headers, Prefer: 'return=minimal' },
+        body: JSON.stringify({ archived_at: new Date().toISOString(), archived_for_plan_id: newPlanId }),
+      });
+      if (!archRes.ok) {
+        const archErr = await archRes.text();
+        console.error('[SessionPlan] archive prior failed:', archErr);
+        return res.status(500).json({ error: 'Failed to archive prior session plan', detail: archErr.slice(0, 400) });
+      }
+    }
+
+    const nowIso = new Date().toISOString();
     const insertBody = {
+      id: newPlanId,
       intervention_plan_id,
       booking_id,
       coach_id,
@@ -383,12 +430,34 @@ export default async function handler(req, res) {
         source_attribution: validated.source_attribution,
       },
     };
+    if (revision_context) {
+      insertBody.revision_context = revision_context;
+      insertBody.coach_edits = [{
+        action: 'revision',
+        criteria: revision_context,
+        revised_at: nowIso,
+        coach_id,
+        archived_prior_plan_id: priorPlan?.id || null,
+      }];
+    }
 
     const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/session_plans`, {
       method: 'POST',
       headers: { ...headers, Prefer: 'return=representation' },
       body: JSON.stringify(insertBody),
     });
+    if (!insertRes.ok && revision_context && priorPlan) {
+      // Rollback the archive — leave the prior plan active so the coach
+      // doesn't lose access to a working plan because of a transient error.
+      const rollbackErr = await insertRes.text();
+      console.error('[SessionPlan] revision insert failed, rolling back archive:', rollbackErr);
+      await fetch(`${SUPABASE_URL}/rest/v1/session_plans?id=eq.${priorPlan.id}`, {
+        method: 'PATCH',
+        headers: { ...headers, Prefer: 'return=minimal' },
+        body: JSON.stringify({ archived_at: null, archived_for_plan_id: null }),
+      });
+      return res.status(500).json({ error: 'Failed to persist revised session plan; prior plan restored', detail: rollbackErr.slice(0, 400) });
+    }
     if (!insertRes.ok) {
       const err = await insertRes.text();
       console.error('[SessionPlan] insert failed:', err);
