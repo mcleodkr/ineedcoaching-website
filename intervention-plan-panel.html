@@ -863,13 +863,13 @@
     try {
       // If a specific booking_id was supplied (bookings-tab entry), prefer it.
       if (preferredBookingId) {
-        const res = await fetch(SUPABASE_URL + '/rest/v1/coach_bookings?id=eq.' + encodeURIComponent(preferredBookingId) + '&select=id,session_at,duration_minutes,session_type&limit=1', { headers: apiHeaders() });
+        const res = await fetch(SUPABASE_URL + '/rest/v1/coach_bookings?id=eq.' + encodeURIComponent(preferredBookingId) + '&select=id,scheduled_at,service_id,status&limit=1', { headers: apiHeaders() });
         const rows = await res.json();
         if (Array.isArray(rows) && rows.length) return rows[0];
       }
       // Otherwise auto-pick the soonest future booking for this client + coach.
       const nowIso = new Date().toISOString();
-      const res = await fetch(SUPABASE_URL + '/rest/v1/coach_bookings?coach_id=eq.' + coachId + '&client_email=eq.' + encodeURIComponent(clientEmail) + '&session_at=gte.' + encodeURIComponent(nowIso) + '&select=id,session_at,duration_minutes,session_type&order=session_at.asc&limit=1', { headers: apiHeaders() });
+      const res = await fetch(SUPABASE_URL + '/rest/v1/coach_bookings?coach_id=eq.' + coachId + '&client_email=eq.' + encodeURIComponent(clientEmail) + '&scheduled_at=gte.' + encodeURIComponent(nowIso) + '&status=in.(confirmed,manual)&select=id,scheduled_at,service_id,status&order=scheduled_at.asc&limit=1', { headers: apiHeaders() });
       const rows = await res.json();
       return Array.isArray(rows) && rows.length ? rows[0] : null;
     } catch (_) { return null; }
@@ -982,7 +982,7 @@
         body: JSON.stringify({ intervention_plan_id: plan.id, booking_id: booking.id, coach_id: coachId, client_email: clientEmail }),
       });
       const sp = await parseApiResponse(res, 'Session plan generation failed');
-      slot.innerHTML = renderSessionPlan(sp, _cachedClientDisplayName, booking.session_at);
+      slot.innerHTML = renderSessionPlan(sp, _cachedClientDisplayName, booking.scheduled_at);
       slot.scrollIntoView({ behavior: 'smooth', block: 'start' });
       // Wire regenerate + close buttons
       const regenBtn = slot.querySelector('.regen-session-plan');

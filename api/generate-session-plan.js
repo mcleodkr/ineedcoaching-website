@@ -215,7 +215,7 @@ async function fetchContext(SUPABASE_URL, SUPABASE_KEY, intervention_plan_id, bo
     fetch(`${SUPABASE_URL}/rest/v1/intervention_plans?id=eq.${intervention_plan_id}&select=*&limit=1`, { headers }),
     fetch(`${SUPABASE_URL}/rest/v1/coach_session_notes?client_email=eq.${enc}&post_session_analysis=not.is.null&select=booking_id,created_at,post_session_analysis&order=created_at.desc&limit=1`, { headers }),
     fetch(`${SUPABASE_URL}/rest/v1/coach_goals?coach_id=eq.${coach_id}&client_email=eq.${enc}&status=in.(active,progressing,stalled,blocked)&select=id,title,description,status,target_date`, { headers }),
-    fetch(`${SUPABASE_URL}/rest/v1/coach_bookings?id=eq.${booking_id}&select=id,session_at,duration_minutes,session_type&limit=1`, { headers }),
+    fetch(`${SUPABASE_URL}/rest/v1/coach_bookings?id=eq.${booking_id}&select=id,scheduled_at,service_id,status&limit=1`, { headers }),
     // Pre-session check-in attached to this booking (table name varies — try the canonical one used elsewhere)
     fetch(`${SUPABASE_URL}/rest/v1/coach_checkin_responses?client_email=eq.${enc}&booking_id=eq.${booking_id}&select=*&order=created_at.desc&limit=1`, { headers }),
     // Recent journal entries since last session — best-effort, table may not exist for all coaches
@@ -237,7 +237,11 @@ async function fetchContext(SUPABASE_URL, SUPABASE_KEY, intervention_plan_id, bo
     booking: Array.isArray(bookingRows) ? bookingRows[0] : null,
     checkin: Array.isArray(checkinRows) && checkinRows[0] ? checkinRows[0] : null,
     journal_entries: Array.isArray(journalRows) ? journalRows : [],
-    booking_duration_minutes: (Array.isArray(bookingRows) && bookingRows[0]?.duration_minutes) || 60,
+    // duration_minutes isn't a column on coach_bookings — duration lives on
+    // coach_services as a free-text field ("60 min") and isn't joined here.
+    // Default to 60 for the time_flow validator. Wire a proper service join
+    // in a follow-up if non-60-minute sessions become a real signal.
+    booking_duration_minutes: 60,
   };
 }
 
@@ -270,7 +274,7 @@ function buildUserPayload(ctx) {
     entry_text: (j.entry_text || '').slice(0, 600),
   }));
 
-  const sessionAt = ctx.booking?.session_at || null;
+  const sessionAt = ctx.booking?.scheduled_at || null;
   const sessionDateLabel = sessionAt ? new Date(sessionAt).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : 'upcoming';
 
   return `Generate a tactical session plan from the following inputs.
