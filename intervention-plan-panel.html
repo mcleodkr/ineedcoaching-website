@@ -969,9 +969,34 @@
 
   // Read-only lookup. Hits the partial unique index — at most one active row
   // per booking. Spreads coaching_data so the renderer has flat field access.
+  // Tolerates the migration-not-yet-applied state by falling back to a
+  // most-recent-generated_at lookup when archived_at filter 400s on missing
+  // column. Logs a clear hint so the next reader knows to run the migration.
   async function loadExistingSessionPlan(bookingId) {
     try {
       const res = await fetch(SUPABASE_URL + '/rest/v1/session_plans?booking_id=eq.' + encodeURIComponent(bookingId) + '&archived_at=is.null&select=*&limit=1', { headers: apiHeaders() });
+      if (res.ok) {
+        const rows = await res.json();
+        if (!Array.isArray(rows) || !rows.length) return null;
+        const row = rows[0];
+        return Object.assign({}, row, row.coaching_data || {});
+      }
+      const errBody = await res.text().catch(() => '');
+      if (res.status === 400 && /archived_at|column .* does not exist/i.test(errBody)) {
+        console.warn('[SessionPlan] archived_at column missing — apply migrations/20260425_session_plans_persistence.sql in the Supabase SQL Editor. Falling back to most-recent-generated_at lookup.');
+      } else {
+        console.error('[SessionPlan] read failed:', res.status, errBody.slice(0, 300));
+        return null;
+      }
+    } catch (e) {
+      console.error('[SessionPlan] read exception:', e);
+      return null;
+    }
+    // Fallback (pre-migration): no archived_at filter. Picks the most recent
+    // by generated_at. Will surface stale rows if duplicates exist — that's
+    // a deliberate trade-off vs. leaving the coach with no plan visible.
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/session_plans?booking_id=eq.' + encodeURIComponent(bookingId) + '&select=*&order=generated_at.desc&limit=1', { headers: apiHeaders() });
       if (!res.ok) return null;
       const rows = await res.json();
       if (!Array.isArray(rows) || !rows.length) return null;
@@ -1022,6 +1047,20 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(reqBody),
       });
+      // 409 = an active plan already exists for this booking. Treat that as
+      // "load the existing one" rather than an error — happens when the
+      // auto-load race is lost or a coach clicks the button on a stale view.
+      if (res.status === 409 && !revisionContext) {
+        const existing = await loadExistingSessionPlan(booking.id);
+        if (existing) {
+          const planBtn = document.querySelector('.plan-session-btn');
+          if (planBtn) planBtn.style.display = 'none';
+          slot.innerHTML = renderSessionPlan(existing, _cachedClientDisplayName, booking.scheduled_at);
+          wireSessionPlanCard(slot, booking, existing);
+          slot.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          return;
+        }
+      }
       const sp = await parseApiResponse(res, 'Session plan generation failed');
       const planBtn = document.querySelector('.plan-session-btn');
       if (planBtn) planBtn.style.display = 'none';

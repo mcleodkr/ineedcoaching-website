@@ -350,14 +350,42 @@ export default async function handler(req, res) {
     const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
 
     // Look up the prior active plan for this booking. The partial unique
-    // index allows at most one — Revise must archive it before INSERT.
+    // index allows at most one — Revise must archive it before INSERT,
+    // and a non-revision call must refuse if one already exists (otherwise
+    // we silently accumulate duplicates the way pre-chunk-6.5 did).
     let priorPlan = null;
-    if (revision_context) {
+    let priorLookupTolerated = false;
+    try {
       const priorRes = await fetch(`${SUPABASE_URL}/rest/v1/session_plans?booking_id=eq.${booking_id}&archived_at=is.null&select=id,coach_edits&limit=1`, {
         headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
       });
-      const priorRows = await priorRes.json().catch(() => []);
-      priorPlan = Array.isArray(priorRows) && priorRows[0] ? priorRows[0] : null;
+      if (priorRes.ok) {
+        const priorRows = await priorRes.json();
+        priorPlan = Array.isArray(priorRows) && priorRows[0] ? priorRows[0] : null;
+      } else {
+        const errBody = await priorRes.text().catch(() => '');
+        if (priorRes.status === 400 && /archived_at|column .* does not exist/i.test(errBody)) {
+          // Migration not yet applied. Tolerate so the endpoint still returns
+          // a plan, but skip the duplicate guard since we can't tell active
+          // from archived without the column.
+          console.warn('[SessionPlan] archived_at missing — apply migrations/20260425_session_plans_persistence.sql. Duplicate guard disabled until migration runs.');
+          priorLookupTolerated = true;
+        } else {
+          console.error('[SessionPlan] prior-plan lookup failed:', priorRes.status, errBody.slice(0, 300));
+        }
+      }
+    } catch (e) {
+      console.error('[SessionPlan] prior-plan lookup exception:', e.message);
+    }
+
+    // Non-revision request and an active plan already exists — refuse so the
+    // partial unique index never trips and the panel can prompt the coach
+    // toward Revise instead of silently creating a duplicate row.
+    if (!revision_context && priorPlan && !priorLookupTolerated) {
+      return res.status(409).json({
+        error: 'A session plan already exists for this booking. Use Revise with new context to update it, or Edit to modify fields directly.',
+        existing_plan_id: priorPlan.id,
+      });
     }
 
     console.log(`[SessionPlan] Generating for booking ${booking_id} on locked IP ${intervention_plan_id} — checkin: ${!!ctx.checkin}, journal: ${ctx.journal_entries.length}, goals: ${ctx.active_goals.length}, revision: ${!!revision_context}`);
