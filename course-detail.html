@@ -201,7 +201,9 @@ footer a { color: var(--gold); text-decoration: none; }
 <div id="course-page" style="display:none;">
 
   <!-- ENROLLMENT-REQUIRED BANNER (shown when classroom redirected here) -->
-  <div id="enroll-banner" style="display:none;background:linear-gradient(90deg,#fdf9f1 0%,#fbf8f1 100%);border-bottom:1px solid #c49a3c;padding:14px 24px;text-align:center;font-family:'DM Sans',sans-serif;font-size:0.92rem;color:#1a3a52;">
+  <!-- Positioned as a fixed stripe below the fixed top nav (~70px) so it -->
+  <!-- isn't hidden under the nav's z-index:300 layer. -->
+  <div id="enroll-banner" style="display:none;position:fixed;top:70px;left:0;right:0;z-index:200;background:linear-gradient(90deg,#fdf9f1 0%,#fbf8f1 100%);border-bottom:1px solid #c49a3c;padding:14px 24px;text-align:center;font-family:'DM Sans',sans-serif;font-size:0.92rem;color:#1a3a52;box-shadow:0 4px 12px rgba(15,25,38,0.06);">
     <strong style="color:#c49a3c;">Enroll to access this course.</strong> You'll get instant classroom access right after.
   </div>
 
