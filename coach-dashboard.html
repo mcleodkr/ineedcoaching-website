@@ -8961,6 +8961,7 @@ function renderCourseList() {
         + '<div class="prop-right">'
         + '<span class="prop-badge ' + statusBadge + '">' + escapeHtml(statusLabel) + '</span>'
         + '<div class="prop-actions">'
+        + '<a href="#" onclick="event.preventDefault();event.stopPropagation();renderCourseStudents(\'' + c.id + '\')" class="prop-btn prop-btn-edit" style="background:#1a3a52;color:#fff;border-color:#1a3a52;">Students</a>'
         + '<a href="#" onclick="event.preventDefault();event.stopPropagation();openCourseBuilder(\'' + c.id + '\')" class="prop-btn prop-btn-edit">Edit</a>'
         + '<button class="prop-btn prop-btn-delete" onclick="event.stopPropagation();deleteCourse(\'' + c.id + '\')">Delete</button>'
         + '</div>'
@@ -8980,6 +8981,103 @@ async function deleteCourse(id) {
     renderCourseList();
   } catch (e) { /* ignore */ }
 }
+
+/* ── COURSE STUDENTS VIEW ──
+   Shows enrollments for a single course with progress bars and status.
+   Coaches drill in via the "Students" button on each course card. */
+async function renderCourseStudents(courseId) {
+  var content = $('courses-content');
+  var course = (dashCourses || []).find(function(c) { return c.id === courseId; }) || {};
+  content.innerHTML = '<div class="loading-state" style="min-height:30vh;"><div class="loading-spinner"></div></div>';
+  try {
+    // Total lesson count for the course (denominator).
+    var lessonsRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?course_id=eq.' + courseId + '&select=id', { headers: apiHeaders() });
+    var lessons = await lessonsRes.json();
+    var totalLessons = Array.isArray(lessons) ? lessons.length : 0;
+
+    // Enrollments + per-enrollment completion counts.
+    var enrollRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_enrollments?course_id=eq.' + courseId + '&order=enrolled_at.desc&select=id,student_email,student_name,enrolled_at,completed_at,certificate_id', { headers: apiHeaders() });
+    var enrollments = await enrollRes.json();
+    if (!Array.isArray(enrollments)) enrollments = [];
+
+    // Fan out completion lookups in parallel.
+    await Promise.all(enrollments.map(async function(en) {
+      try {
+        var cRes = await fetch(SUPABASE_URL + '/rest/v1/coach_lesson_completions?enrollment_id=eq.' + en.id + '&select=id', { headers: apiHeaders() });
+        var comps = await cRes.json();
+        en._completed = Array.isArray(comps) ? comps.length : 0;
+      } catch (e) { en._completed = 0; }
+    }));
+
+    var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:12px;">'
+      + '<a href="#" onclick="event.preventDefault();renderCourseList()" style="font-size:0.78rem;color:var(--muted);text-decoration:none;">&larr; Back to Courses</a>'
+      + '<a href="#" onclick="event.preventDefault();openCourseBuilder(\'' + escapeHtml(courseId) + '\')" class="prop-new" style="font-size:0.8rem;">Edit course</a>'
+      + '</div>'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:600;color:#1a3a52;margin-bottom:2px;">' + escapeHtml(course.title || 'Course') + '</div>'
+      + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:var(--muted);margin-bottom:22px;">' + enrollments.length + ' enrolled student' + (enrollments.length === 1 ? '' : 's') + ' &middot; ' + totalLessons + ' lesson' + (totalLessons === 1 ? '' : 's') + '</div>';
+
+    if (enrollments.length === 0) {
+      var slug = course.slug || courseId;
+      var shareUrl = '/coach-courses.html?course=' + encodeURIComponent(slug);
+      html += '<div class="empty-state" style="background:var(--white);border:1px solid var(--border);border-radius:10px;padding:36px 28px;text-align:center;">'
+        + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;color:#1a3a52;margin-bottom:8px;">No students enrolled yet.</div>'
+        + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:var(--muted);margin-bottom:14px;">Share your course to start enrolling.</div>'
+        + '<a href="' + escapeHtml(shareUrl) + '" target="_blank" rel="noopener" style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:600;color:#c49a3c;text-decoration:none;">' + escapeHtml(shareUrl) + ' &rarr;</a>'
+        + '</div>';
+      content.innerHTML = html;
+      return;
+    }
+
+    html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden;">'
+      + '<div style="display:grid;grid-template-columns:1.6fr 1fr 1.4fr 1fr 0.6fr;gap:14px;padding:12px 18px;background:var(--cream);border-bottom:1px solid var(--border);font-family:\'DM Sans\',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);">'
+      +   '<div>Student</div><div>Enrolled</div><div>Progress</div><div>Status</div><div></div>'
+      + '</div>';
+
+    enrollments.forEach(function(en, idx) {
+      var name = en.student_name || (en.student_email ? en.student_email.split('@')[0] : '—');
+      var email = en.student_email || '';
+      var enrolledStr = en.enrolled_at ? new Date(en.enrolled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      var done = en._completed || 0;
+      var pct = totalLessons > 0 ? Math.round((done / totalLessons) * 100) : 0;
+      var statusLabel, statusColor;
+      if (en.completed_at) {
+        var compStr = new Date(en.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        statusLabel = 'Completed ' + compStr;
+        statusColor = 'background:#2d6a4f;color:#fff;';
+      } else if (done === 0) {
+        statusLabel = 'Not started';
+        statusColor = 'background:rgba(107,107,96,0.15);color:var(--muted);';
+      } else {
+        statusLabel = 'In progress';
+        statusColor = 'background:#c49a3c;color:#fff;';
+      }
+      var certCell = en.certificate_id
+        ? '<a href="/certificate.html?certificate_id=' + encodeURIComponent(en.certificate_id) + '" target="_blank" rel="noopener" style="font-size:0.74rem;font-weight:600;color:#c49a3c;text-decoration:none;">View cert &rarr;</a>'
+        : '';
+
+      html += '<div style="display:grid;grid-template-columns:1.6fr 1fr 1.4fr 1fr 0.6fr;gap:14px;padding:14px 18px;align-items:center;' + (idx > 0 ? 'border-top:1px solid var(--border);' : '') + 'font-family:\'DM Sans\',sans-serif;">'
+        +   '<div>'
+        +     '<div style="font-size:0.92rem;font-weight:600;color:#1a3a52;line-height:1.3;">' + escapeHtml(name) + '</div>'
+        +     (email && email.toLowerCase() !== name.toLowerCase() ? '<div style="font-size:0.74rem;color:var(--muted);margin-top:2px;">' + escapeHtml(email) + '</div>' : '')
+        +   '</div>'
+        +   '<div style="font-size:0.82rem;color:var(--muted);">' + escapeHtml(enrolledStr) + '</div>'
+        +   '<div>'
+        +     '<div style="font-size:0.78rem;color:var(--ink);margin-bottom:4px;">' + done + ' of ' + totalLessons + ' lessons</div>'
+        +     '<div style="height:6px;background:#eee;border-radius:50px;overflow:hidden;"><div style="height:100%;width:' + pct + '%;background:#c49a3c;border-radius:50px;transition:width 0.3s ease;"></div></div>'
+        +   '</div>'
+        +   '<div><span style="display:inline-block;font-size:0.7rem;font-weight:700;padding:4px 10px;border-radius:50px;letter-spacing:0.04em;text-transform:uppercase;' + statusColor + '">' + escapeHtml(statusLabel) + '</span></div>'
+        +   '<div style="text-align:right;">' + certCell + '</div>'
+        + '</div>';
+    });
+    html += '</div>';
+
+    content.innerHTML = html;
+  } catch (err) {
+    console.error('[CourseStudents] load error', err);
+    content.innerHTML = '<div class="empty-state"><p>We had trouble loading enrollments. Please refresh in a moment.</p></div>';
+  }
+}
+window.renderCourseStudents = renderCourseStudents;
 
 /* ── COURSE BUILDER ── */
 async function openCourseBuilder(courseId) {
@@ -9825,15 +9923,15 @@ async function cbLoadModuleLessons(modId) {
         // detail page. Now also used as a fallback in the classroom when
         // content is empty, so authors should treat this as student-facing.
         + '<div class="cb-field" style="margin-bottom:10px;">'
-        + '<label class="cb-label" style="font-size:0.72rem;letter-spacing:0.04em;color:#8a8a9a;text-transform:uppercase;font-weight:700;">Lesson summary</label>'
-        + '<div class="cb-hint" style="font-size:0.72rem;color:#9a9490;margin-bottom:6px;">Short overview shown on the public course page. Also used as the lesson body in the classroom if "Lesson body" below is left empty.</div>'
-        + '<textarea class="cb-input cb-lesson-autosave" data-lesson-id="' + l.id + '" data-lesson-field="description" data-mod-id="' + modId + '" placeholder="A few sentences summarizing this lesson..." style="font-size:0.82rem;min-height:50px;resize:vertical;">' + escapeHtml(l.description || '') + '</textarea>'
+        + '<label class="cb-label" style="font-size:0.72rem;letter-spacing:0.04em;color:#8a8a9a;text-transform:uppercase;font-weight:700;">Lesson summary <span style="color:#c49a3c;font-weight:400;text-transform:none;letter-spacing:0;font-size:0.7rem;">&middot; public page</span></label>'
+        + '<div class="cb-hint" style="font-size:0.72rem;color:#9a9490;margin-bottom:6px;">A one- or two-sentence preview shown on the public course detail page <em>before</em> students enroll. Optional. Falls back to lesson body in the classroom only if you leave that empty.</div>'
+        + '<textarea class="cb-input cb-lesson-autosave" data-lesson-id="' + l.id + '" data-lesson-field="description" data-mod-id="' + modId + '" placeholder="One or two sentences for the public course page..." style="font-size:0.82rem;min-height:50px;resize:vertical;">' + escapeHtml(l.description || '') + '</textarea>'
         + '</div>'
 
         // Content tabs — the full lesson body shown to students in the classroom.
         + '<div style="margin-bottom:10px;">'
-        + '<label class="cb-label" style="font-size:0.72rem;letter-spacing:0.04em;color:#8a8a9a;text-transform:uppercase;font-weight:700;">Lesson body</label>'
-        + '<div class="cb-hint" style="font-size:0.72rem;color:#9a9490;margin-bottom:8px;">Full content shown to enrolled students in the classroom. Pick one mode: write text, paste a video URL, or upload a file (PDF / video).</div>'
+        + '<label class="cb-label" style="font-size:0.72rem;letter-spacing:0.04em;color:#8a8a9a;text-transform:uppercase;font-weight:700;">Lesson body <span style="color:#c49a3c;font-weight:400;text-transform:none;letter-spacing:0;font-size:0.7rem;">&middot; classroom</span></label>'
+        + '<div class="cb-hint" style="font-size:0.72rem;color:#9a9490;margin-bottom:8px;">The actual lesson — what enrolled students see in the classroom. Pick one mode: <strong>Write</strong> for written text, <strong>Video</strong> for a YouTube / Vimeo / Zoom link, or <strong>Upload File</strong> for a PDF or video file.</div>'
         + '<div style="display:flex;gap:4px;margin-bottom:8px;">'
         + '<button onclick="cbLessonTab(\'' + l.id + '\',\'write\')" class="cb-lesson-tab' + (activeTab === 'write' ? ' active' : '') + '" id="lt-write-' + l.id + '">Write</button>'
         + '<button onclick="cbLessonTab(\'' + l.id + '\',\'video\')" class="cb-lesson-tab' + (activeTab === 'video' ? ' active' : '') + '" id="lt-video-' + l.id + '">Video</button>'

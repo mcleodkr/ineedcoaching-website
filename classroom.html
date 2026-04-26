@@ -656,6 +656,22 @@ function renderLessonView() {
       if (currentLessons[i].id === selectedLessonId) { sel = currentLessons[i]; break; }
     }
     if (sel) {
+      // Coach welcome message — surfaces once per session on the first lesson
+      // view. Captured in the Course Builder (coach_courses.welcome_message)
+      // but never shown to students before this. Dismissible via the close
+      // button; sessionStorage survives a refresh, returns next session.
+      var welcomeMsg = (course.welcome_message || '').trim();
+      var welcomeKey = 'cr_wm_seen_' + (currentEnrollment.id || '');
+      var welcomeSeen = false;
+      try { welcomeSeen = !!sessionStorage.getItem(welcomeKey); } catch (e) {}
+      if (welcomeMsg && !welcomeSeen) {
+        var coachName = coach.display_name || 'your coach';
+        html += '<div class="welcome-card" id="welcome-card" style="background:var(--cream);border:1px solid var(--gold);border-left:3px solid var(--gold);border-radius:10px;padding:20px 24px 18px;margin-bottom:20px;position:relative;">'
+          + '<button onclick="dismissWelcome(\'' + escapeHtml(welcomeKey) + '\')" aria-label="Dismiss" style="position:absolute;top:10px;right:12px;background:none;border:none;font-size:1.1rem;color:var(--muted);cursor:pointer;line-height:1;">&times;</button>'
+          + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">A welcome from ' + escapeHtml(coachName) + '</div>'
+          + '<div style="font-family:\'Cormorant Garamond\',serif;font-style:italic;font-size:1.1rem;line-height:1.55;color:var(--ink);white-space:pre-wrap;">' + escapeHtml(welcomeMsg) + '</div>'
+          + '</div>';
+      }
       html += '<h3>' + escapeHtml(sel.title) + '</h3>';
       if (sel.video_url) {
         // PDF handouts get uploaded to the same video_url field by the
@@ -777,6 +793,12 @@ async function toggleLesson(lessonId) {
   }
 
   renderLessonView();
+}
+
+function dismissWelcome(key) {
+  try { sessionStorage.setItem(key, '1'); } catch (e) {}
+  var card = document.getElementById('welcome-card');
+  if (card && card.parentNode) card.parentNode.removeChild(card);
 }
 
 async function generateCertificate() {

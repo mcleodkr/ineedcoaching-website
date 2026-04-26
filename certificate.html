@@ -3,184 +3,416 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Certificate of Completion</title>
+<title>Certificate of Completion — ineedcoaching.org</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,500;1,600&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap');
+:root {
+  --navy: #1a3a52;
+  --gold: #c49a3c;
+  --gold-soft: rgba(196, 154, 60, 0.35);
+  --cream: #f7f4ee;
+  --cream-warm: #fbf7ef;
+  --ink: #1a1a1a;
+  --muted: #6a6560;
+  --border: #e8e4dc;
+}
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Cabinet Grotesk', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #e8e8e8; padding: 40px 20px; }
-.cert { width: 800px; min-height: 560px; position: relative; }
-.print-bar { text-align: center; margin-bottom: 20px; }
-.print-btn { background: #1a3a52; color: white; border: none; padding: 10px 28px; border-radius: 50px; font-family: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; }
-@media print { .print-bar { display: none !important; } body { background: white; padding: 0; } .cert { width: 100%; } }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #efece4;
+  color: var(--ink);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 36px 20px 60px;
+}
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 22px;
+}
+.actions a, .actions button {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 50px;
+  padding: 10px 22px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+  border: 1px solid var(--navy);
+}
+.actions .btn-primary { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+.actions .btn-primary:hover { background: #b8862e; border-color: #b8862e; }
+.actions .btn-secondary { background: transparent; color: var(--navy); }
+.actions .btn-secondary:hover { background: var(--navy); color: #ffffff; }
+.note {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 22px;
+  max-width: 600px;
+  line-height: 1.5;
+}
 
-/* ═══ PRESTIGE ═══ */
-.prestige { background: #0e1a0e; padding: 48px; text-align: center; border: 3px solid rgba(196,154,60,0.3); }
-.prestige .inner { border: 1.5px solid rgba(196,154,60,0.2); padding: 40px 36px; }
-.prestige .star { width: 48px; height: 48px; border: 2px solid #c49a3c; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 1.4rem; color: #c49a3c; }
-.prestige .brand { font-size: 0.55rem; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: #c49a3c; margin-bottom: 16px; }
-.prestige .rule { height: 1px; background: linear-gradient(90deg, transparent, rgba(196,154,60,0.4), transparent); margin: 18px 0; }
-.prestige .pre { font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(196,154,60,0.5); margin-bottom: 8px; }
-.prestige .name { font-family: Georgia, serif; font-size: 26px; color: #f7f4ee; margin-bottom: 8px; }
-.prestige .course { font-size: 13px; color: #c49a3c; margin-bottom: 4px; }
-.prestige .coach { font-size: 0.65rem; color: rgba(247,244,238,0.4); margin-bottom: 4px; }
-.prestige .footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 24px; padding-top: 12px; }
-.prestige .sig { border-top: 1px solid rgba(196,154,60,0.3); width: 160px; padding-top: 6px; font-size: 0.6rem; color: rgba(247,244,238,0.35); }
-.prestige .meta { text-align: right; font-size: 0.55rem; color: rgba(247,244,238,0.3); line-height: 1.6; }
+.cert {
+  width: 100%;
+  max-width: 880px;
+  aspect-ratio: 1.414 / 1;
+  background: var(--cream);
+  border: 8px solid var(--navy);
+  position: relative;
+  padding: 28px;
+  box-shadow: 0 20px 60px rgba(15, 25, 38, 0.18);
+}
+.cert .inner {
+  width: 100%;
+  height: 100%;
+  border: 1.5px solid var(--gold);
+  padding: 56px 64px 48px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.cert .corner {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--gold);
+}
+.cert .corner-tl { top: -1.5px; left: -1.5px; border-right: none; border-bottom: none; }
+.cert .corner-tr { top: -1.5px; right: -1.5px; border-left: none; border-bottom: none; }
+.cert .corner-bl { bottom: -1.5px; left: -1.5px; border-right: none; border-top: none; }
+.cert .corner-br { bottom: -1.5px; right: -1.5px; border-left: none; border-top: none; }
 
-/* ═══ EDITORIAL ═══ */
-.editorial { background: white; overflow: hidden; }
-.editorial .top { background: #1a3a52; padding: 48px 48px 36px; text-align: center; }
-.editorial .tag { font-size: 0.55rem; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: #c49a3c; margin-bottom: 16px; }
-.editorial .name { font-family: Georgia, serif; font-size: 26px; color: #f7f4ee; line-height: 1.3; }
-.editorial .bottom { padding: 36px 48px 40px; }
-.editorial .label { font-size: 0.55rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #999; margin-bottom: 8px; }
-.editorial .course { font-size: 16px; font-weight: 700; color: #1a3a52; margin-bottom: 4px; }
-.editorial .coach { font-size: 0.78rem; color: #999; margin-bottom: 16px; }
-.editorial .gold-rule { width: 40px; height: 2px; background: #c49a3c; margin-bottom: 24px; }
-.editorial .footer { display: flex; justify-content: space-between; align-items: flex-end; }
-.editorial .sig { border-top: 1px solid #ddd; width: 160px; padding-top: 6px; font-size: 0.6rem; color: #999; }
-.editorial .meta { text-align: right; font-size: 0.55rem; color: #bbb; line-height: 1.6; }
+.brand {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-align: center;
+  margin-bottom: 28px;
+}
+.brand .lower { color: var(--navy); }
 
-/* ═══ GEOMETRIC ═══ */
-.geometric { background: #f7f4ee; position: relative; padding: 0; }
-.geometric .bar { height: 8px; background: #1a3a52; }
-.geometric .body { padding: 48px; position: relative; }
-.geometric .watermark { position: absolute; top: 60px; left: 48px; font-size: 36px; font-weight: 900; color: rgba(26,46,26,0.06); letter-spacing: 0.1em; text-transform: uppercase; pointer-events: none; }
-.geometric .dot { position: absolute; top: 28px; right: 48px; width: 12px; height: 12px; border-radius: 50%; background: #c49a3c; }
-.geometric .name { font-size: 22px; font-weight: 800; color: #1a3a52; margin-bottom: 12px; margin-top: 40px; }
-.geometric .text { font-size: 0.78rem; color: #888; line-height: 1.6; margin-bottom: 16px; }
-.geometric .badge { display: inline-block; background: #1a3a52; color: #c49a3c; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; padding: 5px 14px; border-radius: 50px; margin-bottom: 20px; }
-.geometric .course { font-size: 14px; font-weight: 700; color: #1a3a52; margin-bottom: 4px; }
-.geometric .coach { font-size: 0.75rem; color: #888; margin-bottom: 24px; }
-.geometric .footer { display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid #ddd; padding-top: 16px; }
-.geometric .sig { border-top: 1px solid #1a3a52; width: 160px; padding-top: 6px; font-size: 0.6rem; color: #888; }
-.geometric .meta { text-align: right; font-size: 0.55rem; color: #aaa; line-height: 1.6; }
+.seal {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: var(--gold);
+  margin: 0 auto 18px;
+  position: relative;
+}
+.seal::before, .seal::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 80px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold-soft));
+}
+.seal::before { right: 100%; margin-right: 12px; }
+.seal::after { left: 100%; margin-left: 12px; transform: scaleX(-1); }
 
-/* ═══ WARMTH ═══ */
-.warmth { background: white; display: flex; overflow: hidden; }
-.warmth .left-bar { width: 8px; background: #4a7c59; flex-shrink: 0; }
-.warmth .content { padding: 48px; flex: 1; }
-.warmth .brand { font-size: 0.55rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: #4a7c59; margin-bottom: 20px; }
-.warmth .pre { font-size: 0.72rem; color: #888; margin-bottom: 8px; }
-.warmth .name { font-family: Georgia, serif; font-size: 22px; color: #4a7c59; margin-bottom: 16px; }
-.warmth .label { font-size: 0.55rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #888; margin-bottom: 6px; }
-.warmth .course { font-size: 15px; font-weight: 700; color: #1a3a52; margin-bottom: 4px; }
-.warmth .cohort { font-size: 0.78rem; color: #4a7c59; margin-bottom: 20px; }
-.warmth .rule { height: 1px; background: #e0ddd5; margin-bottom: 24px; }
-.warmth .footer { display: flex; justify-content: space-between; align-items: flex-end; }
-.warmth .sig { border-top: 2px solid #4a7c59; width: 180px; padding-top: 8px; }
-.warmth .sig-name { font-size: 0.78rem; font-weight: 700; color: #1a3a52; }
-.warmth .sig-title { font-size: 0.6rem; color: #888; }
-.warmth .meta { text-align: right; font-size: 0.6rem; color: #aaa; line-height: 1.6; }
+.eyebrow {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 14px;
+}
+.title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.4rem;
+  font-weight: 600;
+  color: var(--navy);
+  text-align: center;
+  letter-spacing: 0.01em;
+  margin-bottom: 28px;
+  line-height: 1.15;
+}
+.presented {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 8px;
+  font-style: italic;
+}
+.student {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 2.4rem;
+  font-weight: 500;
+  color: var(--navy);
+  text-align: center;
+  line-height: 1.2;
+  margin-bottom: 20px;
+}
+.gold-rule {
+  width: 60px;
+  height: 2px;
+  background: var(--gold);
+  margin: 0 auto 22px;
+}
+.completion-text {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.92rem;
+  color: var(--ink);
+  text-align: center;
+  line-height: 1.6;
+  margin-bottom: 6px;
+}
+.course {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--navy);
+  text-align: center;
+  line-height: 1.25;
+  margin-bottom: 4px;
+}
+.with-coach {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.88rem;
+  color: var(--muted);
+  text-align: center;
+  font-style: italic;
+  margin-bottom: 28px;
+}
+.spacer { flex: 1; }
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+.sig {
+  flex: 0 0 auto;
+}
+.sig-line {
+  width: 200px;
+  border-top: 1.5px solid var(--navy);
+  padding-top: 8px;
+}
+.sig-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--navy);
+}
+.sig-role {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.meta {
+  text-align: right;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.65;
+}
+.meta strong { color: var(--ink); font-weight: 600; }
+
+.error-card {
+  max-width: 560px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-left: 3px solid #c44;
+  border-radius: 10px;
+  padding: 24px 28px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.92rem;
+  color: var(--ink);
+  line-height: 1.6;
+}
+.error-card h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 6px;
+}
+
+@media print {
+  body { background: #ffffff; padding: 0; }
+  .actions, .note { display: none !important; }
+  .cert { box-shadow: none; max-width: 100%; }
+}
+
+@media (max-width: 720px) {
+  .cert { aspect-ratio: auto; padding: 16px; }
+  .cert .inner { padding: 36px 28px 32px; }
+  .title { font-size: 1.8rem; }
+  .student { font-size: 1.8rem; }
+  .course { font-size: 1.25rem; }
+  .footer { flex-direction: column; align-items: stretch; gap: 16px; }
+  .meta { text-align: left; }
+}
 </style>
 </head>
 <body>
 
-<div class="print-bar"><button class="print-btn" onclick="window.print()">Print Certificate</button></div>
-<div class="cert" id="cert"></div>
+<div class="actions">
+  <button class="btn-primary" onclick="window.print()">Print certificate</button>
+  <button class="btn-secondary" onclick="downloadPdf()">Save as PDF</button>
+</div>
+<div class="note" id="note">A printable certificate of completion. To save as a PDF, choose "Save as PDF" as the destination in the print dialog.</div>
+
+<div id="cert-host"></div>
 
 <script>
-var params = new URLSearchParams(window.location.search);
-var template = params.get('template') || 'prestige';
-var student = params.get('student') || 'Student';
-var course = params.get('course') || 'Course';
-var coach = params.get('coach') || 'Coach';
-var date = params.get('date') || new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-var certId = params.get('id') || 'CERT-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+var SUPA = 'https://qroizygknxdjsstkezsf.supabase.co';
+var KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
 
-// Also try fetching from Supabase if id param is a UUID
-(async function() {
-  if (params.get('id') && params.get('id').includes('-')) {
-    try {
-      var SUPA = 'https://qroizygknxdjsstkezsf.supabase.co';
-      var KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
-      var res = await fetch(SUPA + '/rest/v1/coach_course_enrollments?certificate_id=eq.' + params.get('id') + '&select=*,coach_courses(title,certificate_template,coach_profiles(display_name))&limit=1', {
-        headers: { apikey: KEY, Authorization: 'Bearer ' + KEY }
-      });
-      var rows = await res.json();
-      if (rows && rows.length) {
-        var e = rows[0];
-        student = e.student_email ? e.student_email.split('@')[0] : student;
-        course = e.coach_courses ? e.coach_courses.title : course;
-        coach = e.coach_courses && e.coach_courses.coach_profiles ? e.coach_courses.coach_profiles.display_name : coach;
-        date = e.completed_at ? new Date(e.completed_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : date;
-        certId = e.certificate_id || certId;
-        template = e.coach_courses ? (e.coach_courses.certificate_template || template) : template;
-      }
-    } catch(err) {}
-  }
-  render();
-})();
+function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 
-function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-
-function render() {
-  var el = document.getElementById('cert');
-
-  if (template === 'prestige') {
-    el.innerHTML =
-      '<div class="prestige"><div class="inner">' +
-        '<div class="star">&#9733;</div>' +
-        '<div class="brand">ineedcoaching.org</div>' +
-        '<div class="rule"></div>' +
-        '<div class="pre">This certificate is presented to</div>' +
-        '<div class="name">' + esc(student) + '</div>' +
-        '<div class="pre">in recognition of completing</div>' +
-        '<div class="course">' + esc(course) + '</div>' +
-        '<div class="coach">with ' + esc(coach) + '</div>' +
-        '<div class="rule"></div>' +
-        '<div class="footer"><div class="sig">Signature</div><div class="meta">' + esc(date) + '<br>' + esc(certId) + '</div></div>' +
-      '</div></div>';
-  } else if (template === 'editorial') {
-    el.innerHTML =
-      '<div class="editorial">' +
-        '<div class="top">' +
-          '<div class="tag">Certificate of Completion</div>' +
-          '<div class="name">' + esc(student) + '</div>' +
-        '</div>' +
-        '<div class="bottom">' +
-          '<div class="label">Successfully completed</div>' +
-          '<div class="course">' + esc(course) + '</div>' +
-          '<div class="coach">with ' + esc(coach) + '</div>' +
-          '<div class="gold-rule"></div>' +
-          '<div class="footer"><div class="sig">Signature</div><div class="meta">' + esc(date) + '<br>' + esc(certId) + '</div></div>' +
-        '</div>' +
-      '</div>';
-  } else if (template === 'geometric') {
-    el.innerHTML =
-      '<div class="geometric">' +
-        '<div class="bar"></div>' +
-        '<div class="body">' +
-          '<div class="watermark">CERTIFICATE</div>' +
-          '<div class="dot"></div>' +
-          '<div class="name">' + esc(student) + '</div>' +
-          '<div class="text">Has successfully completed the following program and demonstrated commitment to personal and professional growth.</div>' +
-          '<div class="badge">ineedcoaching.org</div><br>' +
-          '<div class="course">' + esc(course) + '</div>' +
-          '<div class="coach">with ' + esc(coach) + '</div>' +
-          '<div class="footer"><div class="sig">Signature</div><div class="meta">Certificate ID: ' + esc(certId) + '<br>' + esc(date) + '</div></div>' +
-        '</div>' +
-      '</div>';
-  } else if (template === 'warmth') {
-    el.innerHTML =
-      '<div class="warmth">' +
-        '<div class="left-bar"></div>' +
-        '<div class="content">' +
-          '<div class="brand">ineedtherapy.org</div>' +
-          '<div class="pre">This certificate recognizes that</div>' +
-          '<div class="name">' + esc(student) + '</div>' +
-          '<div class="label">Completed</div>' +
-          '<div class="course">' + esc(course) + '</div>' +
-          '<div class="cohort">May 2026 Cohort</div>' +
-          '<div class="rule"></div>' +
-          '<div class="footer">' +
-            '<div class="sig"><div class="sig-name">Dr. Kimberly McLeod EdD LPC-A</div><div class="sig-title">Facilitator</div></div>' +
-            '<div class="meta">' + esc(date) + '<br>' + esc(certId) + '</div>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-  }
+function downloadPdf() {
+  // Browser print → "Save as PDF" is the most reliable cross-platform path
+  // and avoids shipping a heavy PDF library. The print stylesheet hides
+  // the action bar so the cert renders edge-to-edge in the PDF.
+  window.print();
 }
+
+function fallbackStudentName(emailOrName) {
+  if (!emailOrName) return 'Student';
+  var s = String(emailOrName);
+  if (s.indexOf('@') === -1) return s;
+  var local = s.split('@')[0] || 'Student';
+  return local.split(/[._-]+/).filter(Boolean).map(function(part) {
+    return part.charAt(0).toUpperCase() + part.slice(1);
+  }).join(' ');
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function renderCert(data) {
+  var host = document.getElementById('cert-host');
+  var student = data.student || 'Student';
+  var course = data.course || 'Course';
+  var coach = data.coach || 'Your coach';
+  var dateStr = data.date || '';
+  var certId = data.certId || '';
+
+  document.title = 'Certificate — ' + course;
+
+  host.innerHTML =
+    '<div class="cert" role="img" aria-label="Certificate of completion for ' + esc(student) + '">'
+    + '<div class="inner">'
+    +   '<div class="corner corner-tl"></div>'
+    +   '<div class="corner corner-tr"></div>'
+    +   '<div class="corner corner-bl"></div>'
+    +   '<div class="corner corner-br"></div>'
+    +   '<div class="brand">i<span class="lower">need</span><span>coaching</span><span class="lower">.org</span></div>'
+    +   '<div class="seal">&#9733;</div>'
+    +   '<div class="eyebrow">Certificate of Completion</div>'
+    +   '<div class="title">Awarded with care</div>'
+    +   '<div class="presented">This certificate is presented to</div>'
+    +   '<div class="student">' + esc(student) + '</div>'
+    +   '<div class="gold-rule"></div>'
+    +   '<div class="completion-text">in recognition of completing</div>'
+    +   '<div class="course">' + esc(course) + '</div>'
+    +   '<div class="with-coach">with ' + esc(coach) + '</div>'
+    +   '<div class="spacer"></div>'
+    +   '<div class="footer">'
+    +     '<div class="sig">'
+    +       '<div class="sig-line">'
+    +         '<div class="sig-name">' + esc(coach) + '</div>'
+    +         '<div class="sig-role">Facilitator</div>'
+    +       '</div>'
+    +     '</div>'
+    +     '<div class="meta">'
+    +       (dateStr ? '<div><strong>' + esc(dateStr) + '</strong></div>' : '')
+    +       (certId ? '<div>Certificate ID: ' + esc(certId) + '</div>' : '')
+    +       '<div>ineedcoaching.org</div>'
+    +     '</div>'
+    +   '</div>'
+    + '</div>'
+    + '</div>';
+}
+
+function renderError(headline, body) {
+  var host = document.getElementById('cert-host');
+  host.innerHTML = '<div class="error-card">'
+    + '<h2>' + esc(headline) + '</h2>'
+    + '<p>' + esc(body) + '</p>'
+    + '</div>';
+}
+
+(async function init() {
+  var params = new URLSearchParams(window.location.search);
+  // Support both ?id= (legacy) and ?certificate_id= (spec).
+  var certIdParam = params.get('certificate_id') || params.get('id') || '';
+  var preview = params.get('preview') === '1';
+
+  // Preview mode lets the coach see what a finished cert looks like before
+  // a real student completes the course.
+  if (preview || !certIdParam) {
+    renderCert({
+      student: params.get('student') || 'Sample Student',
+      course: params.get('course') || 'Course Title',
+      coach: params.get('coach') || 'Your Coach',
+      date: params.get('date') || formatDate(new Date().toISOString()),
+      certId: certIdParam || 'PREVIEW'
+    });
+    return;
+  }
+
+  try {
+    var url = SUPA + '/rest/v1/coach_course_enrollments'
+      + '?certificate_id=eq.' + encodeURIComponent(certIdParam)
+      + '&select=certificate_id,student_email,student_name,completed_at,coach_courses(title,coach_profiles(display_name,full_name))'
+      + '&limit=1';
+    var res = await fetch(url, { headers: { apikey: KEY, Authorization: 'Bearer ' + KEY } });
+    if (!res.ok) throw new Error('lookup ' + res.status);
+    var rows = await res.json();
+    if (!Array.isArray(rows) || rows.length === 0) {
+      renderError('Certificate not found', 'We could not find a certificate with that ID. If you completed the course recently, try refreshing the page in a moment.');
+      return;
+    }
+    var e = rows[0];
+    var c = e.coach_courses || {};
+    var p = c.coach_profiles || {};
+    renderCert({
+      student: e.student_name || fallbackStudentName(e.student_email),
+      course: c.title || 'Course',
+      coach: p.display_name || p.full_name || 'Your coach',
+      date: formatDate(e.completed_at) || formatDate(new Date().toISOString()),
+      certId: e.certificate_id || certIdParam
+    });
+  } catch (err) {
+    console.error('[Certificate] lookup error', err);
+    renderError('We had trouble loading your certificate', 'Please try again in a moment, or contact your coach if this keeps happening.');
+  }
+})();
 </script>
 </body>
 </html>
