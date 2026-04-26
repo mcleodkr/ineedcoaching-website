@@ -1530,6 +1530,90 @@ window.addClientGoal = addClientGoal;
 /* ================================================
    CHECK-INS
    ================================================ */
+// Mirror of coach-side dcMoodScore — same mapping so client + coach views
+// agree on how a mood string lands on the 1–5 sparkline.
+function dcMoodScoreClient(m) {
+  if (!m) return null;
+  const k = String(m).toLowerCase();
+  const map = { heavy: 1, exhausted: 1, tired: 2, okay: 3, steady: 3, bright: 4, thriving: 5 };
+  return map[k] != null ? map[k] : null;
+}
+
+function renderMoodSparkline(rows) {
+  // rows: explorer_checkins entries, any order, any age. We restrict to the
+  // last 14 days, sort oldest→newest, and skip rows whose mood isn't on the
+  // canonical scale.
+  const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+  const trend = (rows || [])
+    .filter(function(r) { return r && r.created_at && new Date(r.created_at) >= cutoff; })
+    .slice()
+    .sort(function(a, b) { return new Date(a.created_at) - new Date(b.created_at); })
+    .map(function(r) { return { score: dcMoodScoreClient(r.mood), date: r.created_at }; })
+    .filter(function(p) { return p.score != null; });
+
+  if (trend.length < 2) return '';
+  const w = 480, h = 90, padX = 8, padY = 12;
+  const stepX = (w - padX * 2) / Math.max(1, (trend.length - 1));
+  const path = trend.map(function(p, i) {
+    const x = padX + i * stepX;
+    const y = padY + (h - padY * 2) * (1 - (p.score - 1) / 4);
+    return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1);
+  }).join(' ');
+  const dots = trend.map(function(p, i) {
+    const x = padX + i * stepX;
+    const y = padY + (h - padY * 2) * (1 - (p.score - 1) / 4);
+    return '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="3" fill="#c49a3c"></circle>';
+  }).join('');
+  return '<div style="margin-bottom:18px;">'
+    + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#5a5560;margin-bottom:8px;">Your mood — last 14 days</div>'
+    + '<div class="card" style="padding:14px;">'
+    +   '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" style="width:100%;height:90px;display:block;">'
+    +     '<path d="' + path + '" fill="none" stroke="#1a3a52" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>'
+    +     dots
+    +   '</svg>'
+    +   '<div style="display:flex;justify-content:space-between;font-family:\'DM Sans\',sans-serif;font-size:0.7rem;color:#8a8580;margin-top:6px;">'
+    +     '<span>Heavy</span><span>Steady</span><span>Thriving</span>'
+    +   '</div>'
+    + '</div></div>';
+}
+
+function renderRecentOneWords(rows) {
+  const words = (rows || []).filter(function(r) { return r && r.one_word; }).slice(0, 7);
+  if (words.length === 0) return '';
+  let html = '<div style="margin-bottom:18px;">'
+    + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#5a5560;margin-bottom:8px;">Recent one-words</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+  words.forEach(function(r) {
+    const dt = r.created_at ? new Date(r.created_at) : null;
+    const dateStr = dt ? dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+    html += '<span style="display:inline-flex;align-items:baseline;gap:6px;background:var(--cream-warm);border:1px solid #edeae4;border-radius:50px;padding:6px 12px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:var(--navy);">'
+      + '<span style="font-weight:600;">' + escapeHtml(String(r.one_word)) + '</span>'
+      + '<span style="font-size:0.7rem;color:var(--muted);">' + escapeHtml(dateStr) + '</span>'
+      + '</span>';
+  });
+  html += '</div></div>';
+  return html;
+}
+
+function renderTodaysCheckin(rows) {
+  // Find a row whose created_at is on today's local date.
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  const today = (rows || []).find(function(r) {
+    if (!r || !r.created_at) return false;
+    return new Date(r.created_at) >= start;
+  });
+  if (!today) return '';
+  const mood = today.mood ? escapeHtml(String(today.mood)) : '';
+  const word = today.one_word ? escapeHtml(String(today.one_word)) : '';
+  return '<div style="background:linear-gradient(135deg,var(--cream-warm) 0%,#fbf9f3 100%);border:1px solid var(--gold);border-left:3px solid var(--gold);border-radius:var(--r);padding:18px 22px;margin-bottom:18px;">'
+    + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">Today\'s check-in</div>'
+    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.35rem;color:var(--navy);font-weight:600;line-height:1.3;">'
+    +   (mood ? mood : 'Captured')
+    +   (word ? ' <span style="color:var(--muted);font-weight:400;">&middot;</span> <em style="font-style:italic;">' + word + '</em>' : '')
+    + '</div>'
+    + '</div>';
+}
+
 async function loadCheckins() {
   const container = $('checkins-content');
   container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
@@ -1557,11 +1641,37 @@ async function loadCheckins() {
     } else if (completed.length === 0) {
       html += '<div class="checkin-empty">'
         + '<div class="icon">&#10022;</div>'
-        + '<p>A small daily moment — mood, one word, a pattern you\'re noticing. Your check-ins will gather here as you go.</p>'
+        + '<p>Your daily check-ins help you and your coach track patterns. A small moment — mood, one word, a pattern you\'re noticing — gathers here as you go.</p>'
         + '</div>';
     }
 
     if (completed.length > 0) {
+      // Mirror of coach-side panel: today first, then trend, words, pattern
+      // feed, then full accordion of past reflections.
+      html += renderTodaysCheckin(completed);
+      html += renderMoodSparkline(completed);
+      html += renderRecentOneWords(completed);
+
+      const patternRows = completed.filter(function(r) { return r && r.pattern_response; });
+      if (patternRows.length > 0) {
+        html += '<div style="margin-bottom:22px;">'
+          + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#5a5560;margin-bottom:8px;">Pattern reflections</div>'
+          + '<div class="card" style="max-height:340px;overflow-y:auto;padding:0;">';
+        patternRows.forEach(function(r, idx) {
+          const dt = r.created_at ? new Date(r.created_at) : null;
+          const dateStr = dt ? dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+          const ref = r.pattern_referenced || '';
+          html += '<div style="padding:14px 16px;' + (idx > 0 ? 'border-top:1px solid var(--border);' : '') + '">'
+            + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">'
+            +   '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.74rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">' + escapeHtml(dateStr) + '</span>'
+            +   (ref ? '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;background:#fdf2da;color:#8a6a1c;padding:3px 9px;border-radius:50px;">' + escapeHtml(ref) + '</span>' : '')
+            + '</div>'
+            + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.92rem;color:var(--navy);line-height:1.6;white-space:pre-wrap;">' + escapeHtml(String(r.pattern_response)) + '</div>'
+            + '</div>';
+        });
+        html += '</div></div>';
+      }
+
       html += '<div class="section-header">Past reflections</div>';
       completed.forEach(function(c, idx) {
         const dt = formatDate(c.created_at || c.completed_at);
@@ -1830,50 +1940,76 @@ function toggleAccordion(idx) {
 window.toggleAccordion = toggleAccordion;
 
 /* ================================================
-   MESSAGES
+   MESSAGES — bidirectional, client compose at top
    ================================================ */
 async function loadMessages() {
   const container = $('messages-content');
   container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   try {
+    // Resolve assigned coach. Prefer the in-memory values populated by
+    // loadSessions; fall back to the cached booking lookup so the compose
+    // surface still works for clients who landed on Messages first.
+    let coachId = currentCoachId || await getAssignedCoachId();
+    let coachName = currentCoachName || '';
+
     const res = await fetch(SUPABASE_URL + '/rest/v1/coach_messages?client_email=eq.' + encodeURIComponent(currentEmail) + '&order=created_at.asc&select=*,coach_profiles:coach_id(display_name,full_name)', {
       headers: apiHeaders()
     });
-    const data = await res.json();
-    if (!Array.isArray(data) || data.length === 0) {
-      container.innerHTML = '<div class="empty"><p>No messages yet. After your first session, this becomes a quiet line between you and your coach.</p></div>';
+    let data = [];
+    if (res.ok) data = await res.json();
+    if (!Array.isArray(data)) data = [];
+
+    // Top up coach name/id from the thread itself if loadSessions hasn't run.
+    for (let i = 0; i < data.length; i++) {
+      if (data[i].coach_profiles && !coachName) {
+        coachName = data[i].coach_profiles.display_name || data[i].coach_profiles.full_name || '';
+      }
+      if (data[i].coach_id && !coachId) coachId = data[i].coach_id;
+    }
+    if (!coachName) coachName = 'Your coach';
+
+    // No assigned coach AND no thread → friendly placeholder, no compose.
+    if (!coachId && data.length === 0) {
+      container.innerHTML = '<div class="empty"><p>You\'ll be able to message your coach after your first booking.</p></div>';
       return;
     }
 
-    // Determine coach name + coach_id for replies
-    let coachName = 'Your coach';
-    let coachId = null;
-    for (let i = 0; i < data.length; i++) {
-      if (data[i].coach_profiles) {
-        coachName = data[i].coach_profiles.display_name || data[i].coach_profiles.full_name || coachName;
-      }
-      if (data[i].coach_id) coachId = data[i].coach_id;
+    let html = '<div class="card">'
+      + '<h3>Conversation with ' + escapeHtml(coachName) + '</h3>';
+
+    // Compose surface at top — only when we have a coach to send to.
+    if (coachId) {
+      html += '<div class="compose" style="margin-bottom:14px;">'
+        +   '<textarea id="msg-input" placeholder="Write a note to your coach..."></textarea>'
+        +   '<button class="btn btn-primary" id="msg-send-btn" type="button">Send</button>'
+        + '</div>'
+        + '<div class="compose-note" id="msg-compose-note">Your coach will respond at their next availability.</div>';
     }
 
-    let html = '<div class="card"><h3>Conversation with ' + escapeHtml(coachName) + '</h3><div class="message-thread" id="msg-thread">';
-    data.forEach(function(m) {
-      if (!m) return;
-      const isMe = m.sender === 'client' || m.sender_email === currentEmail;
-      const body = m.message || m.body || m.content || '';
-      const t = formatDateTime(m.created_at);
-      html += '<div class="msg ' + (isMe ? 'me' : 'them') + '">'
-        + '<div class="bubble">' + escapeHtml(body) + '</div>'
-        + '<div class="time">' + escapeHtml(t) + '</div>'
-        + '</div>';
-    });
+    if (data.length > 0) {
+      html += '<div class="message-thread" id="msg-thread" style="margin-top:14px;">';
+      data.forEach(function(m) {
+        if (!m) return;
+        const isMe = m.sender === 'client' || (m.sender_email && m.sender_email.toLowerCase() === currentEmail);
+        const body = m.message || m.body || m.content || '';
+        const t = formatDateTime(m.created_at);
+        html += '<div class="msg ' + (isMe ? 'me' : 'them') + '">'
+          + '<div class="bubble">' + escapeHtml(body) + '</div>'
+          + '<div class="time">' + escapeHtml(t) + '</div>'
+          + '</div>';
+      });
+      html += '</div>';
+    } else {
+      html += '<div class="empty" style="margin-top:14px;background:var(--cream-warm);border:1px solid var(--border);border-radius:var(--r-sm);padding:18px 22px;"><p style="font-style:italic;color:var(--muted);margin:0;">No messages yet. Say hello when you\'re ready.</p></div>';
+    }
     html += '</div>';
-    html += '<div class="compose">'
-      + '<textarea id="msg-input" placeholder="Write a note to your coach..."></textarea>'
-      + '<button class="btn btn-primary" onclick="sendMessage(\'' + escapeHtml(coachId || '') + '\')">Send</button>'
-      + '</div>'
-      + '<div class="compose-note">Your coach will respond at their next availability.</div>'
-      + '</div>';
+
     container.innerHTML = html;
+
+    if (coachId) {
+      const btn = document.getElementById('msg-send-btn');
+      if (btn) btn.addEventListener('click', function() { sendMessage(coachId); });
+    }
     const thread = $('msg-thread');
     if (thread) thread.scrollTop = thread.scrollHeight;
   } catch (err) {
@@ -1884,28 +2020,43 @@ async function loadMessages() {
 
 async function sendMessage(coachId) {
   const input = $('msg-input');
+  const note = $('msg-compose-note');
+  const btn = $('msg-send-btn');
   if (!input) return;
   const text = input.value.trim();
   if (!text) return;
+  // If somehow we got here without a coachId, retry the lookup.
+  if (!coachId) coachId = await getAssignedCoachId();
+  if (!coachId) {
+    if (note) { note.textContent = 'We couldn\'t find your assigned coach yet — try again after your first booking is confirmed.'; note.style.color = '#c44'; }
+    return;
+  }
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
   try {
+    const senderName = (clientProfile && (clientProfile.display_name || clientProfile.full_name || clientProfile.name)) || null;
     const payload = {
       client_email: currentEmail,
+      coach_id: coachId,
       sender: 'client',
+      sender_email: currentEmail,
+      sender_name: senderName,
       message: text,
+      is_read: false,
       created_at: new Date().toISOString()
     };
-    if (coachId) payload.coach_id = coachId;
     const res = await fetch(SUPABASE_URL + '/rest/v1/coach_messages', {
       method: 'POST',
       headers: Object.assign({}, apiHeaders(), { 'Prefer': 'return=minimal' }),
       body: JSON.stringify(payload)
     });
-    if (!res.ok) throw new Error('Send failed');
+    if (!res.ok) throw new Error('Send failed ' + res.status);
     input.value = '';
+    if (note) { note.textContent = 'Sent. Your coach will respond at their next availability.'; note.style.color = ''; }
     loadMessages();
   } catch (err) {
     console.error('[Messages] send error:', err);
-    alert('We had trouble sending that. Please try again.');
+    if (note) { note.textContent = 'We had trouble sending that. Please try again in a moment.'; note.style.color = '#c44'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Send'; }
   }
 }
 window.sendMessage = sendMessage;
@@ -1942,8 +2093,8 @@ async function loadMyCourses() {
       const coachName = coach.display_name || coach.full_name || 'Your coach';
       const completed = !!e.completed_at;
       const thumbHtml = thumb
-        ? '<div style="aspect-ratio:16/9;background:#1a2e1a center/cover no-repeat url(\'' + escapeHtml(thumb) + '\');border-radius:10px 10px 0 0;"></div>'
-        : '<div style="aspect-ratio:16/9;background:linear-gradient(135deg,#1a2e1a 0%,#2c4a2c 100%);border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:center;color:#c49a3c;font-family:\'Cormorant Garamond\',serif;font-size:1.4rem;font-style:italic;">' + escapeHtml(title) + '</div>';
+        ? '<div style="aspect-ratio:16/9;background:var(--navy) center/cover no-repeat url(\'' + escapeHtml(thumb) + '\');border-radius:10px 10px 0 0;"></div>'
+        : '<div style="aspect-ratio:16/9;background:linear-gradient(135deg,var(--navy) 0%,#2c5170 100%);border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:center;padding:14px;color:var(--gold);font-family:\'Cormorant Garamond\',serif;font-size:1.4rem;font-style:italic;text-align:center;line-height:1.25;">' + escapeHtml(title) + '</div>';
       const ctaLabel = completed ? 'Revisit' : 'Continue';
       html += '<div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column;">'
         + thumbHtml
