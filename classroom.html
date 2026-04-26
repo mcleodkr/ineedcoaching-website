@@ -126,6 +126,70 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
   .lesson-content-area .lesson-video iframe { height: 220px; }
   .login-card { padding: 32px 24px; }
 }
+
+/* ── CE TRACKER (right column, coach-only) ──────────────────────── */
+.classroom-grid { display: grid; grid-template-columns: 1fr; gap: 32px; }
+.classroom-grid.has-tracker { grid-template-columns: minmax(0, 1fr) 320px; }
+.ce-tracker { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 24px; height: fit-content; position: sticky; top: 90px; }
+.ce-tracker h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--ink); margin-bottom: 4px; }
+.ce-tracker .ce-sub { font-size: 0.78rem; color: var(--muted); margin-bottom: 18px; }
+.ce-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+.ce-stats .stat-card { background: var(--cream); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px 14px; }
+.ce-stats .stat-card.full { grid-column: span 2; }
+.ce-stats .stat-num { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700; color: var(--ink); line-height: 1.1; }
+.ce-stats .stat-label { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+.ce-progress { margin-bottom: 18px; }
+.ce-progress-row { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--ink); margin-bottom: 4px; }
+.ce-progress-row .pr-label { color: var(--muted); }
+.ce-progress-bar { background: var(--border); border-radius: 50px; height: 6px; overflow: hidden; margin-bottom: 12px; }
+.ce-progress-fill { height: 100%; border-radius: 50px; background: var(--forest); transition: width 0.4s; }
+.ce-log-list { max-height: 300px; overflow-y: auto; border-top: 1px solid var(--border); margin-top: 8px; }
+.ce-log-item { padding: 10px 0; border-bottom: 1px solid var(--border); }
+.ce-log-item:last-child { border-bottom: none; }
+.ce-log-title { font-size: 0.85rem; font-weight: 600; color: var(--ink); line-height: 1.4; margin-bottom: 4px; }
+.ce-log-meta { font-size: 0.72rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ce-badge { display: inline-block; padding: 2px 8px; border-radius: 50px; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.ce-badge.platform { background: rgba(74,124,89,0.15); color: var(--forest); }
+.ce-badge.external { background: rgba(107,107,96,0.15); color: var(--muted); }
+.ce-badge.cat { background: rgba(196,154,60,0.15); color: var(--gold); }
+.ce-add-btn { width: 100%; padding: 12px 16px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: background 0.2s; margin-top: 14px; }
+.ce-add-btn:hover { background: var(--gold-hover); }
+.ce-empty { font-size: 0.82rem; color: var(--muted); font-style: italic; padding: 14px 0; text-align: center; }
+
+/* ── REFLECTION SURFACE (below video in lesson view) ────────────── */
+.reflection-surface { margin-top: 28px; padding: 22px; background: var(--cream); border: 1px solid var(--border); border-radius: var(--r); }
+.reflection-surface h4 { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--ink); margin-bottom: 6px; }
+.reflection-prompt { font-family: 'Playfair Display', serif; font-style: italic; font-size: 1rem; color: var(--ink); line-height: 1.55; margin-bottom: 12px; }
+.reflection-privacy { font-size: 0.74rem; color: var(--muted); margin-bottom: 10px; }
+.reflection-textarea { width: 100%; min-height: 120px; padding: 14px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.92rem; line-height: 1.6; color: var(--ink); background: var(--white); resize: vertical; transition: border-color 0.2s; }
+.reflection-textarea:focus { outline: none; border-color: var(--gold); }
+.reflection-actions { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.reflection-save-btn { padding: 10px 22px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+.reflection-save-btn:hover { background: var(--gold-hover); }
+.reflection-save-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.reflection-confirm { font-size: 0.78rem; color: var(--forest); }
+
+/* ── ADD-HOURS MODAL ────────────────────────────────────────────── */
+.ce-modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); z-index: 500; align-items: center; justify-content: center; padding: 20px; }
+.ce-modal-overlay.open { display: flex; }
+.ce-modal { background: var(--white); border-radius: var(--r); padding: 32px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; }
+.ce-modal h3 { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--ink); margin-bottom: 6px; }
+.ce-modal .modal-sub { font-size: 0.85rem; color: var(--muted); margin-bottom: 20px; }
+.ce-modal label { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; margin-top: 14px; }
+.ce-modal input[type="text"], .ce-modal input[type="date"], .ce-modal input[type="number"], .ce-modal textarea { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem; color: var(--ink); background: var(--cream); }
+.ce-modal input:focus, .ce-modal textarea:focus { outline: none; border-color: var(--gold); }
+.ce-modal .radio-row { display: flex; gap: 16px; margin-top: 4px; }
+.ce-modal .radio-row label { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--ink); margin: 0; cursor: pointer; }
+.ce-modal .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+.ce-modal .btn-cancel { padding: 10px 20px; background: none; color: var(--muted); border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; cursor: pointer; }
+.ce-modal .btn-submit { padding: 10px 22px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; font-weight: 700; cursor: pointer; }
+.ce-modal .btn-submit:disabled { opacity: 0.55; cursor: not-allowed; }
+.ce-modal .modal-error { font-size: 0.82rem; color: #c44; margin-top: 12px; min-height: 18px; }
+
+@media (max-width: 900px) {
+  .classroom-grid.has-tracker { grid-template-columns: 1fr; }
+  .ce-tracker { position: static; }
+}
 </style>
 <style data-MOBILE_NAV_HAMBURGER_v1>
 /* Mobile hamburger nav */
@@ -209,16 +273,51 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
     <div id="courses-view">
       <h1>My Courses</h1>
       <p class="subtitle">Pick up where you left off.</p>
-      <div id="courses-loading" class="loading-state" style="min-height:30vh;">
-        <div class="loading-spinner"></div>
-      </div>
-      <div id="courses-grid" class="course-grid" style="display:none;"></div>
-      <div id="courses-empty" class="empty-state" style="display:none;">
-        <p>You haven't enrolled in any courses yet.<br><a href="/coach-courses.html">Browse courses</a></p>
+      <div id="classroom-grid-wrap" class="classroom-grid">
+        <div>
+          <div id="courses-loading" class="loading-state" style="min-height:30vh;">
+            <div class="loading-spinner"></div>
+          </div>
+          <div id="courses-grid" class="course-grid" style="display:none;"></div>
+          <div id="courses-empty" class="empty-state" style="display:none;">
+            <p>You haven't enrolled in any courses yet.<br><a href="/coach-courses.html">Browse courses</a></p>
+          </div>
+        </div>
+        <aside id="ce-tracker" class="ce-tracker" style="display:none;"></aside>
       </div>
     </div>
 
     <div id="lesson-view" class="lesson-view"></div>
+  </div>
+</div>
+
+<!-- ADD EXTERNAL HOURS MODAL -->
+<div id="ce-modal-overlay" class="ce-modal-overlay">
+  <div class="ce-modal">
+    <h3>Add external CE hours</h3>
+    <p class="modal-sub">Log hours from events, courses, or training delivered outside this platform.</p>
+    <label for="ce-event-name">Event name *</label>
+    <input type="text" id="ce-event-name" placeholder="ICF Annual Conference, Coaching Skills Workshop, etc.">
+    <label for="ce-event-date">Date *</label>
+    <input type="date" id="ce-event-date">
+    <label for="ce-hours">Hours *</label>
+    <input type="number" id="ce-hours" min="0.25" max="100" step="0.25" placeholder="1.5">
+    <label>Category *</label>
+    <div class="radio-row">
+      <label><input type="radio" name="ce-category" value="core_competencies" checked> Core Competencies</label>
+      <label><input type="radio" name="ce-category" value="resource_development"> Resource Development</label>
+    </div>
+    <label for="ce-provider">Provider</label>
+    <input type="text" id="ce-provider" placeholder="ICF, Coaches Training Institute, etc.">
+    <label for="ce-notes">Notes</label>
+    <textarea id="ce-notes" rows="2" placeholder="Optional context about this entry"></textarea>
+    <label for="ce-cert-file">Certificate (PDF, JPG, PNG — optional)</label>
+    <input type="file" id="ce-cert-file" accept="application/pdf,image/jpeg,image/png" style="background:transparent;border:none;padding:0;font-size:0.85rem;">
+    <div class="modal-error" id="ce-modal-error"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="ce-modal-cancel">Cancel</button>
+      <button class="btn-submit" id="ce-modal-submit">Save hours</button>
+    </div>
   </div>
 </div>
 
@@ -234,6 +333,14 @@ var currentEnrollment = null;
 var currentLessons = [];
 var currentCompletions = [];
 var selectedLessonId = null;
+// Coach identity resolution — populated in init() after auth completes.
+// isCoach = true means this signed-in email matches a coach_profiles row,
+// which gates the CE tracker UI and the auto-log on lesson completion.
+var isCoach = false;
+var coachProfile = null;
+// Cached CE log rows (this coach's full history). Drives the right-column
+// stat cards + log list. Refreshed after auto-log and after manual add.
+var ceHoursLog = [];
 
 function $(id) { return document.getElementById(id); }
 
@@ -340,7 +447,38 @@ async function init() {
   $('classroom').style.display = 'block';
   $('nav-email').textContent = currentUser.email;
 
+  // Resolve isCoach via coach_profiles.user_email — same column the
+  // dashboard, intervention plan panel, and Coach Mirror all use.
+  // (Verified column name in coach-mirror-panel.html:360 + pattern-map-panel.html:196.)
+  await resolveIsCoach();
+
+  // CE tracker is the right column on the courses-view. Render once
+  // up front; loadCEHoursLog populates the stats and log list.
+  if (isCoach) {
+    $('classroom-grid-wrap').classList.add('has-tracker');
+    $('ce-tracker').style.display = '';
+    await loadCEHoursLog();
+    renderCETracker();
+    wireCEModal();
+  }
+
   loadEnrollments();
+}
+
+async function resolveIsCoach() {
+  if (!currentUser || !currentUser.email) return;
+  var email = (currentUser.email || '').toLowerCase();
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles?user_email=eq.' + encodeURIComponent(email) + '&select=id,display_name,slug&limit=1', {
+      headers: apiHeaders()
+    });
+    if (!res.ok) return;
+    var rows = await res.json();
+    if (Array.isArray(rows) && rows.length) {
+      coachProfile = rows[0];
+      isCoach = true;
+    }
+  } catch (e) { /* non-fatal — coach UI just won't render */ }
 }
 
 /* LOAD ENROLLMENTS */
@@ -367,7 +505,7 @@ async function loadEnrollments() {
   for (var i = 0; i < enrollments.length; i++) {
     var en = enrollments[i];
     try {
-      var lessonsRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?course_id=eq.' + en.course_id + '&select=id&order=sort_order.asc', {
+      var lessonsRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?course_id=eq.' + en.course_id + '&select=id&order=order_index.asc', {
         headers: apiHeaders()
       });
       var lessons = await lessonsRes.json();
@@ -431,7 +569,7 @@ async function openCourse(enrollmentId) {
 
   // Fetch lessons
   try {
-    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?course_id=eq.' + currentEnrollment.course_id + '&order=sort_order.asc&select=*', {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?course_id=eq.' + currentEnrollment.course_id + '&order=order_index.asc&select=*', {
       headers: apiHeaders()
     });
     currentLessons = await res.json();
@@ -450,6 +588,10 @@ async function openCourse(enrollmentId) {
   } catch (e) {
     currentCompletions = [];
   }
+
+  // Load reflections for this enrollment so prompts can prefill on the
+  // lesson view. Empty map if the table is missing or query fails.
+  await loadReflectionsForEnrollment();
 
   renderLessonView();
 }
@@ -516,6 +658,9 @@ function renderLessonView() {
       if (sel.content) {
         html += '<div class="lesson-html">' + sel.content + '</div>';
       }
+      // Reflection surface — only renders when the lesson has a prompt.
+      // Lessons without a prompt show no surface at all per the spec.
+      html += renderReflectionSurface(sel);
     }
   } else {
     html += '<div class="no-lesson-selected">Select a lesson from the sidebar to begin.</div>';
@@ -539,6 +684,13 @@ function renderLessonView() {
   var view = $('lesson-view');
   view.innerHTML = html;
   view.classList.add('open');
+
+  // Wire reflection save buttons (only present when current lesson has a prompt).
+  view.querySelectorAll('.reflection-save-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      saveReflection(this.dataset.lessonId);
+    });
+  });
 }
 
 function selectLesson(lessonId) {
@@ -586,6 +738,14 @@ async function toggleLesson(lessonId) {
         currentCompletions.push(data[0]);
       }
     } catch (e) { /* ignore */ }
+
+    // Auto-log CE hours when the marker is a coach AND the course is
+    // CCE-eligible. Idempotent via the unique index in the migration.
+    var lessonRow = null;
+    for (var li = 0; li < currentLessons.length; li++) {
+      if (currentLessons[li].id === lessonId) { lessonRow = currentLessons[li]; break; }
+    }
+    if (lessonRow) await autoLogCEHours(lessonRow);
   }
 
   renderLessonView();
@@ -613,6 +773,328 @@ async function generateCertificate() {
   } catch (e) {
     alert('Error generating certificate. Please try again.');
   }
+}
+
+/* ── CE TRACKER (right-column, coach-only) ─────────────────────── */
+
+async function loadCEHoursLog() {
+  if (!coachProfile) return;
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_ce_hours_log?coach_id=eq.' + coachProfile.id + '&select=*&order=event_date.desc,created_at.desc', {
+      headers: apiHeaders()
+    });
+    if (!res.ok) { ceHoursLog = []; return; }
+    var rows = await res.json();
+    ceHoursLog = Array.isArray(rows) ? rows : [];
+  } catch (e) { ceHoursLog = []; }
+}
+
+function ceFormatDate(iso) {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch (e) { return iso; }
+}
+
+function renderCETracker() {
+  if (!isCoach) return;
+  var totalHours = 0, coreHours = 0, rdHours = 0;
+  ceHoursLog.forEach(function(r) {
+    var h = parseFloat(r.hours) || 0;
+    totalHours += h;
+    if (r.category === 'core_competencies') coreHours += h;
+    else if (r.category === 'resource_development') rdHours += h;
+  });
+  // ICF CCE renewal target: 40 hours total, minimum 24 of which must be Core Competencies.
+  var totalPct = Math.min(100, Math.round((totalHours / 40) * 100));
+  var corePct = Math.min(100, Math.round((coreHours / 24) * 100));
+
+  var html = '';
+  html += '<h3>CE Hours</h3>';
+  html += '<div class="ce-sub">Track Continuing Coach Education toward ICF renewal.</div>';
+
+  html += '<div class="ce-stats">';
+  html += '<div class="stat-card full"><div class="stat-num">' + totalHours.toFixed(2).replace(/\.00$/, '') + '</div><div class="stat-label">Total hours</div></div>';
+  html += '<div class="stat-card"><div class="stat-num">' + coreHours.toFixed(2).replace(/\.00$/, '') + '</div><div class="stat-label">Core comp.</div></div>';
+  html += '<div class="stat-card"><div class="stat-num">' + rdHours.toFixed(2).replace(/\.00$/, '') + '</div><div class="stat-label">Resource dev.</div></div>';
+  html += '</div>';
+
+  html += '<div class="ce-progress">';
+  html += '<div class="ce-progress-row"><span class="pr-label">Total / 40 target</span><span>' + totalHours.toFixed(2).replace(/\.00$/, '') + ' / 40</span></div>';
+  html += '<div class="ce-progress-bar"><div class="ce-progress-fill" style="width:' + totalPct + '%"></div></div>';
+  html += '<div class="ce-progress-row"><span class="pr-label">Core / 24 minimum</span><span>' + coreHours.toFixed(2).replace(/\.00$/, '') + ' / 24</span></div>';
+  html += '<div class="ce-progress-bar"><div class="ce-progress-fill" style="width:' + corePct + '%;background:var(--gold)"></div></div>';
+  html += '</div>';
+
+  html += '<div class="ce-log-list">';
+  if (ceHoursLog.length === 0) {
+    html += '<div class="ce-empty">No hours logged yet.</div>';
+  } else {
+    ceHoursLog.slice(0, 10).forEach(function(r) {
+      var srcLabel = r.source === 'platform_auto' ? 'Platform' : 'External';
+      var srcClass = r.source === 'platform_auto' ? 'platform' : 'external';
+      var catLabel = r.category === 'core_competencies' ? 'Core comp.' : 'Resource dev.';
+      html += '<div class="ce-log-item">';
+      html += '<div class="ce-log-title">' + escapeHtml(r.event_name || '—') + '</div>';
+      html += '<div class="ce-log-meta">';
+      html += '<span>' + ceFormatDate(r.event_date) + '</span>';
+      html += '<span>· ' + (parseFloat(r.hours) || 0).toFixed(2).replace(/\.00$/, '') + ' hrs</span>';
+      html += '<span class="ce-badge cat">' + catLabel + '</span>';
+      html += '<span class="ce-badge ' + srcClass + '">' + srcLabel + '</span>';
+      html += '</div>';
+      html += '</div>';
+    });
+  }
+  html += '</div>';
+
+  html += '<button class="ce-add-btn" id="ce-add-btn">+ Add external hours</button>';
+
+  $('ce-tracker').innerHTML = html;
+  var addBtn = $('ce-add-btn');
+  if (addBtn) addBtn.addEventListener('click', openCEModal);
+}
+
+function openCEModal() {
+  $('ce-event-name').value = '';
+  $('ce-event-date').valueAsDate = new Date();
+  $('ce-hours').value = '';
+  $('ce-provider').value = '';
+  $('ce-notes').value = '';
+  $('ce-cert-file').value = '';
+  $('ce-modal-error').textContent = '';
+  document.querySelector('input[name="ce-category"][value="core_competencies"]').checked = true;
+  $('ce-modal-overlay').classList.add('open');
+  setTimeout(function() { $('ce-event-name').focus(); }, 50);
+}
+
+function closeCEModal() { $('ce-modal-overlay').classList.remove('open'); }
+
+function wireCEModal() {
+  $('ce-modal-cancel').addEventListener('click', closeCEModal);
+  $('ce-modal-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeCEModal();
+  });
+  $('ce-modal-submit').addEventListener('click', submitCEModal);
+}
+
+async function uploadCertificate(file) {
+  // Path convention matches the storage RLS policy in the migration:
+  //   <coach_id>/<random>.<ext>
+  // RLS lets a coach read/write only files under their own coach_id folder.
+  if (!file || !coachProfile) return null;
+  var ext = (file.name || '').split('.').pop().toLowerCase();
+  if (!['pdf','jpg','jpeg','png'].includes(ext)) ext = 'pdf';
+  var rand = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(36).slice(2));
+  var path = coachProfile.id + '/' + rand + '.' + ext;
+  try {
+    var res = await fetch(SUPABASE_URL + '/storage/v1/object/ce-certificates/' + path, {
+      method: 'POST',
+      headers: {
+        'apikey': ANON_KEY,
+        'Authorization': 'Bearer ' + currentToken,
+        'Content-Type': file.type || 'application/octet-stream'
+      },
+      body: file
+    });
+    if (!res.ok) return null;
+    // Store the storage path; viewers can resolve to a signed URL on click.
+    return 'ce-certificates/' + path;
+  } catch (e) { return null; }
+}
+
+async function submitCEModal() {
+  var nameVal = $('ce-event-name').value.trim();
+  var dateVal = $('ce-event-date').value;
+  var hoursVal = parseFloat($('ce-hours').value);
+  var category = (document.querySelector('input[name="ce-category"]:checked') || {}).value || 'core_competencies';
+  var provider = $('ce-provider').value.trim();
+  var notes = $('ce-notes').value.trim();
+  var fileEl = $('ce-cert-file');
+  var file = fileEl && fileEl.files && fileEl.files[0] ? fileEl.files[0] : null;
+
+  var err = $('ce-modal-error');
+  err.textContent = '';
+  if (!nameVal) { err.textContent = 'Event name is required.'; return; }
+  if (!dateVal) { err.textContent = 'Date is required.'; return; }
+  if (!hoursVal || hoursVal <= 0 || hoursVal > 100) { err.textContent = 'Hours must be between 0.25 and 100.'; return; }
+
+  var btn = $('ce-modal-submit');
+  btn.disabled = true; btn.textContent = 'Saving...';
+
+  var certUrl = null;
+  if (file) {
+    certUrl = await uploadCertificate(file);
+    if (!certUrl) {
+      err.textContent = 'Certificate upload failed. Try again or save without it.';
+      btn.disabled = false; btn.textContent = 'Save hours';
+      return;
+    }
+  }
+
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_ce_hours_log', {
+      method: 'POST',
+      headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
+      body: JSON.stringify({
+        coach_id: coachProfile.id,
+        source: 'manual',
+        hours: hoursVal,
+        category: category,
+        event_date: dateVal,
+        event_name: nameVal,
+        provider: provider || null,
+        notes: notes || null,
+        certificate_url: certUrl
+      })
+    });
+    if (!res.ok) {
+      var detail = '';
+      try { var j = await res.json(); detail = j.message || ''; } catch (e) {}
+      err.textContent = 'Save failed' + (detail ? ': ' + detail : '');
+      btn.disabled = false; btn.textContent = 'Save hours';
+      return;
+    }
+    closeCEModal();
+    await loadCEHoursLog();
+    renderCETracker();
+  } catch (e) {
+    err.textContent = 'Network error. Try again.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save hours';
+  }
+}
+
+/* ── REFLECTION SURFACE (lesson view) ──────────────────────────── */
+
+var lessonReflectionMap = {}; // lesson_id → reflection row (cached per course load)
+
+async function loadReflectionsForEnrollment() {
+  if (!currentEnrollment) return;
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_reflections?enrollment_id=eq.' + currentEnrollment.id + '&select=*', {
+      headers: apiHeaders()
+    });
+    var rows = await res.json();
+    lessonReflectionMap = {};
+    (Array.isArray(rows) ? rows : []).forEach(function(r) {
+      if (r && r.lesson_id) lessonReflectionMap[r.lesson_id] = r;
+    });
+  } catch (e) { lessonReflectionMap = {}; }
+}
+
+function renderReflectionSurface(lesson) {
+  if (!lesson || !lesson.reflection_prompt) return '';
+  var existing = lessonReflectionMap[lesson.id];
+  var existingText = existing ? (existing.reflection_text || '') : '';
+  var btnLabel = existing ? 'Update reflection' : 'Save reflection';
+  var html = '';
+  html += '<div class="reflection-surface" id="reflection-surface-' + escapeHtml(lesson.id) + '">';
+  html += '<h4>Reflection</h4>';
+  html += '<div class="reflection-prompt">' + escapeHtml(lesson.reflection_prompt) + '</div>';
+  html += '<div class="reflection-privacy">Your reflections are private to you and the course author.</div>';
+  html += '<textarea class="reflection-textarea" id="reflection-text-' + escapeHtml(lesson.id) + '" placeholder="Write your reflection here...">' + escapeHtml(existingText) + '</textarea>';
+  html += '<div class="reflection-actions">';
+  html += '<button class="reflection-save-btn" data-lesson-id="' + escapeHtml(lesson.id) + '">' + btnLabel + '</button>';
+  html += '<span class="reflection-confirm" id="reflection-confirm-' + escapeHtml(lesson.id) + '"></span>';
+  html += '</div>';
+  html += '</div>';
+  return html;
+}
+
+async function saveReflection(lessonId) {
+  if (!currentEnrollment || !lessonId) return;
+  var ta = $('reflection-text-' + lessonId);
+  if (!ta) return;
+  var text = ta.value.trim();
+  if (!text) return;
+  var btn = document.querySelector('.reflection-save-btn[data-lesson-id="' + lessonId + '"]');
+  var confirmEl = $('reflection-confirm-' + lessonId);
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+  try {
+    var existing = lessonReflectionMap[lessonId];
+    var url, method, body;
+    if (existing && existing.id) {
+      url = SUPABASE_URL + '/rest/v1/coach_course_reflections?id=eq.' + existing.id;
+      method = 'PATCH';
+      body = JSON.stringify({ reflection_text: text });
+    } else {
+      url = SUPABASE_URL + '/rest/v1/coach_course_reflections';
+      method = 'POST';
+      // Find the lesson's prompt for the reflection_prompt snapshot.
+      var lessonRow = null;
+      for (var i = 0; i < currentLessons.length; i++) {
+        if (currentLessons[i].id === lessonId) { lessonRow = currentLessons[i]; break; }
+      }
+      body = JSON.stringify({
+        enrollment_id: currentEnrollment.id,
+        lesson_id: lessonId,
+        student_email: (currentUser.email || '').toLowerCase(),
+        reflection_prompt: lessonRow ? (lessonRow.reflection_prompt || null) : null,
+        reflection_text: text
+      });
+    }
+    var res = await fetch(url, {
+      method: method,
+      headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
+      body: body
+    });
+    if (!res.ok) throw new Error('save failed');
+    var rows = await res.json();
+    if (Array.isArray(rows) && rows.length) lessonReflectionMap[lessonId] = rows[0];
+    if (btn) btn.textContent = 'Update reflection';
+    if (confirmEl) {
+      confirmEl.textContent = '✓ Saved';
+      setTimeout(function() { if (confirmEl) confirmEl.textContent = ''; }, 3000);
+    }
+  } catch (e) {
+    if (confirmEl) confirmEl.textContent = 'Save failed';
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+/* ── CE AUTO-LOG (on lesson mark-complete) ─────────────────────── */
+
+async function autoLogCEHours(lesson) {
+  // Gating per the spec: only log when the signed-in user is a coach AND
+  // the course is flagged CCE-eligible AND has positive hours per lesson.
+  // Idempotency is enforced by uniq_ce_hours_platform_auto in the DB; this
+  // function attempts the insert and treats unique-violation 409 as success.
+  if (!isCoach || !coachProfile) return;
+  var course = (currentEnrollment && currentEnrollment.coach_courses) || {};
+  if (!course.cce_eligible) return;
+  var perLesson = parseFloat(course.cce_hours_per_lesson);
+  if (!perLesson || perLesson <= 0) return;
+  if (!course.cce_category) return;
+
+  var coachName = (course.coach_profiles && (course.coach_profiles.display_name || course.coach_profiles.full_name)) || 'Course author';
+  var eventName = (course.title || 'Course') + ' — ' + (lesson.title || 'Lesson');
+  var today = new Date().toISOString().slice(0, 10);
+
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_ce_hours_log', {
+      method: 'POST',
+      headers: { ...apiHeaders(), 'Prefer': 'return=representation,resolution=ignore-duplicates' },
+      body: JSON.stringify({
+        coach_id: coachProfile.id,
+        source: 'platform_auto',
+        hours: perLesson,
+        category: course.cce_category,
+        event_date: today,
+        event_name: eventName,
+        provider: coachName,
+        course_id: course.id,
+        lesson_id: lesson.id,
+        enrollment_id: currentEnrollment.id
+      })
+    });
+    // 201 = inserted, 200 with empty array = ignored duplicate (idempotent).
+    // Either is fine.
+    if (res.ok) {
+      await loadCEHoursLog();
+      renderCETracker();
+    }
+  } catch (e) { /* non-fatal — completion succeeds even if CE log fails */ }
 }
 
 init();

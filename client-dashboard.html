@@ -1628,7 +1628,7 @@ async function loadCourses() {
         + '<div class="course-progress"><div class="bar" style="width:' + pct + '%"></div></div>'
         + '<div class="progress-text">' + done + ' of ' + total + ' lessons</div>'
         + '</div>'
-        + '<a href="/course-view.html?id=' + escapeHtml(c.id || e.course_id || '') + '" class="btn btn-primary btn-sm">Continue</a>'
+        + '<a href="/course-detail.html?id=' + escapeHtml(c.id || e.course_id || '') + '" class="btn btn-primary btn-sm">Continue</a>'
         + '</div></div>';
     });
     container.innerHTML = html;

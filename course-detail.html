@@ -293,17 +293,43 @@ function apiHeaders(token) {
 
 var courseData = null;
 
+async function getLoggedInEmail() {
+  var token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return null;
+  try {
+    var res = await fetch(SUPABASE_URL + '/auth/v1/user', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) return null;
+    var u = await res.json();
+    return (u.email || '').toLowerCase();
+  } catch (e) { return null; }
+}
+
 async function loadCourse() {
   var params = new URLSearchParams(window.location.search);
   var slug = params.get('slug');
-  if (!slug) {
+  var courseId = params.get('id');
+  var isPreview = params.get('preview') === 'true';
+
+  if (!slug && !courseId) {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('error').style.display = 'block';
     return;
   }
 
   try {
-    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_courses?slug=eq.' + encodeURIComponent(slug) + '&select=*,coach_profiles(display_name,slug,photo_url,headline)', {
+    var url;
+    if (courseId) {
+      // Course Builder preview path + client dashboard "Continue" link both
+      // pass id. Embed user_email so we can verify ownership for drafts.
+      url = SUPABASE_URL + '/rest/v1/coach_courses?id=eq.' + encodeURIComponent(courseId)
+        + '&select=*,coach_profiles(display_name,slug,photo_url,headline,user_email)';
+    } else {
+      url = SUPABASE_URL + '/rest/v1/coach_courses?slug=eq.' + encodeURIComponent(slug)
+        + '&select=*,coach_profiles(display_name,slug,photo_url,headline,user_email)';
+    }
+    var res = await fetch(url, {
       headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
     });
     var data = await res.json();
@@ -313,18 +339,46 @@ async function loadCourse() {
       return;
     }
     courseData = data[0];
-    renderCourse();
+
+    // Draft preview: only the course's own coach can view a draft. Anyone
+    // else gets the same not-found state as a missing course.
+    if (courseData.status === 'draft' || isPreview) {
+      var ownerEmail = ((courseData.coach_profiles && courseData.coach_profiles.user_email) || '').toLowerCase();
+      var viewerEmail = await getLoggedInEmail();
+      if (!viewerEmail || viewerEmail !== ownerEmail) {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('error').style.display = 'block';
+        return;
+      }
+    }
+
+    // Strip user_email before rendering so it never reaches DOM.
+    if (courseData.coach_profiles) delete courseData.coach_profiles.user_email;
+
+    renderCourse(isPreview || courseData.status === 'draft');
   } catch (e) {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('error').style.display = 'block';
   }
 }
 
-function renderCourse() {
+function renderCourse(isDraft) {
   var c = courseData;
   var coach = c.coach_profiles;
 
   document.title = (c.title || 'Course') + ' — ineedcoaching.org';
+
+  // Preview banner for draft courses (only the owning coach reaches this branch).
+  if (isDraft) {
+    var pageEl = document.getElementById('course-page');
+    if (pageEl && !document.getElementById('preview-banner')) {
+      var banner = document.createElement('div');
+      banner.id = 'preview-banner';
+      banner.style.cssText = 'position:fixed;top:54px;left:0;right:0;z-index:250;background:var(--gold);color:var(--ink);text-align:center;padding:10px 24px;font-size:0.82rem;font-weight:700;letter-spacing:0.02em;';
+      banner.textContent = 'Preview mode — this course is not yet published. Only you can see this.';
+      pageEl.prepend(banner);
+    }
+  }
 
   // Hero
   var formatMap = { 'self-paced': 'Self-paced', 'cohort': 'Cohort', 'masterclass': 'Masterclass' };

@@ -1052,6 +1052,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
     <button class="tab-btn" data-tab="goals">Goals</button>
     <div class="dash-group">Your Work</div>
     <button class="tab-btn" data-tab="coach-dna">Coach DNA</button>
+    <button class="tab-btn" data-tab="ce-hours">My CE Hours</button>
     <button class="tab-btn" data-tab="articles">Draft Articles</button>
     <button class="tab-btn" data-tab="courses">Courses</button>
     <div class="dash-group">Business</div>
@@ -1626,6 +1627,14 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       <div id="dna-content" class="hidden"></div>
     </div>
 
+    <!-- MY CE HOURS TAB -->
+    <div id="tab-ce-hours" class="tab-panel">
+      <div id="ce-hours-loading" class="loading-state" style="min-height:30vh;">
+        <div class="loading-spinner" style="border-top-color:var(--gold);"></div>
+      </div>
+      <div id="ce-hours-content" class="hidden"></div>
+    </div>
+
     <!-- COURSES TAB -->
     <div id="tab-courses" class="tab-panel">
       <div id="courses-loading" class="loading-state" style="min-height:30vh;">
@@ -2166,6 +2175,10 @@ function setupTabs() {
       if (btn.dataset.tab === 'coach-dna' && !btn._loaded) {
         btn._loaded = true;
         loadCoachDNA();
+      }
+      if (btn.dataset.tab === 'ce-hours' && !btn._loaded) {
+        btn._loaded = true;
+        loadCoachCeHours();
       }
       if (btn.dataset.tab === 'courses' && !btn._loaded) {
         btn._loaded = true;
@@ -8605,6 +8618,271 @@ var courseData = {};
 var courseObjectives = [];
 var courseModules = [];
 
+/* ── MY CE HOURS TAB ─────────────────────────────────────────── */
+// Same data + UX as the classroom right-column tracker (Sub-group E),
+// but full-width on the dashboard for managing CE history outside any
+// single course context. Driven entirely by coach_ce_hours_log RLS —
+// only the coach's own rows return.
+
+var ceHoursState = { rows: [], page: 0, perPage: 25 };
+
+async function loadCoachCeHours() {
+  var loading = $('ce-hours-loading');
+  var content = $('ce-hours-content');
+  if (loading) loading.style.display = 'flex';
+  if (content) content.classList.add('hidden');
+
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_ce_hours_log?coach_id=eq.' + coachProfile.id + '&select=*&order=event_date.desc,created_at.desc', {
+      headers: apiHeaders()
+    });
+    var rows = res.ok ? await res.json() : [];
+    ceHoursState.rows = Array.isArray(rows) ? rows : [];
+    ceHoursState.page = 0;
+  } catch (e) {
+    ceHoursState.rows = [];
+  }
+
+  if (loading) loading.style.display = 'none';
+  if (content) content.classList.remove('hidden');
+  renderCoachCeHours();
+}
+
+function ceFmtDate(iso) {
+  if (!iso) return '';
+  try { return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); } catch (e) { return iso; }
+}
+function ceTrim(n) { var f = parseFloat(n) || 0; return f.toFixed(2).replace(/\.00$/, ''); }
+
+function renderCoachCeHours() {
+  var rows = ceHoursState.rows;
+  var totalHours = 0, coreHours = 0, rdHours = 0;
+  rows.forEach(function(r) {
+    var h = parseFloat(r.hours) || 0;
+    totalHours += h;
+    if (r.category === 'core_competencies') coreHours += h;
+    else if (r.category === 'resource_development') rdHours += h;
+  });
+  var totalPct = Math.min(100, Math.round((totalHours / 40) * 100));
+  var corePct = Math.min(100, Math.round((coreHours / 24) * 100));
+
+  var html = '';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">'
+    + '<div>'
+    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:700;color:#1a3a52;">My CE Hours</div>'
+    + '<div style="font-size:0.82rem;color:#9a9490;">Continuing Coach Education tracker · ICF renewal target 40 hours (24 minimum Core Competencies)</div>'
+    + '</div>'
+    + '<button id="ce-page-add-btn" style="padding:10px 20px;background:#c49a3c;color:#fff;border:none;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer;">+ Add external hours</button>'
+    + '</div>';
+
+  // Stat cards
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px;">';
+  html += '<div style="background:#fff;border:1px solid #edeae4;border-radius:8px;padding:16px 18px;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:1.6rem;font-weight:700;color:#1a3a52;line-height:1.1;">' + ceTrim(totalHours) + '</div><div style="font-size:0.7rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#8a8a9a;margin-top:4px;">Total hours</div></div>';
+  html += '<div style="background:#fff;border:1px solid #edeae4;border-radius:8px;padding:16px 18px;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:1.6rem;font-weight:700;color:#1a3a52;line-height:1.1;">' + ceTrim(coreHours) + '</div><div style="font-size:0.7rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#8a8a9a;margin-top:4px;">Core competencies</div></div>';
+  html += '<div style="background:#fff;border:1px solid #edeae4;border-radius:8px;padding:16px 18px;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:1.6rem;font-weight:700;color:#1a3a52;line-height:1.1;">' + ceTrim(rdHours) + '</div><div style="font-size:0.7rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#8a8a9a;margin-top:4px;">Resource development</div></div>';
+  html += '</div>';
+
+  // Progress bars
+  html += '<div style="background:#fff;border:1px solid #edeae4;border-radius:8px;padding:16px 18px;margin-bottom:20px;">';
+  html += '<div style="display:flex;justify-content:space-between;font-size:0.82rem;color:#1a3a52;margin-bottom:4px;"><span style="color:#8a8a9a;">Total / 40 target</span><span>' + ceTrim(totalHours) + ' / 40</span></div>';
+  html += '<div style="background:#edeae4;border-radius:50px;height:8px;overflow:hidden;margin-bottom:14px;"><div style="height:100%;border-radius:50px;background:#4a7c59;width:' + totalPct + '%;transition:width 0.4s;"></div></div>';
+  html += '<div style="display:flex;justify-content:space-between;font-size:0.82rem;color:#1a3a52;margin-bottom:4px;"><span style="color:#8a8a9a;">Core competencies / 24 minimum</span><span>' + ceTrim(coreHours) + ' / 24</span></div>';
+  html += '<div style="background:#edeae4;border-radius:50px;height:8px;overflow:hidden;"><div style="height:100%;border-radius:50px;background:#c49a3c;width:' + corePct + '%;transition:width 0.4s;"></div></div>';
+  html += '</div>';
+
+  // Hours log table (paginated)
+  var pageStart = ceHoursState.page * ceHoursState.perPage;
+  var pageRows = rows.slice(pageStart, pageStart + ceHoursState.perPage);
+  var totalPages = Math.max(1, Math.ceil(rows.length / ceHoursState.perPage));
+
+  html += '<div style="background:#fff;border:1px solid #edeae4;border-radius:8px;overflow:hidden;">';
+  html += '<div style="padding:14px 18px;border-bottom:1px solid #edeae4;display:flex;justify-content:space-between;align-items:center;">';
+  html += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:700;color:#1a3a52;">Hours log</div>';
+  html += '<div style="font-size:0.78rem;color:#8a8a9a;">' + rows.length + ' total ' + (rows.length === 1 ? 'entry' : 'entries') + '</div>';
+  html += '</div>';
+  if (rows.length === 0) {
+    html += '<div style="padding:40px 18px;text-align:center;font-size:0.88rem;color:#8a8a9a;font-style:italic;">No hours logged yet. Use "+ Add external hours" or complete a CCE-eligible course lesson to start tracking.</div>';
+  } else {
+    pageRows.forEach(function(r) {
+      var srcLabel = r.source === 'platform_auto' ? 'Platform' : 'External';
+      var srcColor = r.source === 'platform_auto' ? '#4a7c59' : '#8a8a9a';
+      var srcBg = r.source === 'platform_auto' ? 'rgba(74,124,89,0.15)' : 'rgba(107,107,96,0.15)';
+      var catLabel = r.category === 'core_competencies' ? 'Core comp.' : 'Resource dev.';
+      html += '<div style="padding:14px 18px;border-bottom:1px solid #edeae4;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;">';
+      html += '<div style="flex:1;min-width:240px;">';
+      html += '<div style="font-size:0.92rem;font-weight:600;color:#1a3a52;line-height:1.4;margin-bottom:4px;">' + escapeHtml(r.event_name || '—') + '</div>';
+      html += '<div style="font-size:0.76rem;color:#8a8a9a;">' + ceFmtDate(r.event_date) + (r.provider ? ' · ' + escapeHtml(r.provider) : '') + '</div>';
+      if (r.notes) html += '<div style="font-size:0.78rem;color:#5a5560;font-style:italic;margin-top:4px;">' + escapeHtml(r.notes) + '</div>';
+      html += '</div>';
+      html += '<div style="display:flex;align-items:center;gap:10px;">';
+      html += '<span style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:700;color:#1a3a52;">' + ceTrim(r.hours) + ' hrs</span>';
+      html += '<span style="display:inline-block;padding:3px 10px;border-radius:50px;font-size:0.65rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;background:rgba(196,154,60,0.15);color:#c49a3c;">' + catLabel + '</span>';
+      html += '<span style="display:inline-block;padding:3px 10px;border-radius:50px;font-size:0.65rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;background:' + srcBg + ';color:' + srcColor + ';">' + srcLabel + '</span>';
+      html += '</div>';
+      html += '</div>';
+    });
+    if (totalPages > 1) {
+      html += '<div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;">';
+      html += '<button id="ce-page-prev" ' + (ceHoursState.page === 0 ? 'disabled' : '') + ' style="padding:6px 14px;background:none;border:1px solid #edeae4;border-radius:6px;font-family:inherit;font-size:0.82rem;cursor:pointer;' + (ceHoursState.page === 0 ? 'opacity:0.5;' : '') + '">← Prev</button>';
+      html += '<span style="color:#8a8a9a;">Page ' + (ceHoursState.page + 1) + ' of ' + totalPages + '</span>';
+      html += '<button id="ce-page-next" ' + (ceHoursState.page >= totalPages - 1 ? 'disabled' : '') + ' style="padding:6px 14px;background:none;border:1px solid #edeae4;border-radius:6px;font-family:inherit;font-size:0.82rem;cursor:pointer;' + (ceHoursState.page >= totalPages - 1 ? 'opacity:0.5;' : '') + '">Next →</button>';
+      html += '</div>';
+    }
+  }
+  html += '</div>';
+
+  $('ce-hours-content').innerHTML = html;
+
+  // Wire interactive elements.
+  var addBtn = $('ce-page-add-btn');
+  if (addBtn) addBtn.addEventListener('click', openCePageModal);
+  var prevBtn = $('ce-page-prev');
+  if (prevBtn) prevBtn.addEventListener('click', function() { ceHoursState.page = Math.max(0, ceHoursState.page - 1); renderCoachCeHours(); });
+  var nextBtn = $('ce-page-next');
+  if (nextBtn) nextBtn.addEventListener('click', function() { ceHoursState.page = Math.min(totalPages - 1, ceHoursState.page + 1); renderCoachCeHours(); });
+}
+
+// Reuses the modal markup defined inline below this function. The modal
+// is appended to body on first open so it's always available regardless
+// of which tab the coach is on.
+function ensureCePageModal() {
+  if (document.getElementById('ce-page-modal')) return;
+  var overlay = document.createElement('div');
+  overlay.id = 'ce-page-modal';
+  overlay.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:600;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML = '<div style="background:#fff;border-radius:14px;padding:32px;max-width:500px;width:100%;max-height:90vh;overflow-y:auto;font-family:\'DM Sans\',sans-serif;">'
+    + '<h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.3rem;color:#1a3a52;margin-bottom:6px;">Add external CE hours</h3>'
+    + '<p style="font-size:0.85rem;color:#8a8a9a;margin-bottom:20px;">Log hours from events, courses, or training delivered outside this platform.</p>'
+    + '<label style="display:block;font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;">Event name *</label>'
+    + '<input type="text" id="cep-name" style="width:100%;padding:10px 14px;border:1px solid #edeae4;border-radius:8px;font-family:inherit;font-size:0.9rem;color:#1a3a52;background:#f7f4ee;margin-bottom:12px;">'
+    + '<label style="display:block;font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;">Date *</label>'
+    + '<input type="date" id="cep-date" style="width:100%;padding:10px 14px;border:1px solid #edeae4;border-radius:8px;font-family:inherit;font-size:0.9rem;color:#1a3a52;background:#f7f4ee;margin-bottom:12px;">'
+    + '<label style="display:block;font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;">Hours *</label>'
+    + '<input type="number" id="cep-hours" min="0.25" max="100" step="0.25" style="width:100%;padding:10px 14px;border:1px solid #edeae4;border-radius:8px;font-family:inherit;font-size:0.9rem;color:#1a3a52;background:#f7f4ee;margin-bottom:12px;">'
+    + '<label style="display:block;font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;">Category *</label>'
+    + '<div style="display:flex;gap:16px;margin-bottom:12px;">'
+    + '<label style="display:flex;align-items:center;gap:6px;font-size:0.86rem;color:#1a3a52;cursor:pointer;"><input type="radio" name="cep-cat" value="core_competencies" checked> Core Competencies</label>'
+    + '<label style="display:flex;align-items:center;gap:6px;font-size:0.86rem;color:#1a3a52;cursor:pointer;"><input type="radio" name="cep-cat" value="resource_development"> Resource Development</label>'
+    + '</div>'
+    + '<label style="display:block;font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;">Provider</label>'
+    + '<input type="text" id="cep-provider" style="width:100%;padding:10px 14px;border:1px solid #edeae4;border-radius:8px;font-family:inherit;font-size:0.9rem;color:#1a3a52;background:#f7f4ee;margin-bottom:12px;">'
+    + '<label style="display:block;font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;">Notes</label>'
+    + '<textarea id="cep-notes" rows="2" style="width:100%;padding:10px 14px;border:1px solid #edeae4;border-radius:8px;font-family:inherit;font-size:0.9rem;color:#1a3a52;background:#f7f4ee;resize:vertical;margin-bottom:12px;"></textarea>'
+    + '<label style="display:block;font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#8a8a9a;margin-bottom:6px;">Certificate (PDF, JPG, PNG — optional)</label>'
+    + '<input type="file" id="cep-file" accept="application/pdf,image/jpeg,image/png" style="font-size:0.85rem;margin-bottom:6px;">'
+    + '<div id="cep-error" style="font-size:0.82rem;color:#c44;margin-top:8px;min-height:18px;"></div>'
+    + '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">'
+    + '<button id="cep-cancel" style="padding:10px 20px;background:none;color:#8a8a9a;border:1px solid #edeae4;border-radius:8px;font-family:inherit;font-size:0.85rem;cursor:pointer;">Cancel</button>'
+    + '<button id="cep-submit" style="padding:10px 22px;background:#c49a3c;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:0.85rem;font-weight:700;cursor:pointer;">Save hours</button>'
+    + '</div></div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) closeCePageModal(); });
+  document.getElementById('cep-cancel').addEventListener('click', closeCePageModal);
+  document.getElementById('cep-submit').addEventListener('click', submitCePageModal);
+}
+
+function openCePageModal() {
+  ensureCePageModal();
+  $('cep-name').value = '';
+  $('cep-date').valueAsDate = new Date();
+  $('cep-hours').value = '';
+  $('cep-provider').value = '';
+  $('cep-notes').value = '';
+  $('cep-file').value = '';
+  $('cep-error').textContent = '';
+  document.querySelector('input[name="cep-cat"][value="core_competencies"]').checked = true;
+  document.getElementById('ce-page-modal').style.display = 'flex';
+  setTimeout(function() { $('cep-name').focus(); }, 50);
+}
+
+function closeCePageModal() {
+  var m = document.getElementById('ce-page-modal');
+  if (m) m.style.display = 'none';
+}
+
+async function uploadCePageCertificate(file) {
+  if (!file || !coachProfile) return null;
+  var ext = (file.name || '').split('.').pop().toLowerCase();
+  if (!['pdf','jpg','jpeg','png'].includes(ext)) ext = 'pdf';
+  var rand = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(36).slice(2));
+  var path = coachProfile.id + '/' + rand + '.' + ext;
+  try {
+    var token = localStorage.getItem(TOKEN_KEY);
+    var res = await fetch(SUPABASE_URL + '/storage/v1/object/ce-certificates/' + path, {
+      method: 'POST',
+      headers: {
+        'apikey': ANON_KEY,
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': file.type || 'application/octet-stream'
+      },
+      body: file
+    });
+    if (!res.ok) return null;
+    return 'ce-certificates/' + path;
+  } catch (e) { return null; }
+}
+
+async function submitCePageModal() {
+  var name = $('cep-name').value.trim();
+  var date = $('cep-date').value;
+  var hrs = parseFloat($('cep-hours').value);
+  var cat = (document.querySelector('input[name="cep-cat"]:checked') || {}).value || 'core_competencies';
+  var provider = $('cep-provider').value.trim();
+  var notes = $('cep-notes').value.trim();
+  var fileEl = $('cep-file');
+  var file = fileEl && fileEl.files && fileEl.files[0] ? fileEl.files[0] : null;
+
+  var err = $('cep-error');
+  err.textContent = '';
+  if (!name) { err.textContent = 'Event name is required.'; return; }
+  if (!date) { err.textContent = 'Date is required.'; return; }
+  if (!hrs || hrs <= 0 || hrs > 100) { err.textContent = 'Hours must be between 0.25 and 100.'; return; }
+
+  var btn = $('cep-submit');
+  btn.disabled = true; btn.textContent = 'Saving...';
+
+  var certUrl = null;
+  if (file) {
+    certUrl = await uploadCePageCertificate(file);
+    if (!certUrl) {
+      err.textContent = 'Certificate upload failed. Try again or save without it.';
+      btn.disabled = false; btn.textContent = 'Save hours';
+      return;
+    }
+  }
+
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_ce_hours_log', {
+      method: 'POST',
+      headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
+      body: JSON.stringify({
+        coach_id: coachProfile.id,
+        source: 'manual',
+        hours: hrs,
+        category: cat,
+        event_date: date,
+        event_name: name,
+        provider: provider || null,
+        notes: notes || null,
+        certificate_url: certUrl
+      })
+    });
+    if (!res.ok) {
+      var detail = '';
+      try { var j = await res.json(); detail = j.message || ''; } catch (e) {}
+      err.textContent = 'Save failed' + (detail ? ': ' + detail : '');
+      btn.disabled = false; btn.textContent = 'Save hours';
+      return;
+    }
+    closeCePageModal();
+    await loadCoachCeHours();
+  } catch (e) {
+    err.textContent = 'Network error. Try again.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save hours';
+  }
+}
+
 async function loadDashCourses() {
   var loading = $('courses-loading');
   var content = $('courses-content');
@@ -8835,8 +9113,37 @@ function renderStep1() {
   html += '<div class="cb-field"><label class="cb-label">Who This Course Is For</label>'
     + '<textarea id="cb-who" class="cb-textarea" style="min-height:80px;" placeholder="Describe the ideal student...">' + escapeHtml(d.who_its_for || '') + '</textarea></div>';
 
+  // CCE settings — opt-in. When checked, course-completing coaches get
+  // platform_auto rows in coach_ce_hours_log.
+  var cceChecked = !!d.cce_eligible;
+  var cceHrs = d.cce_hours_per_lesson != null ? d.cce_hours_per_lesson : 0.5;
+  var cceCat = d.cce_category || 'core_competencies';
+  html += '<div class="cb-field" style="border:1px solid #e0ddd5;border-radius:8px;padding:16px;background:#fdfbf6;">';
+  html += '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:0.92rem;font-weight:600;color:#1a3a52;">'
+    + '<input type="checkbox" id="cb-cce-eligible" ' + (cceChecked ? 'checked' : '') + ' onchange="cbToggleCce()" style="width:16px;height:16px;accent-color:#c49a3c;">'
+    + 'This course awards CCE hours</label>';
+  html += '<div class="cb-hint" style="margin-top:6px;">When enabled, coaches who complete each lesson get hours auto-logged to their CE tracker.</div>';
+  html += '<div id="cb-cce-detail" style="margin-top:12px;display:' + (cceChecked ? 'block' : 'none') + ';">';
+  html += '<div class="cb-row">';
+  html += '<div class="cb-field"><label class="cb-label">Hours per lesson</label>'
+    + '<input type="number" id="cb-cce-hours" class="cb-input" min="0.25" max="10" step="0.25" value="' + cceHrs + '"></div>';
+  html += '<div class="cb-field"><label class="cb-label">Category</label>'
+    + '<div style="display:flex;gap:14px;padding-top:10px;">'
+    + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:0.86rem;color:#1a3a52;"><input type="radio" name="cb-cce-cat" value="core_competencies" ' + (cceCat === 'core_competencies' ? 'checked' : '') + '> Core Competencies</label>'
+    + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:0.86rem;color:#1a3a52;"><input type="radio" name="cb-cce-cat" value="resource_development" ' + (cceCat === 'resource_development' ? 'checked' : '') + '> Resource Development</label>'
+    + '</div></div>';
+  html += '</div>';
+  html += '</div></div>';
+
   html += '</div>';
   return html;
+}
+
+// Show/hide the CCE detail block when the eligibility checkbox flips.
+function cbToggleCce() {
+  var checked = document.getElementById('cb-cce-eligible').checked;
+  var detail = document.getElementById('cb-cce-detail');
+  if (detail) detail.style.display = checked ? 'block' : 'none';
 }
 
 /* ── STEP 2: SCHEDULE ── */
@@ -8966,7 +9273,7 @@ function renderStep4() {
   html += '<div style="display:flex;flex-direction:column;gap:10px;">';
   html += '<button onclick="cbPublish()" class="cb-btn-publish">Publish My Course</button>';
   if (currentCourseId) {
-    html += '<button onclick="window.open(\'/course-view.html?id=' + currentCourseId + '&preview=true\',\'_blank\')" class="cb-btn-preview">Preview My Course</button>';
+    html += '<button onclick="window.open(\'/course-detail.html?id=' + currentCourseId + '&preview=true\',\'_blank\')" class="cb-btn-preview">Preview My Course</button>';
   }
   html += '</div>';
 
@@ -9042,6 +9349,18 @@ function cbCollectStepData() {
     var lm = $('cb-limit'); if (lm) courseData.enrollment_limit = parseInt(lm.value) || null;
     var wh = $('cb-who'); if (wh) courseData.who_its_for = wh.value.trim();
     courseData.objectives = courseObjectives;
+    // CCE settings — read the checkbox + conditional fields.
+    var cce = $('cb-cce-eligible');
+    courseData.cce_eligible = !!(cce && cce.checked);
+    if (courseData.cce_eligible) {
+      var ch = $('cb-cce-hours');
+      courseData.cce_hours_per_lesson = ch ? (parseFloat(ch.value) || 0) : 0;
+      var ccat = document.querySelector('input[name="cb-cce-cat"]:checked');
+      courseData.cce_category = ccat ? ccat.value : 'core_competencies';
+    } else {
+      courseData.cce_hours_per_lesson = 0;
+      courseData.cce_category = null;
+    }
   } else if (courseStep === 2) {
     var eo = $('cb-enroll-open'); if (eo) courseData.enrollment_open_date = eo.value || null;
     var ec = $('cb-enroll-close'); if (ec) courseData.enrollment_close_date = ec.value || null;
@@ -9096,6 +9415,11 @@ async function cbSaveDraft() {
     in_person_schedule: courseData.in_person_schedule || null,
     location_type: courseData.location_type || 'classroom',
     welcome_message: courseData.welcome_message || null,
+    // CCE settings — coach-only opt-in. Hours auto-log to coach_ce_hours_log
+    // when enabled and a coach completes a lesson on this course.
+    cce_eligible: !!courseData.cce_eligible,
+    cce_hours_per_lesson: courseData.cce_eligible ? (courseData.cce_hours_per_lesson || 0) : 0,
+    cce_category: courseData.cce_eligible ? (courseData.cce_category || 'core_competencies') : null,
     status: 'draft'
   };
 
@@ -9500,7 +9824,15 @@ async function cbLoadModuleLessons(modId) {
         + '<div id="lp-video-' + l.id + '" style="display:' + (activeTab === 'video' ? 'block' : 'none') + ';"><input type="text" class="cb-input cb-lesson-autosave" data-lesson-id="' + l.id + '" data-lesson-field="video_url" data-mod-id="' + modId + '" value="' + escapeHtml(realVideoUrl) + '" placeholder="Paste video URL (YouTube, Vimeo, Zoom recording...)" style="font-size:0.82rem;"></div>'
         + '<div id="lp-upload-' + l.id + '" style="display:none;"><input type="file" id="lesson-file-' + l.id + '" accept=".pdf,.mp4,.mp3,.jpg,.jpeg,.png,.doc,.docx,.ppt,.pptx" style="font-size:0.82rem;" onchange="cbUploadLessonFile(\'' + modId + '\',\'' + l.id + '\')"><div id="lesson-upload-status-' + l.id + '" style="font-size:0.78rem;margin-top:4px;"></div>'
         + (fileUrl ? '<div style="font-size:0.78rem;margin-top:6px;display:flex;align-items:center;gap:8px;color:#1a3a52;">&#128196; <span style="font-weight:600;">' + escapeHtml(cbCleanFilename(fileUrl)) + '</span> <a href="' + escapeHtml(fileUrl) + '" target="_blank" style="font-size:0.72rem;color:#c49a3c;text-decoration:none;font-weight:700;">View</a> <button onclick="cbRemoveLessonFile(\'' + modId + '\',\'' + l.id + '\')" style="font-size:0.72rem;color:#c44;background:none;border:none;cursor:pointer;font-weight:700;">Remove</button></div>' : '')
-        + '</div></div>';
+        + '</div></div>'
+
+        // Reflection prompt — optional. Persists to coach_course_lessons.reflection_prompt
+        // via the existing cb-lesson-autosave handler. When non-empty, the
+        // classroom renders a reflection capture surface for the student.
+        + '<div class="cb-field" style="margin-bottom:10px;">'
+        + '<label class="cb-label" style="font-size:0.72rem;letter-spacing:0.04em;color:#8a8a9a;text-transform:uppercase;font-weight:700;">Reflection prompt (optional)</label>'
+        + '<textarea class="cb-input cb-lesson-autosave" data-lesson-id="' + l.id + '" data-lesson-field="reflection_prompt" data-mod-id="' + modId + '" placeholder="What question should students reflect on after this lesson?" style="font-size:0.82rem;min-height:48px;resize:vertical;">' + escapeHtml(l.reflection_prompt || '') + '</textarea>'
+        + '</div>';
 
       // Drip scheduling
       var courseDays = 0;
