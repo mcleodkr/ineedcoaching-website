@@ -303,10 +303,13 @@ export default async function handler(req, res) {
     let synthesisFailureReason = null;
 
     try {
+      // max_tokens=5000 — the prior 2500 cap was truncating mid-array on
+      // clients with ~3+ sessions of dense PSA evidence, which is what
+      // surfaced as the "JSON parse fa..." errors in production.
       rawSynthesisText = await callClaudeRaw(
         ANTHROPIC_API_KEY,
         'claude-sonnet-4-6',
-        2500,
+        5000,
         SYSTEM_PROMPT,
         USER_PROMPT,
         'Pattern Map'
