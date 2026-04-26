@@ -37,6 +37,7 @@
       "maxDuration": 30
     }
   },
+  "cleanUrls": true,
   "rewrites": [
     { "source": "/coaches", "destination": "/coaches.html" },
     { "source": "/coach/:slug", "destination": "/coach-profile.html?slug=:slug" },
@@ -46,6 +47,7 @@
     { "source": "/intervention-plan", "destination": "/intervention-plan-panel.html" },
     { "source": "/coach-mirror", "destination": "/coach-mirror-panel.html" },
     { "source": "/pattern-map", "destination": "/pattern-map-panel.html" },
+    { "source": "/decision-lab", "destination": "/decision-lab.html" },
     { "source": "/article.html", "destination": "/api/article-render" },
     { "source": "/sitemap.xml", "destination": "/api/sitemap" }
   ]
