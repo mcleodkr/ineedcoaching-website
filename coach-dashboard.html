@@ -8990,23 +8990,42 @@ async function renderCourseStudents(courseId) {
   var course = (dashCourses || []).find(function(c) { return c.id === courseId; }) || {};
   content.innerHTML = '<div class="loading-state" style="min-height:30vh;"><div class="loading-spinner"></div></div>';
   try {
-    // Total lesson count for the course (denominator).
-    var lessonsRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?course_id=eq.' + courseId + '&select=id', { headers: apiHeaders() });
+    // Lessons for the course (full rows so we can list per-lesson quiz status).
+    var lessonsRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?course_id=eq.' + courseId + '&order=order_index.asc&select=id,title,order_index', { headers: apiHeaders() });
     var lessons = await lessonsRes.json();
-    var totalLessons = Array.isArray(lessons) ? lessons.length : 0;
+    if (!Array.isArray(lessons)) lessons = [];
+    var totalLessons = lessons.length;
 
-    // Enrollments + per-enrollment completion counts.
+    // Quizzes attached to any lesson in this course.
+    var quizzes = [];
+    if (totalLessons > 0) {
+      var lessonIds = lessons.map(function(l) { return '"' + l.id + '"'; }).join(',');
+      try {
+        var qRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_quizzes?lesson_id=in.(' + lessonIds + ')&select=id,lesson_id,title,pass_score', { headers: apiHeaders() });
+        quizzes = await qRes.json();
+        if (!Array.isArray(quizzes)) quizzes = [];
+      } catch (e) { quizzes = []; }
+    }
+    var quizByLesson = {};
+    quizzes.forEach(function(q) { if (q && q.lesson_id) quizByLesson[q.lesson_id] = q; });
+
+    // Enrollments + per-enrollment completion counts + quiz attempts.
     var enrollRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_enrollments?course_id=eq.' + courseId + '&order=enrolled_at.desc&select=id,student_email,student_name,enrolled_at,completed_at,certificate_id', { headers: apiHeaders() });
     var enrollments = await enrollRes.json();
     if (!Array.isArray(enrollments)) enrollments = [];
 
-    // Fan out completion lookups in parallel.
     await Promise.all(enrollments.map(async function(en) {
       try {
-        var cRes = await fetch(SUPABASE_URL + '/rest/v1/coach_lesson_completions?enrollment_id=eq.' + en.id + '&select=id', { headers: apiHeaders() });
+        var cRes = await fetch(SUPABASE_URL + '/rest/v1/coach_lesson_completions?enrollment_id=eq.' + en.id + '&select=lesson_id', { headers: apiHeaders() });
         var comps = await cRes.json();
-        en._completed = Array.isArray(comps) ? comps.length : 0;
-      } catch (e) { en._completed = 0; }
+        en._completedRows = Array.isArray(comps) ? comps : [];
+        en._completed = en._completedRows.length;
+      } catch (e) { en._completedRows = []; en._completed = 0; }
+      try {
+        var aRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_quiz_attempts?enrollment_id=eq.' + en.id + '&order=created_at.asc&select=id,lesson_id,score,passed,attempt_number,created_at', { headers: apiHeaders() });
+        en._attempts = await aRes.json();
+        if (!Array.isArray(en._attempts)) en._attempts = [];
+      } catch (e) { en._attempts = []; }
     }));
 
     var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:12px;">'
@@ -9027,6 +9046,10 @@ async function renderCourseStudents(courseId) {
       content.innerHTML = html;
       return;
     }
+
+    var quizCount = quizzes.length;
+    var hasQuizzes = quizCount > 0;
+    var lessonsWithQuizzes = lessons.filter(function(l) { return !!quizByLesson[l.id]; });
 
     html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden;">'
       + '<div style="display:grid;grid-template-columns:1.6fr 1fr 1.4fr 1fr 0.6fr;gap:14px;padding:12px 18px;background:var(--cream);border-bottom:1px solid var(--border);font-family:\'DM Sans\',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);">'
@@ -9055,9 +9078,12 @@ async function renderCourseStudents(courseId) {
         ? '<a href="/certificate.html?certificate_id=' + encodeURIComponent(en.certificate_id) + '" target="_blank" rel="noopener" style="font-size:0.74rem;font-weight:600;color:#c49a3c;text-decoration:none;">View cert &rarr;</a>'
         : '';
 
-      html += '<div style="display:grid;grid-template-columns:1.6fr 1fr 1.4fr 1fr 0.6fr;gap:14px;padding:14px 18px;align-items:center;' + (idx > 0 ? 'border-top:1px solid var(--border);' : '') + 'font-family:\'DM Sans\',sans-serif;">'
+      var detailId = 'student-detail-' + en.id;
+      var canExpand = hasQuizzes;
+      var rowOpenAttr = canExpand ? 'onclick="toggleStudentQuizDetail(\'' + detailId + '\')" style="cursor:pointer;"' : '';
+      html += '<div ' + rowOpenAttr + ' style="display:grid;grid-template-columns:1.6fr 1fr 1.4fr 1fr 0.6fr;gap:14px;padding:14px 18px;align-items:center;' + (idx > 0 ? 'border-top:1px solid var(--border);' : '') + 'font-family:\'DM Sans\',sans-serif;' + (canExpand ? 'cursor:pointer;' : '') + '">'
         +   '<div>'
-        +     '<div style="font-size:0.92rem;font-weight:600;color:#1a3a52;line-height:1.3;">' + escapeHtml(name) + '</div>'
+        +     '<div style="font-size:0.92rem;font-weight:600;color:#1a3a52;line-height:1.3;">' + escapeHtml(name) + (canExpand ? ' <span style="font-size:0.7rem;color:#8a8580;font-weight:400;">&#9662; quiz status</span>' : '') + '</div>'
         +     (email && email.toLowerCase() !== name.toLowerCase() ? '<div style="font-size:0.74rem;color:var(--muted);margin-top:2px;">' + escapeHtml(email) + '</div>' : '')
         +   '</div>'
         +   '<div style="font-size:0.82rem;color:var(--muted);">' + escapeHtml(enrolledStr) + '</div>'
@@ -9066,8 +9092,58 @@ async function renderCourseStudents(courseId) {
         +     '<div style="height:6px;background:#eee;border-radius:50px;overflow:hidden;"><div style="height:100%;width:' + pct + '%;background:#c49a3c;border-radius:50px;transition:width 0.3s ease;"></div></div>'
         +   '</div>'
         +   '<div><span style="display:inline-block;font-size:0.7rem;font-weight:700;padding:4px 10px;border-radius:50px;letter-spacing:0.04em;text-transform:uppercase;' + statusColor + '">' + escapeHtml(statusLabel) + '</span></div>'
-        +   '<div style="text-align:right;">' + certCell + '</div>'
+        +   '<div style="text-align:right;" onclick="event.stopPropagation();">' + certCell + '</div>'
         + '</div>';
+
+      // Expandable quiz status (only when the course has any quizzes).
+      if (canExpand) {
+        var maxLessonOrder = -1;
+        en._completedRows.forEach(function(c) {
+          for (var k = 0; k < lessons.length; k++) {
+            if (lessons[k].id === c.lesson_id && lessons[k].order_index > maxLessonOrder) {
+              maxLessonOrder = lessons[k].order_index;
+            }
+          }
+        });
+        var attemptsByLesson = {};
+        (en._attempts || []).forEach(function(a) {
+          if (!attemptsByLesson[a.lesson_id]) attemptsByLesson[a.lesson_id] = [];
+          attemptsByLesson[a.lesson_id].push(a);
+        });
+
+        var detailHtml = '<div id="' + detailId + '" style="display:none;background:#fdf9f1;border-top:1px solid var(--border);padding:14px 18px 18px;">'
+          + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Quiz status</div>';
+        lessonsWithQuizzes.forEach(function(l) {
+          var atts = attemptsByLesson[l.id] || [];
+          var bestAtt = atts.reduce(function(best, a) { return (!best || Number(a.score) > Number(best.score)) ? a : best; }, null);
+          var lastAtt = atts.length > 0 ? atts[atts.length - 1] : null;
+          var passedAtt = atts.find(function(a) { return a.passed; });
+          var statusText, statusBg;
+          if (passedAtt) {
+            statusText = 'Passed (' + Number(passedAtt.score) + '%, attempt ' + passedAtt.attempt_number + ')';
+            statusBg = 'background:#2d6a4f;color:#fff;';
+          } else if (atts.length > 0) {
+            statusText = 'Failed (last score ' + Number(lastAtt.score) + '%, ' + atts.length + ' attempt' + (atts.length === 1 ? '' : 's') + ')';
+            statusBg = 'background:#b8860b;color:#fff;';
+          } else if (l.order_index > maxLessonOrder + 1) {
+            statusText = 'Hasn’t reached this lesson yet';
+            statusBg = 'background:rgba(107,107,96,0.15);color:var(--muted);';
+          } else {
+            statusText = 'Not attempted';
+            statusBg = 'background:rgba(107,107,96,0.15);color:var(--muted);';
+          }
+          var bestStr = bestAtt ? ' &middot; best ' + Number(bestAtt.score) + '%' : '';
+          detailHtml += '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:8px 0;border-bottom:1px dashed var(--border);font-family:\'DM Sans\',sans-serif;">'
+            +   '<div style="font-size:0.85rem;color:#1a3a52;font-weight:500;flex:1;">'
+            +     escapeHtml(l.title)
+            +     '<span style="font-size:0.7rem;color:var(--muted);font-weight:400;margin-left:6px;">' + atts.length + ' attempt' + (atts.length === 1 ? '' : 's') + bestStr + '</span>'
+            +   '</div>'
+            +   '<span style="display:inline-block;font-size:0.68rem;font-weight:700;padding:3px 9px;border-radius:50px;letter-spacing:0.04em;text-transform:uppercase;white-space:nowrap;' + statusBg + '">' + escapeHtml(statusText) + '</span>'
+            + '</div>';
+        });
+        detailHtml += '</div>';
+        html += detailHtml;
+      }
     });
     html += '</div>';
 
@@ -9078,6 +9154,13 @@ async function renderCourseStudents(courseId) {
   }
 }
 window.renderCourseStudents = renderCourseStudents;
+
+function toggleStudentQuizDetail(detailId) {
+  var el = document.getElementById(detailId);
+  if (!el) return;
+  el.style.display = (el.style.display === 'none' || !el.style.display) ? 'block' : 'none';
+}
+window.toggleStudentQuizDetail = toggleStudentQuizDetail;
 
 /* ── COURSE BUILDER ── */
 async function openCourseBuilder(courseId) {

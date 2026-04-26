@@ -190,6 +190,39 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
   .classroom-grid.has-tracker { grid-template-columns: 1fr; }
   .ce-tracker { position: static; }
 }
+
+/* ── QUIZ ─────────────────────────────────────────────────────── */
+.lesson-item.locked { cursor: default; opacity: 0.7; }
+.lesson-item.locked:hover { background: transparent; }
+.lesson-item .lock-icon { font-size: 0.78rem; color: #8a8580; margin-left: 6px; }
+.locked-msg { display:block; font-size:0.74rem; color:#8a8580; margin-top:4px; font-style:italic; }
+.quiz-block { margin-top: 28px; padding: 24px 26px; background: #fdf9f1; border: 1px solid #edeae4; border-left: 3px solid #c49a3c; border-radius: 10px; font-family: 'Cabinet Grotesk', sans-serif; }
+.quiz-block .quiz-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; font-weight: 600; color: #1a3a52; margin-bottom: 4px; line-height: 1.25; }
+.quiz-block .quiz-sub { font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.82rem; color: #6a6560; margin-bottom: 18px; line-height: 1.55; }
+.quiz-question { background: #ffffff; border: 1px solid #e8e4dc; border-radius: 8px; padding: 16px 18px; margin-bottom: 12px; }
+.quiz-question .q-text { font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.92rem; color: #1a3a52; font-weight: 600; line-height: 1.5; margin-bottom: 12px; }
+.quiz-option { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 6px; cursor: pointer; transition: background 0.12s ease; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.88rem; color: #1a3a52; line-height: 1.5; margin-bottom: 4px; }
+.quiz-option:hover { background: #fdf9f1; }
+.quiz-option input { margin-top: 4px; flex-shrink: 0; accent-color: #c49a3c; }
+.quiz-option.option-correct { background: #fdf2da; }
+.quiz-option.option-incorrect { background: rgba(26,58,82,0.05); }
+.quiz-option .marker { display: inline-block; width: 16px; flex-shrink: 0; font-weight: 700; }
+.quiz-option .marker.ok { color: #c49a3c; }
+.quiz-option .marker.miss { color: #1a3a52; opacity: 0.5; }
+.quiz-explanation { margin-top: 10px; padding: 10px 12px; background: #fdf9f1; border-left: 2px solid #c49a3c; border-radius: 4px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.82rem; color: #3a3540; line-height: 1.55; }
+.quiz-explanation .label { font-weight: 700; color: #c49a3c; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; margin-right: 6px; }
+.quiz-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+.quiz-submit-btn { background: #c49a3c; color: #1a3a52; border: none; padding: 11px 22px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; }
+.quiz-submit-btn:hover:not(:disabled) { background: #b8862e; }
+.quiz-submit-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.quiz-feedback { margin-top: 16px; padding: 18px 22px; border-radius: 8px; font-family: 'Cabinet Grotesk', sans-serif; line-height: 1.6; }
+.quiz-feedback.pass { background: #fbf8f1; border: 1px solid #c49a3c; border-left: 3px solid #c49a3c; }
+.quiz-feedback.review { background: #fdf2da; border: 1px solid #d8b568; border-left: 3px solid #c49a3c; }
+.quiz-feedback .fb-eyebrow { font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.72rem; font-weight: 700; color: #c49a3c; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+.quiz-feedback .fb-msg { font-family: 'Playfair Display', serif; font-style: italic; font-size: 1.1rem; color: #1a3a52; line-height: 1.5; }
+.quiz-feedback .fb-score { font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.82rem; color: #6a6560; margin-top: 8px; }
+.quiz-try-again { background: transparent; color: #1a3a52; border: 1px solid #1a3a52; padding: 9px 18px; border-radius: 50px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
+.quiz-try-again:hover { background: #1a3a52; color: #ffffff; }
 </style>
 <style data-MOBILE_NAV_HAMBURGER_v1>
 /* Mobile hamburger nav */
@@ -341,6 +374,9 @@ var coachProfile = null;
 // Cached CE log rows (this coach's full history). Drives the right-column
 // stat cards + log list. Refreshed after auto-log and after manual add.
 var ceHoursLog = [];
+var currentQuizzes = [];     // coach_course_quizzes rows for the active course
+var currentAttempts = [];    // coach_course_quiz_attempts for this enrollment
+var quizUiState = {};        // { [lessonId]: { selected:{qIdx:answer}, lastResult:{score,passed,perQuestion[]} } }
 
 function $(id) { return document.getElementById(id); }
 
@@ -594,11 +630,83 @@ async function openCourse(enrollmentId) {
     currentCompletions = [];
   }
 
+  // Fetch quizzes for the course (for lesson gating + render).
+  currentQuizzes = [];
+  if (currentLessons.length > 0) {
+    var lessonIds = currentLessons.map(function(l) { return '"' + l.id + '"'; }).join(',');
+    try {
+      var qRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_quizzes?lesson_id=in.(' + lessonIds + ')&select=*', {
+        headers: apiHeaders()
+      });
+      currentQuizzes = await qRes.json();
+      if (!Array.isArray(currentQuizzes)) currentQuizzes = [];
+    } catch (e) { currentQuizzes = []; }
+  }
+
+  // Fetch quiz attempts for this enrollment.
+  try {
+    var aRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_quiz_attempts?enrollment_id=eq.' + currentEnrollment.id + '&order=created_at.asc&select=*', {
+      headers: apiHeaders()
+    });
+    currentAttempts = await aRes.json();
+    if (!Array.isArray(currentAttempts)) currentAttempts = [];
+  } catch (e) { currentAttempts = []; }
+
+  quizUiState = {};
+
   // Load reflections for this enrollment so prompts can prefill on the
   // lesson view. Empty map if the table is missing or query fails.
   await loadReflectionsForEnrollment();
 
   renderLessonView();
+}
+
+/* ── QUIZ HELPERS ─────────────────────────────────────────────── */
+
+function getQuizForLesson(lessonId) {
+  for (var i = 0; i < currentQuizzes.length; i++) {
+    if (currentQuizzes[i].lesson_id === lessonId) return currentQuizzes[i];
+  }
+  return null;
+}
+
+function hasPassedQuiz(lessonId) {
+  for (var i = 0; i < currentAttempts.length; i++) {
+    var a = currentAttempts[i];
+    if (a.lesson_id === lessonId && a.passed) return true;
+  }
+  return false;
+}
+
+function attemptsForLesson(lessonId) {
+  return currentAttempts.filter(function(a) { return a.lesson_id === lessonId; });
+}
+
+// First not-yet-completed lesson in order_index sequence. Everything strictly
+// after this index is locked. Returns -1 when all lessons are complete.
+function nextRequiredLessonIndex() {
+  for (var i = 0; i < currentLessons.length; i++) {
+    if (!isLessonCompleted(currentLessons[i].id)) return i;
+  }
+  return -1;
+}
+
+function isLessonLocked(lessonId) {
+  var nextIdx = nextRequiredLessonIndex();
+  if (nextIdx === -1) return false; // all complete → nothing locked
+  for (var i = 0; i < currentLessons.length; i++) {
+    if (currentLessons[i].id === lessonId) return i > nextIdx;
+  }
+  return false;
+}
+
+function previousLesson(lessonId) {
+  for (var i = 0; i < currentLessons.length; i++) {
+    if (currentLessons[i].id === lessonId) {
+      return i > 0 ? currentLessons[i - 1] : null;
+    }
+  }
+  return null;
 }
 
 function isLessonCompleted(lessonId) {
@@ -638,12 +746,23 @@ function renderLessonView() {
   html += '<div class="lesson-sidebar">';
   currentLessons.forEach(function(lesson) {
     var done = isLessonCompleted(lesson.id);
+    var locked = isLessonLocked(lesson.id);
     var isActive = selectedLessonId === lesson.id;
-    html += '<div class="lesson-item' + (isActive ? ' active-lesson' : '') + '" data-lesson-id="' + lesson.id + '">';
-    html += '<div class="lesson-checkbox' + (done ? ' checked' : '') + '" onclick="event.stopPropagation();toggleLesson(\'' + lesson.id + '\')"></div>';
-    html += '<span class="lesson-item-title' + (done ? ' completed-title' : '') + '" onclick="selectLesson(\'' + lesson.id + '\')">' + escapeHtml(lesson.title) + '</span>';
-    if (lesson.video_url) {
-      html += '<span class="lesson-video-icon">&#9654;</span>';
+    var classes = 'lesson-item';
+    if (isActive) classes += ' active-lesson';
+    if (locked) classes += ' locked';
+    html += '<div class="' + classes + '" data-lesson-id="' + lesson.id + '">';
+    if (locked) {
+      // Locked lessons show a lock instead of the toggle. Click on the row
+      // surfaces the gating hint inline.
+      html += '<div class="lesson-checkbox" style="cursor:default;border-style:dashed;" title="Locked"></div>';
+      html += '<span class="lesson-item-title" onclick="showLockedHint(\'' + lesson.id + '\')">' + escapeHtml(lesson.title) + '<span class="lock-icon">&#128274;</span></span>';
+    } else {
+      html += '<div class="lesson-checkbox' + (done ? ' checked' : '') + '" onclick="event.stopPropagation();toggleLesson(\'' + lesson.id + '\')"></div>';
+      html += '<span class="lesson-item-title' + (done ? ' completed-title' : '') + '" onclick="selectLesson(\'' + lesson.id + '\')">' + escapeHtml(lesson.title) + '</span>';
+      if (lesson.video_url) {
+        html += '<span class="lesson-video-icon">&#9654;</span>';
+      }
     }
     html += '</div>';
   });
@@ -705,6 +824,10 @@ function renderLessonView() {
       // Reflection surface — only renders when the lesson has a prompt.
       // Lessons without a prompt show no surface at all per the spec.
       html += renderReflectionSurface(sel);
+      // Quiz surface — renders when a coach_course_quizzes row points at
+      // this lesson. Passing the quiz auto-marks the lesson complete and
+      // unlocks the next one (handled in submitQuiz).
+      html += renderQuizBlock(sel);
     }
   } else {
     html += '<div class="no-lesson-selected">Select a lesson from the sidebar to begin.</div>';
@@ -734,6 +857,33 @@ function renderLessonView() {
     btn.addEventListener('click', function() {
       saveReflection(this.dataset.lessonId);
     });
+  });
+
+  // Quiz wiring: option clicks update local UI state, submit grades and
+  // posts an attempt, try-again resets the inputs.
+  view.querySelectorAll('.quiz-option input').forEach(function(input) {
+    input.addEventListener('change', function() {
+      var lessonId = this.dataset.lessonId;
+      var qIdx = parseInt(this.dataset.qIdx, 10);
+      if (!quizUiState[lessonId]) quizUiState[lessonId] = { selected: {} };
+      quizUiState[lessonId].selected[qIdx] = this.value;
+      // Toggle submit-button enabled state based on whether all questions answered.
+      var btn = document.querySelector('.quiz-submit-btn[data-lesson-id="' + lessonId + '"]');
+      var quiz = getQuizForLesson(lessonId);
+      if (btn && quiz) {
+        var qs = Array.isArray(quiz.questions) ? quiz.questions : [];
+        var allAnswered = qs.every(function(_, i) {
+          return quizUiState[lessonId].selected[i] != null;
+        });
+        btn.disabled = !allAnswered;
+      }
+    });
+  });
+  view.querySelectorAll('.quiz-submit-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() { submitQuiz(this.dataset.lessonId); });
+  });
+  view.querySelectorAll('.quiz-try-again').forEach(function(btn) {
+    btn.addEventListener('click', function() { tryAgainQuiz(this.dataset.lessonId); });
   });
 }
 
@@ -767,31 +917,202 @@ async function toggleLesson(lessonId) {
       currentCompletions = currentCompletions.filter(function(c) { return c.id !== compId; });
     } catch (e) { /* ignore */ }
   } else {
-    // Complete: POST
-    try {
-      var res = await fetch(SUPABASE_URL + '/rest/v1/coach_lesson_completions', {
-        method: 'POST',
-        headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
-        body: JSON.stringify({
-          enrollment_id: currentEnrollment.id,
-          lesson_id: lessonId
-        })
-      });
-      var data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        currentCompletions.push(data[0]);
+    // Quiz gate: lessons with a quiz can only be marked complete by passing
+    // it. The checkbox-completion path is reserved for non-quiz lessons.
+    if (getQuizForLesson(lessonId) && !hasPassedQuiz(lessonId)) {
+      var hint = document.getElementById('quiz-gate-msg-' + lessonId);
+      if (hint) hint.textContent = 'Pass the quiz below to mark this lesson complete.';
+      // Make sure the quiz block is visible.
+      if (selectedLessonId !== lessonId) {
+        selectedLessonId = lessonId;
+        renderLessonView();
       }
-    } catch (e) { /* ignore */ }
-
-    // Auto-log CE hours when the marker is a coach AND the course is
-    // CCE-eligible. Idempotent via the unique index in the migration.
-    var lessonRow = null;
-    for (var li = 0; li < currentLessons.length; li++) {
-      if (currentLessons[li].id === lessonId) { lessonRow = currentLessons[li]; break; }
+      return;
     }
-    if (lessonRow) await autoLogCEHours(lessonRow);
+    await markLessonComplete(lessonId, 'checkbox');
   }
 
+  renderLessonView();
+}
+
+// Shared completion writer. `source` is 'checkbox' or 'quiz_pass' so the
+// CE auto-log can apply the cce_eligible + has-quiz gate correctly.
+async function markLessonComplete(lessonId, source) {
+  if (isLessonCompleted(lessonId)) return;
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_lesson_completions', {
+      method: 'POST',
+      headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
+      body: JSON.stringify({
+        enrollment_id: currentEnrollment.id,
+        lesson_id: lessonId
+      })
+    });
+    var data = await res.json();
+    if (Array.isArray(data) && data.length > 0) {
+      currentCompletions.push(data[0]);
+    }
+  } catch (e) { /* ignore */ }
+
+  var lessonRow = null;
+  for (var li = 0; li < currentLessons.length; li++) {
+    if (currentLessons[li].id === lessonId) { lessonRow = currentLessons[li]; break; }
+  }
+  if (lessonRow) await autoLogCEHours(lessonRow, source);
+}
+
+function showLockedHint(lessonId) {
+  var prev = previousLesson(lessonId);
+  var prevTitle = prev ? prev.title : 'the previous lesson';
+  alert('Complete “' + prevTitle + '” to unlock this lesson.');
+}
+window.showLockedHint = showLockedHint;
+
+/* ── QUIZ RENDER + GRADE ──────────────────────────────────────── */
+
+function renderQuizBlock(lesson) {
+  var quiz = getQuizForLesson(lesson.id);
+  if (!quiz) return '';
+  var questions = Array.isArray(quiz.questions) ? quiz.questions : [];
+  if (questions.length === 0) return '';
+
+  var state = quizUiState[lesson.id] || (quizUiState[lesson.id] = { selected: {} });
+  var passed = hasPassedQuiz(lesson.id);
+  var lastResult = state.lastResult;
+  var prevAttempts = attemptsForLesson(lesson.id);
+  var attemptNumber = prevAttempts.length + 1;
+  var passScore = Number(quiz.pass_score || 70);
+
+  var html = '<div class="quiz-block">'
+    + '<div class="quiz-title">' + escapeHtml(quiz.title || 'Knowledge check') + '</div>'
+    + '<div class="quiz-sub">Pass with ' + passScore + '% or higher to mark this lesson complete and unlock the next lesson.</div>';
+
+  questions.forEach(function(q, i) {
+    var opts = Array.isArray(q.options) ? q.options : [];
+    var selected = state.selected[i];
+    var perResult = lastResult && lastResult.perQuestion && lastResult.perQuestion[i];
+    html += '<div class="quiz-question">'
+      + '<div class="q-text">' + (i + 1) + '. ' + escapeHtml(q.question || '') + '</div>';
+    opts.forEach(function(opt) {
+      var inputId = 'q-' + lesson.id + '-' + i + '-' + Math.abs(hashStr(opt));
+      var checked = selected === opt ? ' checked' : '';
+      var optClass = 'quiz-option';
+      var marker = '';
+      if (perResult) {
+        var isCorrect = opt === q.correct_answer;
+        var isUserPick = opt === perResult.user;
+        if (isCorrect) { optClass += ' option-correct'; marker = '<span class="marker ok">&#10003;</span>'; }
+        else if (isUserPick) { optClass += ' option-incorrect'; marker = '<span class="marker miss">&#10005;</span>'; }
+      }
+      html += '<label class="' + optClass + '" for="' + inputId + '">'
+        + (marker || '<span class="marker"></span>')
+        + '<input type="radio" id="' + inputId + '" name="q-' + lesson.id + '-' + i + '" value="' + escapeHtml(opt) + '" data-lesson-id="' + lesson.id + '" data-q-idx="' + i + '"' + checked + (perResult || passed ? ' disabled' : '') + '>'
+        + '<span>' + escapeHtml(opt) + '</span>'
+        + '</label>';
+    });
+    if (perResult && q.explanation) {
+      html += '<div class="quiz-explanation"><span class="label">Why this matters</span>' + escapeHtml(q.explanation) + '</div>';
+    }
+    html += '</div>';
+  });
+
+  // Feedback panel + actions.
+  if (lastResult) {
+    var pass = lastResult.passed;
+    html += '<div class="quiz-feedback ' + (pass ? 'pass' : 'review') + '">'
+      + '<div class="fb-eyebrow">' + (pass ? 'Passed' : 'Take another look') + '</div>'
+      + '<div class="fb-msg">' + escapeHtml(pass ? (quiz.pass_feedback || 'You\'ve got this — keep going.') : (quiz.needs_review_feedback || 'Take a moment to review and try again when you\'re ready.')) + '</div>'
+      + '<div class="fb-score">Score: ' + lastResult.score + '% &middot; Attempt ' + lastResult.attemptNumber + '</div>'
+      + '</div>';
+    if (!pass) {
+      html += '<div class="quiz-actions"><div class="locked-msg" id="quiz-gate-msg-' + lesson.id + '"></div><button class="quiz-try-again" data-lesson-id="' + lesson.id + '">Try again</button></div>';
+    }
+  } else {
+    var allAnswered = questions.every(function(_, i) { return state.selected[i] != null; });
+    html += '<div class="quiz-actions">'
+      + '<div class="locked-msg" id="quiz-gate-msg-' + lesson.id + '">' + (passed ? 'You passed this quiz on attempt ' + (prevAttempts.length || attemptNumber) + '.' : '') + '</div>'
+      + (passed ? '' : '<button class="quiz-submit-btn" data-lesson-id="' + lesson.id + '"' + (allAnswered ? '' : ' disabled') + '>Submit quiz</button>')
+      + '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+// Tiny stable hash for option-input IDs (not security-sensitive — just needs
+// to be deterministic within a render so DOM ids don't collide).
+function hashStr(s) {
+  var h = 0;
+  s = String(s || '');
+  for (var i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; }
+  return h;
+}
+
+async function submitQuiz(lessonId) {
+  var quiz = getQuizForLesson(lessonId);
+  if (!quiz) return;
+  var state = quizUiState[lessonId] || (quizUiState[lessonId] = { selected: {} });
+  var questions = Array.isArray(quiz.questions) ? quiz.questions : [];
+
+  // Grade.
+  var perQuestion = [];
+  var correct = 0;
+  questions.forEach(function(q, i) {
+    var pick = state.selected[i];
+    var isRight = pick === q.correct_answer;
+    if (isRight) correct++;
+    perQuestion.push({ user: pick, correct: q.correct_answer, isRight: isRight });
+  });
+  var total = questions.length;
+  var rawScore = total > 0 ? (correct / total) * 100 : 0;
+  var score = Math.round(rawScore * 100) / 100;
+  var passScore = Number(quiz.pass_score || 70);
+  var passed = score >= passScore;
+
+  var attemptNumber = attemptsForLesson(lessonId).length + 1;
+
+  // Persist the attempt. Best-effort — UI feedback still renders if the
+  // insert fails so the student isn't stranded mid-grade.
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_quiz_attempts', {
+      method: 'POST',
+      headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
+      body: JSON.stringify({
+        enrollment_id: currentEnrollment.id,
+        quiz_id: quiz.id,
+        lesson_id: lessonId,
+        student_email: (currentUser && currentUser.email) ? currentUser.email.toLowerCase() : '',
+        answers: state.selected,
+        score: score,
+        passed: passed,
+        attempt_number: attemptNumber
+      })
+    });
+    if (res.ok) {
+      var rows = await res.json().catch(function() { return []; });
+      if (Array.isArray(rows) && rows[0]) currentAttempts.push(rows[0]);
+    }
+  } catch (e) { console.error('[Quiz] attempt insert error', e); }
+
+  state.lastResult = {
+    score: score,
+    passed: passed,
+    attemptNumber: attemptNumber,
+    perQuestion: perQuestion
+  };
+
+  // On pass, write the lesson completion (which carries 'quiz_pass' as the
+  // CE auto-log source so the cce_eligible gate applies correctly).
+  if (passed && !isLessonCompleted(lessonId)) {
+    await markLessonComplete(lessonId, 'quiz_pass');
+  }
+
+  renderLessonView();
+}
+
+function tryAgainQuiz(lessonId) {
+  // Reset the local UI state but keep the historical attempts in
+  // currentAttempts so attempt_number keeps incrementing on next submit.
+  quizUiState[lessonId] = { selected: {} };
   renderLessonView();
 }
 
@@ -1105,7 +1426,7 @@ async function saveReflection(lessonId) {
 
 /* ── CE AUTO-LOG (on lesson mark-complete) ─────────────────────── */
 
-async function autoLogCEHours(lesson) {
+async function autoLogCEHours(lesson, source) {
   // Gating per the spec: only log when the signed-in user is a coach AND
   // the course is flagged CCE-eligible AND has positive hours per lesson.
   // Idempotency is enforced by uniq_ce_hours_platform_auto in the DB; this
@@ -1116,6 +1437,9 @@ async function autoLogCEHours(lesson) {
   var perLesson = parseFloat(course.cce_hours_per_lesson);
   if (!perLesson || perLesson <= 0) return;
   if (!course.cce_category) return;
+  // CCE defensibility: when the lesson has a quiz, only credit on quiz pass.
+  // A bare checkbox tick is not enough proof of comprehension.
+  if (getQuizForLesson(lesson.id) && source !== 'quiz_pass') return;
 
   var coachName = (course.coach_profiles && (course.coach_profiles.display_name || course.coach_profiles.full_name)) || 'Course author';
   var eventName = (course.title || 'Course') + ' — ' + (lesson.title || 'Lesson');

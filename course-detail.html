@@ -256,9 +256,13 @@ footer a { color: var(--gold); text-decoration: none; }
   <div class="modal-box" style="position:relative;">
     <button class="modal-close" id="modal-close">&times;</button>
     <h2>Enroll in This Course</h2>
-    <p>Enter your email to enroll. You'll receive access to the classroom.</p>
+    <p>A couple of details and you're in. You'll get classroom access right after.</p>
+    <label for="enroll-email" style="display:block;font-family:'DM Sans',sans-serif;font-size:0.78rem;font-weight:600;color:#1a3a52;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;">Email</label>
     <input type="email" id="enroll-email" placeholder="you@example.com" required>
-    <button class="modal-btn" id="enroll-submit">Enroll Now</button>
+    <label for="enroll-cert-name" style="display:block;font-family:'DM Sans',sans-serif;font-size:0.78rem;font-weight:600;color:#1a3a52;margin-top:14px;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;">Name as it should appear on your certificate</label>
+    <input type="text" id="enroll-cert-name" placeholder="Dr. Jane Smith" maxlength="120" required>
+    <div style="font-family:'DM Sans',sans-serif;font-size:0.74rem;color:#8a8580;line-height:1.5;margin-top:4px;">This will appear on your completion certificate. Use a professional title (Dr., LMFT) if relevant.</div>
+    <button class="modal-btn" id="enroll-submit" style="margin-top:18px;">Enroll Now</button>
     <div class="modal-msg" id="enroll-msg"></div>
   </div>
 </div>
@@ -481,7 +485,7 @@ function renderCourse(isDraft) {
   document.getElementById('course-page').style.display = 'block';
 }
 
-function handleEnroll() {
+async function handleEnroll() {
   if (!courseData) return;
 
   // If course has stripe_price_id, redirect to Stripe checkout
@@ -490,9 +494,31 @@ function handleEnroll() {
     return;
   }
 
-  // Otherwise show email modal
-  document.getElementById('enroll-modal').classList.add('open');
-  document.getElementById('enroll-email').focus();
+  // Otherwise show email modal. Pre-fill email + display name from the
+  // signed-in profile so the user usually only needs to confirm and submit.
+  var modal = document.getElementById('enroll-modal');
+  var emailEl = document.getElementById('enroll-email');
+  var nameEl = document.getElementById('enroll-cert-name');
+  modal.classList.add('open');
+  try {
+    var loggedEmail = await getLoggedInEmail();
+    if (loggedEmail && emailEl && !emailEl.value) emailEl.value = loggedEmail;
+    if (loggedEmail && nameEl && !nameEl.value) {
+      var profileRes = await fetch(SUPABASE_URL + '/rest/v1/explorer_profiles?email=ilike.' + encodeURIComponent(loggedEmail) + '&select=display_name&limit=1', {
+        headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
+      });
+      if (profileRes.ok) {
+        var rows = await profileRes.json();
+        if (Array.isArray(rows) && rows[0] && rows[0].display_name) {
+          nameEl.value = rows[0].display_name;
+        }
+      }
+    }
+  } catch (e) { /* prefill is best-effort */ }
+  // Focus the empty field if any, otherwise the cert-name field so the
+  // student can confirm/edit before submitting.
+  if (emailEl && !emailEl.value) emailEl.focus();
+  else if (nameEl) nameEl.focus();
 }
 
 document.getElementById('modal-close').addEventListener('click', function() {
@@ -505,9 +531,15 @@ document.getElementById('enroll-modal').addEventListener('click', function(e) {
 
 document.getElementById('enroll-submit').addEventListener('click', async function() {
   var email = document.getElementById('enroll-email').value.trim();
+  var certName = (document.getElementById('enroll-cert-name').value || '').trim();
   var msg = document.getElementById('enroll-msg');
   if (!email) {
     msg.textContent = 'Please enter your email.';
+    msg.style.color = '#c44';
+    return;
+  }
+  if (!certName) {
+    msg.textContent = 'Please enter the name you\'d like on your certificate.';
     msg.style.color = '#c44';
     return;
   }
@@ -522,7 +554,8 @@ document.getElementById('enroll-submit').addEventListener('click', async functio
       headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
       body: JSON.stringify({
         course_id: courseData.id,
-        student_email: email
+        student_email: email,
+        student_name: certName
       })
     });
 
