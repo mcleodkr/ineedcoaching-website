@@ -503,7 +503,27 @@ async function init() {
     wireCEModal();
   }
 
-  loadEnrollments();
+  // Enrollment-gated deep link: /classroom.html?course=<id> auto-opens the
+  // course IF this user is enrolled. Non-enrolled visitors get redirected
+  // to the public course detail page with an enrollment banner — this is
+  // what protects shared friend links without breaking the bare-URL list
+  // view (which keeps loading the user's own enrollments).
+  var deepCourseId = new URLSearchParams(window.location.search).get('course');
+  if (deepCourseId) {
+    try {
+      var encEmail = encodeURIComponent((currentUser.email || '').toLowerCase());
+      var enRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_enrollments?course_id=eq.' + encodeURIComponent(deepCourseId) + '&student_email=ilike.' + encEmail + '&select=id&limit=1', {
+        headers: apiHeaders()
+      });
+      var enRows = enRes.ok ? await enRes.json() : [];
+      if (!Array.isArray(enRows) || enRows.length === 0) {
+        window.location.href = '/course-detail.html?id=' + encodeURIComponent(deepCourseId) + '&enroll_required=1';
+        return;
+      }
+    } catch (e) { /* fall through to list view on lookup error */ }
+  }
+
+  loadEnrollments(deepCourseId);
 }
 
 async function resolveIsCoach() {
@@ -523,7 +543,7 @@ async function resolveIsCoach() {
 }
 
 /* LOAD ENROLLMENTS */
-async function loadEnrollments() {
+async function loadEnrollments(autoOpenCourseId) {
   try {
     var email = currentUser.email;
     var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_enrollments?student_email=eq.' + encodeURIComponent(email) + '&select=*,coach_courses(*,coach_profiles(display_name,slug,photo_url,headline))', {
@@ -564,6 +584,17 @@ async function loadEnrollments() {
   }
 
   renderCourseCards();
+
+  // Stripe success URL + My Courses "Continue" link both pass ?course=<id>;
+  // auto-open that enrollment so the student lands directly in the course.
+  if (autoOpenCourseId) {
+    for (var k = 0; k < enrollments.length; k++) {
+      if (enrollments[k].course_id === autoOpenCourseId) {
+        openCourse(enrollments[k].id);
+        break;
+      }
+    }
+  }
 }
 
 function renderCourseCards() {
@@ -835,14 +866,21 @@ function renderLessonView() {
   html += '</div>';
   html += '</div>';
 
-  // Completion banner
+  // Completion banner — request-driven certificate. The student clicks to
+  // generate (never auto). After generation, the panel switches to a "View
+  // your certificate" link with a quieter "Regenerate with updated name"
+  // affordance for cases where the student wants to refresh their name on
+  // the cert without re-enrolling.
   if (allDone) {
     html += '<div class="completion-banner">';
-    html += '<h3>Congratulations! You completed ' + escapeHtml(course.title || 'this course') + '.</h3>';
-    html += '<p>You\'ve finished all lessons. Well done!</p>';
     if (currentEnrollment.certificate_id) {
-      html += '<a href="/certificate.html?id=' + encodeURIComponent(currentEnrollment.certificate_id) + '" class="cert-btn">Download Certificate</a>';
+      html += '<h3>You\'ve completed ' + escapeHtml(course.title || 'this course') + '.</h3>';
+      html += '<p>Your certificate is ready whenever you want to view, print, or share it.</p>';
+      html += '<a href="/certificate.html?certificate_id=' + encodeURIComponent(currentEnrollment.certificate_id) + '" target="_blank" rel="noopener" class="cert-btn">View your certificate</a>';
+      html += '<div style="margin-top:12px;font-size:0.78rem;"><a href="#" onclick="event.preventDefault();regenerateCertificate();" style="color:rgba(255,255,255,0.85);text-decoration:underline;">Regenerate with updated name</a></div>';
     } else {
+      html += '<h3>✨ You\'ve completed ' + escapeHtml(course.title || 'this course') + '.</h3>';
+      html += '<p>Generate your certificate when you\'re ready.</p>';
       html += '<button class="cert-btn" onclick="generateCertificate()">Generate Certificate</button>';
     }
     html += '</div>';
@@ -939,6 +977,7 @@ async function toggleLesson(lessonId) {
 // CE auto-log can apply the cce_eligible + has-quiz gate correctly.
 async function markLessonComplete(lessonId, source) {
   if (isLessonCompleted(lessonId)) return;
+  var wasAllDone = currentLessons.length > 0 && currentLessons.every(function(l) { return isLessonCompleted(l.id); });
   try {
     var res = await fetch(SUPABASE_URL + '/rest/v1/coach_lesson_completions', {
       method: 'POST',
@@ -959,7 +998,73 @@ async function markLessonComplete(lessonId, source) {
     if (currentLessons[li].id === lessonId) { lessonRow = currentLessons[li]; break; }
   }
   if (lessonRow) await autoLogCEHours(lessonRow, source);
+
+  // Course-completion notification — fires the moment the final lesson
+  // becomes complete (regardless of cert generation). Idempotent via a
+  // pre-write existence check on coach_notifications.
+  var allDoneNow = currentLessons.length > 0 && currentLessons.every(function(l) { return isLessonCompleted(l.id); });
+  if (allDoneNow && !wasAllDone) {
+    notifyCoachOfCourseCompletion().catch(function(err) {
+      console.error('[Notify] course-completion error', err);
+    });
+  }
 }
+
+async function notifyCoachOfCourseCompletion() {
+  var course = (currentEnrollment && currentEnrollment.coach_courses) || {};
+  if (!course.coach_id) return;
+  // Idempotency: skip if a course_completion notification for this
+  // enrollment already exists. link_url carries the enrollment id.
+  try {
+    var encEnrollment = encodeURIComponent(currentEnrollment.id);
+    var checkRes = await fetch(SUPABASE_URL + '/rest/v1/coach_notifications?coach_id=eq.' + encodeURIComponent(course.coach_id) + '&type=eq.course_completion&link_url=ilike.*' + encEnrollment + '*&select=id&limit=1', {
+      headers: apiHeaders()
+    });
+    if (checkRes.ok) {
+      var existing = await checkRes.json();
+      if (Array.isArray(existing) && existing.length > 0) return;
+    }
+  } catch (e) { /* fall through and write */ }
+
+  var studentName = currentEnrollment.student_name
+    || (currentUser && currentUser.email ? currentUser.email.split('@')[0] : 'A student');
+  var courseTitle = course.title || 'a course';
+  var link = '/coach-dashboard.html?tab=courses&course=' + encodeURIComponent(course.id || '') + '&student=' + encodeURIComponent(currentEnrollment.id);
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/coach_notifications', {
+      method: 'POST',
+      headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        coach_id: course.coach_id,
+        type: 'course_completion',
+        title: 'Student completed ' + courseTitle,
+        body: studentName + ' completed ' + courseTitle + '.',
+        link_url: link
+      })
+    });
+  } catch (e) { /* non-fatal */ }
+}
+
+async function regenerateCertificate() {
+  if (!currentEnrollment) return;
+  var current = currentEnrollment.student_name || '';
+  var nextName = window.prompt('Update the name on your certificate:', current);
+  if (nextName == null) return;
+  nextName = String(nextName).trim();
+  if (!nextName) return;
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/coach_course_enrollments?id=eq.' + currentEnrollment.id, {
+      method: 'PATCH',
+      headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ student_name: nextName })
+    });
+    currentEnrollment.student_name = nextName;
+    alert('Certificate name updated. Open the certificate to see the change.');
+  } catch (e) {
+    alert('We had trouble updating that. Please try again.');
+  }
+}
+window.regenerateCertificate = regenerateCertificate;
 
 function showLockedHint(lessonId) {
   var prev = previousLesson(lessonId);

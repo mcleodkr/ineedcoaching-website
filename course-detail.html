@@ -200,9 +200,15 @@ footer a { color: var(--gold); text-decoration: none; }
 
 <div id="course-page" style="display:none;">
 
+  <!-- ENROLLMENT-REQUIRED BANNER (shown when classroom redirected here) -->
+  <div id="enroll-banner" style="display:none;background:linear-gradient(90deg,#fdf9f1 0%,#fbf8f1 100%);border-bottom:1px solid #c49a3c;padding:14px 24px;text-align:center;font-family:'DM Sans',sans-serif;font-size:0.92rem;color:#1a3a52;">
+    <strong style="color:#c49a3c;">Enroll to access this course.</strong> You'll get instant classroom access right after.
+  </div>
+
   <!-- HERO -->
   <section class="course-hero">
     <div class="hero-inner">
+      <div id="hero-thumbnail" style="display:none;margin-bottom:24px;border-radius:14px;overflow:hidden;border:1px solid rgba(196,154,60,0.3);box-shadow:0 12px 32px rgba(0,0,0,0.18);"></div>
       <div class="hero-text">
         <div class="format-badge" id="hero-format"></div>
         <h1 id="hero-title"></h1>
@@ -316,6 +322,13 @@ async function loadCourse() {
   var courseId = params.get('id');
   var isPreview = params.get('preview') === 'true';
 
+  // classroom.html redirects non-enrolled users here with enroll_required=1.
+  // Surface the banner so the visitor knows why they bounced and what to do.
+  if (params.get('enroll_required') === '1') {
+    var bannerEl = document.getElementById('enroll-banner');
+    if (bannerEl) bannerEl.style.display = 'block';
+  }
+
   if (!slug && !courseId) {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('error').style.display = 'block';
@@ -386,6 +399,13 @@ function renderCourse(isDraft) {
 
   // Hero
   var formatMap = { 'self-paced': 'Self-paced', 'cohort': 'Cohort', 'masterclass': 'Masterclass' };
+  if (c.thumbnail_url) {
+    var thumbEl = document.getElementById('hero-thumbnail');
+    if (thumbEl) {
+      thumbEl.style.display = 'block';
+      thumbEl.innerHTML = '<img src="' + escapeHtml(c.thumbnail_url) + '" alt="' + escapeHtml(c.title || 'Course') + '" style="display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;">';
+    }
+  }
   document.getElementById('hero-format').textContent = formatMap[c.format] || c.format || 'Course';
   document.getElementById('hero-title').textContent = c.title || '';
 

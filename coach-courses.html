@@ -339,8 +339,13 @@ function renderCourses(courses) {
       ? `<img src="${escapeHtml(coach.photo_url)}" alt="${escapeHtml(coachName)}" class="coach-avatar">`
       : `<div class="coach-initials">${getInitials(coachName)}</div>`;
 
+    const thumbBlock = course.thumbnail_url
+      ? `<a href="/course-detail.html?slug=${escapeHtml(course.slug || '')}" style="display:block;aspect-ratio:16/9;background:#1a3a52 center/cover no-repeat url('${escapeHtml(course.thumbnail_url)}');"></a>`
+      : `<a href="/course-detail.html?slug=${escapeHtml(course.slug || '')}" style="display:block;aspect-ratio:16/9;background:linear-gradient(135deg,#1a3a52 0%,#2c5170 100%);display:flex;align-items:center;justify-content:center;padding:18px;text-align:center;color:#c49a3c;font-family:'Playfair Display',serif;font-style:italic;font-size:1.2rem;line-height:1.25;text-decoration:none;">${escapeHtml(course.title)}</a>`;
+
     html += `
       <div class="course-card${course.is_featured ? ' featured' : ''}" data-format="${course.format || ''}" data-status="${course.status || ''}" data-title="${escapeHtml((course.title || '').toLowerCase())}" data-desc="${escapeHtml((course.description || '').toLowerCase())}">
+        ${thumbBlock}
         <div class="course-card-body">
           <div class="course-coach">
             ${avatarHtml}
