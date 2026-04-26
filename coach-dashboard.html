@@ -9808,13 +9808,19 @@ async function cbLoadModuleLessons(modId) {
         + '<button onclick="cbDeleteLesson(\'' + modId + '\',\'' + l.id + '\')" style="background:none;border:none;color:#c44;cursor:pointer;font-size:0.9rem;padding:2px 6px;">&times;</button>'
         + '</div>'
 
-        // Description
+        // Description — short summary that appears on the public course
+        // detail page. Now also used as a fallback in the classroom when
+        // content is empty, so authors should treat this as student-facing.
         + '<div class="cb-field" style="margin-bottom:10px;">'
-        + '<textarea class="cb-input cb-lesson-autosave" data-lesson-id="' + l.id + '" data-lesson-field="description" data-mod-id="' + modId + '" placeholder="Add a description..." style="font-size:0.82rem;min-height:50px;resize:vertical;">' + escapeHtml(l.description || '') + '</textarea>'
+        + '<label class="cb-label" style="font-size:0.72rem;letter-spacing:0.04em;color:#8a8a9a;text-transform:uppercase;font-weight:700;">Lesson summary</label>'
+        + '<div class="cb-hint" style="font-size:0.72rem;color:#9a9490;margin-bottom:6px;">Short overview shown on the public course page. Also used as the lesson body in the classroom if "Lesson body" below is left empty.</div>'
+        + '<textarea class="cb-input cb-lesson-autosave" data-lesson-id="' + l.id + '" data-lesson-field="description" data-mod-id="' + modId + '" placeholder="A few sentences summarizing this lesson..." style="font-size:0.82rem;min-height:50px;resize:vertical;">' + escapeHtml(l.description || '') + '</textarea>'
         + '</div>'
 
-        // Content tabs
+        // Content tabs — the full lesson body shown to students in the classroom.
         + '<div style="margin-bottom:10px;">'
+        + '<label class="cb-label" style="font-size:0.72rem;letter-spacing:0.04em;color:#8a8a9a;text-transform:uppercase;font-weight:700;">Lesson body</label>'
+        + '<div class="cb-hint" style="font-size:0.72rem;color:#9a9490;margin-bottom:8px;">Full content shown to enrolled students in the classroom. Pick one mode: write text, paste a video URL, or upload a file (PDF / video).</div>'
         + '<div style="display:flex;gap:4px;margin-bottom:8px;">'
         + '<button onclick="cbLessonTab(\'' + l.id + '\',\'write\')" class="cb-lesson-tab' + (activeTab === 'write' ? ' active' : '') + '" id="lt-write-' + l.id + '">Write</button>'
         + '<button onclick="cbLessonTab(\'' + l.id + '\',\'video\')" class="cb-lesson-tab' + (activeTab === 'video' ? ' active' : '') + '" id="lt-video-' + l.id + '">Video</button>'
