@@ -255,7 +255,7 @@
         <h1 id="client-heading">Loading…</h1>
         <div class="meta" id="header-meta" style="text-transform:none;letter-spacing:0;font-size:0.82rem;color:var(--muted);">&nbsp;</div>
       </div>
-      <a href="/coach-dashboard.html" id="back-link">← Back to dashboard</a>
+      <a href="/coach-dashboard.html" id="back-link" onclick="if(document.referrer && document.referrer.indexOf('/coach-dashboard.html') !== -1){history.back();return false;}">← Back to dashboard</a>
     </div>
     <div id="content">
       <div class="loader">

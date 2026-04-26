@@ -143,7 +143,7 @@
         <h1 id="client-heading">Loading…</h1>
         <div class="meta" id="header-meta" style="text-transform:none;letter-spacing:0;font-size:0.82rem;color:var(--muted);">&nbsp;</div>
       </div>
-      <a href="/coach-dashboard.html" id="back-link">← Back to dashboard</a>
+      <a href="/coach-dashboard.html" id="back-link" onclick="if(document.referrer && document.referrer.indexOf('/coach-dashboard.html') !== -1){history.back();return false;}">← Back to dashboard</a>
     </div>
 
     <div class="toolbar" id="toolbar" style="display:none;">
@@ -203,30 +203,61 @@
   }
 
   // Build session_id → "session N · date" labels so source_sessions chips
-  // render readable text instead of raw uuids. Same pattern that
-  // intervention-plan-panel.html uses for prior_commitments.
-  async function loadSessionLabels() {
+  // render readable text instead of raw uuids. Joins coach_session_notes
+  // to coach_bookings via booking_id and orders by scheduled_at — the same
+  // source coach-dashboard.html and api/coach-mirror.js use, so chips on
+  // all three surfaces agree. Used as a fallback when the persisted
+  // pattern_map JSONB is missing session_labels (older rows).
+  async function loadSessionLabelsFallback() {
     try {
-      const res = await fetch(SUPABASE_URL + '/rest/v1/coach_session_notes?coach_id=eq.' + coachId + '&client_email=eq.' + encodeURIComponent(clientEmail) + '&post_session_analysis=not.is.null&select=id,created_at&order=created_at.asc', { headers: apiHeaders() });
-      if (!res.ok) return {};
-      const rows = await res.json();
+      const [notesRes, bookingsRes] = await Promise.all([
+        fetch(SUPABASE_URL + '/rest/v1/coach_session_notes?coach_id=eq.' + coachId + '&client_email=eq.' + encodeURIComponent(clientEmail) + '&post_session_analysis=not.is.null&select=id,booking_id,created_at', { headers: apiHeaders() }),
+        fetch(SUPABASE_URL + '/rest/v1/coach_bookings?coach_id=eq.' + coachId + '&client_email=eq.' + encodeURIComponent(clientEmail) + '&select=id,scheduled_at', { headers: apiHeaders() }),
+      ]);
+      if (!notesRes.ok) return {};
+      const notes = await notesRes.json();
+      const bookings = bookingsRes.ok ? await bookingsRes.json() : [];
+      const bookingMap = {};
+      (Array.isArray(bookings) ? bookings : []).forEach(function(b) {
+        if (b && b.id) bookingMap[b.id] = b.scheduled_at || null;
+      });
+      // Stamp effective date from booking.scheduled_at, fall through to PSA created_at.
+      const stamped = (Array.isArray(notes) ? notes : []).map(function(r) {
+        const eff = (r && r.booking_id && bookingMap[r.booking_id]) ? bookingMap[r.booking_id] : (r && r.created_at) || null;
+        return { id: r && r.id, eff: eff };
+      }).filter(function(r) { return r.id; });
+      stamped.sort(function(a, b) {
+        const ta = a.eff ? new Date(a.eff).getTime() : 0;
+        const tb = b.eff ? new Date(b.eff).getTime() : 0;
+        return ta - tb;
+      });
       const map = {};
-      (Array.isArray(rows) ? rows : []).forEach(function(r, i) {
-        if (!r || !r.id) return;
-        const d = r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
+      stamped.forEach(function(r, i) {
+        const d = r.eff ? new Date(r.eff).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
         map[r.id] = 'session ' + (i + 1) + (d ? ' · ' + d : '');
       });
       return map;
     } catch (_) { return {}; }
   }
 
-  async function loadClientName(email) {
+  // Resolve a client display name using the same source coach-dashboard.html
+  // uses (line 4107): the first /^Name:\s*(.+)/m match in coach_bookings.notes
+  // for this client. Coach Mirror's API does this server-side; here we mirror
+  // it client-side as a fallback when the API response or persisted row
+  // lacks display_name (older rows pre-this-commit).
+  async function loadClientNameFallback(email) {
     if (!email) return null;
     try {
-      const res = await fetch(SUPABASE_URL + '/rest/v1/explorer_profiles?email=eq.' + encodeURIComponent(email) + '&select=display_name&limit=1', { headers: apiHeaders() });
+      const res = await fetch(SUPABASE_URL + '/rest/v1/coach_bookings?coach_id=eq.' + coachId + '&client_email=eq.' + encodeURIComponent(email) + '&select=notes', { headers: apiHeaders() });
       if (!res.ok) return null;
       const rows = await res.json();
-      return Array.isArray(rows) && rows.length ? (rows[0].display_name || null) : null;
+      if (!Array.isArray(rows)) return null;
+      for (const r of rows) {
+        const n = (r && r.notes) || '';
+        const m = n.match(/^Name:\s*(.+)/m);
+        if (m) return m[1].trim();
+      }
+      return null;
     } catch (_) { return null; }
   }
 
@@ -235,6 +266,29 @@
     if (!res.ok) return null;
     const rows = await res.json();
     return Array.isArray(rows) && rows.length ? rows[0] : null;
+  }
+
+  // Resolve session labels from a pattern_map JSONB if it carries them
+  // (post-this-commit rows do); otherwise hit the fallback query.
+  async function resolveSessionLabels(pm) {
+    if (pm && pm.session_labels && typeof pm.session_labels === 'object') {
+      return pm.session_labels;
+    }
+    return await loadSessionLabelsFallback();
+  }
+
+  // Update the header (name + session count + email subline) from whatever
+  // pattern_map JSONB we're rendering. Prefers pm.display_name (booking-notes
+  // source) over the bookings fallback over the email.
+  async function applyHeader(pm, sessionCountOverride) {
+    let name = (pm && pm.display_name) || null;
+    if (!name) name = await loadClientNameFallback(clientEmail);
+    $('client-heading').textContent = name || clientEmail;
+    const sc = (typeof sessionCountOverride === 'number') ? sessionCountOverride
+      : (pm && (pm.session_count || 0)) || 0;
+    $('header-meta').textContent =
+      (name && clientEmail !== name ? clientEmail + ' · ' : '')
+      + sc + ' session' + (sc === 1 ? '' : 's') + ' analyzed';
   }
 
   async function regenerate() {
@@ -262,14 +316,16 @@
       if (data && data.status === 'failed') {
         const priorRow = await loadPatternMap();
         if (priorRow && priorRow.pattern_map) {
-          sessionLabels = await loadSessionLabels();
+          sessionLabels = await resolveSessionLabels(priorRow.pattern_map);
+          await applyHeader(priorRow.pattern_map, priorRow.session_count);
           renderMap(priorRow.pattern_map, priorRow.last_analyzed || (priorRow.pattern_map && priorRow.pattern_map.last_analyzed), { failureBanner: true });
         } else {
           renderFailureState();
         }
         return;
       }
-      sessionLabels = await loadSessionLabels();
+      sessionLabels = await resolveSessionLabels(data);
+      await applyHeader(data, data && data.session_count);
       renderMap(data, new Date().toISOString());
     } catch (e) {
       showError(e.message || 'Regeneration failed.');
@@ -507,26 +563,21 @@
     if (!profile) return;
     coachId = profile.id;
 
-    const clientName = await loadClientName(clientEmail);
-    $('client-heading').textContent = clientName || clientEmail;
-    if (clientName && clientEmail !== clientName) {
-      $('header-meta').textContent = clientEmail;
-    }
-
-    sessionLabels = await loadSessionLabels();
-
     const row = await loadPatternMap();
     if (!row || !row.pattern_map) {
+      // No persisted map. Header still gets the booking-notes name so the
+      // empty state shows "candy apple" not "creativeenergytx@gmail.com".
+      const fallbackName = await loadClientNameFallback(clientEmail);
+      $('client-heading').textContent = fallbackName || clientEmail;
       $('header-meta').textContent =
-        (clientName && clientEmail !== clientName ? clientEmail + ' · ' : '')
+        (fallbackName && clientEmail !== fallbackName ? clientEmail + ' · ' : '')
         + 'Not yet generated';
+      sessionLabels = await loadSessionLabelsFallback();
       renderEmpty();
     } else {
       const pm = row.pattern_map;
-      const sc = row.session_count || pm.session_count || 0;
-      $('header-meta').textContent =
-        (clientName && clientEmail !== clientName ? clientEmail + ' · ' : '')
-        + sc + ' session' + (sc === 1 ? '' : 's') + ' analyzed';
+      sessionLabels = await resolveSessionLabels(pm);
+      await applyHeader(pm, row.session_count || pm.session_count);
       renderMap(pm, row.last_analyzed || pm.last_analyzed);
     }
 

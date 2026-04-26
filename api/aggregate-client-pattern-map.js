@@ -77,6 +77,15 @@ function fmtDate(iso) {
   } catch (_) { return null; }
 }
 
+// Same regex coach-dashboard.html:4107 and api/coach-mirror.js use to derive
+// the client display name. Keeping the three surfaces on one source means a
+// dashboard rename of "candy apple" propagates to both panels automatically.
+function parseNameFromNotes(notes) {
+  if (typeof notes !== 'string' || !notes) return null;
+  const m = notes.match(/^Name:\s*(.+)/m);
+  return m ? m[1].trim() : null;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -104,30 +113,76 @@ export default async function handler(req, res) {
       'Content-Type': 'application/json',
     };
 
-    // Fetch all PSA-analyzed sessions for this client (ascending so session
-    // ordinals are stable: oldest = 1, newest = N).
+    // Fetch PSA-analyzed sessions and this client's bookings in parallel.
+    // Bookings give us scheduled_at (true session date — see Coach Mirror's
+    // 5b hotfix for why PSA created_at is wrong) and notes (display_name
+    // source via the same regex coach-dashboard.html uses).
     const enc = encodeURIComponent(client_email);
     const sessionsUrl = `${SUPABASE_URL}/rest/v1/coach_session_notes`
       + `?coach_id=eq.${coach_id}`
       + `&client_email=eq.${enc}`
       + `&post_session_analysis=not.is.null`
-      + `&select=id,booking_id,created_at,post_session_analysis,extraction_data`
-      + `&order=created_at.asc`;
-    const sessionsRes = await fetch(sessionsUrl, { headers: supaHeaders });
+      + `&select=id,booking_id,created_at,post_session_analysis,extraction_data`;
+    const bookingsUrl = `${SUPABASE_URL}/rest/v1/coach_bookings`
+      + `?coach_id=eq.${coach_id}`
+      + `&client_email=eq.${enc}`
+      + `&select=id,scheduled_at,notes`;
+
+    const [sessionsRes, bookingsRes] = await Promise.all([
+      fetch(sessionsUrl, { headers: supaHeaders }),
+      fetch(bookingsUrl, { headers: supaHeaders }),
+    ]);
     if (!sessionsRes.ok) {
       const errText = await sessionsRes.text();
       console.error('[Pattern Map] sessions fetch failed:', errText.substring(0, 500));
       return res.status(500).json({ error: 'Failed to load sessions' });
     }
-    const sessions = await sessionsRes.json();
+    const rawSessions = await sessionsRes.json();
 
-    if (!Array.isArray(sessions) || sessions.length < 3) {
+    let bookingRows = [];
+    if (bookingsRes.ok) {
+      const parsed = await bookingsRes.json();
+      if (Array.isArray(parsed)) bookingRows = parsed;
+    } else {
+      // Bookings fetch failure is non-fatal — we'll fall back to PSA created_at
+      // for date sourcing and leave display_name null. Don't block synthesis.
+      console.warn('[Pattern Map] bookings fetch failed (non-fatal):', bookingsRes.status);
+    }
+
+    // bookingId → { scheduled_at, notes }; first matching notes entry wins
+    // for displayName (matches Coach Mirror's behavior).
+    const bookingMap = {};
+    let displayName = null;
+    bookingRows.forEach(function(b) {
+      if (!b || !b.id) return;
+      bookingMap[b.id] = { scheduled_at: b.scheduled_at || null, notes: b.notes || '' };
+      if (!displayName) {
+        const n = parseNameFromNotes(b.notes);
+        if (n) displayName = n;
+      }
+    });
+
+    if (!Array.isArray(rawSessions) || rawSessions.length < 3) {
       return res.status(200).json({
         locked: true,
-        session_count: Array.isArray(sessions) ? sessions.length : 0,
+        session_count: Array.isArray(rawSessions) ? rawSessions.length : 0,
         needed: 3,
+        display_name: displayName,
       });
     }
+
+    // Stamp each session with effective_date (booking.scheduled_at when joinable,
+    // else PSA created_at). Then sort by effective_date ASC so ordinals are
+    // stable oldest=1 even if PSA rows were written out of session order.
+    const sessions = rawSessions.map(function(s) {
+      const bk = s.booking_id ? bookingMap[s.booking_id] : null;
+      const effectiveDate = (bk && bk.scheduled_at) ? bk.scheduled_at : s.created_at;
+      return Object.assign({}, s, { effective_date: effectiveDate });
+    }).sort(function(a, b) {
+      const ta = a.effective_date ? new Date(a.effective_date).getTime() : 0;
+      const tb = b.effective_date ? new Date(b.effective_date).getTime() : 0;
+      return ta - tb;
+    });
 
     // ── Aggregation pass — counts + source_session tracking ───────────────
     // Maps each pattern element back to the session_ids that contributed.
@@ -218,12 +273,24 @@ export default async function handler(req, res) {
 
     const allClientQuotes = Array.from(quoteSet).slice(0, 10);
 
-    const firstDate = sessions[0]?.created_at ? new Date(sessions[0].created_at) : null;
-    const lastDate = sessions[sessions.length - 1]?.created_at ? new Date(sessions[sessions.length - 1].created_at) : null;
+    // Date range and per-session ordinals come from effective_date (booking
+    // scheduled_at when joinable, else PSA created_at) — see the sort above.
+    const firstDate = sessions[0]?.effective_date ? new Date(sessions[0].effective_date) : null;
+    const lastDate = sessions[sessions.length - 1]?.effective_date ? new Date(sessions[sessions.length - 1].effective_date) : null;
     const dateRange = (firstDate && lastDate)
       ? `${fmtDate(firstDate.toISOString())} — ${fmtDate(lastDate.toISOString())}`
       : 'Unknown range';
     const sessionCount = sessions.length;
+
+    // Per-session label map for source-citation chips on the panel:
+    //   session_id → "session N · Apr 21, 2026"
+    // Built server-side so the panel doesn't need a separate query and so
+    // chips always agree with what the synthesis prompt saw.
+    const sessionLabels = {};
+    sessions.forEach(function(s, i) {
+      const dStr = fmtDate(s.effective_date);
+      sessionLabels[s.id] = 'session ' + (i + 1) + (dStr ? ' · ' + dStr : '');
+    });
 
     // Compact session index passed to the synthesis prompt: ordinal + date +
     // the client-facing fields only. No missed_windows, no
@@ -233,7 +300,7 @@ export default async function handler(req, res) {
       return {
         session_id: s.id,
         ordinal: i + 1,
-        date: fmtDate(s.created_at) || null,
+        date: fmtDate(s.effective_date) || null,
         pattern: psa.pattern || null,
         frameworks: Array.isArray(psa.frameworks) ? psa.frameworks : null,
         emotional_anchor: psa.emotional_anchor || null,
@@ -252,12 +319,26 @@ export default async function handler(req, res) {
       'You are aggregating Coach Clarity outputs from multiple sessions to produce a Client Pattern Map.\n\n' +
       'STRICT BOUNDARY: every output field describes the CLIENT only — their drivers, their language, their patterns, their growth, what moves them forward, where they get stuck. ' +
       'You are writing a forensic-psychologist-style profile of the person being coached.\n\n' +
+      'OUTPUT VOICE: third-person observation only. Every sentence describes the client. ZERO sentences address the coach. ' +
+      'Do NOT use second-person "you" or "your" referring to the coach. Do NOT include prescriptive language about what to do, watch for, or attend to. ' +
+      'Forbidden phrases that signal a coach-facing leak — never include any of these in any output text:\n' +
+      '- "As a coach"  /  "as a coach:"\n' +
+      '- "You may need to" / "You might" / "You should" / "Watch for" / "Notice when"\n' +
+      '- "In these moments" / "In this moment"\n' +
+      '- "The stall is the signal" or any aphorism aimed at the coach\n' +
+      '- "Staying with the feeling before moving to insight" or any prescriptive direction\n' +
+      'If a sentence would only make sense if a coach were reading it as instruction, that sentence does not belong in Pattern Map. Coach-facing reflection lives in Coach Mirror.\n\n' +
       'NEVER include coach-facing reflection. Specifically:\n' +
       '- Do NOT write "what the coach didn\'t explore" or "what was left on the table"\n' +
       '- Do NOT write "missed windows" content or critique coaching choices\n' +
       '- Do NOT write "why this mattered to the coach" or anything from the coach\'s point of view\n' +
-      '- Do NOT name what the coach should have done differently\n' +
-      'Coach-facing reflection lives in a separate surface called Coach Mirror; Pattern Map does not duplicate that material.\n\n' +
+      '- Do NOT name what the coach should have done differently\n\n' +
+      'NO PREAMBLE on any field. Forbidden opening phrases on driver / stall_point / shift / condition / summary text:\n' +
+      '- "This client\'s patterns suggest:"\n' +
+      '- "It appears that"\n' +
+      '- "There is a tendency to"\n' +
+      '- "What we see here is"\n' +
+      'State the observation directly. The driver IS the first words. The stall point IS the first words.\n\n' +
       'Diagnostic framing is also forbidden. Words you must NEVER use: dysregulation, maladaptive, pathology, borderline, disorder, trauma (as diagnosis), intervention (use "move" or "approach"). ' +
       'Use coaching language. Ground every statement in the supplied PSA evidence — sessions, quotes, observed patterns. ' +
       'If evidence is thin for a section, say so honestly: "Not enough sessions yet to see a clear pattern here." Do NOT invent patterns.\n\n' +
@@ -275,22 +356,22 @@ export default async function handler(req, res) {
       'Return ONLY this JSON shape. Every array element MUST include source_sessions: [session_id,...] from the SESSION INDEX above:\n' +
       '{\n' +
       '  "likely_drivers": [\n' +
-      '    { "driver": "plain language description", "evidence_quote": "verbatim or near-verbatim client language", "frequency": "observed in X of ' + sessionCount + ' sessions", "source_sessions": ["<session_id>"] }\n' +
+      '    { "driver": "Name the driver directly. Begin with the driver itself — NO preamble like \\"This client\'s patterns suggest:\\" or \\"It appears that\\". Third-person description of the client.", "evidence_quote": "verbatim or near-verbatim client language", "frequency": "observed in X of ' + sessionCount + ' sessions", "source_sessions": ["<session_id>"] }\n' +
       '  ],\n' +
       '  "emotional_style": {\n' +
-      '    "summary": "how this client moves through emotional territory — 2-3 sentences, coaching language only",\n' +
-      '    "patterns": ["observable client pattern 1", "observable client pattern 2"],\n' +
+      '    "summary": "1-2 sentences in third-person describing how the CLIENT moves through emotional territory. Description, not prescription. NO sentences directed at the coach. NO \\"As a coach\\", \\"You may\\", \\"Watch for\\", \\"In these moments\\".",\n' +
+      '    "patterns": ["observable client pattern 1 — third-person observation only", "observable client pattern 2 — third-person observation only"],\n' +
       '    "client_language": ["verbatim or near-verbatim quote showing emotional style"],\n' +
       '    "source_sessions": ["<session_id>"]\n' +
       '  },\n' +
       '  "what_moves_them_forward": [\n' +
-      '    { "condition": "what creates real movement for this client", "evidence_quote": "session example or quote", "source_sessions": ["<session_id>"] }\n' +
+      '    { "condition": "what creates real movement for this client — third-person observation, no prescription", "evidence_quote": "session example or quote", "source_sessions": ["<session_id>"] }\n' +
       '  ],\n' +
       '  "where_they_get_stuck": [\n' +
-      '    { "stall_point": "specific stall condition in coaching language (CLIENT-SIDE only)", "evidence_quote": "session evidence or quote", "frequency": "observed in X of ' + sessionCount + ' sessions", "source_sessions": ["<session_id>"] }\n' +
+      '    { "stall_point": "Specific client-side stall condition in third-person. NO sentences directed at the coach. NO \\"In these moments\\", \\"The stall is the signal\\", \\"Staying with the feeling\\" — those are coach-facing aphorisms.", "evidence_quote": "session evidence or quote", "frequency": "observed in X of ' + sessionCount + ' sessions", "source_sessions": ["<session_id>"] }\n' +
       '  ],\n' +
       '  "signs_of_growth": [\n' +
-      '    { "shift": "observable change in language, behavior, or awareness", "from": "what it looked like before", "to": "what it looks like now", "evidence_quote": "session reference", "source_sessions": ["<session_id>"] }\n' +
+      '    { "shift": "observable change in client language, behavior, or awareness — third-person", "from": "what it looked like before", "to": "what it looks like now", "evidence_quote": "session reference", "source_sessions": ["<session_id>"] }\n' +
       '  ]\n' +
       '}\n\n' +
       'If a section lacks evidence, return one element where the descriptive text is "Not enough sessions yet to see a clear pattern here." with empty evidence_quote and empty source_sessions array. Do NOT fabricate.';
@@ -357,6 +438,10 @@ export default async function handler(req, res) {
       core_patterns: corePatterns,
       behavioral_tendencies: behavioralTendencies,
       recurring_stuck_points: recurringStuckPoints,
+      // Header / source-citation data — persisted into pattern_map JSONB so
+      // the panel doesn't need separate queries on subsequent loads.
+      display_name: displayName,
+      session_labels: sessionLabels,
       // Metadata
       session_count: sessionCount,
       date_range: dateRange,
