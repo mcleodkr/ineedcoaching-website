@@ -30,7 +30,7 @@ const STUCK_LABELS = {
   energy_shift: 'Noticeable shifts in energy during session',
 };
 
-async function callClaude(apiKey, model, maxTokens, system, userMessage, passName) {
+async function callClaudeRaw(apiKey, model, maxTokens, system, userMessage, passName) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -51,15 +51,23 @@ async function callClaude(apiKey, model, maxTokens, system, userMessage, passNam
     throw new Error(`${passName} Claude API error ${res.status}`);
   }
   const data = await res.json();
-  let rawText = data.content?.[0]?.text || '';
-  rawText = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
-  try {
-    const match = rawText.match(/\{[\s\S]*\}/);
-    return match ? JSON.parse(match[0]) : JSON.parse(rawText);
-  } catch (e) {
-    console.error(`[${passName}] JSON parse failed. Raw:`, rawText.substring(0, 2000));
-    throw new Error(`${passName} JSON parse error: ${e.message}`);
+  return data.content?.[0]?.text || '';
+}
+
+// Defensive JSON extractor for Claude synthesis output.
+// Claude's shape is non-deterministic — sometimes raw {...}, sometimes
+// fenced ```json{...}```, sometimes prefixed with "Here is the Pattern Map:".
+// This strips fences and slices between the first { and the last } so any
+// lead-in / outro prose is dropped. Throws if no JSON object is present.
+function extractJSON(text) {
+  let s = (text || '').trim();
+  s = s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '');
+  const first = s.indexOf('{');
+  const last = s.lastIndexOf('}');
+  if (first === -1 || last === -1 || last < first) {
+    throw new Error('No JSON object found in synthesis response');
   }
+  return s.slice(first, last + 1);
 }
 
 function fmtDate(iso) {
@@ -287,9 +295,15 @@ export default async function handler(req, res) {
       '}\n\n' +
       'If a section lacks evidence, return one element where the descriptive text is "Not enough sessions yet to see a clear pattern here." with empty evidence_quote and empty source_sessions array. Do NOT fabricate.';
 
-    let aiOutput;
+    // Synthesis: call → extract JSON → parse. Any failure here returns 200
+    // {status:'failed', error} and DOES NOT write to coach_client_patterns,
+    // so a failed regenerate never clobbers a previously-successful row.
+    let rawSynthesisText = '';
+    let aiOutput = null;
+    let synthesisFailureReason = null;
+
     try {
-      aiOutput = await callClaude(
+      rawSynthesisText = await callClaudeRaw(
         ANTHROPIC_API_KEY,
         'claude-sonnet-4-6',
         2500,
@@ -298,14 +312,30 @@ export default async function handler(req, res) {
         'Pattern Map'
       );
     } catch (e) {
-      console.error('[Pattern Map] AI synthesis failed:', e.message);
-      aiOutput = {
-        likely_drivers: [],
-        emotional_style: { summary: 'Pattern Map generation failed. Try again shortly.', patterns: [], client_language: [], source_sessions: [] },
-        what_moves_them_forward: [],
-        where_they_get_stuck: [],
-        signs_of_growth: [],
-      };
+      synthesisFailureReason = 'synthesis_api_failed';
+      console.error('[Pattern Map] Claude API failed:', e.message);
+    }
+
+    if (!synthesisFailureReason) {
+      try {
+        const extracted = extractJSON(rawSynthesisText);
+        aiOutput = JSON.parse(extracted);
+      } catch (err) {
+        synthesisFailureReason = 'synthesis_parse_failed';
+        console.error('[Pattern Map] JSON parse failed', {
+          err: err.message,
+          raw: (rawSynthesisText || '').slice(0, 500),
+        });
+      }
+    }
+
+    if (synthesisFailureReason || !aiOutput) {
+      // Hand off to panel with a status flag. Panel renders the prior row
+      // (if any) plus a retry banner — the empty-defaults UI must NOT show.
+      return res.status(200).json({
+        status: 'failed',
+        error: synthesisFailureReason || 'synthesis_failed',
+      });
     }
 
     const now = new Date().toISOString();

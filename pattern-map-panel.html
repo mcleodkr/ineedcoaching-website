@@ -256,6 +256,19 @@
         renderLocked(data.session_count || 0);
         return;
       }
+      // Synthesis failed server-side. Endpoint did NOT write to the DB, so
+      // any prior pattern_map row is intact. Render that row with a retry
+      // banner; if there's no prior row, render a clean failure state.
+      if (data && data.status === 'failed') {
+        const priorRow = await loadPatternMap();
+        if (priorRow && priorRow.pattern_map) {
+          sessionLabels = await loadSessionLabels();
+          renderMap(priorRow.pattern_map, priorRow.last_analyzed || (priorRow.pattern_map && priorRow.pattern_map.last_analyzed), { failureBanner: true });
+        } else {
+          renderFailureState();
+        }
+        return;
+      }
       sessionLabels = await loadSessionLabels();
       renderMap(data, new Date().toISOString());
     } catch (e) {
@@ -362,9 +375,17 @@
     return html || '<div class="empty-section">Not enough sessions yet to see a clear pattern here.</div>';
   }
 
-  function renderMap(pm, lastAnalyzedIso) {
+  function renderMap(pm, lastAnalyzedIso, options) {
+    options = options || {};
     const isEmpty = function(arr) { return !Array.isArray(arr) || arr.length === 0; };
     let html = '';
+
+    if (options.failureBanner) {
+      html += '<div class="error-box" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
+        + '<span>⚠ Last regenerate failed. Showing previous Pattern Map.</span>'
+        + '<button class="btn btn-secondary" id="retry-regenerate-btn" style="margin:0;">Retry</button>'
+        + '</div>';
+    }
 
     html += '<div class="info-box"><strong>Built from session evidence.</strong> ' +
       'Pattern Map describes how this client operates — drivers, language, patterns, growth. ' +
@@ -443,6 +464,22 @@
 
     $('content').innerHTML = html;
     $('toolbar').style.display = '';
+
+    if (options.failureBanner) {
+      const retryBtn = $('retry-regenerate-btn');
+      if (retryBtn) retryBtn.addEventListener('click', regenerate);
+    }
+  }
+
+  function renderFailureState() {
+    $('toolbar').style.display = '';
+    $('content').innerHTML =
+      '<div class="error-box" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
+      + '<span>⚠ Pattern Map generation failed. No prior Pattern Map exists for this client yet.</span>'
+      + '<button class="btn btn-secondary" id="failure-retry-btn" style="margin:0;">Retry</button>'
+      + '</div>';
+    const retryBtn = $('failure-retry-btn');
+    if (retryBtn) retryBtn.addEventListener('click', regenerate);
   }
 
   function renderLocked(sessionCount) {
