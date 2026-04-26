@@ -1,10 +1,21 @@
+// STRIPE_MODE selects between test and live key sets. Default to 'test' so
+// missing config fails closed rather than charging real money. Flip to
+// 'live' in Vercel env vars before real coaches onboard.
+function resolveStripeKey() {
+  const mode = (process.env.STRIPE_MODE || 'test').toLowerCase();
+  if (mode === 'live') {
+    return process.env.STRIPE_SECRET_KEY_LIVE || process.env.STRIPE_SECRET_KEY || null;
+  }
+  return process.env.STRIPE_SECRET_KEY_TEST || process.env.STRIPE_SECRET_KEY || null;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+  const STRIPE_SECRET_KEY = resolveStripeKey();
   const SUPABASE_URL = process.env.SUPABASE_URL || 'https://qroizygknxdjsstkezsf.supabase.co';
   const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -14,6 +25,7 @@ export default async function handler(req, res) {
       debug: {
         hasStripeKey: !!STRIPE_SECRET_KEY,
         hasSupabaseKey: !!SUPABASE_KEY,
+        stripeMode: process.env.STRIPE_MODE || 'test',
         stripeEnvVars: Object.keys(process.env).filter(function(k) { return k.includes('STRIPE') || k.includes('stripe'); })
       }
     });

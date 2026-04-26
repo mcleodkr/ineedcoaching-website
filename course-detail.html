@@ -343,10 +343,10 @@ async function loadCourse() {
       // Course Builder preview path + client dashboard "Continue" link both
       // pass id. Embed user_email so we can verify ownership for drafts.
       url = SUPABASE_URL + '/rest/v1/coach_courses?id=eq.' + encodeURIComponent(courseId)
-        + '&select=*,coach_profiles(display_name,slug,photo_url,headline,user_email)';
+        + '&select=*,coach_profiles(display_name,slug,photo_url,headline,user_email,stripe_account_id)';
     } else {
       url = SUPABASE_URL + '/rest/v1/coach_courses?slug=eq.' + encodeURIComponent(slug)
-        + '&select=*,coach_profiles(display_name,slug,photo_url,headline,user_email)';
+        + '&select=*,coach_profiles(display_name,slug,photo_url,headline,user_email,stripe_account_id)';
     }
     var res = await fetch(url, {
       headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
@@ -482,7 +482,27 @@ function renderCourse(isDraft) {
   if (c.duration_weeks) {
     priceHtml += '<div class="price-row"><span class="price-label">Duration</span><span class="price-value">' + c.duration_weeks + ' weeks</span></div>';
   }
-  priceHtml += '<button class="enroll-btn" id="enroll-btn" onclick="handleEnroll()">Enroll Now</button>';
+  // Enroll readiness — gated on stripe_price_id (course is configured for
+  // checkout) AND coach.stripe_account_id (coach can receive payouts).
+  // When either is missing we render a disabled button + tooltip explaining
+  // why, so the page never quietly creates a free enrollment for a paid
+  // course.
+  var hasPrice = !!c.stripe_price_id;
+  var hasCoachAccount = !!(c.coach_profiles && c.coach_profiles.stripe_account_id);
+  var enrollDisabled = price > 0 && (!hasPrice || !hasCoachAccount);
+  var disabledTooltip = '';
+  if (enrollDisabled) {
+    disabledTooltip = !hasPrice
+      ? 'Coming soon — checkout for this course is being set up.'
+      : 'This course is not yet available for purchase.';
+  }
+  var btnAttrs = enrollDisabled
+    ? 'disabled style="opacity:0.55;cursor:not-allowed;" title="' + escapeHtml(disabledTooltip) + '"'
+    : 'onclick="handleEnroll()"';
+  priceHtml += '<button class="enroll-btn" id="enroll-btn" ' + btnAttrs + '>' + (enrollDisabled ? 'Coming soon' : 'Enroll Now') + '</button>';
+  if (enrollDisabled) {
+    priceHtml += '<div style="margin-top:10px;font-family:\'Cabinet Grotesk\',sans-serif;font-size:0.78rem;color:var(--muted);text-align:center;">' + escapeHtml(disabledTooltip) + '</div>';
+  }
   document.getElementById('price-card').innerHTML = priceHtml;
 
   // Coach section
@@ -510,14 +530,10 @@ function renderCourse(isDraft) {
 async function handleEnroll() {
   if (!courseData) return;
 
-  // If course has stripe_price_id, redirect to Stripe checkout
-  if (courseData.stripe_price_id) {
-    window.location.href = 'https://checkout.stripe.com/pay/' + courseData.stripe_price_id;
-    return;
-  }
-
-  // Otherwise show email modal. Pre-fill email + display name from the
-  // signed-in profile so the user usually only needs to confirm and submit.
+  // Always show the modal first so we can collect the cert-name. The submit
+  // handler routes to Stripe Checkout when stripe_price_id + coach
+  // stripe_account_id are both set; otherwise it does the free-enroll
+  // insert path.
   var modal = document.getElementById('enroll-modal');
   var emailEl = document.getElementById('enroll-email');
   var nameEl = document.getElementById('enroll-cert-name');
@@ -570,6 +586,40 @@ document.getElementById('enroll-submit').addEventListener('click', async functio
   this.textContent = 'Enrolling...';
   msg.textContent = '';
 
+  // Stripe path: paid course with both stripe_price_id and coach
+  // stripe_account_id configured. Hand off to /api/create-checkout-session
+  // and redirect to the hosted checkout page. Webhook completes the
+  // enrollment + purchase ledger after payment succeeds.
+  var price = parseFloat(courseData.price || 0) || 0;
+  var hasStripeConfig = !!courseData.stripe_price_id
+    && !!(courseData.coach_profiles && courseData.coach_profiles.stripe_account_id);
+  if (price > 0 && hasStripeConfig) {
+    try {
+      var checkoutRes = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ course_id: courseData.id, student_email: email, student_name: certName })
+      });
+      var checkoutData = await checkoutRes.json().catch(function() { return {}; });
+      if (checkoutRes.ok && checkoutData.url) {
+        window.location.href = checkoutData.url;
+        return;
+      }
+      msg.textContent = checkoutData.error || 'We had trouble starting checkout. Please try again in a moment.';
+      msg.style.color = '#c44';
+      this.disabled = false;
+      this.textContent = 'Enroll Now';
+      return;
+    } catch (e) {
+      msg.textContent = 'Network error. Please try again.';
+      msg.style.color = '#c44';
+      this.disabled = false;
+      this.textContent = 'Enroll Now';
+      return;
+    }
+  }
+
+  // Free path (or unconfigured paid course): legacy direct insert.
   try {
     var res = await fetch(SUPABASE_URL + '/rest/v1/coach_course_enrollments', {
       method: 'POST',

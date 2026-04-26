@@ -1244,6 +1244,15 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
           <button class="action-decline" id="cancel-service-btn" style="padding:14px 24px;">Cancel</button>
         </div>
       </div>
+
+      <!-- Payments / Stripe Connect -->
+      <div class="form-section">
+        <h2 class="form-section-title">Payments</h2>
+        <p style="font-family:'DM Sans',sans-serif;font-size:0.9rem;color:var(--muted);line-height:1.6;margin-bottom:18px;">Connect your Stripe account so course enrollments pay you directly. The platform retains a small fee per enrollment; the rest transfers to your account on each sale.</p>
+        <div id="stripe-connect-card" style="background:var(--white);border:1px solid var(--border);border-left:3px solid #c49a3c;border-radius:10px;padding:22px 24px;font-family:'DM Sans',sans-serif;">
+          <div style="font-size:0.86rem;color:var(--muted);">Loading payment account&hellip;</div>
+        </div>
+      </div>
     </div>
 
     <!-- BOOKINGS TAB -->
@@ -2114,6 +2123,7 @@ async function init() {
   setupTabs();
   setupProfileHandlers();
   setupNotifications();
+  setupStripeConnectCard();
 
   // Clients is the default active tab — the setupTabs lazy-loader
   // only fires on click, so kick off the initial clients fetch here.
@@ -8636,6 +8646,7 @@ async function addGoal() {
    COURSES TAB — 4-Step Builder
    ================================================ */
 var dashCourses = [];
+var dashPurchases = [];
 var currentCourseId = null;
 var courseStep = 1;
 var courseData = {};
@@ -8931,15 +8942,61 @@ async function loadDashCourses() {
     } catch (e) { dashCourses[i]._enrollCount = 0; }
   }
 
+  // Pull revenue ledger so renderRevenuePanel has the data ready.
+  try {
+    var pRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_purchases?coach_id=eq.' + coachProfile.id + '&order=created_at.desc&select=id,course_id,amount_paid_cents,coach_payout_cents,platform_fee_cents,status,created_at', { headers: apiHeaders() });
+    dashPurchases = await pRes.json();
+    if (!Array.isArray(dashPurchases)) dashPurchases = [];
+  } catch (e) { dashPurchases = []; }
+
   loading.style.display = 'none';
   content.classList.remove('hidden');
   renderCourseList();
 }
 
+/* Revenue summary across all courses for this coach. Pulls from
+   coach_course_purchases. Hidden when there are no completed purchases. */
+function renderRevenuePanel(courses) {
+  var purchases = (dashPurchases || []).filter(function(p) { return p && p.status === 'completed'; });
+  if (purchases.length === 0) return '';
+  var now = Date.now();
+  var thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+  var totalCents = 0, last30Cents = 0;
+  var perCourse = {};
+  purchases.forEach(function(p) {
+    var payout = Number(p.coach_payout_cents || 0);
+    totalCents += payout;
+    if (new Date(p.created_at).getTime() >= thirtyDaysAgo) last30Cents += payout;
+    if (!perCourse[p.course_id]) perCourse[p.course_id] = { cents: 0, count: 0 };
+    perCourse[p.course_id].cents += payout;
+    perCourse[p.course_id].count += 1;
+  });
+  function dollars(cents) { return '$' + (cents / 100).toFixed(2).replace(/\.00$/, ''); }
+  var perCourseHtml = '';
+  (courses || []).forEach(function(c) {
+    var pc = perCourse[c.id];
+    if (!pc) return;
+    perCourseHtml += '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px dashed var(--border);">'
+      + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.86rem;color:#1a3a52;font-weight:500;">' + escapeHtml(c.title || 'Untitled') + ' <span style="font-size:0.72rem;color:var(--muted);font-weight:400;">' + pc.count + ' enrollment' + (pc.count === 1 ? '' : 's') + '</span></div>'
+      + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.92rem;font-weight:700;color:#c49a3c;">' + dollars(pc.cents) + '</div>'
+      + '</div>';
+  });
+  return '<div style="background:#fdf9f1;border:1px solid #edeae4;border-left:3px solid #c49a3c;border-radius:10px;padding:22px 24px;margin-bottom:22px;font-family:\'DM Sans\',sans-serif;">'
+    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.3rem;font-weight:600;color:#1a3a52;margin-bottom:14px;">Revenue</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:' + (perCourseHtml ? '18px' : '0') + ';">'
+    +   '<div><div style="font-size:0.7rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Lifetime</div><div style="font-size:1.5rem;font-weight:700;color:#1a3a52;">' + dollars(totalCents) + '</div></div>'
+    +   '<div><div style="font-size:0.7rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Last 30 days</div><div style="font-size:1.5rem;font-weight:700;color:#1a3a52;">' + dollars(last30Cents) + '</div></div>'
+    +   '<div><div style="font-size:0.7rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Total enrollments</div><div style="font-size:1.5rem;font-weight:700;color:#1a3a52;">' + purchases.length + '</div></div>'
+    + '</div>'
+    + perCourseHtml
+    + '</div>';
+}
+
 /* ── COURSE LIST VIEW ── */
 function renderCourseList() {
   var content = $('courses-content');
-  var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">'
+  var html = renderRevenuePanel(dashCourses);
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">'
     + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.2rem;font-weight:700;color:var(--ink);">Your Courses</div>'
     + '<a href="#" onclick="event.preventDefault();openCourseBuilder(null)" class="prop-new">+ Create New Course</a>'
     + '</div>';
@@ -9328,9 +9385,18 @@ function renderStep1() {
   // Price + Enrollment limit
   html += '<div class="cb-row">'
     + '<div class="cb-field"><label class="cb-label">Price ($)</label>'
-    + '<input type="number" id="cb-price" class="cb-input" value="' + (d.price || '') + '" placeholder="0" min="0" step="1"></div>'
+    + '<input type="number" id="cb-price" class="cb-input" value="' + (d.price || '') + '" placeholder="0" min="0" step="1" oninput="cbRenderFeeMath()"></div>'
     + '<div class="cb-field"><label class="cb-label">Enrollment Limit</label>'
     + '<input type="number" id="cb-limit" class="cb-input" value="' + (d.enrollment_limit || '') + '" placeholder="Leave blank for unlimited" min="1"></div>'
+    + '</div>';
+
+  // Fee math — read-only, recalculated as price changes. platform_fee_percentage
+  // defaults to 10% but is admin-controlled per course; coaches see the math
+  // but can't edit it inline.
+  var feePct = d.platform_fee_percentage != null ? Number(d.platform_fee_percentage) : 10;
+  html += '<div class="cb-field" style="background:#fdf9f1;border:1px solid #edeae4;border-radius:8px;padding:14px 16px;">'
+    + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#c49a3c;margin-bottom:8px;">What you receive per enrollment</div>'
+    + '<div id="cb-fee-math" data-fee-pct="' + feePct + '" style="font-family:\'DM Sans\',sans-serif;font-size:0.86rem;color:#1a3a52;line-height:1.6;"></div>'
     + '</div>';
 
   // Who it's for
@@ -9552,6 +9618,9 @@ function cbRemoveObjective(idx) {
 }
 
 function cbRenderObjectives() {
+  // Step 1 layout shares this hook; whenever objectives re-render, the fee
+  // math is also re-rendered to stay in sync with the live price input.
+  if (typeof cbRenderFeeMath === 'function') cbRenderFeeMath();
   var list = $('cb-objectives-list');
   if (!list) return;
   var html = '';
@@ -9681,15 +9750,39 @@ async function cbNext() {
     await cbSaveDraft();
   }
   if (courseStep < 4) { courseStep++; renderCourseBuilder(); }
-  // Re-render objectives after step 1
-  if (courseStep === 1) setTimeout(cbRenderObjectives, 0);
+  // Re-render objectives + fee math after step 1
+  if (courseStep === 1) { setTimeout(cbRenderObjectives, 0); setTimeout(cbRenderFeeMath, 0); }
 }
 
 function cbPrev() {
   cbCollectStepData();
   if (courseStep > 1) { courseStep--; renderCourseBuilder(); }
-  if (courseStep === 1) setTimeout(cbRenderObjectives, 0);
+  if (courseStep === 1) { setTimeout(cbRenderObjectives, 0); setTimeout(cbRenderFeeMath, 0); }
 }
+
+// Live fee math display. Reads the price input + the platform_fee_percentage
+// data attribute and shows: course price, platform fee, Stripe fee, coach
+// receives. Read-only — coaches can't edit the percentage.
+function cbRenderFeeMath() {
+  var host = document.getElementById('cb-fee-math');
+  if (!host) return;
+  var priceEl = document.getElementById('cb-price');
+  var price = priceEl ? Number(priceEl.value || 0) : Number(courseData.price || 0);
+  var feePct = Number(host.dataset.feePct || 10);
+  if (!price || price <= 0) {
+    host.innerHTML = '<div style="color:var(--muted);font-style:italic;">Set a price above to see your per-enrollment payout.</div>';
+    return;
+  }
+  var platformFee = price * (feePct / 100);
+  var stripeFee = price * 0.029 + 0.30; // Stripe standard processing
+  var coachReceives = Math.max(0, price - platformFee - stripeFee);
+  function fmt(n) { return '$' + n.toFixed(2); }
+  host.innerHTML = '<div style="display:flex;justify-content:space-between;gap:12px;"><span>Course price</span><span style="font-weight:600;">' + fmt(price) + '</span></div>'
+    + '<div style="display:flex;justify-content:space-between;gap:12px;color:var(--muted);"><span>Platform fee (' + feePct + '%)</span><span>&minus;' + fmt(platformFee) + '</span></div>'
+    + '<div style="display:flex;justify-content:space-between;gap:12px;color:var(--muted);"><span>Stripe processing (2.9% + $0.30)</span><span>&minus;' + fmt(stripeFee) + '</span></div>'
+    + '<div style="display:flex;justify-content:space-between;gap:12px;padding-top:8px;margin-top:8px;border-top:1px solid #e0ddd5;"><span style="font-weight:600;color:#1a3a52;">You receive</span><span style="font-weight:700;color:#c49a3c;font-size:1rem;">' + fmt(coachReceives) + '</span></div>';
+}
+window.cbRenderFeeMath = cbRenderFeeMath;
 
 async function cbPublish() {
   cbCollectStepData();
@@ -11244,6 +11337,68 @@ function openIntakePreview() {
   });
   document.getElementById('intake-preview-body').innerHTML = html;
   document.getElementById('intake-preview-overlay').classList.add('open');
+}
+
+/* ================================================
+   STRIPE CONNECT — coach onboarding + status card
+   ================================================ */
+async function setupStripeConnectCard() {
+  var card = document.getElementById('stripe-connect-card');
+  if (!card || !coachProfile) return;
+
+  // After a return from Stripe onboarding the URL carries ?stripe=success.
+  // Show a subtle confirmation banner once.
+  try {
+    var stripeQuery = new URLSearchParams(window.location.search).get('stripe');
+    if (stripeQuery === 'success') {
+      // Drop the param so a refresh doesn't re-show the banner.
+      var clean = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, '', clean);
+    }
+  } catch (e) { /* ignore */ }
+
+  var email = (coachProfile.user_email || '').toLowerCase();
+  if (!email) {
+    card.innerHTML = '<div style="font-size:0.86rem;color:var(--muted);">We couldn\'t determine your account email — sign out and sign back in.</div>';
+    return;
+  }
+
+  try {
+    var statusRes = await fetch('/api/stripe-connect-status?email=' + encodeURIComponent(email));
+    var status = await statusRes.json().catch(function() { return {}; });
+    if (!statusRes.ok) {
+      card.innerHTML = '<div style="font-size:0.86rem;color:#c44;">We had trouble checking your payment account. Try refreshing in a moment.</div>';
+      return;
+    }
+    if (!status.connected) {
+      card.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">'
+        + '<div style="flex:1;min-width:220px;">'
+        +   '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.2rem;font-weight:600;color:#1a3a52;margin-bottom:4px;">Connect your Stripe account</div>'
+        +   '<div style="font-size:0.84rem;color:var(--muted);line-height:1.55;">Stripe handles ID verification, tax forms, and payouts. Takes about 5 minutes.</div>'
+        + '</div>'
+        + '<a href="/api/stripe-connect-link?email=' + encodeURIComponent(email) + '" class="save-btn" style="text-decoration:none;display:inline-block;padding:11px 22px;background:#c49a3c;color:#1a3a52;border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:700;">Connect Stripe</a>'
+        + '</div>';
+      return;
+    }
+    // Connected: show charges/payouts status. Stripe sometimes returns
+    // connected=true but charges_enabled=false when verification is still
+    // in progress — surface that state honestly.
+    var ready = !!(status.charges_enabled && status.payouts_enabled);
+    var statusLabel = ready ? 'Stripe account connected' : 'Connected — verification in progress';
+    var pillBg = ready ? 'background:#2d6a4f;color:#fff;' : 'background:#c49a3c;color:#1a3a52;';
+    card.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">'
+      + '<div style="flex:1;min-width:220px;">'
+      +   '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span style="display:inline-block;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:50px;letter-spacing:0.04em;text-transform:uppercase;' + pillBg + '">' + escapeHtml(statusLabel) + '</span></div>'
+      +   '<div style="font-size:0.84rem;color:var(--muted);line-height:1.55;">' + (ready ? 'Course enrollments will pay out to your connected account.' : 'Stripe is still verifying your details. Continue onboarding to finish setup.') + '</div>'
+      + '</div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+      +   '<a href="/api/stripe-connect-link?email=' + encodeURIComponent(email) + '" style="text-decoration:none;display:inline-block;padding:9px 18px;border:1.5px solid #1a3a52;color:#1a3a52;border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.8rem;font-weight:600;">' + (ready ? 'Manage on Stripe' : 'Continue onboarding') + '</a>'
+      + '</div>'
+      + '</div>';
+  } catch (e) {
+    console.error('[stripe-connect-card]', e);
+    card.innerHTML = '<div style="font-size:0.86rem;color:#c44;">We had trouble checking your payment account. Try refreshing in a moment.</div>';
+  }
 }
 
 /* ================================================
