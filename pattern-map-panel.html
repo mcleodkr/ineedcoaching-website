@@ -402,6 +402,77 @@
     return html;
   }
 
+  // Display labels for the locked canonical_patterns.domain taxonomy.
+  // Keys must match VALID_DOMAINS in api/aggregate-client-pattern-map.js.
+  const DOMAIN_LABELS = {
+    self_identity: 'Self & identity',
+    behavioral: 'Behavioral',
+    recovery_health: 'Recovery & health',
+    leadership_work: 'Leadership & work',
+    emotional: 'Emotional',
+    relational: 'Relational',
+    decision_agency: 'Decision & agency',
+  };
+
+  function renderCanonicalItem(p) {
+    if (!p) return '';
+    let html = '<div class="item">';
+    html += '<span class="pill">' + escapeHtml(p.canonical_name || '') + '</span>';
+    if (typeof p.session_count === 'number') {
+      html += ' <span class="pill count">' + p.session_count + ' session' + (p.session_count === 1 ? '' : 's') + '</span>';
+    }
+    // Surface the consolidated synonyms when more than one input tag merged.
+    if (Array.isArray(p.original_labels) && p.original_labels.length > 1) {
+      html += '<div class="item-meta" style="margin-top:6px;">Includes: '
+        + p.original_labels.map(escapeHtml).join(', ')
+        + '</div>';
+    }
+    html += chipsForSessions(p.session_ids);
+    html += '</div>';
+    return html;
+  }
+
+  // Group canonical patterns by domain. Within each domain, sort by
+  // session_count desc then canonical_name asc. Order domains by total
+  // session_count desc so the densest domain leads. Empty domains skipped.
+  function groupCanonicalByDomain(items) {
+    const groups = {};
+    items.forEach(function(p) {
+      if (!p || !p.domain || !DOMAIN_LABELS[p.domain]) return;
+      if (!groups[p.domain]) groups[p.domain] = [];
+      groups[p.domain].push(p);
+    });
+    Object.keys(groups).forEach(function(k) {
+      groups[k].sort(function(a, b) {
+        const c = (b.session_count || 0) - (a.session_count || 0);
+        if (c !== 0) return c;
+        return (a.canonical_name || '').localeCompare(b.canonical_name || '');
+      });
+    });
+    return Object.keys(groups)
+      .map(function(k) {
+        const total = groups[k].reduce(function(s, p) { return s + (p.session_count || 0); }, 0);
+        return { key: k, label: DOMAIN_LABELS[k], items: groups[k], total: total };
+      })
+      .sort(function(a, b) {
+        const c = b.total - a.total;
+        if (c !== 0) return c;
+        return a.key.localeCompare(b.key);
+      });
+  }
+
+  function renderDomainGroups(groups) {
+    if (!groups.length) return '';
+    let html = '';
+    groups.forEach(function(g) {
+      html += '<div style="margin-top:14px;">';
+      html += '<div class="section-label">' + escapeHtml(g.label) + '</div>';
+      g.items.forEach(function(p) { html += renderCanonicalItem(p); });
+      html += '</div>';
+    });
+    return html;
+  }
+
   function renderStuckItem(t) {
     if (!t) return '';
     let html = '<div class="item">';
@@ -488,23 +559,49 @@
     }
     html += '</div>';
 
-    // 6a. Core Patterns (DNA tags ≥ 2 sessions)
-    html += '<div class="card"><h3>Core Patterns</h3><div class="card-sub">DNA tags appearing across multiple sessions</div>';
-    if (isEmpty(pm.core_patterns)) {
-      html += '<div class="empty-section">No tags yet appear in 2 or more sessions.</div>';
+    // 6. Canonical patterns — synonym-consolidated, partitioned by frequency.
+    // Older pattern_map rows (pre-canonical commit) lack canonical_patterns;
+    // those sections render empty until the coach clicks Regenerate. By
+    // design — no historical rewrite, fresh aggregation produces clean data.
+    const canonical = Array.isArray(pm.canonical_patterns) ? pm.canonical_patterns : [];
+    const recurring = canonical.filter(function(p) { return (p && p.session_count || 0) >= 3; });
+    const twoSession = canonical.filter(function(p) { return (p && p.session_count || 0) === 2; });
+    const singleSession = canonical.filter(function(p) { return (p && p.session_count || 0) === 1; });
+
+    // 6a. Recurring patterns (≥3 sessions) — signature themes, top of view.
+    html += '<div class="card"><h3>Recurring patterns</h3><div class="card-sub">Patterns observed in 3+ sessions</div>';
+    if (!recurring.length) {
+      html += '<div class="empty-section">No patterns yet observed in 3 or more sessions. As more sessions accumulate, recurring themes will surface here.</div>';
     } else {
-      pm.core_patterns.forEach(function(t) { html += renderTagItem(t); });
+      // Sorted by session_count desc so the densest signature shows first.
+      recurring.slice().sort(function(a, b) { return (b.session_count || 0) - (a.session_count || 0); })
+        .forEach(function(p) { html += renderCanonicalItem(p); });
     }
     html += '</div>';
 
-    // 6b. Behavioral Tendencies (single-session DNA tags)
-    if (Array.isArray(pm.behavioral_tendencies) && pm.behavioral_tendencies.length) {
-      html += '<div class="card"><h3>Behavioral Tendencies</h3><div class="card-sub">Tags observed in a single session so far</div>';
-      pm.behavioral_tendencies.forEach(function(t) { html += renderTagItem(t); });
+    // 6b. Patterns by domain (=2 sessions) — grouped middle section.
+    if (twoSession.length) {
+      html += '<div class="card"><h3>Patterns by domain</h3><div class="card-sub">How this client\'s patterns cluster</div>';
+      html += renderDomainGroups(groupCanonicalByDomain(twoSession));
       html += '</div>';
     }
 
-    // 6c. Recurring Stuck Points (signal_types ≥ 2 sessions)
+    // 6c. Single-session observations (=1 session) — collapsed by default.
+    if (singleSession.length) {
+      html += '<div class="card" style="padding:0;">'
+        + '<details style="padding:14px 22px;">'
+        + '<summary style="cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:0.86rem;font-weight:600;color:var(--navy);list-style:none;">'
+        + '+ Show single-session observations <span style="color:var(--muted);font-weight:400;">(' + singleSession.length + ')</span>'
+        + '</summary>'
+        + '<div class="card-sub" style="margin-top:10px;">Patterns observed in a single session so far</div>'
+        + renderDomainGroups(groupCanonicalByDomain(singleSession))
+        + '</details>'
+        + '</div>';
+    }
+
+    // 6d. Recurring Stuck Points (signal_types ≥ 2 sessions) — separate
+    // concept from canonical_patterns; signal_types come from PSA's
+    // friction_points, not the per-session behavioral tags.
     if (Array.isArray(pm.recurring_stuck_points) && pm.recurring_stuck_points.length) {
       html += '<div class="card"><h3>Recurring Stuck Points</h3><div class="card-sub">Signal types appearing across sessions</div>';
       pm.recurring_stuck_points.forEach(function(t) { html += renderStuckItem(t); });

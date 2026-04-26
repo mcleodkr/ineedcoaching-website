@@ -16,6 +16,15 @@
 //   core_patterns, where_they_get_stuck, likely_drivers, emotional_style,
 //   what_moves_them_forward, signs_of_growth
 //
+// New for this revision: canonical_patterns — synonym-consolidated, domain-
+// grouped pattern dictionary produced by the synthesis pass. The panel
+// renders from this; downstream consumers continue reading core_patterns
+// (raw, unconsolidated) so nothing breaks. Domain values are validated
+// against VALID_DOMAINS — invalid → synthesis rejected, no DB write,
+// retry banner. Coach DNA (a separate construct about the coach) lives
+// elsewhere; "DNA" terminology has been removed from this file's UI-facing
+// labels to keep the two surfaces from bleeding into each other.
+//
 // Boundary rule (architecture audit): Pattern Map is client-only. No
 // coach-facing reflection. Coach-side material (missed_windows, what was
 // "left on the table", coaching_reflection) lives in Coach Mirror. The
@@ -29,6 +38,20 @@ const STUCK_LABELS = {
   charged_language: 'Uses language that signals deeper weight',
   energy_shift: 'Noticeable shifts in energy during session',
 };
+
+// Locked taxonomy for canonical_patterns.domain. Anything outside this set
+// fails validation and the synthesis is rejected (no DB write, retry banner
+// renders) — better to surface "regenerate failed" than to persist a
+// pattern with an unmappable domain that would render as a UI orphan.
+const VALID_DOMAINS = new Set([
+  'recovery_health',
+  'self_identity',
+  'emotional',
+  'behavioral',
+  'leadership_work',
+  'relational',
+  'decision_agency',
+]);
 
 async function callClaudeRaw(apiKey, model, maxTokens, system, userMessage, passName) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -196,7 +219,10 @@ export default async function handler(req, res) {
       const psa = s.post_session_analysis;
       const sid = s.id;
 
-      // DNA tags → core_patterns / behavioral_tendencies
+      // Per-session client behavioral tags → core_patterns / behavioral_tendencies.
+      // PSA's coaching_interventions[].dna_tag is the upstream field name
+      // (kept for schema compat); these are CLIENT behavioral patterns, not
+      // Coach DNA. Synthesis pass consolidates synonyms into canonical_patterns.
       const ci = Array.isArray(psa.coaching_interventions) ? psa.coaching_interventions : [];
       ci.forEach(function(c) {
         if (!c || !Array.isArray(c.dna_tag)) return;
@@ -343,12 +369,22 @@ export default async function handler(req, res) {
       'Use coaching language. Ground every statement in the supplied PSA evidence — sessions, quotes, observed patterns. ' +
       'If evidence is thin for a section, say so honestly: "Not enough sessions yet to see a clear pattern here." Do NOT invent patterns.\n\n' +
       'Cite source_sessions on every output element using the session_id values from the SESSION INDEX. Use evidence_quote when you have a verbatim client quote that grounds the claim.\n\n' +
+      'CANONICAL PATTERNS — produce a deduplicated, domain-grouped pattern dictionary in the canonical_patterns array.\n' +
+      'CONSOLIDATION RULE: When producing canonical_patterns, consolidate synonyms aggressively. If two per-session tags refer to the same construct (e.g., "pattern disruption" and "pattern interruption"; "identity integration" and "identity shift"; "self-awareness" and "self-accountability" when both refer to recognizing one\'s own patterns), merge them under a single canonical_name and combine their session_ids. Preserve the original labels in original_labels for audit. session_count MUST equal session_ids.length.\n' +
+      'DOMAIN ASSIGNMENT: Each canonical pattern must be assigned exactly one domain from this LOCKED list. Do NOT invent new domains. Anything outside this list will be rejected:\n' +
+      '  - recovery_health — recovery process, health behaviors, addiction patterns, relapse dynamics\n' +
+      '  - self_identity — self-relationship, self-accountability, identity, shame, self-talk\n' +
+      '  - emotional — emotional regulation, processing patterns, affect tolerance, grief\n' +
+      '  - behavioral — action tendencies, defensive moves, pattern interruption, behavioral transfer\n' +
+      '  - leadership_work — professional self-worth, leadership presence, role dynamics\n' +
+      '  - relational — interpersonal patterns, attachment, communication moves\n' +
+      '  - decision_agency — decision-making style, agency, conscious choice, ownership\n\n' +
       'Tone: practical, grounded, non-clinical, developmental. Return ONLY raw JSON. No markdown, no preamble.';
 
     const USER_PROMPT =
       'Client Pattern Map aggregation input — ' + sessionCount + ' sessions, ' + dateRange + '.\n\n' +
-      'CORE PATTERNS (DNA tags appearing in 2+ sessions, with session counts):\n' + JSON.stringify(corePatterns) + '\n\n' +
-      'BEHAVIORAL TENDENCIES (DNA tags appearing in exactly 1 session):\n' + JSON.stringify(behavioralTendencies) + '\n\n' +
+      'RECURRING TAGS (per-session client behavioral tags appearing in 2+ sessions, with session counts):\n' + JSON.stringify(corePatterns) + '\n\n' +
+      'SINGLE-SESSION TAGS (per-session client behavioral tags appearing in exactly 1 session):\n' + JSON.stringify(behavioralTendencies) + '\n\n' +
       'RECURRING STUCK POINTS (signal_types appearing in 2+ sessions):\n' + JSON.stringify(recurringStuckPoints) + '\n\n' +
       'CLIENT QUOTES (verbatim from sessions, max 10):\n' + JSON.stringify(allClientQuotes) + '\n\n' +
       'SESSION INDEX (per-session client-facing summaries — use session_id values for source_sessions citations):\n' + JSON.stringify(sessionIndex) + '\n\n' +
@@ -372,9 +408,19 @@ export default async function handler(req, res) {
       '  ],\n' +
       '  "signs_of_growth": [\n' +
       '    { "shift": "observable change in client language, behavior, or awareness — third-person", "from": "what it looked like before", "to": "what it looks like now", "evidence_quote": "session reference", "source_sessions": ["<session_id>"] }\n' +
+      '  ],\n' +
+      '  "canonical_patterns": [\n' +
+      '    {\n' +
+      '      "canonical_name": "deduplicated pattern name in coaching language (e.g., \\"pattern interruption\\", \\"self-accountability\\")",\n' +
+      '      "domain": "<EXACTLY ONE of: self_identity | behavioral | recovery_health | emotional | leadership_work | relational | decision_agency>",\n' +
+      '      "session_ids": ["<session_id from SESSION INDEX>"],\n' +
+      '      "session_count": 2,\n' +
+      '      "original_labels": ["pattern disruption", "pattern interruption"]\n' +
+      '    }\n' +
       '  ]\n' +
       '}\n\n' +
-      'If a section lacks evidence, return one element where the descriptive text is "Not enough sessions yet to see a clear pattern here." with empty evidence_quote and empty source_sessions array. Do NOT fabricate.';
+      'If a section lacks evidence, return one element where the descriptive text is "Not enough sessions yet to see a clear pattern here." with empty evidence_quote and empty source_sessions array. Do NOT fabricate. ' +
+      'For canonical_patterns specifically: if no patterns to consolidate, return an empty array []. Never invent patterns to fill the array.';
 
     // Synthesis: call → extract JSON → parse. Any failure here returns 200
     // {status:'failed', error} and DOES NOT write to coach_client_patterns,
@@ -384,13 +430,13 @@ export default async function handler(req, res) {
     let synthesisFailureReason = null;
 
     try {
-      // max_tokens=5000 — the prior 2500 cap was truncating mid-array on
-      // clients with ~3+ sessions of dense PSA evidence, which is what
-      // surfaced as the "JSON parse fa..." errors in production.
+      // max_tokens=7500 — adding canonical_patterns adds ~2000-3500 tokens
+      // to the output for typical clients; 5000 truncated mid-array. 7500
+      // gives headroom on dense profiles without inflating cost on sparser ones.
       rawSynthesisText = await callClaudeRaw(
         ANTHROPIC_API_KEY,
         'claude-sonnet-4-6',
-        5000,
+        7500,
         SYSTEM_PROMPT,
         USER_PROMPT,
         'Pattern Map'
@@ -410,6 +456,34 @@ export default async function handler(req, res) {
           err: err.message,
           raw: (rawSynthesisText || '').slice(0, 500),
         });
+      }
+    }
+
+    // Hard-validate canonical_patterns. A bogus domain renders as a UI
+    // orphan ("undefined" group); better to reject the synthesis and show
+    // the retry banner than persist garbage. Empty array is fine.
+    if (!synthesisFailureReason && aiOutput) {
+      if (aiOutput.canonical_patterns !== undefined && !Array.isArray(aiOutput.canonical_patterns)) {
+        synthesisFailureReason = 'invalid_canonical_patterns_shape';
+        console.error('[Pattern Map] canonical_patterns is not an array', { type: typeof aiOutput.canonical_patterns });
+      } else if (Array.isArray(aiOutput.canonical_patterns)) {
+        for (const cp of aiOutput.canonical_patterns) {
+          if (!cp || typeof cp !== 'object'
+              || typeof cp.canonical_name !== 'string' || !cp.canonical_name
+              || !VALID_DOMAINS.has(cp.domain)
+              || !Array.isArray(cp.session_ids)
+              || !Array.isArray(cp.original_labels)
+              || typeof cp.session_count !== 'number') {
+            synthesisFailureReason = 'invalid_canonical_pattern_entry';
+            console.error('[Pattern Map] invalid canonical_pattern entry', {
+              canonical_name: cp && cp.canonical_name,
+              domain: cp && cp.domain,
+              has_session_ids: Array.isArray(cp && cp.session_ids),
+              has_original_labels: Array.isArray(cp && cp.original_labels),
+            });
+            break;
+          }
+        }
       }
     }
 
@@ -434,10 +508,16 @@ export default async function handler(req, res) {
       what_moves_them_forward: Array.isArray(aiOutput.what_moves_them_forward) ? aiOutput.what_moves_them_forward : [],
       where_they_get_stuck: Array.isArray(aiOutput.where_they_get_stuck) ? aiOutput.where_they_get_stuck : [],
       signs_of_growth: Array.isArray(aiOutput.signs_of_growth) ? aiOutput.signs_of_growth : [],
-      // SQL-aggregated fields (same field names as before)
+      // SQL-aggregated fields (same field names as before — kept for
+      // downstream consumers: approach-lab, post-session-intelligence,
+      // intervention-plan, regenerate-intervention-plan-from-scratch).
       core_patterns: corePatterns,
       behavioral_tendencies: behavioralTendencies,
       recurring_stuck_points: recurringStuckPoints,
+      // canonical_patterns: synonym-consolidated, domain-grouped pattern
+      // dictionary produced by the synthesis pass. The panel renders from
+      // this; downstream consumers continue reading core_patterns above.
+      canonical_patterns: Array.isArray(aiOutput.canonical_patterns) ? aiOutput.canonical_patterns : [],
       // Header / source-citation data — persisted into pattern_map JSONB so
       // the panel doesn't need separate queries on subsequent loads.
       display_name: displayName,
