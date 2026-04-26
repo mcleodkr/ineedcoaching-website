@@ -1065,23 +1065,24 @@ document.getElementById('message-form').addEventListener('submit', async functio
   btn.textContent = 'Sending...';
 
   const senderEmail = document.getElementById('msg-email').value.trim();
+  // Routes through /api/send-coach-message (service role) because
+  // coach_messages RLS now requires an authenticated sender. The endpoint
+  // hard-codes sender='client' so unauthenticated visitors can't claim
+  // to be a coach, and validates coach_id against coach_profiles.
   const payload = {
     coach_id: coachData.id,
     sender_name: document.getElementById('msg-name').value.trim(),
     sender_email: senderEmail,
-    client_email: senderEmail,
-    sender: 'client',
     message: document.getElementById('msg-text').value.trim(),
-    is_read: false
   };
 
   try {
-    const res = await fetch(`${API}/coach_messages`, {
+    const res = await fetch('/api/send-coach-message', {
       method: 'POST',
-      headers: HEADERS,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    if (res.ok || res.status === 201) {
+    if (res.ok) {
       document.getElementById('message-form').style.display = 'none';
       document.getElementById('message-success').style.display = 'block';
     } else {

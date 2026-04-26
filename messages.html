@@ -375,6 +375,8 @@ async function sendMessage() {
 
   try {
     var coachId = bookingInfo ? bookingInfo.coach_id : null;
+    // sender_email + lower(client_email) match auth.jwt()->>'email' so the
+    // tightened messages_client_insert policy accepts the row.
     await fetch(SUPABASE_URL + '/rest/v1/coach_messages', {
       method: 'POST',
       headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
@@ -383,7 +385,9 @@ async function sendMessage() {
         client_email: currentEmail,
         booking_id: bookingId,
         sender: 'client',
-        message: text
+        sender_email: currentEmail,
+        message: text,
+        is_read: false
       })
     });
     input.value = '';
