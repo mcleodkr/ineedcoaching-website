@@ -1693,10 +1693,6 @@ async function loadCoachArticlesWidget() {
   }
 }
 
-// Stash of the last client detail bundle so the Pattern Map re-render
-// can re-call renderClientDetail without re-fetching from Supabase.
-var _clientDetailBundle = null;
-
 // ===================================================================
 // DNA TAG DEFINITIONS — shared between the Coaching Mirror (per-session
 // intervention tags) and the Client Pattern Map (aggregated behavioral
@@ -4515,8 +4511,7 @@ async function openClientDetail(email) {
       supabaseGet('coach_checkin_responses?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&submitted_at=not.is.null&order=created_at.desc&select=*'),
       supabaseGet('coach_messages?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&order=created_at.asc&select=*'),
       supabaseGet('coach_session_notes?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&select=*'),
-      supabaseGet('coach_intake_forms?coach_id=eq.' + cid + '&form_type=eq.checkin&select=id,name'),
-      supabaseGet('coach_client_patterns?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&select=pattern_map,last_analyzed,session_count&limit=1')
+      supabaseGet('coach_intake_forms?coach_id=eq.' + cid + '&form_type=eq.checkin&select=id,name')
     ]);
     var goals = results[0] || [];
     var intakeResponses = results[1] || [];
@@ -4524,23 +4519,10 @@ async function openClientDetail(email) {
     var messages = results[3] || [];
     var sessionNotes = results[4] || [];
     var checkinForms = results[5] || [];
-    var patternRows = results[6] || [];
 
     notesByBooking = {};
     sessionNotes.forEach(function(n) { notesByBooking[n.booking_id] = n; });
 
-    // Preload previously-generated Client Pattern Map so returning to this
-    // client shows sections 5-9 without re-running generation.
-    if (Array.isArray(patternRows) && patternRows.length && patternRows[0] && patternRows[0].pattern_map) {
-      var row = patternRows[0];
-      client.patternMap = Object.assign({}, row.pattern_map, {
-        last_analyzed: row.last_analyzed || row.pattern_map.last_analyzed || null,
-        session_count: row.session_count || row.pattern_map.session_count || null
-      });
-    }
-
-    // Stash the full bundle so Pattern Map generation can re-render without a refetch.
-    _clientDetailBundle = { client: client, goals: goals, intakeResponses: intakeResponses, checkinResponses: checkinResponses, messages: messages, notesByBooking: notesByBooking, checkinForms: checkinForms };
     renderClientDetail(client, goals, intakeResponses, checkinResponses, messages, notesByBooking, checkinForms);
   } catch(e) {
     $('clients-detail-view').innerHTML = '<div class="empty-state"><p>Error loading client details.</p></div>';
@@ -4726,108 +4708,10 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
   }
   html += '</div>';
 
-  // ===================================================================
-  // CLIENT PATTERN MAP GUARDRAIL
-  // This is NOT a diagnostic tool. It does not infer conditions, disorders, or pathology.
-  // It surfaces observable patterns from session data in coaching language only.
-  // Every label, section header, and AI-generated output must pass this test:
-  // "Would a coach say this, or would a therapist say this?"
-  // If a therapist would say it — rewrite it.
-  // Sources of truth: client's own words, behavioral observations, session patterns only.
-  // Never: diagnose, infer mental health conditions, use clinical framing.
-  // ===================================================================
-
-  // Aggregate raw signals from post_session_analysis across all sessions for this client.
-  // Pure client-side — no API call. AI-filled sections arrive when the endpoint is built.
-  var pmAnalyzedSessions = [];
-  var pmTagCounts = {};
-  var pmTagSessions = {};      // tag -> [sessionDateStr, ...]
-  var pmMissedTypeCounts = {}; // signal_type -> count
-  var pmUnmetOpenings = [];    // [{ text, date }]
-
-  (client.sessions || []).forEach(function(s) {
-    if (!s) return;
-    var note = notesByBooking[s.id];
-    if (!note || !note.post_session_analysis) return;
-    var psa = note.post_session_analysis;
-    var sessionDt = s.scheduled_at ? new Date(s.scheduled_at) : null;
-    var sessionDateStr = sessionDt ? sessionDt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Date unknown';
-    pmAnalyzedSessions.push({ id: s.id, date: sessionDateStr });
-
-    // DNA tags live inside each coaching_interventions entry
-    var ci = Array.isArray(psa.coaching_interventions) ? psa.coaching_interventions : [];
-    ci.forEach(function(c) {
-      if (!c || !Array.isArray(c.dna_tag)) return;
-      c.dna_tag.forEach(function(t) {
-        if (!t) return;
-        pmTagCounts[t] = (pmTagCounts[t] || 0) + 1;
-        if (!pmTagSessions[t]) pmTagSessions[t] = [];
-        pmTagSessions[t].push(sessionDateStr);
-      });
-    });
-
-    // Missed windows — new shape uses what_opened, legacy uses moment
-    var mw = Array.isArray(psa.missed_windows) ? psa.missed_windows : [];
-    mw.forEach(function(w) {
-      if (!w) return;
-      if (w.signal_type) {
-        pmMissedTypeCounts[w.signal_type] = (pmMissedTypeCounts[w.signal_type] || 0) + 1;
-      }
-      var opening = w.what_opened || w.moment;
-      if (opening) pmUnmetOpenings.push({ text: opening, date: sessionDateStr, what_this_cost: w.what_this_cost || '' });
-    });
-  });
-
-  // Split DNA tags: frequency >= 2 → core patterns, frequency = 1 → tendencies
-  var pmCorePatterns = [];
-  var pmBehavioralTendencies = [];
-  Object.keys(pmTagCounts).forEach(function(t) {
-    if (pmTagCounts[t] >= 2) {
-      pmCorePatterns.push({ tag: t, count: pmTagCounts[t] });
-    } else {
-      pmBehavioralTendencies.push({ tag: t, sessions: pmTagSessions[t] || [] });
-    }
-  });
-  pmCorePatterns.sort(function(a, b) { return b.count - a.count; });
-
-  // Recurring stuck points — missed_window signal_type with frequency >= 2
-  var pmStuckLabels = {
-    'unprocessed_cost': 'Names losses without staying with them',
-    'behavioral_contradiction': 'States goals that contradict current behavior',
-    'emotional_mismatch': 'Emotional response stronger than the stated situation',
-    'repetition_without_movement': 'Returns to the same theme without resolution',
-    'charged_language': 'Uses language that signals deeper weight',
-    'energy_shift': 'Noticeable shifts in energy during session'
-  };
-  var pmRecurringStuck = [];
-  Object.keys(pmMissedTypeCounts).forEach(function(k) {
-    if (pmMissedTypeCounts[k] >= 2) {
-      pmRecurringStuck.push({ key: k, label: pmStuckLabels[k] || k, count: pmMissedTypeCounts[k] });
-    }
-  });
-  pmRecurringStuck.sort(function(a, b) { return b.count - a.count; });
-
-  var pmHasEnoughData = pmAnalyzedSessions.length >= 3;
-
-  // Section-header helper — Cormorant 1.15rem navy, hairline border-bottom
-  var pmHdr = function(title) {
-    return '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;border-bottom:1px solid #edeae4;padding-bottom:10px;margin-bottom:16px;margin-top:26px;">' + title + '</div>';
-  };
-  var pmPill = function(text, count) {
-    // Reuses the shared .dna-tag-pill tooltip CSS from the override style block
-    // so Pattern Map pills hover like Mirror pills. Definition pulled from
-    // the script-top-level dnaTagDefinitions / lookupDnaTagDef pair.
-    // NOTE: Pattern Map tooltips deliberately OMIT the "Tracked in your Coach DNA"
-    // footer that the Mirror uses — this is a client-facing pattern map, not a
-    // coach-facing signal tracker.
-    var countHtml = count ? '<span style="margin-left:6px;font-weight:700;opacity:0.85;">\u00d7' + count + '</span>' : '';
-    var def = lookupDnaTagDef(text) || 'Pattern detected in this client\'s sessions';
-    return '<span class="dna-tag-pill" style="padding:4px 12px;border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.72rem;font-weight:600;background:#c49a3c;color:#ffffff;margin-right:6px;margin-bottom:6px;cursor:help;">'
-      + escapeHtml(text) + countHtml
-      + '<span class="dna-tag-tooltip" style="position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#fdf9f1;border:1px solid #edeae4;border-radius:4px;padding:10px 12px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:400;color:#1a3a52;max-width:240px;min-width:200px;white-space:normal;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.08);line-height:1.5;pointer-events:none;text-transform:none;letter-spacing:normal;">'
-      + escapeHtml(def)
-      + '</span></span>';
-  };
+  // The inline Pattern Map aggregation, helpers, and rendering that lived
+  // here were removed in Split 5c. Pattern Map content now lives in
+  // /pattern-map (panel) and Coach Mirror content in /coach-mirror (panel);
+  // the dashboard is a launcher, not a renderer.
 
   // Section 1.4: Journal Intelligence (client-shared journal entries)
   var jiBodyId = 'journal-intel-body-' + (client.email || '').replace(/[@.]/g, '-');
@@ -4842,201 +4726,26 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
     + '<div id="' + jiBodyId + '" style="display:none;margin-top:18px;"><div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#8a8580;">Loading&hellip;</div></div>'
     + '</div>';
 
-  // Section 1.5: Pattern Map
-  var pmBodyId = 'pattern-map-body-' + (client.email || '').replace(/[@.]/g, '-');
+  // Section 1.5: Coach Intelligence — launcher block for the three coach-facing panels.
+  // Inline Pattern Map rendering was removed in Split 5c; the panels handle their own data load.
   html += '<div class="form-section" style="margin-bottom:24px;background:#f7f4ef;padding:28px 32px;border:1px solid #e8e4dc;">'
-    // Header row: title + Generate button
-    + '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:6px;">'
-    + '<div>'
-    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:600;color:#1a3a52;letter-spacing:-0.005em;margin-bottom:4px;">Pattern Map</div>'
-    + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#9a9490;">' + pmAnalyzedSessions.length + ' session' + (pmAnalyzedSessions.length !== 1 ? 's' : '') + ' with Coach Clarity analysis</div>'
+    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:600;color:#1a3a52;letter-spacing:-0.005em;margin-bottom:4px;">Coach Intelligence</div>'
+    + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#5a5560;line-height:1.6;margin-bottom:18px;">Strategy, patterns, reflection \u2014 all session-grounded. Open the panel that fits what you need right now.</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">'
+    +   '<a href="/intervention-plan?client_email=' + encodeURIComponent(client.email) + '" target="_blank" rel="noopener" style="display:flex;flex-direction:column;gap:4px;background:#1a3a52;color:#ffffff;border-radius:6px;padding:14px 18px;text-decoration:none;transition:background 0.12s ease;">'
+    +     '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;font-weight:600;">Open Intervention Plan</span>'
+    +     '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.74rem;color:rgba(247,244,238,0.75);line-height:1.45;">Strategic frames, working hypotheses, modality sequence.</span>'
+    +   '</a>'
+    +   '<a href="/pattern-map?client_email=' + encodeURIComponent(client.email) + '" target="_blank" rel="noopener" style="display:flex;flex-direction:column;gap:4px;background:#c49a3c;color:#ffffff;border-radius:6px;padding:14px 18px;text-decoration:none;transition:background 0.12s ease;">'
+    +     '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;font-weight:600;">Open Pattern Map</span>'
+    +     '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.74rem;color:rgba(255,255,255,0.85);line-height:1.45;">Drivers, emotional style, signs of growth across sessions.</span>'
+    +   '</a>'
+    +   '<a href="/coach-mirror?client_email=' + encodeURIComponent(client.email) + '" target="_blank" rel="noopener" style="display:flex;flex-direction:column;gap:4px;background:#a07a1a;color:#ffffff;border-radius:6px;padding:14px 18px;text-decoration:none;transition:background 0.12s ease;">'
+    +     '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;font-weight:600;">Open Coach Mirror</span>'
+    +     '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.74rem;color:rgba(255,255,255,0.85);line-height:1.45;">Per-session reflection and missed windows \u2014 for your eyes only.</span>'
+    +   '</a>'
     + '</div>'
-    + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-    + '<a href="/intervention-plan?client_email=' + encodeURIComponent(client.email) + '" target="_blank" rel="noopener" style="background:#1a3a52;color:#ffffff;border:none;border-radius:4px;padding:8px 18px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-block;transition:background 0.12s ease;">Open intervention plan</a>'
-    + '<a href="/coach-mirror?client_email=' + encodeURIComponent(client.email) + '" target="_blank" rel="noopener" title="Per-session reflection and missed windows — for your eyes only" style="background:#a07a1a;color:#ffffff;border:none;border-radius:4px;padding:8px 18px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:500;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-block;transition:background 0.12s ease;">Open Coach Mirror</a>'
-    + '<button id="generate-pattern-map-btn" data-client-email="' + escapeHtml(client.email) + '" data-body-id="' + pmBodyId + '" style="background:#c49a3c;color:#ffffff;border:none;border-radius:4px;padding:8px 18px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:500;cursor:pointer;white-space:nowrap;transition:background 0.12s ease;">Generate Pattern Map</button>'
-    + '</div>'
-    + '</div>'
-    + '<div id="pattern-map-status" style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#c49a3c;min-height:18px;margin-top:10px;"></div>'
-    // Divider + context label
-    + '<div style="border-top:1px solid #edeae4;margin:16px 0;"></div>'
-    + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.75rem;font-style:italic;color:#b8b0a4;margin-bottom:20px;">Built from session evidence \u00b7 Updates each time you generate</div>'
-    // What is this? explanation box
-    + '<div style="background:#fdf9f1;border:1px solid #edeae4;border-radius:6px;padding:14px 16px;margin-bottom:20px;">'
-    + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#c49a3c;margin-bottom:6px;">What is this?</div>'
-    + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#5a5560;line-height:1.65;">The Pattern Map builds a picture of how this client operates \u2014 what drives their behavior, where they get stuck, what moves them forward, and how they\u2019re growing. It draws from their own words and repeated patterns across sessions. It is not a diagnosis. It is a coaching lens. Powered by Coach Clarity.</div>'
-    + '</div>'
-    // Body wrapper — replaced wholesale by Generate button loading state
-    + '<div id="' + pmBodyId + '">';
-
-  if (!pmHasEnoughData) {
-    html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#9a9490;line-height:1.6;padding:16px 0 4px;">Not enough session data yet. Pattern Map builds after 3 or more sessions with Coach Clarity analysis.</div>';
-  }
-
-  // SECTION 1 — Core Patterns (DNA tags, frequency >= 2)
-  html += pmHdr('Core Patterns');
-  html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#9a9490;margin-top:-8px;margin-bottom:14px;">Patterns appearing across multiple sessions</div>';
-  if (pmCorePatterns.length) {
-    html += '<div>';
-    pmCorePatterns.forEach(function(p) { html += pmPill(p.tag, p.count); });
-    html += '</div>';
-  } else {
-    html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#c49a3c;margin-bottom:4px;">Emerging Patterns</div>';
-    html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.75rem;font-style:italic;color:#9a9490;margin-bottom:12px;">Early signals \u2014 not yet stable across multiple sessions</div>';
-    if (pmBehavioralTendencies.length) {
-      html += '<div>';
-      pmBehavioralTendencies.forEach(function(p) { html += pmPill(p.tag, null); });
-      html += '</div>';
-      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.75rem;font-style:italic;color:#9a9490;margin-top:10px;">These patterns appeared once \u2014 watch for repetition.</div>';
-    } else {
-      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#9a9490;">No signals yet. Run Coach Clarity on a session to surface patterns.</div>';
-    }
-  }
-
-  // SECTION 2 — Behavioral Tendencies (DNA tags, frequency = 1)
-  html += pmHdr('Behavioral Tendencies');
-  html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#9a9490;margin-top:-8px;margin-bottom:14px;">Patterns observed once \u2014 worth watching</div>';
-  if (pmBehavioralTendencies.length) {
-    html += '<div>';
-    pmBehavioralTendencies.forEach(function(p) {
-      var dateStr = p.sessions[0] || '';
-      html += '<div style="display:inline-flex;align-items:center;gap:8px;margin-right:10px;margin-bottom:8px;vertical-align:top;">'
-        + pmPill(p.tag, null)
-        + '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#9a9490;">' + escapeHtml(dateStr) + '</span>'
-        + '</div>';
-    });
-    html += '</div>';
-  } else {
-    html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#9a9490;">No single-session patterns observed.</div>';
-  }
-
-  // SECTION 3 — Recurring Stuck Points (missed_windows signal_type, frequency >= 2)
-  html += pmHdr('Recurring Stuck Points');
-  html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#9a9490;margin-top:-8px;margin-bottom:14px;">Where this client repeatedly gets stuck in session</div>';
-  if (pmRecurringStuck.length) {
-    pmRecurringStuck.forEach(function(sp) {
-      html += '<div style="background:#ffffff;border:1px solid #edeae4;border-radius:6px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
-        + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:#1a3a52;line-height:1.5;">' + escapeHtml(sp.label) + '</div>'
-        + '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;font-weight:700;color:#c49a3c;background:#fdf9f1;padding:3px 10px;border-radius:50px;white-space:nowrap;">\u00d7' + sp.count + '</span>'
-        + '</div>';
-    });
-  } else {
-    html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#9a9490;">No recurring stuck points yet.</div>';
-  }
-
-  // SECTION 4 — Unmet Openings (all missed_windows.what_opened)
-  html += pmHdr('Unmet Openings');
-  html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#9a9490;margin-top:-8px;margin-bottom:14px;">Moments that surfaced but were not fully explored</div>';
-  if (pmUnmetOpenings.length) {
-    pmUnmetOpenings.forEach(function(op) {
-      html += '<div style="background:#fdf9f1;border:1px solid #edeae4;border-radius:6px;padding:14px 16px;margin-bottom:10px;">'
-        + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.875rem;color:#1a3a52;line-height:1.55;margin-bottom:6px;">' + escapeHtml(op.text) + '</div>'
-        + (op.what_this_cost ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#c49a3c;margin-top:8px;margin-bottom:2px;">What was left on the table:</div>'
-            + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-style:italic;color:#5a5560;line-height:1.55;margin-bottom:6px;">' + escapeHtml(op.what_this_cost) + '</div>'
-            + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#c49a3c;margin-top:6px;margin-bottom:2px;">Why this mattered:</div>'
-            + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-style:italic;color:#5a5560;line-height:1.55;margin-bottom:6px;">Staying with this moment could have opened something the client was not yet able to reach on their own.</div>' : '')
-        + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#9a9490;">' + escapeHtml(op.date) + '</div>'
-        + '</div>';
-    });
-  } else {
-    html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#9a9490;">No unmet openings logged yet.</div>';
-  }
-
-  // SECTIONS 5-9 — AI-populated when client.patternMap exists, locked otherwise.
-  var pm = client.patternMap || null;
-  var pmAiSections = [
-    { key: 'likely_drivers',         title: 'Likely Drivers',            sub: 'What may be driving this client\u2019s patterns' },
-    { key: 'emotional_style',        title: 'Emotional Style',           sub: 'How this client moves through emotional territory' },
-    { key: 'what_moves_them_forward',title: 'What Moves Them Forward',   sub: 'Conditions that create real movement' },
-    { key: 'where_they_get_stuck',   title: 'Where They Get Stuck',      sub: 'Conditions that cause them to stall' },
-    { key: 'signs_of_growth',        title: 'Signs of Growth',           sub: 'Observable shifts across sessions' }
-  ];
-  pmAiSections.forEach(function(s) {
-    html += pmHdr(s.title)
-      + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#9a9490;margin-top:-8px;margin-bottom:12px;">' + s.sub + '</div>';
-
-    if (!pm || !pm[s.key] || (Array.isArray(pm[s.key]) && !pm[s.key].length)) {
-      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-style:italic;color:#9a9490;padding:10px 0;">Generate Pattern Map to unlock</div>';
-      return;
-    }
-
-    if (s.key === 'likely_drivers') {
-      pm.likely_drivers.forEach(function(d) {
-        if (!d) return;
-        html += '<div style="background:#ffffff;border:1px solid #edeae4;border-radius:6px;padding:14px 16px;margin-bottom:10px;">'
-          + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9a9490;margin-bottom:4px;">This client\u2019s patterns suggest:</div>'
-          + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.9rem;font-weight:700;color:#1a3a52;margin-bottom:6px;">' + escapeHtml(d.driver || '') + '</div>'
-          + (d.evidence ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#5a5560;line-height:1.6;margin-bottom:6px;">' + escapeHtml(d.evidence) + '</div>' : '')
-          + (d.frequency ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#9a9490;">' + escapeHtml(d.frequency) + '</div>' : '')
-          + '</div>';
-      });
-    } else if (s.key === 'emotional_style') {
-      var es = pm.emotional_style || {};
-      if (es.summary) {
-        html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:#1a3a52;line-height:1.65;margin-bottom:12px;">' + escapeHtml(es.summary) + '</div>';
-      }
-      if (Array.isArray(es.patterns) && es.patterns.length) {
-        html += '<div style="margin-bottom:10px;">';
-        es.patterns.forEach(function(p) {
-          if (!p) return;
-          html += '<span style="display:inline-block;padding:4px 12px;border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.72rem;font-weight:600;background:#c49a3c;color:#ffffff;margin-right:6px;margin-bottom:6px;">' + escapeHtml(p) + '</span>';
-        });
-        html += '</div>';
-      }
-      if (Array.isArray(es.client_language) && es.client_language.length) {
-        es.client_language.forEach(function(q) {
-          if (!q) return;
-          html += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-style:italic;color:var(--gold);background:#fdf9f1;border-left:2px solid #c49a3c;padding:8px 12px;line-height:1.55;margin-bottom:6px;">\u201C' + escapeHtml(q) + '\u201D</div>';
-        });
-      }
-      html += '<div style="background:#fdf9f1;border-left:2px solid #c49a3c;padding:10px 14px;margin-top:12px;">'
-        + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#c49a3c;margin-bottom:4px;">As a coach:</div>'
-        + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#1a3a52;line-height:1.55;">You may need to slow the moment down before it shifts into analysis. Watch for when emotional honesty arrives with an immediate deflection \u2014 that\u2019s the moment to pause.</div>'
-        + '</div>';
-    } else if (s.key === 'what_moves_them_forward') {
-      pm.what_moves_them_forward.forEach(function(m) {
-        if (!m) return;
-        html += '<div style="background:#ffffff;border:1px solid #edeae4;border-radius:6px;padding:14px 16px;margin-bottom:10px;">'
-          + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.9rem;font-weight:700;color:#1a3a52;margin-bottom:6px;">' + escapeHtml(m.condition || '') + '</div>'
-          + (m.evidence ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#5a5560;line-height:1.6;">' + escapeHtml(m.evidence) + '</div>' : '')
-          + '</div>';
-      });
-    } else if (s.key === 'where_they_get_stuck') {
-      pm.where_they_get_stuck.forEach(function(st) {
-        if (!st) return;
-        html += '<div style="background:#ffffff;border:1px solid #edeae4;border-radius:6px;padding:14px 16px;margin-bottom:10px;">'
-          + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.9rem;font-weight:700;color:#B8654A;margin-bottom:6px;">' + escapeHtml(st.stall_point || '') + '</div>'
-          + (st.evidence ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#5a5560;line-height:1.6;margin-bottom:6px;">' + escapeHtml(st.evidence) + '</div>' : '')
-          + (st.frequency ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#9a9490;">' + escapeHtml(st.frequency) + '</div>' : '')
-          + '</div>';
-      });
-      html += '<div style="background:#fdf9f1;border-left:2px solid #c49a3c;padding:10px 14px;margin-top:12px;">'
-        + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#c49a3c;margin-bottom:4px;">In these moments:</div>'
-        + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#1a3a52;line-height:1.55;">Staying with the feeling before moving to insight often creates more leverage than moving forward. The stall is the signal.</div>'
-        + '</div>';
-    } else if (s.key === 'signs_of_growth') {
-      pm.signs_of_growth.forEach(function(g) {
-        if (!g) return;
-        html += '<div style="background:#ffffff;border:1px solid #edeae4;border-radius:6px;padding:14px 16px;margin-bottom:10px;">'
-          + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.9rem;font-weight:700;color:#1a3a52;margin-bottom:8px;">' + escapeHtml(g.shift || '') + '</div>'
-          + ((g.from || g.to) ? '<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">'
-              + '<div style="flex:1;min-width:140px;background:#f7f5f1;border-radius:4px;padding:8px 12px;font-family:\'DM Sans\',sans-serif;font-size:0.8rem;color:#5a5560;line-height:1.5;"><span style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9a9490;display:block;margin-bottom:2px;">From</span>' + escapeHtml(g.from || '') + '</div>'
-              + '<div style="color:#c49a3c;font-size:1rem;">\u2192</div>'
-              + '<div style="flex:1;min-width:140px;background:#fdf9f1;border-radius:4px;padding:8px 12px;font-family:\'DM Sans\',sans-serif;font-size:0.8rem;color:#1a3a52;line-height:1.5;"><span style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#c49a3c;display:block;margin-bottom:2px;">To</span>' + escapeHtml(g.to || '') + '</div>'
-              + '</div>' : '')
-          + (g.evidence ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#9a9490;font-style:italic;">' + escapeHtml(g.evidence) + '</div>' : '')
-          + '</div>';
-      });
-    }
-  });
-
-  if (pm && pm.last_analyzed) {
-    var la = new Date(pm.last_analyzed);
-    html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#b8b0a4;margin-top:20px;padding-top:12px;border-top:1px solid #edeae4;">Last analyzed ' + escapeHtml(la.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })) + '</div>';
-  }
-
-  html += '</div>'; // close pattern-map body wrapper
-  html += '</div>'; // close Pattern Map form-section
+    + '</div>';
 
   // Section 2: Intake Responses
   html += '<div class="form-section" style="margin-bottom:24px;">'
@@ -5168,87 +4877,6 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
     $('clients-detail-view').classList.add('hidden');
     $('clients-list-view').classList.remove('hidden');
   });
-
-  // Wire Generate Pattern Map button (endpoint not yet built — graceful fallback)
-  var gpmBtn = $('generate-pattern-map-btn');
-  if (gpmBtn) {
-    gpmBtn.addEventListener('click', async function() {
-      // ===================================================================
-      // PATTERN MAP AI GUARDRAIL
-      // You are building a Client Pattern Map for a coach, not a therapist.
-      // This is not a diagnostic profile. Do not infer conditions, disorders, or clinical presentations.
-      // Use only what is observable: patterns in the client's language, behavioral tendencies,
-      // emotional responses as described, and recurring themes across sessions.
-      // Every statement must be grounded in session evidence.
-      // If you cannot tie a pattern to specific session data, do not include it.
-      // Tone: practical, coaching-grounded, non-clinical, developmental.
-      // ===================================================================
-      var self = this;
-      var email = self.dataset.clientEmail;
-      var bodyId = self.dataset.bodyId;
-      var status = $('pattern-map-status');
-      var origText = self.textContent;
-      self.disabled = true;
-      self.textContent = 'Coach Clarity is working\u2026';
-      self.style.opacity = '0.6';
-      if (status) { status.textContent = 'Coach Clarity is building your Pattern Map\u2026'; status.style.color = '#c49a3c'; }
-      // Scroll Pattern Map header into view immediately
-      var pmHeader = document.querySelector('#generate-pattern-map-btn');
-      if (pmHeader) pmHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      // Replace body with loading state
-      var bodyEl = bodyId ? document.getElementById(bodyId) : null;
-      if (bodyEl) {
-        bodyEl.innerHTML = '<div style="text-align:center;padding:48px 24px;color:#9a9490;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;"><div style="font-size:1.5rem;margin-bottom:12px;animation:spin 1.5s linear infinite;display:inline-block;">\u27f3</div><br>Coach Clarity is building your Pattern Map...<br><span style="font-size:0.75rem;color:#b8b0a4;">This takes about 15 seconds</span></div>';
-      }
-      try {
-        var res = await fetch('/api/aggregate-client-pattern-map', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...apiHeaders() },
-          body: JSON.stringify({ coach_id: coachProfile.id, client_email: email })
-        });
-        if (!res.ok) throw new Error('endpoint returned ' + res.status);
-        var data = await res.json();
-
-        if (data && data.locked) {
-          if (status) { status.textContent = 'Pattern Map needs at least ' + (data.needed || 3) + ' analyzed sessions. You have ' + (data.session_count || 0) + '.'; status.style.color = '#9a9490'; }
-          if (bodyEl) {
-            bodyEl.innerHTML = '<div style="text-align:center;padding:48px 24px;color:#9a9490;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-style:italic;">Pattern Map needs at least ' + escapeHtml(String(data.needed || 3)) + ' analyzed sessions. You have ' + escapeHtml(String(data.session_count || 0)) + '.</div>';
-          }
-          return;
-        }
-
-        // Re-render the client detail with the populated Pattern Map sections.
-        if (_clientDetailBundle && _clientDetailBundle.client && _clientDetailBundle.client.email === email) {
-          _clientDetailBundle.client.patternMap = data;
-          renderClientDetail(
-            _clientDetailBundle.client,
-            _clientDetailBundle.goals,
-            _clientDetailBundle.intakeResponses,
-            _clientDetailBundle.checkinResponses,
-            _clientDetailBundle.messages,
-            _clientDetailBundle.notesByBooking,
-            _clientDetailBundle.checkinForms
-          );
-          // Scroll the newly-rendered Pattern Map into view.
-          var pmSection = document.querySelector('#generate-pattern-map-btn');
-          if (pmSection) pmSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } else {
-          console.warn('[Pattern Map] bundle missing or stale, skipping re-render');
-          if (status) { status.textContent = 'Pattern Map ready.'; status.style.color = '#2d6a4f'; }
-        }
-      } catch (e) {
-        console.warn('[Pattern Map] generation failed:', e && e.message);
-        if (status) { status.textContent = 'Coach Clarity couldn\u2019t complete this. Try again shortly.'; status.style.color = '#c44'; }
-        if (bodyEl) {
-          bodyEl.innerHTML = '<div style="text-align:center;padding:48px 24px;color:#c44;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;">Coach Clarity couldn\u2019t complete this. Try again shortly.</div>';
-        }
-      } finally {
-        self.disabled = false;
-        self.textContent = origText;
-        self.style.opacity = '1';
-      }
-    });
-  }
 
   // Wire session expand/collapse
   document.querySelectorAll('.session-expand-btn').forEach(function(btn) {
