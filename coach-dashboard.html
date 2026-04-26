@@ -4739,6 +4739,19 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
     + '<div id="' + jiBodyId + '" style="display:none;margin-top:18px;"><div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#8a8580;">Loading&hellip;</div></div>'
     + '</div>';
 
+  // Section 1.45: Daily Check-ins (client-initiated, mood/one-word/pattern)
+  var dcBodyId = 'daily-checkins-body-' + (client.email || '').replace(/[@.]/g, '-');
+  html += '<div class="form-section" style="margin-bottom:24px;background:#f7f4ef;padding:24px 28px;border:1px solid #e8e4dc;border-left:3px solid #1a3a52;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;cursor:pointer;" onclick="toggleDailyCheckins(\'' + dcBodyId + '\',\'' + escapeHtml(client.email) + '\')">'
+    +   '<div>'
+    +     '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.4rem;font-weight:600;color:#1a3a52;margin-bottom:2px;">Daily Check-ins</div>'
+    +     '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#8a8580;">Mood, one-word, and pattern reflections this client wrote between sessions.</div>'
+    +   '</div>'
+    +   '<button type="button" style="background:transparent;border:1px solid #1a3a52;color:#1a3a52;padding:6px 14px;border-radius:6px;font-size:0.78rem;font-family:\'DM Sans\',sans-serif;font-weight:600;cursor:pointer;">Open</button>'
+    + '</div>'
+    + '<div id="' + dcBodyId + '" style="display:none;margin-top:18px;"><div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#8a8580;">Loading&hellip;</div></div>'
+    + '</div>';
+
   // Section 1.5: Coach Intelligence — launcher block for the three coach-facing panels.
   // Inline Pattern Map rendering was removed in Split 5c; the panels handle their own data load.
   html += '<div class="form-section" style="margin-bottom:24px;background:#f7f4ef;padding:28px 32px;border:1px solid #e8e4dc;">'
@@ -10954,6 +10967,150 @@ function openIntakePreview() {
   });
   document.getElementById('intake-preview-body').innerHTML = html;
   document.getElementById('intake-preview-overlay').classList.add('open');
+}
+
+/* ================================================
+   DAILY CHECK-INS — coach-side view of client-initiated
+   mood / one-word / pattern reflections (explorer_checkins)
+   ================================================ */
+async function toggleDailyCheckins(bodyId, clientEmail) {
+  var el = document.getElementById(bodyId);
+  if (!el) return;
+  if (el.style.display === 'none' || !el.style.display) {
+    el.style.display = 'block';
+    if (!el.dataset.loaded) {
+      el.dataset.loaded = '1';
+      await loadDailyCheckins(bodyId, clientEmail);
+    }
+  } else {
+    el.style.display = 'none';
+  }
+}
+window.toggleDailyCheckins = toggleDailyCheckins;
+
+// Mood string → numeric score for the sparkline. Tolerant of legacy values
+// ("Exhausted", "Okay") written by the older explorer dashboard mood pills.
+function dcMoodScore(m) {
+  if (!m) return null;
+  var k = String(m).toLowerCase();
+  var map = { heavy: 1, exhausted: 1, tired: 2, okay: 3, steady: 3, bright: 4, thriving: 5 };
+  return map[k] != null ? map[k] : null;
+}
+
+async function loadDailyCheckins(bodyId, clientEmail) {
+  var el = document.getElementById(bodyId);
+  if (!el) return;
+  try {
+    var encEmail = encodeURIComponent(clientEmail);
+    var url = SUPABASE_URL + '/rest/v1/explorer_checkins?user_email=eq.' + encEmail
+      + '&order=created_at.desc&limit=60'
+      + '&select=id,mood,one_word,pattern_response,pattern_referenced,created_at';
+    var token = localStorage.getItem(TOKEN_KEY);
+    var headers = { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + (token || ANON_KEY) };
+    var res = await fetch(url, { headers: headers });
+    if (!res.ok) throw new Error('checkins ' + res.status);
+    var rows = await res.json();
+    if (!Array.isArray(rows)) rows = [];
+
+    if (rows.length === 0) {
+      el.innerHTML = '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:#8a8580;font-style:italic;">No check-ins yet from this client.</div>';
+      return;
+    }
+
+    // ---- Mood trend: last 14 days, oldest → newest, sparkline as inline SVG.
+    var now = new Date();
+    var cutoff = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    var trendRows = rows
+      .filter(function(r) { return r && r.created_at && new Date(r.created_at) >= cutoff; })
+      .slice()
+      .sort(function(a, b) { return new Date(a.created_at) - new Date(b.created_at); });
+
+    var trendHtml = '';
+    if (trendRows.length >= 2) {
+      var w = 480, h = 90, padX = 8, padY = 12;
+      var pts = trendRows.map(function(r, i) {
+        var s = dcMoodScore(r.mood);
+        return { x: i, y: s == null ? 3 : s, raw: r };
+      }).filter(function(p) { return p.y != null; });
+      if (pts.length >= 2) {
+        var maxY = 5, minY = 1;
+        var stepX = (w - padX * 2) / Math.max(1, (pts.length - 1));
+        var path = pts.map(function(p, i) {
+          var x = padX + i * stepX;
+          var y = padY + (h - padY * 2) * (1 - (p.y - minY) / (maxY - minY));
+          return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1);
+        }).join(' ');
+        var dotsSvg = pts.map(function(p, i) {
+          var x = padX + i * stepX;
+          var y = padY + (h - padY * 2) * (1 - (p.y - minY) / (maxY - minY));
+          return '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="3" fill="#c49a3c"></circle>';
+        }).join('');
+        trendHtml = '<div style="margin-bottom:18px;">'
+          + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#5a5560;margin-bottom:8px;">Mood — last 14 days</div>'
+          + '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:8px;padding:14px;">'
+          +   '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" style="width:100%;height:90px;display:block;">'
+          +     '<path d="' + path + '" fill="none" stroke="#1a3a52" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>'
+          +     dotsSvg
+          +   '</svg>'
+          +   '<div style="display:flex;justify-content:space-between;font-family:\'DM Sans\',sans-serif;font-size:0.7rem;color:#8a8580;margin-top:6px;">'
+          +     '<span>Heavy</span><span>Steady</span><span>Thriving</span>'
+          +   '</div>'
+          + '</div>'
+          + '</div>';
+      }
+    }
+    if (!trendHtml) {
+      trendHtml = '<div style="margin-bottom:18px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#8a8580;font-style:italic;">A trend will appear after a few check-ins.</div>';
+    }
+
+    // ---- Recent one_words (last 7 with date pills)
+    var wordsRows = rows.filter(function(r) { return r && r.one_word; }).slice(0, 7);
+    var wordsHtml = '';
+    if (wordsRows.length > 0) {
+      wordsHtml = '<div style="margin-bottom:18px;">'
+        + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#5a5560;margin-bottom:8px;">Recent one-words</div>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+      wordsRows.forEach(function(r) {
+        var dt = r.created_at ? new Date(r.created_at) : null;
+        var dateStr = dt ? dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+        wordsHtml += '<span style="display:inline-flex;align-items:baseline;gap:6px;background:#fdf9f1;border:1px solid #edeae4;border-radius:50px;padding:6px 12px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#1a3a52;">'
+          + '<span style="font-weight:600;">' + escapeHtml(String(r.one_word)) + '</span>'
+          + '<span style="font-size:0.7rem;color:#8a8580;">' + escapeHtml(dateStr) + '</span>'
+          + '</span>';
+      });
+      wordsHtml += '</div></div>';
+    }
+
+    // ---- Pattern responses feed
+    var patternRows = rows.filter(function(r) { return r && r.pattern_response; });
+    var patternHtml = '';
+    if (patternRows.length > 0) {
+      patternHtml = '<div>'
+        + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#5a5560;margin-bottom:8px;">Pattern reflections</div>'
+        + '<div style="max-height:340px;overflow-y:auto;border:1px solid #e8e4dc;border-radius:8px;background:#fff;">';
+      patternRows.forEach(function(r, idx) {
+        var dt = r.created_at ? new Date(r.created_at) : null;
+        var dateStr = dt ? dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+        var ref = r.pattern_referenced || '';
+        patternHtml += '<div style="padding:14px 16px;' + (idx > 0 ? 'border-top:1px solid #e8e4dc;' : '') + '">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">'
+          +   '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.74rem;font-weight:600;color:#8a8580;text-transform:uppercase;letter-spacing:0.05em;">' + escapeHtml(dateStr) + '</span>'
+          +   (ref ? '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;background:#fdf2da;color:#8a6a1c;padding:3px 9px;border-radius:50px;">' + escapeHtml(ref) + '</span>' : '')
+          + '</div>'
+          + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.92rem;color:#1a3a52;line-height:1.6;white-space:pre-wrap;">' + escapeHtml(String(r.pattern_response)) + '</div>'
+          + '</div>';
+      });
+      patternHtml += '</div></div>';
+    }
+
+    el.innerHTML = trendHtml + wordsHtml + patternHtml || trendHtml;
+    if (!wordsHtml && !patternHtml && !trendHtml) {
+      el.innerHTML = '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:#8a8580;font-style:italic;">No check-ins yet from this client.</div>';
+    }
+  } catch (err) {
+    console.error('[DailyCheckins] load error', err);
+    el.innerHTML = '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#c44;">Could not load daily check-ins. Please try again.</div>';
+  }
 }
 
 /* ================================================

@@ -388,9 +388,13 @@ async function selectMood(btn) {
   var msg = document.getElementById('mood-msg');
 
   try {
+    // Send the user's JWT (not the anon key) so the explorer_checkins RLS
+    // policy can match user_email against auth.jwt()->>'email'. Without this
+    // the insert is rejected post-tightening.
+    var token = localStorage.getItem('sb_access_token') || ANON_KEY;
     await fetch(SUPABASE_URL + '/rest/v1/explorer_checkins', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY, 'Prefer': 'return=minimal' },
+      headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + token, 'Prefer': 'return=minimal' },
       body: JSON.stringify({ user_email: currentUserEmail, mood: mood, created_at: new Date().toISOString() })
     });
     msg.textContent = 'Noted. Take care of yourself today.';

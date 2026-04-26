@@ -274,6 +274,37 @@ a { color: var(--navy); text-decoration: none; }
 
 .hidden { display: none !important; }
 
+/* DAILY CHECK-IN MODAL */
+.dc-overlay { position: fixed; inset: 0; background: rgba(15, 25, 38, 0.55); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 24px; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+.dc-overlay.open { opacity: 1; pointer-events: auto; }
+.dc-modal { background: linear-gradient(180deg, #fbf8f1 0%, #ffffff 100%); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 20px 60px rgba(15, 25, 38, 0.25); width: 100%; max-width: 520px; max-height: calc(100vh - 48px); overflow-y: auto; padding: 32px 36px 28px; transform: translateY(8px); transition: transform 0.2s ease; }
+.dc-overlay.open .dc-modal { transform: translateY(0); }
+.dc-eyebrow { font-family: 'DM Sans', sans-serif; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
+.dc-title { font-family: 'Cormorant Garamond', serif; font-size: 1.7rem; font-weight: 600; color: var(--ink); margin: 0 0 6px; line-height: 1.2; }
+.dc-sub { font-family: 'DM Sans', sans-serif; font-size: 0.88rem; color: var(--muted); line-height: 1.55; margin: 0 0 22px; }
+.dc-question { margin-bottom: 22px; }
+.dc-q-label { font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 600; color: var(--ink); letter-spacing: 0.02em; margin-bottom: 10px; display: block; }
+.dc-mood-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.dc-mood-pill { flex: 1 1 0; min-width: 78px; border: 1px solid var(--border); background: #ffffff; color: var(--ink); padding: 10px 6px 9px; border-radius: 10px; cursor: pointer; transition: all 0.15s ease; display: flex; flex-direction: column; align-items: center; gap: 4px; font-family: 'DM Sans', sans-serif; }
+.dc-mood-pill:hover { border-color: var(--gold); background: #fdf9f1; }
+.dc-mood-pill.selected { border-color: var(--gold); background: #fdf2da; box-shadow: 0 0 0 2px rgba(196, 154, 60, 0.25); }
+.dc-mood-emoji { font-size: 1.3rem; line-height: 1; }
+.dc-mood-label { font-size: 0.7rem; font-weight: 600; color: var(--muted); }
+.dc-mood-pill.selected .dc-mood-label { color: var(--ink); }
+.dc-input { width: 100%; padding: 11px 14px; border: 1px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--text); background: #ffffff; box-sizing: border-box; }
+.dc-input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(196, 154, 60, 0.15); }
+.dc-textarea { width: 100%; min-height: 88px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px; font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.05rem; color: var(--text); background: #ffffff; resize: vertical; line-height: 1.5; box-sizing: border-box; }
+.dc-textarea:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(196, 154, 60, 0.15); }
+.dc-pattern-prompt { font-family: 'DM Sans', sans-serif; font-size: 0.88rem; color: var(--ink); line-height: 1.55; margin-bottom: 10px; }
+.dc-pattern-prompt em { font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 600; color: var(--navy); font-size: 1rem; }
+.dc-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; padding-top: 18px; border-top: 1px solid var(--border); }
+.dc-skip { background: none; border: none; padding: 8px 4px; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; color: var(--muted); cursor: pointer; transition: color 0.15s ease; }
+.dc-skip:hover { color: var(--ink); }
+.dc-submit { background: var(--gold); color: var(--navy); border: none; padding: 11px 22px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
+.dc-submit:hover { background: #b8862e; }
+.dc-submit:disabled { opacity: 0.55; cursor: not-allowed; }
+.dc-msg { font-family: 'DM Sans', sans-serif; font-size: 0.8rem; color: #c44; margin-top: 10px; min-height: 18px; }
+
 /* MOBILE */
 @media (max-width: 900px) {
   .sidebar { transform: translateX(-100%); transition: transform 0.25s ease; box-shadow: var(--shadow); }
@@ -325,9 +356,10 @@ a { color: var(--navy); text-decoration: none; }
         <button class="side-item active" data-section="sessions"><span class="icon">&#9679;</span>My Sessions</button>
         <button class="side-item" data-section="goals"><span class="icon">&#9679;</span>My Goals</button>
         <button class="side-item" data-section="checkins"><span class="icon">&#9679;</span>My Check-ins</button>
+        <button class="side-item" data-section="my-courses"><span class="icon">&#9679;</span>My Courses</button>
         <button class="side-item" data-section="journal"><span class="icon">&#9679;</span>Journal</button>
         <button class="side-item" data-section="messages"><span class="icon">&#9679;</span>Messages</button>
-        <button class="side-item" data-section="courses"><span class="icon">&#9679;</span>Resources</button>
+        <button class="side-item" data-section="resources"><span class="icon">&#9679;</span>Resources</button>
         <button class="side-item" data-section="profile"><span class="icon">&#9679;</span>My Profile</button>
       </nav>
       <div class="side-foot">
@@ -389,11 +421,18 @@ a { color: var(--navy); text-decoration: none; }
           <div id="messages-content"></div>
         </section>
 
+        <!-- MY COURSES -->
+        <section class="section" id="sec-my-courses">
+          <h1 class="page-title">My Courses</h1>
+          <p class="page-sub">Courses you've enrolled in — keep going at your own pace.</p>
+          <div id="my-courses-content"></div>
+        </section>
+
         <!-- RESOURCES -->
-        <section class="section" id="sec-courses">
+        <section class="section" id="sec-resources">
           <h1 class="page-title">Resources</h1>
-          <p class="page-sub">Resources and learning your coach has shared with you.</p>
-          <div id="courses-content"></div>
+          <p class="page-sub">A space for the worksheets, articles, and tools your coach shares with you.</p>
+          <div id="resources-content"></div>
         </section>
 
         <!-- PROFILE -->
@@ -455,6 +494,33 @@ function formatDateTime(ts) {
 function firstName(s) {
   if (!s) return 'there';
   return String(s).trim().split(/\s+/)[0];
+}
+
+// Cache the assigned coach's email so writers (journal, check-in) can stamp
+// each row with the coach link required by coach-side RLS. Resolves to null
+// when the client has no confirmed/manual booking yet — that's a legitimate
+// "not yet matched" state and we leave the field NULL rather than guessing.
+let assignedCoachEmailCache; // undefined = unresolved, null = none, string = found
+async function getAssignedCoachEmail() {
+  if (assignedCoachEmailCache !== undefined) return assignedCoachEmailCache;
+  try {
+    const url = SUPABASE_URL
+      + '/rest/v1/coach_bookings?client_email=eq.' + encodeURIComponent(currentEmail)
+      + '&status=in.(confirmed,manual)&order=scheduled_at.desc.nullslast,created_at.desc.nullslast'
+      + '&limit=1&select=coach_id,coach_profiles(user_email)';
+    const res = await fetch(url, { headers: apiHeaders() });
+    if (!res.ok) { assignedCoachEmailCache = null; return null; }
+    const rows = await res.json().catch(function() { return []; });
+    const row = Array.isArray(rows) && rows[0];
+    const profile = row && row.coach_profiles;
+    const email = profile && profile.user_email ? String(profile.user_email).toLowerCase() : null;
+    assignedCoachEmailCache = email;
+    return email;
+  } catch (err) {
+    console.error('[Coach] resolve assigned coach error:', err);
+    assignedCoachEmailCache = null;
+    return null;
+  }
 }
 
 /* ================================================
@@ -617,6 +683,9 @@ async function init() {
   renderProgressAndContinuity();
   $('loading-main').style.display = 'none';
   $('dash-body').classList.remove('hidden');
+  // Surface the daily check-in modal once the dashboard is visible. Awaits
+  // are intentionally not blocking the render — the modal can pop in.
+  maybeShowDailyCheckin();
 }
 
 function signOutHard() {
@@ -941,9 +1010,10 @@ function setupSidebar() {
         btn._loaded = true;
         if (target === 'goals') loadGoals();
         if (target === 'checkins') loadCheckins();
+        if (target === 'my-courses') loadMyCourses();
         if (target === 'journal') loadJournal();
         if (target === 'messages') loadMessages();
-        if (target === 'courses') loadCourses();
+        if (target === 'resources') loadResources();
         if (target === 'profile') renderProfile();
       }
     });
@@ -1487,7 +1557,7 @@ async function loadCheckins() {
     } else if (completed.length === 0) {
       html += '<div class="checkin-empty">'
         + '<div class="icon">&#10022;</div>'
-        + '<p>Check-ins help you and your coach stay connected between sessions. When your coach sends one, it will appear here as a moment to reflect.</p>'
+        + '<p>A small daily moment — mood, one word, a pattern you\'re noticing. Your check-ins will gather here as you go.</p>'
         + '</div>';
     }
 
@@ -1496,10 +1566,19 @@ async function loadCheckins() {
       completed.forEach(function(c, idx) {
         const dt = formatDate(c.created_at || c.completed_at);
         const mood = c.mood ? ' — ' + escapeHtml(c.mood) : '';
-        const body = c.notes || c.reflection || c.response || '';
+        const body = c.one_word || c.notes || c.reflection || c.response || '';
+        const pattern = c.pattern_response || '';
+        const referenced = c.pattern_referenced || '';
+        let bodyHtml = body ? escapeHtml(body) : '<em>A quiet check-in.</em>';
+        if (pattern) {
+          bodyHtml += '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:0.88rem;color:var(--ink);line-height:1.55;">'
+            + (referenced ? '<div style="font-size:0.72rem;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Pattern: ' + escapeHtml(referenced) + '</div>' : '')
+            + escapeHtml(pattern)
+            + '</div>';
+        }
         html += '<div class="accordion-item">'
           + '<div class="accordion-head" onclick="toggleAccordion(' + idx + ')"><span>' + escapeHtml(dt) + mood + '</span><span>&#9662;</span></div>'
-          + '<div class="accordion-body" id="acc-' + idx + '">' + (body ? escapeHtml(body) : '<em>A quiet check-in.</em>') + '</div>'
+          + '<div class="accordion-body" id="acc-' + idx + '">' + bodyHtml + '</div>'
           + '</div>';
       });
     }
@@ -1509,6 +1588,240 @@ async function loadCheckins() {
     container.innerHTML = '<div class="empty"><p>We had trouble loading your check-ins. Please refresh in a moment.</p></div>';
   }
 }
+
+/* ================================================
+   DAILY CHECK-IN MODAL
+   Client-initiated, one-per-calendar-day. Replaces the misleading
+   "your coach will send one" empty state. Coach reads, doesn't author.
+   ================================================ */
+let dailyCheckinState = {
+  mood: null,
+  oneWord: '',
+  patternResponse: '',
+  patternReferenced: null,
+  patternPrompt: ''
+};
+
+// Resolve the assigned coach's UUID from the most recent confirmed/manual
+// booking. Cached for the session. Null when the client has no match yet.
+let assignedCoachIdCache; // undefined = unresolved, null = none, string = found
+async function getAssignedCoachId() {
+  if (assignedCoachIdCache !== undefined) return assignedCoachIdCache;
+  try {
+    const url = SUPABASE_URL
+      + '/rest/v1/coach_bookings?client_email=eq.' + encodeURIComponent(currentEmail)
+      + '&status=in.(confirmed,manual)&order=scheduled_at.desc.nullslast,created_at.desc.nullslast'
+      + '&limit=1&select=coach_id';
+    const res = await fetch(url, { headers: apiHeaders() });
+    if (!res.ok) { assignedCoachIdCache = null; return null; }
+    const rows = await res.json().catch(function() { return []; });
+    const row = Array.isArray(rows) && rows[0];
+    assignedCoachIdCache = (row && row.coach_id) ? row.coach_id : null;
+    return assignedCoachIdCache;
+  } catch (err) {
+    console.error('[Coach] resolve coach_id error:', err);
+    assignedCoachIdCache = null;
+    return null;
+  }
+}
+
+// True if any explorer_checkins row exists for this user with created_at
+// in the local-day window. Local time is what the user perceives as "today".
+async function hasCheckinToday() {
+  try {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const url = SUPABASE_URL
+      + '/rest/v1/explorer_checkins?user_email=eq.' + encodeURIComponent(currentEmail)
+      + '&created_at=gte.' + encodeURIComponent(start.toISOString())
+      + '&select=id&limit=1';
+    const res = await fetch(url, { headers: apiHeaders() });
+    if (!res.ok) return false;
+    const rows = await res.json().catch(function() { return []; });
+    return Array.isArray(rows) && rows.length > 0;
+  } catch (err) {
+    console.error('[Checkin] hasCheckinToday error:', err);
+    return false;
+  }
+}
+
+// Pull the highest-session_count canonical pattern for this client, if any,
+// to power the adaptive third question. Returns the canonical_name string
+// or null when no Pattern Map exists yet.
+async function loadTopCanonicalPattern() {
+  try {
+    const url = SUPABASE_URL
+      + '/rest/v1/coach_client_patterns?client_email=eq.' + encodeURIComponent(currentEmail)
+      + '&order=last_analyzed.desc.nullslast,created_at.desc.nullslast'
+      + '&limit=1&select=pattern_map';
+    const res = await fetch(url, { headers: apiHeaders() });
+    if (!res.ok) return null;
+    const rows = await res.json().catch(function() { return []; });
+    const row = Array.isArray(rows) && rows[0];
+    const map = row && row.pattern_map;
+    const canonicals = map && Array.isArray(map.canonical_patterns) ? map.canonical_patterns : [];
+    if (canonicals.length === 0) return null;
+    let top = null;
+    for (let i = 0; i < canonicals.length; i++) {
+      const cp = canonicals[i] || {};
+      const sc = Number(cp.session_count || 0);
+      if (!top || sc > Number(top.session_count || 0)) top = cp;
+    }
+    if (!top) return null;
+    return top.canonical_name || top.canonical_pattern || top.name || null;
+  } catch (err) {
+    console.error('[Checkin] load pattern error:', err);
+    return null;
+  }
+}
+
+async function maybeShowDailyCheckin() {
+  // Don't surface the modal if the user already submitted today, dismissed
+  // it (skip-today survives a reload), or auth isn't ready.
+  if (!currentEmail || !currentToken) return;
+  if (sessionStorage.getItem(dailyCheckinSkipKey())) return;
+  const already = await hasCheckinToday();
+  if (already) return;
+
+  // Build state. Pattern question may be adaptive or free-form.
+  dailyCheckinState = { mood: null, oneWord: '', patternResponse: '', patternReferenced: null, patternPrompt: '' };
+  const top = await loadTopCanonicalPattern();
+  if (top) {
+    dailyCheckinState.patternReferenced = top;
+    dailyCheckinState.patternPrompt = 'Last sessions surfaced <em>' + escapeHtml(top) + '</em> — has it shown up this week?';
+  } else {
+    dailyCheckinState.patternReferenced = null;
+    dailyCheckinState.patternPrompt = 'What pattern are you noticing in yourself this week?';
+  }
+  renderDailyCheckinModal();
+}
+
+function dailyCheckinSkipKey() {
+  const d = new Date();
+  return 'dc_skip_' + d.getFullYear() + '_' + (d.getMonth() + 1) + '_' + d.getDate();
+}
+
+function renderDailyCheckinModal() {
+  let overlay = document.getElementById('daily-checkin-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'daily-checkin-overlay';
+    overlay.className = 'dc-overlay';
+    document.body.appendChild(overlay);
+  }
+  const moods = [
+    { v: 'Heavy', emoji: '☁' },
+    { v: 'Tired', emoji: '◐' },
+    { v: 'Steady', emoji: '●' },
+    { v: 'Bright', emoji: '◑' },
+    { v: 'Thriving', emoji: '☀' }
+  ];
+  let moodHtml = '<div class="dc-mood-row">';
+  moods.forEach(function(m) {
+    const sel = (dailyCheckinState.mood === m.v) ? ' selected' : '';
+    moodHtml += '<button type="button" class="dc-mood-pill' + sel + '" data-mood="' + escapeHtml(m.v) + '">'
+      + '<span class="dc-mood-emoji">' + m.emoji + '</span>'
+      + '<span class="dc-mood-label">' + escapeHtml(m.v) + '</span>'
+      + '</button>';
+  });
+  moodHtml += '</div>';
+
+  overlay.innerHTML = '<div class="dc-modal" role="dialog" aria-labelledby="dc-title-h" aria-modal="true">'
+    + '<div class="dc-eyebrow">A daily moment</div>'
+    + '<h2 class="dc-title" id="dc-title-h">How are you arriving today?</h2>'
+    + '<p class="dc-sub">Three small questions. Yours to track over time. Your coach can see what you share.</p>'
+    + '<div class="dc-question">'
+    +   '<label class="dc-q-label">Mood</label>'
+    +   moodHtml
+    + '</div>'
+    + '<div class="dc-question">'
+    +   '<label class="dc-q-label" for="dc-one-word">One word for today</label>'
+    +   '<input type="text" id="dc-one-word" class="dc-input" maxlength="30" placeholder="e.g. steady, scattered, hopeful" value="' + escapeHtml(dailyCheckinState.oneWord) + '">'
+    + '</div>'
+    + '<div class="dc-question">'
+    +   '<label class="dc-q-label" for="dc-pattern">Pattern check</label>'
+    +   '<div class="dc-pattern-prompt">' + dailyCheckinState.patternPrompt + '</div>'
+    +   '<textarea id="dc-pattern" class="dc-textarea" placeholder="A sentence or two — whatever feels true.">' + escapeHtml(dailyCheckinState.patternResponse) + '</textarea>'
+    + '</div>'
+    + '<div class="dc-msg" id="dc-msg"></div>'
+    + '<div class="dc-actions">'
+    +   '<button type="button" class="dc-skip" id="dc-skip">Skip today</button>'
+    +   '<button type="button" class="dc-submit" id="dc-submit">Save reflection</button>'
+    + '</div>'
+    + '</div>';
+
+  // Force reflow before adding open class so the transition runs.
+  overlay.offsetHeight; // eslint-disable-line no-unused-expressions
+  overlay.classList.add('open');
+
+  const moodPills = overlay.querySelectorAll('.dc-mood-pill');
+  moodPills.forEach(function(p) {
+    p.addEventListener('click', function() {
+      moodPills.forEach(function(x) { x.classList.remove('selected'); });
+      p.classList.add('selected');
+      dailyCheckinState.mood = p.dataset.mood;
+    });
+  });
+  overlay.querySelector('#dc-skip').addEventListener('click', skipDailyCheckin);
+  overlay.querySelector('#dc-submit').addEventListener('click', submitDailyCheckin);
+}
+
+function closeDailyCheckin() {
+  const overlay = document.getElementById('daily-checkin-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('open');
+  setTimeout(function() { if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 220);
+}
+
+function skipDailyCheckin() {
+  // Survives a refresh today; modal returns tomorrow.
+  try { sessionStorage.setItem(dailyCheckinSkipKey(), '1'); } catch (e) {}
+  closeDailyCheckin();
+}
+
+async function submitDailyCheckin() {
+  const overlay = document.getElementById('daily-checkin-overlay');
+  if (!overlay) return;
+  const oneWordEl = overlay.querySelector('#dc-one-word');
+  const patternEl = overlay.querySelector('#dc-pattern');
+  const msgEl = overlay.querySelector('#dc-msg');
+  const submitBtn = overlay.querySelector('#dc-submit');
+  dailyCheckinState.oneWord = (oneWordEl && oneWordEl.value || '').trim();
+  dailyCheckinState.patternResponse = (patternEl && patternEl.value || '').trim();
+  if (!dailyCheckinState.mood) {
+    if (msgEl) msgEl.textContent = 'Pick a mood to start.';
+    return;
+  }
+  if (msgEl) msgEl.textContent = '';
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Saving…'; }
+  try {
+    const coachId = await getAssignedCoachId();
+    const body = {
+      user_email: currentEmail,
+      mood: dailyCheckinState.mood,
+      one_word: dailyCheckinState.oneWord || null,
+      pattern_response: dailyCheckinState.patternResponse || null,
+      pattern_referenced: dailyCheckinState.patternReferenced || null,
+      coach_id: coachId,
+      created_at: new Date().toISOString()
+    };
+    const res = await fetch(SUPABASE_URL + '/rest/v1/explorer_checkins', {
+      method: 'POST',
+      headers: Object.assign({}, apiHeaders(), { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error('insert ' + res.status);
+    // Mark today as done so the modal won't re-open after a reload.
+    try { sessionStorage.setItem(dailyCheckinSkipKey(), '1'); } catch (e) {}
+    closeDailyCheckin();
+  } catch (err) {
+    console.error('[Checkin] save error:', err);
+    if (msgEl) msgEl.textContent = 'We had trouble saving. Please try again in a moment.';
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save reflection'; }
+  }
+}
+window.skipDailyCheckin = skipDailyCheckin;
+window.submitDailyCheckin = submitDailyCheckin;
 
 function toggleAccordion(idx) {
   const el = $('acc-' + idx);
@@ -1598,44 +1911,69 @@ async function sendMessage(coachId) {
 window.sendMessage = sendMessage;
 
 /* ================================================
-   COURSES
+   MY COURSES — coach_course_enrollments JOIN coach_courses
    ================================================ */
-async function loadCourses() {
-  const container = $('courses-content');
+async function loadMyCourses() {
+  const container = $('my-courses-content');
   container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   try {
-    // Try course_enrollments first, fall back gracefully
-    const res = await fetch(SUPABASE_URL + '/rest/v1/course_enrollments?client_email=eq.' + encodeURIComponent(currentEmail) + '&select=*,courses(id,title,description,lesson_count)', {
-      headers: apiHeaders()
-    });
+    const url = SUPABASE_URL
+      + '/rest/v1/coach_course_enrollments?student_email=eq.' + encodeURIComponent(currentEmail)
+      + '&order=enrolled_at.desc'
+      + '&select=id,enrolled_at,completed_at,course_id,coach_courses(id,title,thumbnail_url,slug,coach_profiles(display_name,full_name))';
+    const res = await fetch(url, { headers: apiHeaders() });
     let data = [];
     if (res.ok) data = await res.json();
     if (!Array.isArray(data) || data.length === 0) {
-      container.innerHTML = '<div class="empty"><p>Your coach will share resources, courses, and tools here as you work together.</p></div>';
+      container.innerHTML = '<div class="empty" style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:32px 28px;text-align:center;">'
+        + '<p style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;color:#5a5560;line-height:1.7;max-width:480px;margin:0 auto 14px;">You haven\'t enrolled in any courses yet.</p>'
+        + '<a href="/coach-courses.html" class="btn btn-primary" style="display:inline-block;background:#c49a3c;color:#1a3a52;padding:10px 22px;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:600;text-decoration:none;">Browse courses</a>'
+        + '</div>';
       return;
     }
-    let html = '';
+    let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;">';
     data.forEach(function(e) {
       if (!e) return;
-      const c = e.courses || {};
-      const title = c.title || e.course_title || 'Course';
-      const total = c.lesson_count || e.lesson_count || 0;
-      const done = e.lessons_completed || 0;
-      const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-      html += '<div class="card">'
-        + '<div class="course-row"><div style="flex:1;"><h3>' + escapeHtml(title) + '</h3>'
-        + (c.description ? '<p>' + escapeHtml(c.description) + '</p>' : '')
-        + '<div class="course-progress"><div class="bar" style="width:' + pct + '%"></div></div>'
-        + '<div class="progress-text">' + done + ' of ' + total + ' lessons</div>'
+      const c = e.coach_courses || {};
+      const title = c.title || 'Course';
+      const courseId = c.id || e.course_id || '';
+      const thumb = c.thumbnail_url || '';
+      const coach = c.coach_profiles || {};
+      const coachName = coach.display_name || coach.full_name || 'Your coach';
+      const completed = !!e.completed_at;
+      const thumbHtml = thumb
+        ? '<div style="aspect-ratio:16/9;background:#1a2e1a center/cover no-repeat url(\'' + escapeHtml(thumb) + '\');border-radius:10px 10px 0 0;"></div>'
+        : '<div style="aspect-ratio:16/9;background:linear-gradient(135deg,#1a2e1a 0%,#2c4a2c 100%);border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:center;color:#c49a3c;font-family:\'Cormorant Garamond\',serif;font-size:1.4rem;font-style:italic;">' + escapeHtml(title) + '</div>';
+      const ctaLabel = completed ? 'Revisit' : 'Continue';
+      html += '<div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column;">'
+        + thumbHtml
+        + '<div style="padding:16px 18px 18px;display:flex;flex-direction:column;flex:1;gap:10px;">'
+        +   '<div>'
+        +     '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.2rem;font-weight:600;color:#1a3a52;line-height:1.3;margin-bottom:4px;">' + escapeHtml(title) + '</div>'
+        +     '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#8a8580;">with ' + escapeHtml(coachName) + (completed ? ' &middot; <span style="color:#2d6a4f;font-weight:600;">Completed</span>' : '') + '</div>'
+        +   '</div>'
+        +   '<a href="/classroom.html" class="btn btn-primary" data-course-id="' + escapeHtml(courseId) + '" style="margin-top:auto;align-self:flex-start;background:#c49a3c;color:#1a3a52;padding:8px 18px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:600;text-decoration:none;">' + ctaLabel + '</a>'
         + '</div>'
-        + '<a href="/course-detail.html?id=' + escapeHtml(c.id || e.course_id || '') + '" class="btn btn-primary btn-sm">Continue</a>'
-        + '</div></div>';
+        + '</div>';
     });
+    html += '</div>';
     container.innerHTML = html;
   } catch (err) {
-    // Table likely doesn't exist yet
-    container.innerHTML = '<div class="empty"><p>Your coach will share courses and resources here.</p></div>';
+    console.error('[Courses] load error:', err);
+    container.innerHTML = '<div class="empty"><p>We had trouble loading your courses. Please refresh in a moment.</p></div>';
   }
+}
+
+/* ================================================
+   RESOURCES — placeholder until coach-side sharing UI ships
+   ================================================ */
+function loadResources() {
+  const container = $('resources-content');
+  if (!container) return;
+  container.innerHTML = '<div class="empty" style="background:#fdf9f1;border:1px solid #edeae4;border-left:3px solid #c49a3c;border-radius:10px;padding:28px 32px;">'
+    + '<p style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;color:#1a3a52;line-height:1.6;margin:0 0 10px;">Resources from your coach will appear here.</p>'
+    + '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:#5a5560;line-height:1.6;margin:0;"><span style="font-weight:600;color:#c49a3c;text-transform:uppercase;font-size:0.72rem;letter-spacing:0.06em;">Coming soon</span> — your coach will be able to share worksheets, articles, and tools directly to your space.</p>'
+    + '</div>';
 }
 
 /* ================================================
@@ -2034,8 +2372,12 @@ async function persistJournalEntry() {
   // send anon key as the bearer token (that strips the auth context).
   const token = currentToken || localStorage.getItem(TOKEN_KEY);
   if (!token) throw new Error('not authenticated');
+  // coach_email is what the coach-side RLS policy reads. Without it, shared
+  // entries are invisible to the assigned coach. Resolve from bookings.
+  const coachEmail = await getAssignedCoachEmail();
   const body = {
     client_email: currentEmail,
+    coach_email: coachEmail,
     prompt_text: (journalState.prompt && journalState.prompt.prompt_text) || null,
     prompt_source: (journalState.prompt && journalState.prompt.source_type) || 'free',
     entry_text: journalState.entryText || '',
