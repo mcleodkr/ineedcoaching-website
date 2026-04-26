@@ -12,7 +12,7 @@
     "api/generate-coach-dna.js": {
       "maxDuration": 120
     },
-    "api/generate-client-pattern-map.js": {
+    "api/aggregate-client-pattern-map.js": {
       "maxDuration": 120
     },
     "api/generate-intervention-plan.js": {
@@ -45,6 +45,7 @@
     { "source": "/proposal-builder", "destination": "/proposal-builder.html" },
     { "source": "/intervention-plan", "destination": "/intervention-plan-panel.html" },
     { "source": "/coach-mirror", "destination": "/coach-mirror-panel.html" },
+    { "source": "/pattern-map", "destination": "/pattern-map-panel.html" },
     { "source": "/article.html", "destination": "/api/article-render" },
     { "source": "/sitemap.xml", "destination": "/api/sitemap" }
   ]

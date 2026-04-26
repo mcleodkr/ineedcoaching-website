@@ -509,17 +509,21 @@
     if (!profile) return;
     coachId = profile.id;
 
-    const clientName = await loadClientName(clientEmail);
-    $('client-heading').textContent = clientName || clientEmail;
-    if (clientName && clientEmail !== clientName) {
-      $('header-meta').textContent = clientEmail;
-    }
+    // Provisional header — actual display name comes from the API response
+    // (parsed from coach_bookings.notes by the same regex the dashboard uses,
+    // so the two surfaces always agree for the same client).
+    $('client-heading').textContent = clientEmail;
 
     try {
       const data = await loadMirror();
       const sessionCount = (data && Array.isArray(data.sessions)) ? data.sessions.length : 0;
+      // explorer_profiles.display_name is a separate fallback; prefer the
+      // booking-notes name to match the dashboard's resolved name.
+      let bestName = data && data.display_name ? data.display_name : null;
+      if (!bestName) bestName = await loadClientName(clientEmail);
+      $('client-heading').textContent = bestName || clientEmail;
       $('header-meta').textContent =
-        (clientName && clientEmail !== clientName ? clientEmail + ' · ' : '')
+        (bestName && clientEmail !== bestName ? clientEmail + ' · ' : '')
         + sessionCount + ' session' + (sessionCount === 1 ? '' : 's') + ' analyzed';
       render(data);
     } catch (e) {

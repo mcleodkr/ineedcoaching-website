@@ -5201,7 +5201,7 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
         bodyEl.innerHTML = '<div style="text-align:center;padding:48px 24px;color:#9a9490;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;"><div style="font-size:1.5rem;margin-bottom:12px;animation:spin 1.5s linear infinite;display:inline-block;">\u27f3</div><br>Coach Clarity is building your Pattern Map...<br><span style="font-size:0.75rem;color:#b8b0a4;">This takes about 15 seconds</span></div>';
       }
       try {
-        var res = await fetch('/api/generate-client-pattern-map', {
+        var res = await fetch('/api/aggregate-client-pattern-map', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...apiHeaders() },
           body: JSON.stringify({ coach_id: coachProfile.id, client_email: email })

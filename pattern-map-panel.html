@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pattern Map · Coach Clarity</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Token set deliberately matches intervention-plan-panel.html so the
+       two surfaces feel like siblings. Pattern Map is the client-facing
+       analysis; Coach Mirror (warm tint) is the coach-facing reflection. */
+    :root {
+      --navy: #1a3a52;
+      --gold: #c49a3c;
+      --cream: #f7f4ee;
+      --bg: #f7f5f1;
+      --white: #ffffff;
+      --border: #e8e4dc;
+      --ink: #1a1a1a;
+      --muted: #6b6b60;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'DM Sans', sans-serif; font-size: 18px; background: var(--bg); color: var(--ink); line-height: 1.5; }
+    h1, h2, h3 { font-family: 'Cormorant Garamond', serif; color: var(--navy); font-weight: 600; margin: 0 0 8px; }
+    h1 { font-size: 1.85rem; }
+    h2 { font-size: 1.35rem; }
+    h3 { font-size: 1.05rem; }
+    .panel { max-width: 980px; margin: 0 auto; padding: 28px 22px 80px; }
+    .top-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; margin-bottom: 24px; padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .top-bar a { font-size: 0.85rem; color: var(--muted); text-decoration: none; }
+    .top-bar a:hover { color: var(--ink); }
+    .meta { font-size: 0.78rem; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+    .btn {
+      cursor: pointer; transition: all 0.15s ease;
+      font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500;
+      padding: 9px 18px; border-radius: 6px; border: none;
+    }
+    .btn-primary { background: var(--gold); color: #fff; }
+    .btn-primary:hover { background: #b08930; }
+    .btn-secondary { background: transparent; color: var(--navy); border: 1px solid var(--navy); }
+    .btn-secondary:hover { background: rgba(26,58,82,0.05); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .card {
+      background: var(--white); border: 1px solid var(--border); border-radius: 10px;
+      padding: 20px 22px; margin-bottom: 14px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .card h3 {
+      border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 12px;
+      font-family: 'Cormorant Garamond', serif; font-size: 1.15rem; font-weight: 600; color: var(--navy);
+    }
+    .card-sub {
+      font-size: 0.78rem; color: var(--muted); margin-top: -6px; margin-bottom: 12px;
+    }
+    .item {
+      padding: 12px 14px; border: 1px solid var(--border); border-radius: 6px;
+      margin-bottom: 10px; background: #fdfcfa;
+    }
+    .item:last-child { margin-bottom: 0; }
+    .item-title { font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+    .item-meta { font-size: 0.74rem; color: var(--muted); margin-top: 6px; }
+    .quote {
+      font-style: italic; color: var(--muted);
+      border-left: 2px solid var(--gold); padding-left: 10px;
+      margin-top: 6px; font-size: 0.85rem;
+    }
+    .pill {
+      display: inline-block; padding: 3px 10px; border-radius: 50px;
+      font-size: 0.66rem; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase; background: rgba(196,154,60,0.18); color: #8a6a20;
+      margin: 2px 4px 2px 0;
+    }
+    .pill.count { background: var(--navy); color: #fff; }
+    .pill.signal { background: rgba(26,58,82,0.10); color: var(--navy); }
+    .source-chip {
+      display: inline-block; font-size: 0.66rem; font-weight: 600;
+      letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted);
+      background: rgba(107,107,96,0.10); border-radius: 50px;
+      padding: 2px 8px; margin: 2px 4px 2px 0;
+    }
+    .source-chip-row {
+      margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+    }
+    .source-chip-label {
+      font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--muted); margin-right: 4px;
+    }
+    .empty-section { font-style: italic; color: var(--muted); font-size: 0.86rem; padding: 6px 0; }
+    .empty-card {
+      background: var(--white); border: 1px dashed var(--border); border-radius: 10px;
+      padding: 36px 24px; text-align: center; color: var(--muted); font-size: 0.95rem; line-height: 1.55;
+    }
+    .empty-card strong {
+      color: var(--navy); font-family: 'Cormorant Garamond', serif;
+      font-size: 1.15rem; display: block; margin-bottom: 8px;
+    }
+    .loader { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .spinner {
+      display: inline-block; width: 28px; height: 28px;
+      border: 3px solid rgba(196,154,60,0.2); border-top-color: var(--gold);
+      border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-box {
+      background: #fff5f5; border: 1px solid #c44; color: #8a2222;
+      padding: 14px 18px; border-radius: 6px; margin-bottom: 18px; font-size: 0.88rem;
+    }
+    .info-box {
+      background: rgba(196,154,60,0.08); border: 1px solid var(--border);
+      border-radius: 8px; padding: 14px 16px; margin-bottom: 18px;
+      font-size: 0.86rem; color: var(--muted); line-height: 1.55;
+    }
+    .info-box strong { color: var(--ink); }
+    .section-label {
+      font-family: 'DM Sans', sans-serif; font-size: 0.66rem;
+      font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--gold); margin-bottom: 6px;
+    }
+    .es-summary { font-size: 1rem; color: var(--ink); line-height: 1.6; margin-bottom: 12px; }
+    .es-patterns ul { list-style: none; padding: 0; margin: 0 0 10px; }
+    .es-patterns li { padding: 6px 0; border-bottom: 1px dashed var(--border); font-size: 0.92rem; }
+    .es-patterns li:last-child { border-bottom: none; }
+    @media (max-width: 600px) {
+      .panel { padding: 20px 14px 60px; }
+      .top-bar { flex-direction: column; align-items: flex-start; }
+      .card { padding: 18px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <div class="top-bar">
+      <div>
+        <div class="meta" style="margin-bottom:6px;">Pattern Map</div>
+        <h1 id="client-heading">Loading…</h1>
+        <div class="meta" id="header-meta" style="text-transform:none;letter-spacing:0;font-size:0.82rem;color:var(--muted);">&nbsp;</div>
+      </div>
+      <a href="/coach-dashboard.html" id="back-link">← Back to dashboard</a>
+    </div>
+
+    <div class="toolbar" id="toolbar" style="display:none;">
+      <button class="btn btn-secondary" id="regenerate-btn">Regenerate from latest sessions</button>
+    </div>
+
+    <div id="content">
+      <div class="loader">
+        <div class="spinner"></div>
+        <div>Loading Pattern Map…</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  const SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+  const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+  const TOKEN_KEY = 'sb_access_token';
+  const MIN_SESSIONS = 3;
+
+  const params = new URLSearchParams(location.search);
+  const clientEmail = params.get('client_email') || '';
+  let coachId = null;
+  // bookingId → 'session N · Date'
+  let sessionLabels = {};
+
+  function $(id) { return document.getElementById(id); }
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+    });
+  }
+  function apiHeaders() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    return {
+      apikey: ANON_KEY,
+      Authorization: token ? ('Bearer ' + token) : ('Bearer ' + ANON_KEY),
+      'Content-Type': 'application/json',
+    };
+  }
+  function showError(msg) { $('content').innerHTML = '<div class="error-box">' + escapeHtml(msg) + '</div>'; }
+
+  async function loadCoachProfile() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) { window.location.href = '/coach-dashboard.html'; return null; }
+    const userRes = await fetch(SUPABASE_URL + '/auth/v1/user', { headers: { apikey: ANON_KEY, Authorization: 'Bearer ' + token } });
+    if (!userRes.ok) { window.location.href = '/coach-dashboard.html'; return null; }
+    const user = await userRes.json();
+    const profRes = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles?user_email=eq.' + encodeURIComponent(user.email.toLowerCase()) + '&select=id,display_name', { headers: apiHeaders() });
+    const profRows = await profRes.json();
+    if (!Array.isArray(profRows) || profRows.length === 0) {
+      showError('No coach profile found for ' + user.email);
+      return null;
+    }
+    return profRows[0];
+  }
+
+  // Build session_id → "session N · date" labels so source_sessions chips
+  // render readable text instead of raw uuids. Same pattern that
+  // intervention-plan-panel.html uses for prior_commitments.
+  async function loadSessionLabels() {
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/coach_session_notes?coach_id=eq.' + coachId + '&client_email=eq.' + encodeURIComponent(clientEmail) + '&post_session_analysis=not.is.null&select=id,created_at&order=created_at.asc', { headers: apiHeaders() });
+      if (!res.ok) return {};
+      const rows = await res.json();
+      const map = {};
+      (Array.isArray(rows) ? rows : []).forEach(function(r, i) {
+        if (!r || !r.id) return;
+        const d = r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
+        map[r.id] = 'session ' + (i + 1) + (d ? ' · ' + d : '');
+      });
+      return map;
+    } catch (_) { return {}; }
+  }
+
+  async function loadClientName(email) {
+    if (!email) return null;
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/explorer_profiles?email=eq.' + encodeURIComponent(email) + '&select=display_name&limit=1', { headers: apiHeaders() });
+      if (!res.ok) return null;
+      const rows = await res.json();
+      return Array.isArray(rows) && rows.length ? (rows[0].display_name || null) : null;
+    } catch (_) { return null; }
+  }
+
+  async function loadPatternMap() {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/coach_client_patterns?coach_id=eq.' + coachId + '&client_email=eq.' + encodeURIComponent(clientEmail) + '&select=pattern_map,session_count,last_analyzed&limit=1', { headers: apiHeaders() });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return Array.isArray(rows) && rows.length ? rows[0] : null;
+  }
+
+  async function regenerate() {
+    $('toolbar').style.display = 'none';
+    $('content').innerHTML = '<div class="loader"><div class="spinner"></div><div>Aggregating Pattern Map from session analysis…</div></div>';
+    try {
+      const res = await fetch('/api/aggregate-client-pattern-map', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coach_id: coachId, client_email: clientEmail }),
+      });
+      if (!res.ok) {
+        let detail = '';
+        try { const j = await res.json(); detail = j.error || ''; } catch (_) {}
+        throw new Error('Regeneration failed' + (detail ? ': ' + detail : '') + ' (status ' + res.status + ')');
+      }
+      const data = await res.json();
+      if (data && data.locked) {
+        renderLocked(data.session_count || 0);
+        return;
+      }
+      sessionLabels = await loadSessionLabels();
+      renderMap(data, new Date().toISOString());
+    } catch (e) {
+      showError(e.message || 'Regeneration failed.');
+    }
+  }
+
+  function chipsForSessions(ids) {
+    if (!Array.isArray(ids) || ids.length === 0) return '';
+    let html = '<div class="source-chip-row"><span class="source-chip-label">Source:</span>';
+    ids.forEach(function(sid) {
+      const label = sessionLabels[sid] || (sid ? sid.slice(0, 8) : 'session');
+      html += '<span class="source-chip">' + escapeHtml(label) + '</span>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function renderDriverItem(d) {
+    if (!d) return '';
+    let html = '<div class="item">';
+    html += '<div class="item-title">' + escapeHtml(d.driver || '—') + '</div>';
+    if (d.evidence_quote) html += '<div class="quote">' + escapeHtml(d.evidence_quote) + '</div>';
+    if (d.evidence && !d.evidence_quote) html += '<div class="quote">' + escapeHtml(d.evidence) + '</div>';
+    if (d.frequency) html += '<div class="item-meta">' + escapeHtml(d.frequency) + '</div>';
+    html += chipsForSessions(d.source_sessions);
+    html += '</div>';
+    return html;
+  }
+
+  function renderConditionItem(c) {
+    if (!c) return '';
+    let html = '<div class="item">';
+    html += '<div class="item-title">' + escapeHtml(c.condition || '—') + '</div>';
+    if (c.evidence_quote) html += '<div class="quote">' + escapeHtml(c.evidence_quote) + '</div>';
+    if (c.evidence && !c.evidence_quote) html += '<div class="quote">' + escapeHtml(c.evidence) + '</div>';
+    html += chipsForSessions(c.source_sessions);
+    html += '</div>';
+    return html;
+  }
+
+  function renderStallItem(s) {
+    if (!s) return '';
+    let html = '<div class="item">';
+    html += '<div class="item-title">' + escapeHtml(s.stall_point || '—') + '</div>';
+    if (s.evidence_quote) html += '<div class="quote">' + escapeHtml(s.evidence_quote) + '</div>';
+    if (s.evidence && !s.evidence_quote) html += '<div class="quote">' + escapeHtml(s.evidence) + '</div>';
+    if (s.frequency) html += '<div class="item-meta">' + escapeHtml(s.frequency) + '</div>';
+    html += chipsForSessions(s.source_sessions);
+    html += '</div>';
+    return html;
+  }
+
+  function renderShiftItem(g) {
+    if (!g) return '';
+    let html = '<div class="item">';
+    html += '<div class="item-title">' + escapeHtml(g.shift || '—') + '</div>';
+    if (g.from || g.to) {
+      html += '<div class="item-meta">From: <strong>' + escapeHtml(g.from || '') + '</strong> → To: <strong>' + escapeHtml(g.to || '') + '</strong></div>';
+    }
+    if (g.evidence_quote) html += '<div class="quote">' + escapeHtml(g.evidence_quote) + '</div>';
+    if (g.evidence && !g.evidence_quote) html += '<div class="quote">' + escapeHtml(g.evidence) + '</div>';
+    html += chipsForSessions(g.source_sessions);
+    html += '</div>';
+    return html;
+  }
+
+  function renderTagItem(t) {
+    if (!t) return '';
+    let html = '<div class="item">';
+    html += '<span class="pill">' + escapeHtml(t.tag || '') + '</span>';
+    if (typeof t.count === 'number') html += ' <span class="pill count">' + t.count + '×</span>';
+    html += chipsForSessions(t.source_sessions);
+    html += '</div>';
+    return html;
+  }
+
+  function renderStuckItem(t) {
+    if (!t) return '';
+    let html = '<div class="item">';
+    html += '<div class="item-title">' + escapeHtml(t.label || t.signal_type || '—') + '</div>';
+    html += '<span class="pill signal">' + escapeHtml(t.signal_type || '') + '</span>';
+    if (typeof t.count === 'number') html += ' <span class="pill count">' + t.count + '×</span>';
+    html += chipsForSessions(t.source_sessions);
+    html += '</div>';
+    return html;
+  }
+
+  function renderEmotionalStyle(es) {
+    if (!es) return '';
+    let html = '';
+    if (es.summary) html += '<div class="es-summary">' + escapeHtml(es.summary) + '</div>';
+    if (Array.isArray(es.patterns) && es.patterns.length) {
+      html += '<div class="section-label">Observable patterns</div>';
+      html += '<div class="es-patterns"><ul>';
+      es.patterns.forEach(function(p) { html += '<li>' + escapeHtml(p) + '</li>'; });
+      html += '</ul></div>';
+    }
+    if (Array.isArray(es.client_language) && es.client_language.length) {
+      html += '<div class="section-label">In their words</div>';
+      es.client_language.forEach(function(q) { html += '<div class="quote">' + escapeHtml(q) + '</div>'; });
+    }
+    html += chipsForSessions(es.source_sessions);
+    return html || '<div class="empty-section">Not enough sessions yet to see a clear pattern here.</div>';
+  }
+
+  function renderMap(pm, lastAnalyzedIso) {
+    const isEmpty = function(arr) { return !Array.isArray(arr) || arr.length === 0; };
+    let html = '';
+
+    html += '<div class="info-box"><strong>Built from session evidence.</strong> ' +
+      'Pattern Map describes how this client operates — drivers, language, patterns, growth. ' +
+      'Coach-side reflection (what stood out for you, missed windows) lives in Coach Mirror.</div>';
+
+    // 1. Likely Drivers
+    html += '<div class="card"><h3>Likely Drivers</h3><div class="card-sub">What may be driving this client\'s patterns</div>';
+    if (isEmpty(pm.likely_drivers)) {
+      html += '<div class="empty-section">Not enough sessions yet to see a clear pattern here.</div>';
+    } else {
+      pm.likely_drivers.forEach(function(d) { html += renderDriverItem(d); });
+    }
+    html += '</div>';
+
+    // 2. Emotional Style
+    html += '<div class="card"><h3>Emotional Style</h3><div class="card-sub">How this client moves through emotional territory</div>';
+    html += renderEmotionalStyle(pm.emotional_style);
+    html += '</div>';
+
+    // 3. What Moves Them Forward
+    html += '<div class="card"><h3>What Moves Them Forward</h3><div class="card-sub">Conditions that create real movement</div>';
+    if (isEmpty(pm.what_moves_them_forward)) {
+      html += '<div class="empty-section">Not enough sessions yet to see a clear pattern here.</div>';
+    } else {
+      pm.what_moves_them_forward.forEach(function(c) { html += renderConditionItem(c); });
+    }
+    html += '</div>';
+
+    // 4. Where They Get Stuck
+    html += '<div class="card"><h3>Where They Get Stuck</h3><div class="card-sub">Conditions that cause stalls (client-side)</div>';
+    if (isEmpty(pm.where_they_get_stuck)) {
+      html += '<div class="empty-section">Not enough sessions yet to see a clear pattern here.</div>';
+    } else {
+      pm.where_they_get_stuck.forEach(function(s) { html += renderStallItem(s); });
+    }
+    html += '</div>';
+
+    // 5. Signs of Growth
+    html += '<div class="card"><h3>Signs of Growth</h3><div class="card-sub">Observable shifts across sessions</div>';
+    if (isEmpty(pm.signs_of_growth)) {
+      html += '<div class="empty-section">Not enough sessions yet to see a clear pattern here.</div>';
+    } else {
+      pm.signs_of_growth.forEach(function(g) { html += renderShiftItem(g); });
+    }
+    html += '</div>';
+
+    // 6a. Core Patterns (DNA tags ≥ 2 sessions)
+    html += '<div class="card"><h3>Core Patterns</h3><div class="card-sub">DNA tags appearing across multiple sessions</div>';
+    if (isEmpty(pm.core_patterns)) {
+      html += '<div class="empty-section">No tags yet appear in 2 or more sessions.</div>';
+    } else {
+      pm.core_patterns.forEach(function(t) { html += renderTagItem(t); });
+    }
+    html += '</div>';
+
+    // 6b. Behavioral Tendencies (single-session DNA tags)
+    if (Array.isArray(pm.behavioral_tendencies) && pm.behavioral_tendencies.length) {
+      html += '<div class="card"><h3>Behavioral Tendencies</h3><div class="card-sub">Tags observed in a single session so far</div>';
+      pm.behavioral_tendencies.forEach(function(t) { html += renderTagItem(t); });
+      html += '</div>';
+    }
+
+    // 6c. Recurring Stuck Points (signal_types ≥ 2 sessions)
+    if (Array.isArray(pm.recurring_stuck_points) && pm.recurring_stuck_points.length) {
+      html += '<div class="card"><h3>Recurring Stuck Points</h3><div class="card-sub">Signal types appearing across sessions</div>';
+      pm.recurring_stuck_points.forEach(function(t) { html += renderStuckItem(t); });
+      html += '</div>';
+    }
+
+    // Footer meta
+    if (lastAnalyzedIso || pm.last_analyzed) {
+      const iso = lastAnalyzedIso || pm.last_analyzed;
+      const when = (function() { try { return new Date(iso).toLocaleString(); } catch (_) { return iso; } })();
+      html += '<div class="meta" style="text-align:right;text-transform:none;letter-spacing:0;font-size:0.78rem;margin-top:6px;">Last aggregated ' + escapeHtml(when) + '</div>';
+    }
+
+    $('content').innerHTML = html;
+    $('toolbar').style.display = '';
+  }
+
+  function renderLocked(sessionCount) {
+    $('toolbar').style.display = '';
+    $('content').innerHTML =
+      '<div class="empty-card">'
+      + '<strong>Pattern Map builds after ' + MIN_SESSIONS + ' or more sessions.</strong>'
+      + 'This client has ' + sessionCount + ' session' + (sessionCount === 1 ? '' : 's') + ' with Coach Clarity analysis. '
+      + 'Once you reach ' + MIN_SESSIONS + ' analyzed sessions, generate the map from this page.'
+      + '</div>';
+  }
+
+  function renderEmpty() {
+    $('toolbar').style.display = '';
+    $('content').innerHTML =
+      '<div class="empty-card">'
+      + '<strong>No Pattern Map yet for this client.</strong>'
+      + 'Use Regenerate above to aggregate one from existing Coach Clarity sessions.'
+      + '</div>';
+  }
+
+  async function init() {
+    if (!clientEmail) { showError('Missing client_email parameter.'); return; }
+    const profile = await loadCoachProfile();
+    if (!profile) return;
+    coachId = profile.id;
+
+    const clientName = await loadClientName(clientEmail);
+    $('client-heading').textContent = clientName || clientEmail;
+    if (clientName && clientEmail !== clientName) {
+      $('header-meta').textContent = clientEmail;
+    }
+
+    sessionLabels = await loadSessionLabels();
+
+    const row = await loadPatternMap();
+    if (!row || !row.pattern_map) {
+      $('header-meta').textContent =
+        (clientName && clientEmail !== clientName ? clientEmail + ' · ' : '')
+        + 'Not yet generated';
+      renderEmpty();
+    } else {
+      const pm = row.pattern_map;
+      const sc = row.session_count || pm.session_count || 0;
+      $('header-meta').textContent =
+        (clientName && clientEmail !== clientName ? clientEmail + ' · ' : '')
+        + sc + ' session' + (sc === 1 ? '' : 's') + ' analyzed';
+      renderMap(pm, row.last_analyzed || pm.last_analyzed);
+    }
+
+    $('regenerate-btn').addEventListener('click', regenerate);
+  }
+
+  init();
+  </script>
+</body>
+</html>
