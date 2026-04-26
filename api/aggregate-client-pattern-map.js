@@ -136,10 +136,11 @@ export default async function handler(req, res) {
       'Content-Type': 'application/json',
     };
 
-    // Fetch PSA-analyzed sessions and this client's bookings in parallel.
-    // Bookings give us scheduled_at (true session date — see Coach Mirror's
-    // 5b hotfix for why PSA created_at is wrong) and notes (display_name
-    // source via the same regex coach-dashboard.html uses).
+    // Fetch PSA-analyzed sessions, this client's bookings, AND the existing
+    // pattern_map row in parallel. The existing row enables the no-changes
+    // short-circuit below — if no session has created_at > last_analyzed,
+    // we return the row as-is and skip the Claude call entirely (the
+    // primary AI cost leak this commit closes).
     const enc = encodeURIComponent(client_email);
     const sessionsUrl = `${SUPABASE_URL}/rest/v1/coach_session_notes`
       + `?coach_id=eq.${coach_id}`
@@ -150,10 +151,15 @@ export default async function handler(req, res) {
       + `?coach_id=eq.${coach_id}`
       + `&client_email=eq.${enc}`
       + `&select=id,scheduled_at,notes`;
+    const existingUrl = `${SUPABASE_URL}/rest/v1/coach_client_patterns`
+      + `?coach_id=eq.${coach_id}`
+      + `&client_email=eq.${enc}`
+      + `&select=pattern_map,session_count,last_analyzed&limit=1`;
 
-    const [sessionsRes, bookingsRes] = await Promise.all([
+    const [sessionsRes, bookingsRes, existingRes] = await Promise.all([
       fetch(sessionsUrl, { headers: supaHeaders }),
       fetch(bookingsUrl, { headers: supaHeaders }),
+      fetch(existingUrl, { headers: supaHeaders }),
     ]);
     if (!sessionsRes.ok) {
       const errText = await sessionsRes.text();
@@ -185,6 +191,14 @@ export default async function handler(req, res) {
       }
     });
 
+    // Read the existing pattern_map row (if any) — used both for the
+    // no-changes short-circuit and for failure-path preservation.
+    let existingRow = null;
+    if (existingRes && existingRes.ok) {
+      const parsed = await existingRes.json();
+      if (Array.isArray(parsed) && parsed.length) existingRow = parsed[0];
+    }
+
     if (!Array.isArray(rawSessions) || rawSessions.length < 3) {
       return res.status(200).json({
         locked: true,
@@ -192,6 +206,29 @@ export default async function handler(req, res) {
         needed: 3,
         display_name: displayName,
       });
+    }
+
+    // No-changes short-circuit — the heart of the cost-leak fix. If a row
+    // already exists AND no session has created_at > existing last_analyzed,
+    // there's no new material for Claude to synthesize. Return the existing
+    // pattern_map untouched: NO Claude call, NO upsert, NO last_analyzed
+    // update. This protects against accidental re-clicks, stale tabs,
+    // automation, or duplicate POSTs from re-firing the model.
+    if (existingRow && existingRow.last_analyzed && existingRow.pattern_map) {
+      const lastAnalyzedTs = new Date(existingRow.last_analyzed).getTime();
+      const hasNewWork = rawSessions.some(function(s) {
+        if (!s || !s.created_at) return false;
+        return new Date(s.created_at).getTime() > lastAnalyzedTs;
+      });
+      if (!hasNewWork) {
+        return res.status(200).json({
+          status: 'no_changes',
+          pattern_map: existingRow.pattern_map,
+          session_count: existingRow.session_count || rawSessions.length,
+          last_analyzed: existingRow.last_analyzed,
+          display_name: displayName,
+        });
+      }
     }
 
     // Stamp each session with effective_date (booking.scheduled_at when joinable,

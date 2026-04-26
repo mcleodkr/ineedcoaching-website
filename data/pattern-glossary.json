@@ -1,0 +1,94 @@
+{
+  "self-accountability": {
+    "domain": "self_identity",
+    "definition": "Naming one's own role in a situation or pattern, without externalizing cause. Includes recognizing personal contribution to outcomes, both effective and ineffective."
+  },
+  "self-awareness": {
+    "domain": "self_identity",
+    "definition": "Recognizing one's own patterns, drivers, or emotional states with clarity, often before or during a triggered moment rather than only in retrospect."
+  },
+  "identity shift": {
+    "domain": "self_identity",
+    "definition": "Movement in how the client describes themselves. Often visible as a change in verb tense (am to was, can't to haven't yet) or in the boundary between self and pattern."
+  },
+  "identity integration": {
+    "domain": "self_identity",
+    "definition": "Naming previously separated parts of the self (past behavior and present values, professional self and personal self, recovery self and pre-recovery self) as part of one continuous person rather than as opposing identities."
+  },
+  "shame reduction": {
+    "domain": "self_identity",
+    "definition": "Language or insight that decreases the weight of self-judgment around past behavior, often by separating identity from action."
+  },
+  "pattern interruption": {
+    "domain": "behavioral",
+    "definition": "Catching a familiar sequence (rationalization, accommodation, withdrawal) while it is unfolding and choosing a different action before the pattern completes."
+  },
+  "pattern disruption": {
+    "domain": "behavioral",
+    "definition": "Same construct as pattern interruption — used interchangeably in coaching literature. Catching a familiar sequence while it unfolds and choosing a different action before completion."
+  },
+  "behavioral transfer": {
+    "domain": "behavioral",
+    "definition": "Applying a behavioral skill or insight learned in one context (recovery, relationships) to a different context (leadership, family, work)."
+  },
+  "conscious choice": {
+    "domain": "behavioral",
+    "definition": "Deliberate action taken with awareness of alternatives, in contrast to automatic or pattern-driven action."
+  },
+  "preemptive compliance": {
+    "domain": "behavioral",
+    "definition": "Accommodating or agreeing to a request, expectation, or perceived need before it has been explicitly stated, often based on a read of what the other person wants."
+  },
+  "perception management": {
+    "domain": "behavioral",
+    "definition": "Controlling how one is seen by others through selective disclosure, behavior calibration, or narrative shaping."
+  },
+  "addiction pathway": {
+    "domain": "recovery_health",
+    "definition": "The behavioral and emotional sequence that leads to substance use or compulsive behavior, including triggers, rationalizations, and decision points."
+  },
+  "recovery reframe": {
+    "domain": "recovery_health",
+    "definition": "Restating a recovery-related experience or setback in language that shifts agency, meaning, or identity — often from victim-of to author-of."
+  },
+  "relapse prevention framing": {
+    "domain": "recovery_health",
+    "definition": "Naming risks, warning signs, or vulnerable conditions in advance so they can be recognized when they arise."
+  },
+  "professional self-worth": {
+    "domain": "leadership_work",
+    "definition": "Recognition of one's value, capacity, or contribution in a work or leadership context, particularly when previously diminished or unrecognized."
+  },
+  "purpose-structure integration": {
+    "domain": "leadership_work",
+    "definition": "Connecting what one cares about (purpose) to how one organizes time and effort (structure) so that daily work serves a defined direction."
+  },
+  "emotional precision": {
+    "domain": "emotional",
+    "definition": "Naming a specific emotion or emotional cost with accuracy, in contrast to general distress language."
+  },
+  "affect tolerance": {
+    "domain": "emotional",
+    "definition": "The capacity to stay with a difficult feeling without immediately moving to action, distraction, or reframe."
+  },
+  "grief processing": {
+    "domain": "emotional",
+    "definition": "Staying with a loss or cost long enough for its weight to register, rather than acknowledging it in passing."
+  },
+  "disclosure capacity": {
+    "domain": "relational",
+    "definition": "The ability to share difficult information in a relationship without managing or withholding."
+  },
+  "relational repair": {
+    "domain": "relational",
+    "definition": "Actions taken to restore connection after a rupture, including acknowledgment, accountability, or change in behavior."
+  },
+  "authorship": {
+    "domain": "decision_agency",
+    "definition": "Naming oneself as the one who created a pattern or outcome, rather than as someone things happened to."
+  },
+  "agency reclamation": {
+    "domain": "decision_agency",
+    "definition": "Recognizing the existence of choice in a situation previously experienced as fixed or imposed."
+  }
+}

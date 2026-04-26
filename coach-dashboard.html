@@ -4671,17 +4671,17 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
       html += '</div>';
 
       // Tab 3: Coach Clarity
+      // Per the cost-leak audit: no manual regenerate button. Analysis fires
+      // automatically on transcript ingestion (the runPostSessionAnalysis call
+      // wired into the transcript-paste flow below). To refresh, re-upload.
       html += '<div id="stab-coach-clarity-' + s.id + '" class="stab-panel" data-sid="' + s.id + '" style="padding:20px;display:none;">';
       var canAnalyze = hasTranscript || hasNotes;
       if (hasAnalysis) {
         html += '<div id="post-analysis-' + s.id + '" data-tab-type="coach-clarity"></div>';
       } else if (canAnalyze) {
-        html += '<p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">Analyze this session to surface coaching insights, client patterns, and next-session strategy.</p>';
+        html += '<p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;font-style:italic;">Coach Clarity analysis runs automatically when a transcript is added. To refresh, re-upload the transcript.</p>';
       } else {
         html += '<p style="font-size:0.85rem;color:var(--muted);font-style:italic;">Add a transcript or session notes first to unlock Coach Clarity analysis.</p>';
-      }
-      if (canAnalyze) {
-        html += '<button class="post-analysis-btn" data-booking-id="' + s.id + '" data-client-email="' + escapeHtml(client.email) + '" style="padding:9px 20px;background:#c49a3c;color:#fff;border:none;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:500;cursor:pointer;transition:all 0.15s ease">' + (hasAnalysis ? 'Regenerate Analysis' : 'Run Post-Session Analysis') + '</button>';
       }
       if (!hasAnalysis) {
         html += '<div id="post-analysis-' + s.id + '" data-tab-type="coach-clarity" style="margin-top:16px;"></div>';
@@ -4928,26 +4928,12 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
               renderCoachingMirror(noteData.post_session_analysis, mirrorContainer);
             }
           }
-          // Ensure analysis button exists if data is available
-          var existingBtn = analysisContainer.parentElement.querySelector('.post-analysis-btn');
-          if (!existingBtn && hasData) {
-            var btnHtml = '<button class="post-analysis-btn" data-booking-id="' + sid + '" data-client-email="' + (noteData.client_email || client.email) + '" style="padding:9px 20px;background:#c49a3c;color:#fff;border:none;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:500;cursor:pointer;transition:all 0.15s ease;margin-top:12px;">' + (hasExisting ? 'Regenerate Analysis' : 'Run Post-Session Analysis') + '</button>';
-            analysisContainer.insertAdjacentHTML('afterend', btnHtml);
-            // Wire the new button
-            var newBtn = analysisContainer.parentElement.querySelector('.post-analysis-btn');
-            if (newBtn) {
-              newBtn.addEventListener('click', function() {
-                var nd = notesByBooking[sid] || {};
-                var transcript = nd.raw_transcript || '';
-                var notes = nd.notes || '';
-                var input = transcript && notes ? 'TRANSCRIPT:\n' + transcript + '\n\nSTRUCTURED NOTES:\n' + notes : (transcript || notes);
-                if (!input) return;
-                runPostSessionAnalysis(sid, client.email, input, nd.format || 'general', $('post-analysis-' + sid), goals);
-              });
-            }
-          }
+          // Cost-leak fix: no manual regenerate button. Analysis fires
+          // automatically on transcript ingestion. To refresh, re-upload.
           if (!hasData && !hasExisting) {
             analysisContainer.innerHTML = '<p style="font-size:0.85rem;color:var(--muted);font-style:italic;">Save a transcript or session notes first to unlock analysis.</p>';
+          } else if (hasData && !hasExisting) {
+            analysisContainer.innerHTML = '<p style="font-size:0.85rem;color:var(--muted);font-style:italic;">Coach Clarity analysis runs automatically when a transcript is added. To refresh, re-upload the transcript.</p>';
           }
         }
       }
@@ -5429,26 +5415,10 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
     });
   });
 
-  // Wire Post-Session Analysis (uses transcript OR notes, transcript preferred)
-  document.querySelectorAll('.post-analysis-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      var bid = this.dataset.bookingId;
-      var noteData = notesByBooking[bid];
-      var transcript = (noteData && noteData.raw_transcript) || '';
-      var notes = (noteData && noteData.notes) || '';
-      var sessionInput = '';
-      if (transcript && notes) {
-        sessionInput = 'TRANSCRIPT:\n' + transcript + '\n\nSTRUCTURED NOTES:\n' + notes;
-      } else if (transcript) {
-        sessionInput = transcript;
-      } else if (notes) {
-        sessionInput = notes;
-      }
-      if (!sessionInput) { return; }
-      var fmt = (noteData && noteData.format) || 'general';
-      runPostSessionAnalysis(bid, this.dataset.clientEmail, sessionInput, fmt, $('post-analysis-' + bid), goals);
-    });
-  });
+  // Cost-leak fix: post-analysis-btn is no longer rendered. The
+  // runPostSessionAnalysis function still exists and is called from the
+  // transcript-ingestion path (auto-fire); coaches refresh by re-uploading
+  // the transcript, not by clicking a regenerate button.
 
   // Wire request testimonial
   var testBtn = $('client-request-testimonial-btn');
@@ -6405,9 +6375,7 @@ async function runPostSessionAnalysis(bookingId, clientEmail, sessionNotes, form
     var mirrorId = container.id ? container.id.replace('post-analysis-', 'coaching-mirror-') : null;
     var mirrorEl = mirrorId ? $(mirrorId) : null;
     if (mirrorEl) renderCoachingMirror(analysis, mirrorEl);
-    // Update button label to Regenerate
-    var analysisBtn = container.parentElement ? container.parentElement.querySelector('.post-analysis-btn') : null;
-    if (analysisBtn) analysisBtn.textContent = 'Regenerate Analysis';
+    // (post-analysis-btn removed in cost-leak commit — no label to update.)
     // Update progress indicators ③ and ④
     updateSessionProgress(bookingId, 3, true);
     updateSessionProgress(bookingId, 4, true);
@@ -7507,7 +7475,7 @@ function renderCoachingMirror(a, container) {
   // Top-level null guard
   if (!a) {
     container.innerHTML = '<div style="border:2px solid var(--gold);border-radius:var(--r);padding:24px 28px;margin-bottom:16px;text-align:center;">'
-      + '<div style="font-size:0.88rem;color:var(--ink);line-height:1.6;">This analysis was generated before Coach Clarity\u2019s Coaching Mirror was updated. Regenerate Analysis on the Coach Clarity tab to see your coaching interventions, techniques, and mirror reflection.</div></div>';
+      + '<div style="font-size:0.88rem;color:var(--ink);line-height:1.6;">This analysis was generated before Coach Clarity\u2019s Coaching Mirror was updated. Re-upload the transcript to refresh this analysis with the latest coaching interventions, techniques, and mirror reflection.</div></div>';
     return;
   }
 
@@ -7773,7 +7741,7 @@ function renderCoachingMirror(a, container) {
   // Stale data prompt if no new-schema sections exist
   if ((!ci || !ci.length) && (!par || !par.length) && (!ws || !ws.length || !a.what_stood_out)) {
     h += '<div style="border:2px solid var(--gold);border-radius:var(--r);padding:24px 28px;margin-bottom:16px;text-align:center;">'
-      + '<div style="font-size:0.88rem;color:var(--ink);line-height:1.6;">This analysis was generated before Coach Clarity\u2019s Coaching Mirror was updated. Regenerate Analysis on the Coach Clarity tab to see your coaching interventions, techniques, and mirror reflection.</div>'
+      + '<div style="font-size:0.88rem;color:var(--ink);line-height:1.6;">This analysis was generated before Coach Clarity\u2019s Coaching Mirror was updated. Re-upload the transcript to refresh this analysis with the latest coaching interventions, techniques, and mirror reflection.</div>'
       + '</div>';
   }
 
@@ -8299,10 +8267,35 @@ function renderCoachDNA(profile, sessionCount) {
   var container = $('dna-content');
   if (container) container.innerHTML = html;
 
-  // Wire Regenerate DNA button
+  // Wire Regenerate DNA button. Cost-leak gating mirrors Pattern Map's
+  // approach: query coach_session_notes for rows newer than this DNA's
+  // last_analyzed; if none, disable the button with a tooltip. Avoids
+  // burning a Claude pass when nothing has changed since the prior run.
   var regenBtn = $('regen-dna-btn');
+  if (regenBtn && profile.last_analyzed) {
+    (async function gateRegenDna() {
+      try {
+        var url = SUPABASE_URL + '/rest/v1/coach_session_notes'
+          + '?coach_id=eq.' + coachProfile.id
+          + '&post_session_analysis=not.is.null'
+          + '&created_at=gt.' + encodeURIComponent(profile.last_analyzed)
+          + '&select=id&limit=1';
+        var newRes = await fetch(url, { headers: apiHeaders() });
+        if (!newRes.ok) return;
+        var newRows = await newRes.json();
+        var hasNew = Array.isArray(newRows) && newRows.length > 0;
+        if (!hasNew) {
+          regenBtn.disabled = true;
+          regenBtn.style.opacity = '0.55';
+          regenBtn.style.cursor = 'not-allowed';
+          regenBtn.setAttribute('title', 'No new sessions to incorporate.');
+        }
+      } catch (_) { /* gate-failure is non-fatal — leave button enabled */ }
+    })();
+  }
   if (regenBtn) {
     regenBtn.addEventListener('click', async function() {
+      if (this.disabled) return;
       this.disabled = true;
       this.textContent = 'Regenerating...';
       this.style.opacity = '0.6';
