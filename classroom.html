@@ -445,7 +445,12 @@ async function init() {
   }
 
   $('classroom').style.display = 'block';
-  $('nav-email').textContent = currentUser.email;
+  // The nav HTML has no #nav-email or #sign-out-btn element — the
+  // sign-out-btn delegated handler at line ~414 is benign (event never
+  // fires) but writing textContent on a missing node throws synchronously
+  // and bombs init() before any course renders. Guard it.
+  var navEmailEl = $('nav-email');
+  if (navEmailEl) navEmailEl.textContent = currentUser.email;
 
   // Resolve isCoach via coach_profiles.user_email — same column the
   // dashboard, intervention plan panel, and Coach Mirror all use.
