@@ -39,16 +39,11 @@
   },
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/coaches", "destination": "/coaches.html" },
-    { "source": "/coach/:slug", "destination": "/coach-profile.html?slug=:slug" },
-    { "source": "/coach-signup", "destination": "/coach-signup.html" },
-    { "source": "/signup-success", "destination": "/signup-success.html" },
-    { "source": "/proposal-builder", "destination": "/proposal-builder.html" },
-    { "source": "/intervention-plan", "destination": "/intervention-plan-panel.html" },
-    { "source": "/coach-mirror", "destination": "/coach-mirror-panel.html" },
-    { "source": "/pattern-map", "destination": "/pattern-map-panel.html" },
-    { "source": "/decision-lab", "destination": "/decision-lab.html" },
-    { "source": "/article.html", "destination": "/api/article-render" },
+    { "source": "/coach/:slug", "destination": "/coach-profile?slug=:slug" },
+    { "source": "/intervention-plan", "destination": "/intervention-plan-panel" },
+    { "source": "/coach-mirror", "destination": "/coach-mirror-panel" },
+    { "source": "/pattern-map", "destination": "/pattern-map-panel" },
+    { "source": "/article", "destination": "/api/article-render" },
     { "source": "/sitemap.xml", "destination": "/api/sitemap" }
   ]
 }
