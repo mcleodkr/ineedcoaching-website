@@ -4,22 +4,41 @@
 // technique profile, bias profile, client response signature, growth edges,
 // blind spots, missed leverage moments, evolution signal.
 
-async function callClaude(apiKey, model, maxTokens, system, userMessage, passName) {
+import { logAIUsage } from '../lib/ai-usage.js';
+
+async function callClaude(apiKey, model, maxTokens, system, userMessage, passName, meta) {
   console.log(`[DNA ${passName}] model: ${model}`);
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({ model, max_tokens: maxTokens, system, messages: [{ role: 'user', content: userMessage }] }),
+  const startTime = Date.now();
+  let res, data;
+  try {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ model, max_tokens: maxTokens, system, messages: [{ role: 'user', content: userMessage }] }),
+    });
+    data = await res.json().catch(function() { return null; });
+  } catch (err) {
+    await logAIUsage({ feature: (meta && meta.feature) || 'coach_dna', coachId: meta && meta.coachId, model, status: 'error', errorMessage: err && err.message, durationMs: Date.now() - startTime });
+    throw err;
+  }
+  await logAIUsage({
+    feature: (meta && meta.feature) || 'coach_dna',
+    coachId: meta && meta.coachId,
+    model: (data && data.model) || model,
+    usage: data && data.usage,
+    requestId: data && data.id,
+    status: res.ok ? 'success' : 'error',
+    errorMessage: res.ok ? null : (data && data.error && data.error.message),
+    durationMs: Date.now() - startTime,
   });
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`DNA ${passName} API error ${res.status}: ${err.substring(0, 200)}`);
+    const err = data ? JSON.stringify(data).slice(0, 200) : '(no body)';
+    throw new Error(`DNA ${passName} API error ${res.status}: ${err}`);
   }
-  const data = await res.json();
   let raw = data.content?.[0]?.text || '';
   raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
   // Try direct parse first
@@ -265,8 +284,8 @@ Return ONLY this JSON:
 CRITICAL: Return ONLY valid JSON. No trailing commas. No comments. No markdown. Every array must be properly closed. Start with { and end with }.`;
 
     const [pass1Output, pass2Output] = await Promise.all([
-      callClaude(ANTHROPIC_API_KEY, 'claude-sonnet-4-6', 2000, SYSTEM, USER_PASS1, 'Pass 1 (1-5)'),
-      callClaude(ANTHROPIC_API_KEY, 'claude-sonnet-4-6', 2000, SYSTEM, USER_PASS2, 'Pass 2 (6-10)'),
+      callClaude(ANTHROPIC_API_KEY, 'claude-sonnet-4-6', 2000, SYSTEM, USER_PASS1, 'Pass 1 (1-5)', { feature: 'coach_dna', coachId }),
+      callClaude(ANTHROPIC_API_KEY, 'claude-sonnet-4-6', 2000, SYSTEM, USER_PASS2, 'Pass 2 (6-10)', { feature: 'coach_dna', coachId }),
     ]);
 
     const dnaOutput = Object.assign({}, pass1Output, pass2Output);

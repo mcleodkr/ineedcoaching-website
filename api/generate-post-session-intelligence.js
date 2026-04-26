@@ -9,38 +9,50 @@
  * @param {string} userMessage
  * @returns {Promise<object>}
  */
-async function callClaude(apiKey, model, maxTokens, system, userMessage, passName) {
+import { logAIUsage } from '../lib/ai-usage.js';
+
+async function callClaude(apiKey, model, maxTokens, system, userMessage, passName, meta) {
   console.log(`[${passName}] Using model: ${model}`);
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: maxTokens,
-      system,
-      messages: [{ role: 'user', content: userMessage }],
-    }),
+  const startTime = Date.now();
+  let res, data;
+  try {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: maxTokens,
+        system,
+        messages: [{ role: 'user', content: userMessage }],
+      }),
+    });
+    data = await res.json().catch(function() { return null; });
+  } catch (err) {
+    await logAIUsage({ feature: (meta && meta.feature) || 'coaching_mirror', coachId: meta && meta.coachId, model, status: 'error', errorMessage: err && err.message, durationMs: Date.now() - startTime });
+    throw err;
+  }
+  await logAIUsage({
+    feature: (meta && meta.feature) || 'coaching_mirror',
+    coachId: meta && meta.coachId,
+    model: (data && data.model) || model,
+    usage: data && data.usage,
+    requestId: data && data.id,
+    status: res.ok ? 'success' : 'error',
+    errorMessage: res.ok ? null : (data && data.error && data.error.message),
+    durationMs: Date.now() - startTime,
   });
 
   if (!res.ok) {
-    const errBody = await res.text();
-    console.error(`[${passName}] Claude API error ${res.status}:`, errBody.substring(0, 1000));
-    throw new Error(`${passName} Claude API error ${res.status}: ${errBody.substring(0, 200)}`);
+    const errBody = data ? JSON.stringify(data).slice(0, 1000) : '(no body)';
+    console.error(`[${passName}] Claude API error ${res.status}:`, errBody);
+    throw new Error(`${passName} Claude API error ${res.status}: ${errBody.slice(0, 200)}`);
   }
 
-  let rawText;
-  try {
-    const data = await res.json();
-    rawText = data.content?.[0]?.text || '';
-  } catch (e) {
-    const fallback = await res.text().catch(() => 'Could not read response');
-    console.error(`[${passName}] Response was not valid JSON. Raw:`, fallback.substring(0, 1000));
-    throw new Error(`${passName}: API response was not valid JSON`);
-  }
+  let rawText = data && data.content && data.content[0] && data.content[0].text || '';
 
   // Strip markdown code fences if present
   rawText = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
@@ -178,7 +190,8 @@ When you observe evidence in this session, connect it to these goals if a connec
 
 ${sessionContent}`,
       'Pass 1: Extraction'
-    );
+    , { feature: 'coaching_mirror', coachId }
+      );
 
     // ── Pass 2a: Core Intelligence ──────────────────────────────────────
     const synthesisSystem = `${IDENTITY} ${TONE} ${CONCISE} ${CLARITY} ${JSON_ONLY}${priorPatternContext}${activeGoalsContext}`;
@@ -199,7 +212,8 @@ EVIDENCE: ${JSON.stringify(extractionOutput)}
 Return ONLY this JSON:
 {"key_insights":["what client is doing or avoiding, max 20 words","what shifted this session if anything, max 20 words","what matters most to watch next session, max 20 words"],"core_focus":{"summary":"","why_it_matters":"","transition_context":""},"breakthrough":{"client_quote":"","what_changed":"","why_it_matters":"","reinforcement_suggestion":"","transition_context":""},"pattern":{"name":"","description":"","trigger":"","behavior":"","timeline":{"past":"","present":"","future_risk":""},"next_session_watch":"","next_session_why":"","transition_context":""},"emotional_anchor":"one sentence — the human stakes, not clinical","strategic_direction":{"suggestion":"","why_it_matters":"","what_it_may_reveal":"","use_with_awareness":"","transition_context":""},"early_cues":{"signals":[],"why_it_matters":"","transition_context":""},"opening_question":{"question":"","why_start_here":"","transition_context":""},"next_session":{"focus":"","listen_for":"","explore":"","if_shift":{"options":[],"why_it_matters":""},"transition_context":""},"session_in_one_line":""}`,
       'Pass 2a: Core Intelligence'
-    );
+    , { feature: 'coaching_mirror', coachId }
+      );
 
     // ── Pass 2b: Coaching Interventions (isolated to prevent truncation) ─
     const goalsContext = existingGoals && existingGoals.length
@@ -252,7 +266,8 @@ CORE: ${JSON.stringify(coreOutput)}
 Return ONLY:
 {"coaching_interventions":[{"technique_name":"Category (Refinement)","what_you_did":"You said: [quote]","immediate_effect":"","why_it_mattered":"","signal_strength":"high|medium|low","evidence_anchor":"","dna_tag":[],"consideration":null,"see_why_this_works":{"mechanism":"","model":"","transfer":{"when_to_use":[],"what_it_sounds_like":[],"alternative_intervention":null}}}],"what_stood_out":[{"title":"","what_happened_client":"","what_you_did":"You...","why_it_matters":"","your_impact":""}],"reflection_and_growth":{"what_stood_out_in_your_approach":"You...","what_seemed_effective":"","one_place_to_stay_curious":"You might stay curious about..."},"friction_points":{"points":[],"why_it_matters":"","transition_context":null},"if_stuck":{"scenario":"","explore":"","one_possible_direction":"","transition_context":null},"commitments":[{"text":"","priority":"","follow_up_question":""}]}`,
       'Pass 2b: Interventions'
-    );
+    , { feature: 'coaching_mirror', coachId }
+      );
 
     // ── Pass 2c: Curiosity + Missed Windows ───────────────────────────
     const pass2cOutput = await callClaude(
@@ -300,7 +315,8 @@ CORE: ${JSON.stringify(coreOutput)}
 Return ONLY:
 {"curiosity_edges":[{"curiosity_note":"","what_to_notice":"","why_this_stands_out":""}],"missed_windows":[{"signal_type":"emotional_mismatch|repetition_without_movement|charged_language|behavioral_contradiction|energy_shift|unprocessed_cost","signal_strength":"Subtle opening|Clear opening|Strong opening","what_opened":"","what_you_did":"You...","verbatim_evidence":{"client_quote":"","coach_response":""},"what_that_did":"","what_this_cost":"","if_you_stayed":"","what_that_might_sound_like":null,"alternative_intervention":null}]}`,
       'Pass 2c: Curiosity + Missed Windows'
-    );
+    , { feature: 'coaching_mirror', coachId }
+      );
 
     // ── Pass 2d: Patterns + Goals + Frameworks (fault-tolerant) ────────
     let pass2dOutput = {};
@@ -321,6 +337,7 @@ goals: You MUST generate 1-2 suggested goals based on what emerged in this sessi
 Return ONLY:
 {"patterns_and_your_role":[{"pattern_name":"","what_client_did":"","status":"surfaced|interrupted|reinforced|stabilizing","what_this_means":"","your_role":"You..."}],"what_this_session_revealed":[{"coach_pattern":"","what_you_tend_to_do":"You...","why_this_is_effective":"","where_to_stay_curious":""}],"goals":{"existing":[{"title":"","status":"","session_relevance":""}],"suggested":[{"title":"","description":""}]},"between_session":[{"title":"","invitation":"","why_it_matters":""}],"frameworks":[{"name":"","presence_level":"","what_was_observed":""}]}`,
         'Pass 2d: Patterns'
+      , { feature: 'coaching_mirror', coachId }
       );
       console.log('[Pass 2d] Completed. Goals suggested count:', (pass2dOutput?.goals?.suggested || []).length);
     } catch (e) {
@@ -357,6 +374,7 @@ Return ONLY:
         `You are a UX writer for Coach Clarity. Scan every string value. Any directive language — commands, instructions, statements that remove the coach's choice — must be rewritten as a suggestive alternative. Fix: should→you might explore, must→it may be worth, do not→one possible approach. Verify all why_it_matters fields are non-empty. ${JSON_ONLY}`,
         `Fix directive language in this JSON. Return corrected JSON with identical structure: ${preCleaned}`,
         'Pass 3: Formatting'
+      , { feature: 'coaching_mirror', coachId }
       );
     } catch (e) {
       console.error('[Pass 3: Formatting] Failed, falling back to pre-cleaned synthesis:', e.message);
@@ -382,7 +400,8 @@ Return: {"session_type":"growth|processing|crisis_adjacent","what_stood_out":{"o
 If session_type is processing: set what_seemed_effective and one_thing_to_consider to null.
 If crisis_adjacent: return null.`,
           'Pass 3b: Coaching Reflection'
-        );
+        , { feature: 'coaching_mirror', coachId }
+      );
         formattedOutput.coaching_reflection = reflectionOutput;
       } else {
         formattedOutput.coaching_reflection = null;
@@ -447,7 +466,8 @@ Return ONLY this JSON:
   ]
 }`,
           'Pass 3c: DNA Pattern Manifestation'
-        );
+        , { feature: 'coaching_mirror', coachId }
+      );
       } else {
         console.log('[Pass 3c] No DNA profile found for coach, skipping.');
       }
@@ -516,7 +536,8 @@ For each suggestion return:
 Return: { "approaches_to_explore": [...] }
 Limit to 2 suggestions max. If no strong fit exists return empty array.`,
           'Pass 3d: Approaches to Explore Next'
-        );
+        , { feature: 'coaching_mirror', coachId }
+      );
       } else {
         console.log('[Pass 3d] No missed windows or no clientEmail, skipping.');
       }
@@ -576,7 +597,8 @@ Return ONLY:
 
 Limits: max 3 goal_proposals, max 3 goal_status_updates. Return empty arrays if no concrete evidence exists. Do not invent.`,
           'Pass 3e: Goal Proposals'
-        );
+        , { feature: 'coaching_mirror', coachId }
+      );
         const proposals = Array.isArray(proposalsRaw?.goal_proposals) ? proposalsRaw.goal_proposals : [];
         const rawStatusUpdates = Array.isArray(proposalsRaw?.goal_status_updates) ? proposalsRaw.goal_status_updates : [];
         const validStatuses = ['active','progressing','stalled','blocked','revised','completed'];

@@ -3,22 +3,48 @@
 // a session and replays each through a different coaching lens, plus a bridge
 // section connecting the new approaches to the coach's existing style.
 
-async function callClaude(apiKey, model, maxTokens, system, userMessage, passName) {
+import { logAIUsage } from '../lib/ai-usage.js';
+
+async function callClaude(apiKey, model, maxTokens, system, userMessage, passName, meta) {
   console.log(`[ApproachLab ${passName}] model: ${model}`);
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({ model, max_tokens: maxTokens, system, messages: [{ role: 'user', content: userMessage }] }),
+  const startTime = Date.now();
+  let res, data;
+  try {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ model, max_tokens: maxTokens, system, messages: [{ role: 'user', content: userMessage }] }),
+    });
+    data = await res.json().catch(function() { return null; });
+  } catch (err) {
+    await logAIUsage({
+      feature: (meta && meta.feature) || 'approach_lab',
+      coachId: meta && meta.coachId,
+      model,
+      status: 'error',
+      errorMessage: err && err.message,
+      durationMs: Date.now() - startTime,
+    });
+    throw err;
+  }
+  await logAIUsage({
+    feature: (meta && meta.feature) || 'approach_lab',
+    coachId: meta && meta.coachId,
+    model: (data && data.model) || model,
+    usage: data && data.usage,
+    requestId: data && data.id,
+    status: res.ok ? 'success' : 'error',
+    errorMessage: res.ok ? null : (data && data.error && data.error.message),
+    durationMs: Date.now() - startTime,
   });
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`ApproachLab ${passName} API error ${res.status}: ${err.substring(0, 200)}`);
+    const err = data ? JSON.stringify(data).slice(0, 200) : '(no body)';
+    throw new Error(`ApproachLab ${passName} API error ${res.status}: ${err}`);
   }
-  const data = await res.json();
   let raw = data.content?.[0]?.text || '';
   raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
   // Try direct parse first
@@ -282,7 +308,8 @@ GUARDRAILS:
       8000,
       LAB_SYSTEM,
       LAB_USER,
-      'Single Pass Approach Lab'
+      'Single Pass Approach Lab',
+      { feature: 'approach_lab', coachId }
     );
 
     const finalOutput = {

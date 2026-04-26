@@ -8,28 +8,47 @@
 // locked-mode UI — distinct from /api/revise-intervention-plan, which
 // edits an existing draft in place.
 
-async function callClaude(apiKey, model, maxTokens, system, userMessage, passName) {
+import { logAIUsage } from '../lib/ai-usage.js';
+
+async function callClaude(apiKey, model, maxTokens, system, userMessage, passName, meta) {
   console.log(`[${passName}] Using model: ${model}`);
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: maxTokens,
-      system,
-      messages: [{ role: 'user', content: userMessage }],
-    }),
+  const startTime = Date.now();
+  let res, data;
+  try {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: maxTokens,
+        system,
+        messages: [{ role: 'user', content: userMessage }],
+      }),
+    });
+    data = await res.json().catch(function() { return null; });
+  } catch (err) {
+    await logAIUsage({ feature: (meta && meta.feature) || 'intervention_plan', coachId: meta && meta.coachId, model, status: 'error', errorMessage: err && err.message, durationMs: Date.now() - startTime });
+    throw err;
+  }
+  await logAIUsage({
+    feature: (meta && meta.feature) || 'intervention_plan',
+    coachId: meta && meta.coachId,
+    model: (data && data.model) || model,
+    usage: data && data.usage,
+    requestId: data && data.id,
+    status: res.ok ? 'success' : 'error',
+    errorMessage: res.ok ? null : (data && data.error && data.error.message),
+    durationMs: Date.now() - startTime,
   });
   if (!res.ok) {
-    const errBody = await res.text();
-    console.error(`[${passName}] Claude API error ${res.status}:`, errBody.substring(0, 1000));
+    const errBody = data ? JSON.stringify(data).slice(0, 1000) : '(no body)';
+    console.error(`[${passName}] Claude API error ${res.status}:`, errBody);
     throw new Error(`${passName} Claude API error ${res.status}`);
   }
-  const data = await res.json();
   if (data.stop_reason === 'max_tokens') {
     const rawLen = (data.content?.[0]?.text || '').length;
     console.error(`[${passName}] Output truncated at max_tokens. raw length: ${rawLen}`);
@@ -204,7 +223,8 @@ ${PLAN_SCHEMA_INSTRUCTIONS}`;
       16000,
       PLAN_GUARDRAILS,
       userPayload,
-      'InterventionPlan: Regenerate from scratch'
+      'InterventionPlan: Regenerate from scratch',
+      { feature: 'intervention_plan', coachId: coach_id }
     );
     const validBookingIds = ctx.sessions.map(s => s.booking_id);
     const activeGoalIds = ctx.active_goals.map(g => g.id);

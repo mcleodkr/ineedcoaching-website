@@ -1,6 +1,8 @@
 // POST { coachId }
 // Generates a coaching article using Claude based on coach's specialties
 
+import { logAIUsage } from '../lib/ai-usage.js';
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -35,17 +37,21 @@ export default async function handler(req, res) {
 
     console.log('[generate-article] Generating for:', coachName, 'specialties:', specialties);
 
-    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 2048,
-        system: `You are a content writer for a professional coaching platform. Write articles that are practical, warm, and actionable. Use coaching language — forward-focused, strength-based, empowering. Avoid clinical or academic tone. Write for potential coaching clients who are exploring personal or professional growth.
+    const model = 'claude-sonnet-4-6';
+    const startTime = Date.now();
+    let claudeRes, claudeData;
+    try {
+      claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 2048,
+          system: `You are a content writer for a professional coaching platform. Write articles that are practical, warm, and actionable. Use coaching language — forward-focused, strength-based, empowering. Avoid clinical or academic tone. Write for potential coaching clients who are exploring personal or professional growth.
 
 Return ONLY valid JSON with exactly these keys:
 - "title": A compelling, specific article title (not generic)
@@ -53,21 +59,34 @@ Return ONLY valid JSON with exactly these keys:
 - "meta_description": A 150-character SEO description
 - "category": One of: Leadership, Wellness, Career, Relationships, Personal Growth, Business, Mindset
 - "tags": Array of 3-5 relevant lowercase tags`,
-        messages: [{
-          role: 'user',
-          content: `Write a coaching article for ${coachName}, who specializes in ${specialties}. ${headline ? 'Their tagline is: "' + headline + '".' : ''} Pick a specific, relevant topic that would attract their ideal client. Make it practical and immediately useful.`
-        }]
-      })
+          messages: [{
+            role: 'user',
+            content: `Write a coaching article for ${coachName}, who specializes in ${specialties}. ${headline ? 'Their tagline is: "' + headline + '".' : ''} Pick a specific, relevant topic that would attract their ideal client. Make it practical and immediately useful.`
+          }]
+        })
+      });
+      claudeData = await claudeRes.json().catch(function() { return null; });
+    } catch (err) {
+      await logAIUsage({ feature: 'coach_article', coachId, model, status: 'error', errorMessage: err && err.message, durationMs: Date.now() - startTime });
+      throw err;
+    }
+    await logAIUsage({
+      feature: 'coach_article',
+      coachId,
+      model: (claudeData && claudeData.model) || model,
+      usage: claudeData && claudeData.usage,
+      requestId: claudeData && claudeData.id,
+      status: claudeRes.ok ? 'success' : 'error',
+      errorMessage: claudeRes.ok ? null : (claudeData && claudeData.error && claudeData.error.message),
+      durationMs: Date.now() - startTime,
     });
 
     if (!claudeRes.ok) {
-      const errText = await claudeRes.text();
-      console.error('[generate-article] Claude error:', claudeRes.status, errText);
+      console.error('[generate-article] Claude error:', claudeRes.status, claudeData);
       return res.status(502).json({ error: 'AI generation failed' });
     }
 
-    const claudeData = await claudeRes.json();
-    const responseText = claudeData.content?.[0]?.text || '';
+    const responseText = claudeData && claudeData.content?.[0]?.text || '';
 
     let article;
     try {

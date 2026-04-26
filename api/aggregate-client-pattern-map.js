@@ -53,28 +53,55 @@ const VALID_DOMAINS = new Set([
   'decision_agency',
 ]);
 
-async function callClaudeRaw(apiKey, model, maxTokens, system, userMessage, passName) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
+import { logAIUsage } from '../lib/ai-usage.js';
+
+async function callClaudeRaw(apiKey, model, maxTokens, system, userMessage, passName, meta) {
+  const startTime = Date.now();
+  let res, data;
+  try {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: maxTokens,
+        system,
+        messages: [{ role: 'user', content: userMessage }],
+      }),
+    });
+    data = await res.json().catch(function() { return null; });
+  } catch (err) {
+    await logAIUsage({
+      feature: (meta && meta.feature) || 'pattern_map',
+      coachId: meta && meta.coachId,
       model,
-      max_tokens: maxTokens,
-      system,
-      messages: [{ role: 'user', content: userMessage }],
-    }),
+      status: 'error',
+      errorMessage: err && err.message,
+      durationMs: Date.now() - startTime,
+    });
+    throw err;
+  }
+  const durationMs = Date.now() - startTime;
+  await logAIUsage({
+    feature: (meta && meta.feature) || 'pattern_map',
+    coachId: meta && meta.coachId,
+    model: (data && data.model) || model,
+    usage: data && data.usage,
+    requestId: data && data.id,
+    status: res.ok ? 'success' : 'error',
+    errorMessage: res.ok ? null : (data && data.error && data.error.message),
+    durationMs,
   });
   if (!res.ok) {
-    const errBody = await res.text();
-    console.error(`[${passName}] Claude API error ${res.status}:`, errBody.substring(0, 1000));
+    const errBody = data ? JSON.stringify(data).slice(0, 1000) : '(no body)';
+    console.error(`[${passName}] Claude API error ${res.status}:`, errBody);
     throw new Error(`${passName} Claude API error ${res.status}`);
   }
-  const data = await res.json();
-  return data.content?.[0]?.text || '';
+  return data && data.content?.[0]?.text || '';
 }
 
 // Defensive JSON extractor for Claude synthesis output.
@@ -476,7 +503,8 @@ export default async function handler(req, res) {
         7500,
         SYSTEM_PROMPT,
         USER_PROMPT,
-        'Pattern Map'
+        'Pattern Map',
+        { feature: 'pattern_map', coachId: coach_id }
       );
     } catch (e) {
       synthesisFailureReason = 'synthesis_api_failed';

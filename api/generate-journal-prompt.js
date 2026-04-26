@@ -34,27 +34,47 @@ function cleanPromptText(str) {
   return s.trim();
 }
 
-async function callClaude(apiKey, system, userMessage) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 300,
-      system,
-      messages: [{ role: 'user', content: userMessage }],
-    }),
+import { logAIUsage } from '../lib/ai-usage.js';
+
+async function callClaude(apiKey, system, userMessage, meta) {
+  const model = 'claude-sonnet-4-6';
+  const startTime = Date.now();
+  let res, data;
+  try {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 300,
+        system,
+        messages: [{ role: 'user', content: userMessage }],
+      }),
+    });
+    data = await res.json().catch(function() { return null; });
+  } catch (err) {
+    await logAIUsage({ feature: 'journal_prompt', coachId: meta && meta.coachId, model, status: 'error', errorMessage: err && err.message, durationMs: Date.now() - startTime });
+    throw err;
+  }
+  await logAIUsage({
+    feature: 'journal_prompt',
+    coachId: meta && meta.coachId,
+    model: (data && data.model) || model,
+    usage: data && data.usage,
+    requestId: data && data.id,
+    status: res.ok ? 'success' : 'error',
+    errorMessage: res.ok ? null : (data && data.error && data.error.message),
+    durationMs: Date.now() - startTime,
   });
   if (!res.ok) {
-    const errBody = await res.text().catch(() => '');
-    throw new Error('Claude error ' + res.status + ': ' + errBody.substring(0, 200));
+    const errBody = data ? JSON.stringify(data).slice(0, 200) : '(no body)';
+    throw new Error('Claude error ' + res.status + ': ' + errBody);
   }
-  const data = await res.json();
-  return (data.content && data.content[0] && data.content[0].text || '').trim();
+  return (data && data.content && data.content[0] && data.content[0].text || '').trim();
 }
 
 async function sbGet(supabaseUrl, serviceKey, path) {

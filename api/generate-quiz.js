@@ -1,3 +1,5 @@
+import { logAIUsage } from '../lib/ai-usage.js';
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -8,10 +10,12 @@ export default async function handler(req, res) {
   if (!ANTHROPIC_KEY) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
 
   try {
-    const { content, num_questions } = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const { content, num_questions, coach_id } = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     if (!content) return res.status(400).json({ error: 'Missing content' });
 
     const questionCount = parseInt(num_questions) || 8;
+    const model = 'claude-sonnet-4-6';
+    const startTime = Date.now();
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -21,21 +25,31 @@ export default async function handler(req, res) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        model,
         max_tokens: 2000,
         system: `You are a coaching education expert. Generate quiz questions from the provided content. Return ONLY valid JSON with no markdown, no backticks, just raw JSON: { "title": "string", "questions": [ { "type": "multiple_choice" or "true_false", "question": "string", "options": ["string"] (4 options for mc, ["True","False"] for tf), "correct_answer": "string", "explanation": "string" } ] }. Generate exactly ${questionCount} thoughtful practical questions.`,
         messages: [{ role: 'user', content: 'Generate quiz questions from this content:\n\n' + content.substring(0, 6000) }],
       }),
     });
 
+    const data = await response.json().catch(function() { return null; });
+    await logAIUsage({
+      feature: 'quiz_generation',
+      coachId: coach_id || null,
+      model: (data && data.model) || model,
+      usage: data && data.usage,
+      requestId: data && data.id,
+      status: response.ok ? 'success' : 'error',
+      errorMessage: response.ok ? null : (data && data.error && data.error.message),
+      durationMs: Date.now() - startTime,
+    });
+
     if (!response.ok) {
-      const errText = await response.text();
-      console.error('Anthropic API error:', response.status, errText);
+      console.error('Anthropic API error:', response.status, data);
       return res.status(500).json({ error: 'AI generation failed' });
     }
 
-    const data = await response.json();
-    const text = data.content && data.content[0] ? data.content[0].text : '';
+    const text = data && data.content && data.content[0] ? data.content[0].text : '';
 
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return res.status(500).json({ error: 'Could not parse AI response' });

@@ -1,6 +1,8 @@
 // POST { coachId, clientEmail, bookingId, sessionNotes, format }
 // Runs post-session analysis, detects frameworks and coaching signals
 
+import { logAIUsage } from '../lib/ai-usage.js';
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -34,11 +36,13 @@ export default async function handler(req, res) {
 
     if (!coachId || !sessionNotes) return res.status(400).json({ error: 'Missing required fields' });
 
+    const model = 'claude-sonnet-4-6';
+    const _startTime = Date.now();
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        model,
         max_tokens: 6000,
         system: `You are a coaching intelligence analyst writing directly to a professional coach. Address the coach as "you" throughout — never say "the coach." Your tone is that of a thoughtful senior colleague offering perspective — not a system giving commands. Every field writable on a sticky note. No sentence over 20 words. No academic phrasing. Never use "suggesting," "indicating," "potentially," "it appears that." Use suggestive language: "you may want to consider," "one approach worth exploring," "this may point to." Never use "you should" or "you must." No em dashes.
 
@@ -78,10 +82,20 @@ Return ONLY the single combined JSON object with all fields from both passes.`,
       })
     });
 
+    const claudeData = await claudeRes.json().catch(function() { return null; });
+    await logAIUsage({
+      feature: 'post_session_notes',
+      coachId,
+      model: (claudeData && claudeData.model) || model,
+      usage: claudeData && claudeData.usage,
+      requestId: claudeData && claudeData.id,
+      status: claudeRes.ok ? 'success' : 'error',
+      errorMessage: claudeRes.ok ? null : (claudeData && claudeData.error && claudeData.error.message),
+      durationMs: Date.now() - _startTime,
+    });
     if (!claudeRes.ok) return res.status(502).json({ error: 'AI analysis failed' });
 
-    const claudeData = await claudeRes.json();
-    const text = claudeData.content?.[0]?.text || '';
+    const text = (claudeData && claudeData.content?.[0]?.text) || '';
     let analysis;
     try {
       const match = text.match(/\{[\s\S]*\}/);

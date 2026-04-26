@@ -2,6 +2,8 @@
 // POST { transcript, format (grow/clear/oskar), clientName, sessionDate, coachId }
 // Returns structured notes in the selected framework
 
+import { logAIUsage } from '../lib/ai-usage.js';
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -17,7 +19,7 @@ export default async function handler(req, res) {
 
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const { transcript, format, clientName, sessionDate } = body;
+    const { transcript, format, clientName, sessionDate, coachId } = body;
 
     if (!transcript || !format) {
       return res.status(400).json({ error: 'Missing transcript or format' });
@@ -79,6 +81,8 @@ ${transcript}`;
 
     console.log('[process-session] Calling Claude with format:', format, 'transcript length:', transcript.length);
 
+    const model = 'claude-sonnet-4-6';
+    const _startTime = Date.now();
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -87,21 +91,31 @@ ${transcript}`;
         'content-type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        model,
         max_tokens: 1024,
         messages: [{ role: 'user', content: userMessage }],
         system: systemPrompt
       })
     });
 
+    const claudeData = await claudeRes.json().catch(function() { return null; });
+    await logAIUsage({
+      feature: 'session_processor',
+      coachId: coachId || null,
+      model: (claudeData && claudeData.model) || model,
+      usage: claudeData && claudeData.usage,
+      requestId: claudeData && claudeData.id,
+      status: claudeRes.ok ? 'success' : 'error',
+      errorMessage: claudeRes.ok ? null : (claudeData && claudeData.error && claudeData.error.message),
+      durationMs: Date.now() - _startTime,
+    });
+
     if (!claudeRes.ok) {
-      const errText = await claudeRes.text();
-      console.error('[process-session] Claude API error:', claudeRes.status, errText);
-      return res.status(502).json({ error: 'AI processing failed', details: errText });
+      console.error('[process-session] Claude API error:', claudeRes.status, claudeData);
+      return res.status(502).json({ error: 'AI processing failed', details: claudeData });
     }
 
-    const claudeData = await claudeRes.json();
-    const responseText = claudeData.content?.[0]?.text || '';
+    const responseText = (claudeData && claudeData.content?.[0]?.text) || '';
     console.log('[process-session] Claude response length:', responseText.length);
 
     // Parse JSON from response (handle markdown code blocks)

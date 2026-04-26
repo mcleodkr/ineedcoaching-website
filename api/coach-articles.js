@@ -55,6 +55,7 @@ export default async function handler(req, res) {
           allSpecialties: specialties,
           headline: coach.headline || '',
           bio: (coach.bio || '').slice(0, 300),
+          coachId: coach.id,
         });
 
         if (!article) {
@@ -137,7 +138,9 @@ function slugify(text) {
 }
 
 
-async function generateArticle({ anthropicKey, coachName, primaryNiche, allSpecialties, headline, bio }) {
+import { logAIUsage } from '../lib/ai-usage.js';
+
+async function generateArticle({ anthropicKey, coachName, primaryNiche, allSpecialties, headline, bio, coachId }) {
   const specialtiesList = allSpecialties.slice(0, 4).join(', ');
 
   const prompt = `You are a ghostwriter for ${coachName}, a coach specializing in ${specialtiesList}.
@@ -177,30 +180,47 @@ Voice rules:
 
 IMPORTANT: Return ONLY valid JSON. No markdown code fences. No extra text.`;
 
+  const model = 'claude-haiku-4-5-20251001';
   const payload = JSON.stringify({
-    model: 'claude-haiku-4-5-20251001',
+    model,
     max_tokens: 3000,
     messages: [{ role: 'user', content: prompt }],
   });
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': anthropicKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: payload,
+  const startTime = Date.now();
+  let response, data;
+  try {
+    response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: payload,
+    });
+    data = await response.json().catch(function() { return null; });
+  } catch (err) {
+    await logAIUsage({ feature: 'coach_articles', coachId, model, status: 'error', errorMessage: err && err.message, durationMs: Date.now() - startTime });
+    return null;
+  }
+  await logAIUsage({
+    feature: 'coach_articles',
+    coachId,
+    model: (data && data.model) || model,
+    usage: data && data.usage,
+    requestId: data && data.id,
+    status: response.ok ? 'success' : 'error',
+    errorMessage: response.ok ? null : (data && data.error && data.error.message),
+    durationMs: Date.now() - startTime,
   });
 
   if (!response.ok) {
-    const errText = await response.text();
-    console.error(`Anthropic API error: ${response.status} ${errText}`);
+    console.error(`Anthropic API error: ${response.status}`, data);
     return null;
   }
 
-  const data = await response.json();
-  let raw = data.content[0].text.trim();
+  let raw = (data && data.content && data.content[0] && data.content[0].text || '').trim();
 
   // Strip markdown fences if present
   raw = raw.replace(/^```(?:json)?\s*/g, '').replace(/\s*```$/g, '');

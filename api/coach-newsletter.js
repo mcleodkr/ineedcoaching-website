@@ -96,6 +96,7 @@ export default async function handler(req, res) {
           articleDesc: featured.meta_description || '',
           articleSlug: featured.slug,
           keyInsights: Array.isArray(featured.key_insights) ? featured.key_insights.slice(0, 3) : [],
+          coachId: coach.id,
         });
 
         if (!newsletterContent) continue;
@@ -142,7 +143,9 @@ export default async function handler(req, res) {
 }
 
 
-async function generateNewsletter({ anthropicKey, coachName, nicheDesc, headline, articleTitle, articleDesc, articleSlug, keyInsights }) {
+import { logAIUsage } from '../lib/ai-usage.js';
+
+async function generateNewsletter({ anthropicKey, coachName, nicheDesc, headline, articleTitle, articleDesc, articleSlug, keyInsights, coachId }) {
   const insightsText = keyInsights.length > 0
     ? `\nKey insights from the article:\n${keyInsights.map(i => `- ${i}`).join('\n')}`
     : '';
@@ -169,30 +172,47 @@ CLOSING:
 
 Return ONLY the three sections with their headers. No subject line. No sign-off. Warm but professional tone throughout.`;
 
+  const model = 'claude-haiku-4-5-20251001';
   const payload = JSON.stringify({
-    model: 'claude-haiku-4-5-20251001',
+    model,
     max_tokens: 600,
     messages: [{ role: 'user', content: prompt }],
   });
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': anthropicKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: payload,
+  const startTime = Date.now();
+  let response, data;
+  try {
+    response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: payload,
+    });
+    data = await response.json().catch(function() { return null; });
+  } catch (err) {
+    await logAIUsage({ feature: 'coach_newsletter', coachId, model, status: 'error', errorMessage: err && err.message, durationMs: Date.now() - startTime });
+    return null;
+  }
+  await logAIUsage({
+    feature: 'coach_newsletter',
+    coachId,
+    model: (data && data.model) || model,
+    usage: data && data.usage,
+    requestId: data && data.id,
+    status: response.ok ? 'success' : 'error',
+    errorMessage: response.ok ? null : (data && data.error && data.error.message),
+    durationMs: Date.now() - startTime,
   });
 
   if (!response.ok) {
-    const errText = await response.text();
-    console.error(`Anthropic API error: ${response.status} ${errText}`);
+    console.error(`Anthropic API error: ${response.status}`, data);
     return null;
   }
 
-  const data = await response.json();
-  const text = data.content[0].text.trim();
+  const text = (data && data.content && data.content[0] && data.content[0].text || '').trim();
 
   return { plain: text, sections: parseSections(text) };
 }

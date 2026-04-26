@@ -1,6 +1,8 @@
 // POST { coachId, clientEmail, bookingId }
 // Generates a premium pre-session brief from client history
 
+import { logAIUsage } from '../lib/ai-usage.js';
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -65,11 +67,13 @@ export default async function handler(req, res) {
     const checkinText = (checkins || []).length ? JSON.stringify(checkins[0].responses) : 'No pre-session check-in submitted';
     const intakeBaseline = (intakeData || []).length ? JSON.stringify(intakeData[0].responses) : '';
 
+    const model = 'claude-sonnet-4-6';
+    const startTime = Date.now();
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        model,
         max_tokens: 2000,
         system: `You are a coaching intelligence assistant preparing a pre-session brief for a professional coach. Your tone is that of a thoughtful senior colleague offering perspective — not a system giving commands. Write in strength-based, forward-focused language. Use tentative language: "appears to," "may suggest," "you might explore." Never use "you should" or "you must" or "tell the coach to do X." Suggest the coach may want to consider approaches rather than directing them. No em dashes. Keep last_session_summary.recap to 2 sentences maximum. opening_questions must be specific, slightly uncomfortable, and movement-oriented. Not "What are you noticing..." but "What did you actually do differently in that moment vs what you usually do?" Create productive tension that opens the session with direction. Return ONLY valid JSON with these exact keys:
 {
@@ -91,10 +95,20 @@ export default async function handler(req, res) {
       })
     });
 
+    const claudeData = await claudeRes.json().catch(function() { return null; });
+    await logAIUsage({
+      feature: 'pre_session_brief',
+      coachId,
+      model: (claudeData && claudeData.model) || model,
+      usage: claudeData && claudeData.usage,
+      requestId: claudeData && claudeData.id,
+      status: claudeRes.ok ? 'success' : 'error',
+      errorMessage: claudeRes.ok ? null : (claudeData && claudeData.error && claudeData.error.message),
+      durationMs: Date.now() - startTime,
+    });
     if (!claudeRes.ok) return res.status(502).json({ error: 'AI processing failed' });
 
-    const claudeData = await claudeRes.json();
-    const text = claudeData.content?.[0]?.text || '';
+    const text = (claudeData && claudeData.content?.[0]?.text) || '';
     let brief;
     try {
       const match = text.match(/\{[\s\S]*\}/);
