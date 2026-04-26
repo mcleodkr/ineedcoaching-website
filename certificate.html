@@ -129,23 +129,13 @@ body {
 
 .eyebrow {
   font-family: 'DM Sans', sans-serif;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--muted);
-  text-align: center;
-  margin-bottom: 14px;
-}
-.title {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 2.4rem;
-  font-weight: 600;
   color: var(--navy);
   text-align: center;
-  letter-spacing: 0.01em;
-  margin-bottom: 28px;
-  line-height: 1.15;
+  margin-bottom: 32px;
 }
 .presented {
   font-family: 'DM Sans', sans-serif;
@@ -333,7 +323,6 @@ function renderCert(data) {
     +   '<div class="brand">i<span class="lower">need</span><span>coaching</span><span class="lower">.org</span></div>'
     +   '<div class="seal">&#9733;</div>'
     +   '<div class="eyebrow">Certificate of Completion</div>'
-    +   '<div class="title">Awarded with care</div>'
     +   '<div class="presented">This certificate is presented to</div>'
     +   '<div class="student">' + esc(student) + '</div>'
     +   '<div class="gold-rule"></div>'
@@ -400,8 +389,39 @@ function renderError(headline, body) {
     var e = rows[0];
     var c = e.coach_courses || {};
     var p = c.coach_profiles || {};
+
+    // Student name resolution priority:
+    //   1. enrollment.student_name (snapshotted at enrollment time)
+    //   2. explorer_profiles.display_name (the name the student curated)
+    //   3. derived from the local part of student_email
+    //   4. "Student"
+    // Step 1 covers the case where a student typed a different name when
+    // they enrolled. Step 2 respects the name they chose for their profile
+    // (most common path now that enrollments often arrive via system
+    // inserts with student_name = NULL).
+    var resolvedStudent = (e.student_name || '').trim();
+    if (!resolvedStudent && e.student_email) {
+      try {
+        var profileUrl = SUPA + '/rest/v1/explorer_profiles'
+          + '?email=ilike.' + encodeURIComponent(e.student_email)
+          + '&select=display_name&limit=1';
+        var profileRes = await fetch(profileUrl, { headers: { apikey: KEY, Authorization: 'Bearer ' + KEY } });
+        if (profileRes.ok) {
+          var profileRows = await profileRes.json();
+          if (Array.isArray(profileRows) && profileRows[0] && profileRows[0].display_name) {
+            resolvedStudent = String(profileRows[0].display_name).trim();
+          }
+        }
+      } catch (profileErr) {
+        // Profile lookup is a best-effort enhancement — fall through to the
+        // email-derived fallback rather than failing the whole certificate.
+        console.warn('[Certificate] profile lookup error', profileErr);
+      }
+    }
+    if (!resolvedStudent) resolvedStudent = fallbackStudentName(e.student_email);
+
     renderCert({
-      student: e.student_name || fallbackStudentName(e.student_email),
+      student: resolvedStudent,
       course: c.title || 'Course',
       coach: p.display_name || p.full_name || 'Your coach',
       date: formatDate(e.completed_at) || formatDate(new Date().toISOString()),
