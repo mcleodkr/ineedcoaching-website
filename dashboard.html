@@ -343,7 +343,20 @@ async function initDashboard() {
       }
       // No coach, no explorer — auto-create an explorer profile with role 'client'
       // so first-time magic-link users land directly in their client dashboard.
+      // Pull any UTM params welcome.html stashed in localStorage before the
+      // magic-link round-trip blew the URL state away. Cleared after the
+      // INSERT lands so a future re-auth doesn't accidentally re-tag.
       var defaultDisplay = (currentUserEmail.split('@')[0] || '').trim();
+      var newProfile = { email: currentUserEmail, display_name: defaultDisplay, role: 'client' };
+      try {
+        var stashed = localStorage.getItem('utm_capture');
+        if (stashed) {
+          var utm = JSON.parse(stashed) || {};
+          ['utm_source','utm_campaign','utm_medium','utm_content','utm_term'].forEach(function(k) {
+            if (utm[k]) newProfile[k] = utm[k];
+          });
+        }
+      } catch (e) { /* localStorage unavailable / bad JSON — silent no-op */ }
       var createRes = await fetch(SUPABASE_URL + '/rest/v1/explorer_profiles', {
         method: 'POST',
         headers: {
@@ -352,9 +365,10 @@ async function initDashboard() {
           'Content-Type': 'application/json',
           'Prefer': 'return=minimal,resolution=ignore-duplicates'
         },
-        body: JSON.stringify({ email: currentUserEmail, display_name: defaultDisplay, role: 'client' })
+        body: JSON.stringify(newProfile)
       });
       if (createRes.ok || createRes.status === 409) {
+        try { localStorage.removeItem('utm_capture'); } catch (e) {}
         window.location.href = '/client-dashboard.html';
         return;
       }
