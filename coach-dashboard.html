@@ -5079,6 +5079,28 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
         }
         this.textContent = '\u2713 Saved';
         this.style.background = '#2d6a4f';
+
+        // Auto-fire Coach Clarity intelligence pipeline on transcript ingestion.
+        // Wiring was lost in a refactor: extraction_data and synthesis_data
+        // stayed NULL because nothing invoked the intelligence endpoint.
+        // Fire-and-forget so the user is not blocked on the ~90-120s pipeline;
+        // the endpoint PATCHes coach_session_notes when its passes complete.
+        // Re-upload the transcript to refresh.
+        try {
+          fetch('/api/generate-post-session-intelligence', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              coachId: coachProfile.id,
+              clientEmail: clientEmail,
+              bookingId: sid,
+              existingGoals: [],
+              feedbackStyle: (coachProfile && coachProfile.feedback_style) || 'reflective'
+            })
+          }).catch(function(err) { console.error('[transcript-save] auto-fire intel failed:', err); });
+        } catch(intelErr) {
+          console.error('[transcript-save] auto-fire intel threw:', intelErr);
+        }
       } catch(e) {
         this.disabled = false;
         this.textContent = 'Save Transcript';
