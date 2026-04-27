@@ -8,6 +8,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<!-- FullCalendar v6 — auto-injects CSS at runtime; loads when the Scheduling tab boots the calendar (PR 1.F). -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js" defer></script>
 <style>
 :root {
   --ink: #1a2e3b;
@@ -478,6 +480,44 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 .syl-module p { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
 
 .hidden { display: none !important; }
+
+/* Calendar (PR 1.F) ───────────────────────────────────────────────────── */
+#calendar-section .calendar-controls { display: flex; gap: 10px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
+#calendar-section .cal-title { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.1rem; font-weight: 700; color: var(--ink); margin-left: auto; padding: 0 8px; }
+#calendar-section .cal-btn { padding: 8px 16px; border-radius: 50px; border: 1px solid var(--border); background: var(--white); color: var(--ink); font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; }
+#calendar-section .cal-btn:hover { border-color: var(--gold); color: var(--gold); }
+#calendar-section .cal-btn-primary { background: var(--gold); color: #fff; border-color: var(--gold); }
+#calendar-section .cal-btn-primary:hover { background: #a87d1f; border-color: #a87d1f; color: #fff; }
+#calendar-section .cal-btn-danger { color: #c44; border-color: rgba(196,68,68,0.4); }
+#calendar-section .cal-btn-danger:hover { color: #fff; background: #c44; border-color: #c44; }
+#calendar-section .cal-btn-link { background: none; border: none; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 700; cursor: pointer; padding: 8px 12px; text-decoration: underline; }
+#calendar-section .cal-btn-link:hover { color: var(--ink); }
+#calendar-section #cal-view { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; background: var(--white); color: var(--ink); }
+#calendar { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+
+/* FullCalendar brand alignment */
+#calendar .fc { --fc-border-color: #e0ddd5; --fc-today-bg-color: rgba(196,154,60,0.08); --fc-now-indicator-color: #c44; }
+#calendar .fc-event { border: none !important; border-radius: 4px !important; padding: 2px 6px !important; font-size: 0.82rem !important; cursor: pointer; }
+#calendar .fc-event:hover { filter: brightness(0.92); }
+#calendar .fc-event.session-type-0 { background: #4a7c59 !important; color: #fff !important; }
+#calendar .fc-event.session-type-1 { background: #c49a3c !important; color: #fff !important; }
+#calendar .fc-event.session-type-2 { background: #1a3a52 !important; color: #fff !important; }
+#calendar .fc-event.session-type-3 { background: #8b7355 !important; color: #fff !important; }
+#calendar .fc-event.session-type-4 { background: #6b6b60 !important; color: #fff !important; }
+
+/* Event modal (PR 1.F) — generic .modal class scoped to #event-modal so it
+   doesn't collide with the session-type-modal which uses inline styles. */
+#event-modal.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
+#event-modal.modal.is-open { display: flex; }
+#event-modal .modal-content { background: var(--white); border-radius: 12px; padding: 28px 32px; max-width: 520px; width: 100%; box-shadow: 0 20px 48px rgba(0,0,0,0.2); }
+#event-modal .modal-title { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.4rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; line-height: 1.25; }
+#event-modal .modal-body { font-size: 0.9rem; color: var(--ink); line-height: 1.6; }
+#event-modal .modal-body p { margin: 6px 0; }
+#event-modal .modal-body strong { color: var(--ink); font-weight: 700; }
+#event-modal .modal-body a { color: var(--gold); text-decoration: none; font-weight: 600; }
+#event-modal .modal-body a:hover { text-decoration: underline; }
+#event-modal .modal-actions { display: flex; gap: 8px; margin-top: 22px; flex-wrap: wrap; align-items: center; }
+
 </style>
 <style data-MOBILE_NAV_HAMBURGER_v1>
 /* Mobile hamburger nav */
@@ -1442,6 +1482,43 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
         <button class="save-btn" id="add-session-type-btn">+ Add session type</button>
       </div>
 
+      <!-- Calendar (PR 1.F) — visual view of every confirmed/manual booking
+           on this coach. FullCalendar v6 from CDN; lazily initialized the
+           first time the Scheduling tab is opened so the dashboard's other
+           tabs don't pay the parse cost. Cancel / mark-no-show actions
+           PATCH coach_bookings.status; cancellation emails + drag-to-
+           reschedule are Phase 2 follow-ups. -->
+      <div id="calendar-section" class="form-section" style="display:none;">
+        <h2 class="form-section-title">Calendar</h2>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">All confirmed and manually-added bookings. Click an event for details and quick actions.</p>
+        <div class="calendar-controls">
+          <button type="button" id="cal-prev" class="cal-btn">&larr; Previous</button>
+          <button type="button" id="cal-today" class="cal-btn">Today</button>
+          <button type="button" id="cal-next" class="cal-btn">Next &rarr;</button>
+          <span id="cal-title" class="cal-title"></span>
+          <select id="cal-view">
+            <option value="timeGridWeek">Week</option>
+            <option value="dayGridMonth">Month</option>
+          </select>
+        </div>
+        <div id="calendar"></div>
+
+        <!-- Event detail modal (shown on event click) -->
+        <div id="event-modal" class="modal" style="display:none;">
+          <div class="modal-content">
+            <h3 id="event-title" class="modal-title"></h3>
+            <div id="event-details" class="modal-body"></div>
+            <div class="modal-actions">
+              <button type="button" id="event-view-session" class="cal-btn cal-btn-primary">View Session Notes</button>
+              <button type="button" id="event-reschedule" class="cal-btn">Reschedule</button>
+              <button type="button" id="event-cancel" class="cal-btn cal-btn-danger">Cancel</button>
+              <button type="button" id="event-no-show" class="cal-btn">Mark No-Show</button>
+              <button type="button" id="event-close" class="cal-btn-link">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="form-section" id="availability-section">
         <h2 class="form-section-title">Weekly Availability</h2>
         <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">Set your available hours for each day. Only shown if you do not use an external scheduler.</p>
@@ -2274,6 +2351,10 @@ function setupTabs() {
       if (btn.dataset.tab === 'scheduling' && !btn._loaded) {
         btn._loaded = true;
         loadScheduling();
+      } else if (btn.dataset.tab === 'scheduling') {
+        // PR 1.F: Scheduling tab re-opened — refresh calendar + size so events
+        // booked in another tab/session show up without a page reload.
+        if (typeof initCalendar === 'function') initCalendar();
       }
       if (btn.dataset.tab === 'intake' && !btn._loaded) {
         btn._loaded = true;
@@ -3701,6 +3782,11 @@ function loadScheduling() {
   var saveReminderBtn = $('save-reminder-settings-btn');
   if (saveReminderBtn) saveReminderBtn.onclick = saveReminderSettings;
 
+  // Boot the calendar (PR 1.F). initCalendar handles the lazy-init +
+  // refetch-on-revisit logic so this is safe to call every time the
+  // Scheduling tab opens.
+  initCalendar();
+
   // Wire Session Types UI — list, add, edit, deactivate.
   var addStBtn = $('add-session-type-btn');
   if (addStBtn) addStBtn.onclick = function() { openSessionTypeModal(null); };
@@ -4089,6 +4175,226 @@ async function saveZoomLink() {
   }
   btn.disabled = false;
   btn.textContent = 'Save Meeting Link';
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Calendar view (PR 1.F)
+// ─────────────────────────────────────────────────────────────────────────
+//
+// Uses FullCalendar v6 from CDN (loaded with `defer` in <head>). Lazy-init
+// the first time the Scheduling tab is opened — keeps FullCalendar's parse
+// cost off the dashboard's other tabs. Subsequent visits just refetchEvents
+// so a coach who cancels/rebooks elsewhere sees the calendar update.
+
+var calendar = null; // shared FullCalendar instance
+var calendarBookingsCache = []; // last fetched bookings, used by event-click modal lookups
+
+async function initCalendar() {
+  var section = $('calendar-section');
+  var calEl = $('calendar');
+  if (!section || !calEl) return;
+  if (typeof FullCalendar === 'undefined') {
+    // Script tag is `defer`d so on the first tab-open it may still be
+    // loading. Poll briefly, then bail with a friendly message rather than
+    // throwing.
+    for (var i = 0; i < 10; i++) {
+      await new Promise(function (r) { setTimeout(r, 100); });
+      if (typeof FullCalendar !== 'undefined') break;
+    }
+    if (typeof FullCalendar === 'undefined') {
+      calEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:0.9rem;">Calendar library failed to load. Please refresh the page.</div>';
+      section.style.display = '';
+      return;
+    }
+  }
+
+  if (calendar) {
+    // Tab re-opened — refresh and surface the section again.
+    section.style.display = '';
+    await refreshCalendarEvents();
+    calendar.updateSize();
+    return;
+  }
+
+  section.style.display = '';
+  await refreshCalendarEvents();
+
+  calendar = new FullCalendar.Calendar(calEl, {
+    initialView: 'timeGridWeek',
+    headerToolbar: false, // we render our own controls
+    events: function (fetchInfo, success) { success(buildCalendarEvents()); },
+    eventClick: handleCalendarEventClick,
+    height: 'auto',
+    slotMinTime: '06:00:00',
+    slotMaxTime: '22:00:00',
+    allDaySlot: false,
+    nowIndicator: true,
+    dayMaxEvents: true,
+    datesSet: function (info) {
+      var t = $('cal-title');
+      if (t && info.view) t.textContent = info.view.title;
+    },
+  });
+  calendar.render();
+
+  // Wire controls.
+  $('cal-prev').onclick = function () { calendar.prev(); };
+  $('cal-today').onclick = function () { calendar.today(); };
+  $('cal-next').onclick = function () { calendar.next(); };
+  $('cal-view').onchange = function (e) { calendar.changeView(e.target.value); };
+
+  // Modal close handlers.
+  $('event-close').onclick = closeEventModal;
+  var modal = $('event-modal');
+  if (modal) modal.addEventListener('click', function (e) {
+    if (e.target === modal) closeEventModal();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && modal && modal.classList.contains('is-open')) closeEventModal();
+  });
+}
+
+async function refreshCalendarEvents() {
+  if (!coachProfile || !coachProfile.id) {
+    calendarBookingsCache = [];
+    if (calendar) calendar.refetchEvents();
+    return;
+  }
+  // service_id needed for color hash; service_name + duration come from
+  // coach_bookings columns (set at booking time) so this stays one query.
+  var path = 'coach_bookings'
+    + '?coach_id=eq.' + encodeURIComponent(coachProfile.id)
+    + '&status=in.(confirmed,manual)'
+    + '&select=id,client_email,client_name,service_id,service_name,scheduled_at,status,zoom_link,notes,'
+    +   'coach_services(duration)'
+    + '&order=scheduled_at.asc';
+  try {
+    var rows = await supabaseGet(path);
+    calendarBookingsCache = Array.isArray(rows) ? rows : [];
+    if (calendar) calendar.refetchEvents();
+  } catch (e) {
+    console.error('[calendar] refresh failed', e);
+    calendarBookingsCache = [];
+    if (calendar) calendar.refetchEvents();
+  }
+}
+
+function buildCalendarEvents() {
+  return calendarBookingsCache.map(function (b) {
+    var clientLabel = b.client_name || b.client_email || 'Client';
+    var serviceLabel = b.service_name || 'Session';
+    var durationText = (b.coach_services && b.coach_services.duration) || '60 minutes';
+    var endIso = calendarEventEnd(b.scheduled_at, durationText);
+    return {
+      id: b.id,
+      title: serviceLabel + ' — ' + clientLabel,
+      start: b.scheduled_at,
+      end: endIso,
+      extendedProps: {
+        bookingId: b.id,
+        clientEmail: b.client_email,
+        clientName: b.client_name,
+        serviceName: serviceLabel,
+        status: b.status,
+        zoomLink: b.zoom_link,
+        notes: b.notes,
+        serviceId: b.service_id,
+        durationText: durationText,
+      },
+      className: 'session-type-' + hashServiceIdToBucket(b.service_id),
+    };
+  });
+}
+
+function calendarEventEnd(startIso, durationText) {
+  var d = new Date(startIso);
+  if (Number.isNaN(d.getTime())) return startIso;
+  var mins = parseCalendarDurationMinutes(durationText);
+  d.setMinutes(d.getMinutes() + mins);
+  return d.toISOString();
+}
+
+// Mirrors api/availability-slots.js / book.html / api/booking-reminder.js.
+function parseCalendarDurationMinutes(s) {
+  if (!s) return 60;
+  var str = String(s).toLowerCase();
+  var m = str.match(/(\d+(?:\.\d+)?)/);
+  if (!m) return 60;
+  var n = parseFloat(m[1]);
+  if (/hour|hr/.test(str)) return Math.max(5, Math.round(n * 60));
+  return Math.max(5, Math.round(n));
+}
+
+// 5 fixed color buckets so the same service_id always renders the same
+// color across rerenders / sessions / browsers.
+function hashServiceIdToBucket(id) {
+  if (!id) return 0;
+  var hash = 0;
+  for (var i = 0; i < id.length; i++) {
+    hash = ((hash << 5) - hash) + id.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash) % 5;
+}
+
+function handleCalendarEventClick(info) {
+  var props = info.event.extendedProps || {};
+  var startDate = info.event.start;
+  var whenLabel = startDate ? startDate.toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'TBD';
+  $('event-title').textContent = info.event.title;
+  var detailHtml = ''
+    + '<p><strong>When:</strong> ' + escapeHtml(whenLabel) + '</p>'
+    + '<p><strong>Client:</strong> ' + escapeHtml(props.clientName || props.clientEmail || 'Unknown') + '</p>'
+    + '<p><strong>Status:</strong> ' + escapeHtml(props.status || 'confirmed') + '</p>'
+    + (props.durationText ? '<p><strong>Duration:</strong> ' + escapeHtml(props.durationText) + '</p>' : '')
+    + (props.zoomLink && /^https?:\/\//.test(props.zoomLink) ? '<p><strong>Zoom:</strong> <a href="' + escapeHtml(props.zoomLink) + '" target="_blank" rel="noopener">Join</a></p>' : '')
+    + (props.notes ? '<p><strong>Notes:</strong> ' + escapeHtml(props.notes).replace(/\n/g, '<br>') + '</p>' : '');
+  $('event-details').innerHTML = detailHtml;
+
+  $('event-view-session').onclick = function () {
+    // Deep-link target: dashboard reads the `tab` query param at boot. The
+    // booking_id slot is wired up in Phase 2; for now we land on the
+    // Clients tab so the coach can locate the row manually.
+    window.location.href = '/coach-dashboard.html?tab=clients&booking_id=' + encodeURIComponent(props.bookingId);
+  };
+  $('event-reschedule').onclick = function () {
+    alert('Reschedule is coming in Phase 2. For now, cancel this booking and ask the client to rebook from your booking page.');
+  };
+  $('event-cancel').onclick = async function () {
+    if (!confirm('Cancel this booking? Status changes to cancelled. (Cancellation emails ship in Phase 2.)')) return;
+    try {
+      await supabasePatch('coach_bookings', { id: 'eq.' + props.bookingId }, { status: 'cancelled' });
+      closeEventModal();
+      await refreshCalendarEvents();
+    } catch (e) {
+      console.error('[calendar] cancel failed', e);
+      alert('Could not cancel the booking. Please refresh and try again.');
+    }
+  };
+  $('event-no-show').onclick = async function () {
+    if (!confirm('Mark this session as a no-show?')) return;
+    try {
+      await supabasePatch('coach_bookings', { id: 'eq.' + props.bookingId }, { status: 'no_show' });
+      closeEventModal();
+      await refreshCalendarEvents();
+    } catch (e) {
+      console.error('[calendar] no-show patch failed', e);
+      alert('Could not update the booking. Please refresh and try again.');
+    }
+  };
+
+  openEventModal();
+}
+
+function openEventModal() {
+  var m = $('event-modal');
+  if (!m) return;
+  m.classList.add('is-open');
+}
+function closeEventModal() {
+  var m = $('event-modal');
+  if (!m) return;
+  m.classList.remove('is-open');
 }
 
 async function saveReminderSettings() {
