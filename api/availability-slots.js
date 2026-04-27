@@ -126,6 +126,11 @@ export default async function handler(req, res) {
 
   const coachId = String(req.query.coachId || req.query.coach_id || '');
   const serviceId = String(req.query.serviceId || req.query.service_id || '');
+  // PR 3.A: client self-serve reschedule needs to see its own current slot
+  // as available. Without this exclusion the booking the client is about to
+  // *vacate* still blocks itself + its overlap window, leaving the slot
+  // grid lopsided around the client's existing time.
+  const excludeBookingId = String(req.query.excludeBookingId || req.query.exclude_booking_id || '');
   const daysRaw = parseInt(req.query.days || String(DEFAULT_DAYS), 10);
   const days = Number.isFinite(daysRaw) && daysRaw >= 1 && daysRaw <= MAX_DAYS ? daysRaw : DEFAULT_DAYS;
   if (!coachId) return res.status(400).json({ error: 'Missing coachId' });
@@ -206,6 +211,7 @@ export default async function handler(req, res) {
       `${SUPABASE_URL}/rest/v1/coach_bookings`
       + `?coach_id=eq.${coachId}`
       + `&status=in.(confirmed,manual)`
+      + (excludeBookingId ? `&id=neq.${encodeURIComponent(excludeBookingId)}` : '')
       + `&scheduled_at=gte.${encodeURIComponent(winStartUtcIso)}`
       + `&scheduled_at=lte.${encodeURIComponent(winEndUtcIso)}`
       + `&select=scheduled_at,service_id`,

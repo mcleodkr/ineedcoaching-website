@@ -55,7 +55,7 @@ export default async function handler(req, res) {
     const lookup = await fetch(
       `${SUPABASE_URL}/rest/v1/coach_bookings`
         + `?id=eq.${encodeURIComponent(bookingId)}`
-        + `&select=id,client_email,client_name,scheduled_at,notes,service_name,payment_amount_cents,`
+        + `&select=id,client_email,client_name,scheduled_at,notes,service_name,payment_amount_cents,refund_id,refund_amount_cents,refund_status,`
         +   `coach_profiles(display_name,full_name,user_email,slug,timezone),`
         +   `coach_services(title)`
         + `&limit=1`,
@@ -75,6 +75,15 @@ export default async function handler(req, res) {
     const clientName = clientDisplayName(booking);
     const serviceName = service.title || booking.service_name || 'Coaching Session';
     const paid = Number(booking.payment_amount_cents || 0) > 0;
+    // Refund line surfaces ONLY when /api/process-refund landed and stamped
+    // the row. cancelBooking in coach-dashboard.html runs the refund call
+    // before this endpoint, so by the time we read the booking those
+    // columns are populated for paid sessions. For paid bookings without
+    // a successful refund (refund failed, manual handling needed), we fall
+    // back to the softer 'will be processed' line so the client doesn't
+    // wonder where their money went.
+    const hasRefund = !!booking.refund_id && Number(booking.refund_amount_cents || 0) > 0;
+    const refundDollars = hasRefund ? (booking.refund_amount_cents / 100).toFixed(2).replace(/\.00$/, '') : null;
 
     const clientSubject = `Your session with ${coachName} has been cancelled`;
     const clientHtml = `
@@ -85,7 +94,9 @@ export default async function handler(req, res) {
         <div style="background:#f7f4ee;border-radius:8px;padding:20px;margin:20px 0;">
           <p style="margin:6px 0;font-size:0.9rem;"><strong>Session:</strong> ${escapeHtml(serviceName)}</p>
           <p style="margin:6px 0;font-size:0.9rem;"><strong>Was scheduled for:</strong> ${escapeHtml(labels.day)} at ${escapeHtml(labels.time)}</p>
-          ${paid ? `<p style="margin:6px 0;font-size:0.9rem;color:#4a7c59;">💳 If you paid for this session, your refund will be processed by ${escapeHtml(coachName)}'s practice.</p>` : ''}
+          ${hasRefund
+            ? `<p style="margin:6px 0;font-size:0.9rem;color:#4a7c59;">💳 A full refund of $${escapeHtml(refundDollars)} has been processed to your original payment method. It may take 5–10 business days to appear on your statement.</p>`
+            : (paid ? `<p style="margin:6px 0;font-size:0.9rem;color:#4a7c59;">💳 Your refund is being processed by ${escapeHtml(coachName)}'s practice. Reach out if you don't see it within 10 business days.</p>` : '')}
         </div>
         <p style="font-size:0.88rem;line-height:1.6;color:#6b6b60;">If you'd like to reschedule, <a href="https://www.ineedcoaching.org/book?coach=${encodeURIComponent(coachSlug)}" style="color:#c49a3c;text-decoration:none;font-weight:600;">book another session here</a>.</p>
         <p style="font-size:0.78rem;color:#6b6b60;margin-top:24px;">— The <a href="https://www.ineedcoaching.org" style="color:#c49a3c;text-decoration:none;font-weight:600;">ineedcoaching.org</a> team</p>

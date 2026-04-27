@@ -21,6 +21,42 @@ export default async function handler(req, res) {
 
     const booking = bookings[0];
     const coach = booking.coach_profiles;
+
+    // PR 3.A: mint a self-serve reschedule token if one isn't already on the
+    // row. Token is rotated only by re-firing this endpoint AND the column
+    // being NULL — re-confirmations don't reset the token, so a single
+    // booking has a stable reschedule URL. 30-day TTL.
+    let rescheduleToken = booking.reschedule_token;
+    if (!rescheduleToken) {
+      try {
+        const { randomBytes } = await import('crypto');
+        rescheduleToken = randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        const tokenPatch = await fetch(
+          `${SUPABASE_URL}/rest/v1/coach_bookings?id=eq.${booking_id}`,
+          {
+            method: 'PATCH',
+            headers: {
+              apikey: SUPABASE_KEY,
+              Authorization: `Bearer ${SUPABASE_KEY}`,
+              'Content-Type': 'application/json',
+              Prefer: 'return=minimal',
+            },
+            body: JSON.stringify({ reschedule_token: rescheduleToken, reschedule_token_expires_at: expiresAt }),
+          }
+        );
+        if (!tokenPatch.ok) {
+          console.warn('[booking-confirmation] reschedule token patch failed', tokenPatch.status);
+          rescheduleToken = '';
+        }
+      } catch (tokErr) {
+        console.warn('[booking-confirmation] reschedule token mint failed', tokErr && tokErr.message);
+        rescheduleToken = '';
+      }
+    }
+    const rescheduleLink = rescheduleToken
+      ? `https://www.ineedcoaching.org/reschedule?booking_id=${encodeURIComponent(booking_id)}&token=${encodeURIComponent(rescheduleToken)}`
+      : '';
     const clientName = booking.client_name || booking.client_email;
     const coachName = coach.display_name || 'Your Coach';
     const serviceName = booking.service_name || 'Coaching Session';
@@ -62,7 +98,7 @@ export default async function handler(req, res) {
           <p style="margin:4px 0;font-size:0.9rem;"><strong>Date & Time:</strong> ${sessionDate}</p>
           <p style="margin:4px 0;font-size:0.9rem;"><strong>Meeting Link:</strong> ${zoomLink.startsWith('http') ? `<a href="${zoomLink}" style="color:#c49a3c;">${zoomLink}</a>` : zoomLink}</p>
         </div>
-        <p style="font-size:0.85rem;color:#6b6b60;">If you need to reschedule, reply to this email.</p>
+        <p style="font-size:0.85rem;color:#6b6b60;">${rescheduleLink ? `Need a different time? <a href="${rescheduleLink}" style="color:#c49a3c;text-decoration:none;font-weight:600;">Reschedule here</a> &mdash; or just reply to this email.` : 'If you need to reschedule, reply to this email.'}</p>
         <p style="font-size:0.82rem;color:#6b6b60;margin-top:24px;">— The <a href="https://www.ineedcoaching.org" style="color:#c49a3c;text-decoration:none;font-weight:600;">ineedcoaching.org</a> team</p>
       </div>`;
 

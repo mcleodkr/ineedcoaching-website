@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reschedule your session — ineedcoaching.org</title>
+<meta name="description" content="Pick a new time for your coaching session.">
+<meta name="robots" content="noindex,nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #1a3a52;
+  --forest: #4a7c59;
+  --cream: #f7f4ee;
+  --warm: #ffffff;
+  --gold: #c49a3c;
+  --gold-hover: #a87d1f;
+  --muted: #6b6b60;
+  --border: #e0ddd5;
+  --r: 14px;
+  --r-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); color: var(--ink); }
+
+nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; align-items: center; justify-content: space-between; padding: 14px 52px; background: rgba(26,58,82,0.95); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(255,255,255,0.1); }
+.book-nav .logo { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: #f7f4ee; text-decoration: none; }
+.book-nav .logo .brand-i, .book-nav .logo .brand-coaching { color: var(--gold); font-style: italic; }
+
+.shell { padding: 110px 24px 80px; max-width: 720px; margin: 0 auto; }
+.loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 16px; }
+.loading-spinner { width: 44px; height: 44px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.error-state { text-align: center; padding: 80px 24px; }
+.error-state h1 { font-family: 'Playfair Display', serif; font-size: 2rem; color: var(--ink); margin-bottom: 12px; }
+.error-state p { color: var(--muted); font-size: 1rem; max-width: 440px; margin: 0 auto 24px; line-height: 1.6; }
+.error-state .btn-back { display: inline-flex; align-items: center; gap: 6px; padding: 12px 24px; border-radius: 50px; border: 1.5px solid var(--border); color: var(--ink); text-decoration: none; font-weight: 700; font-size: 0.85rem; transition: all 0.2s; }
+.error-state .btn-back:hover { border-color: var(--gold); color: var(--gold); }
+
+.card { background: var(--warm); border: 1px solid var(--border); border-radius: var(--r); padding: 28px 32px; box-shadow: 0 2px 12px rgba(26,58,82,0.04); margin-bottom: 20px; }
+.card h1 { font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; line-height: 1.2; }
+.card .lead { font-size: 0.92rem; color: var(--muted); line-height: 1.55; margin-bottom: 18px; }
+
+.summary-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; font-size: 0.88rem; border-bottom: 1px dashed var(--border); }
+.summary-row:last-child { border-bottom: none; }
+.summary-key { color: var(--muted); font-weight: 600; }
+.summary-val { color: var(--ink); font-weight: 700; text-align: right; }
+
+.tz-note { font-size: 0.78rem; color: var(--muted); margin: 4px 0 16px; padding: 10px 14px; background: var(--cream); border-left: 3px solid var(--gold); border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.slot-day { margin-bottom: 22px; }
+.slot-day-label { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 700; color: var(--ink); margin-bottom: 10px; }
+.slot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+.slot-chip { padding: 10px 8px; border: 1.5px solid var(--border); border-radius: var(--r-sm); background: var(--warm); color: var(--ink); font-family: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
+.slot-chip:hover { border-color: var(--gold); color: var(--gold); transform: translateY(-1px); }
+.slot-chip.is-selected { background: var(--gold); border-color: var(--gold); color: var(--warm); }
+.slot-empty { padding: 24px; text-align: center; color: var(--muted); font-size: 0.9rem; background: var(--cream); border-radius: var(--r-sm); border: 1px dashed var(--border); }
+.slot-loading { padding: 32px; text-align: center; }
+.slot-loading .loading-spinner { width: 32px; height: 32px; border-width: 2px; margin: 0 auto; }
+
+.btn-row { display: flex; gap: 10px; align-items: center; margin-top: 18px; }
+.btn-gold { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--gold); color: var(--warm); padding: 14px 28px; border-radius: 50px; font-family: inherit; font-size: 0.92rem; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
+.btn-gold:hover:not(:disabled) { background: var(--gold-hover); transform: translateY(-1px); }
+.btn-gold:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-link { background: none; border: none; color: var(--muted); font-family: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; padding: 8px 4px; text-decoration: underline; }
+.btn-link:hover { color: var(--ink); }
+.form-error { display: none; padding: 10px 14px; background: rgba(196,68,68,0.08); border-left: 3px solid #c44; border-radius: 0 var(--r-sm) var(--r-sm) 0; font-size: 0.85rem; color: #8a2828; margin: 10px 0; }
+.form-error.is-shown { display: block; }
+
+.success-card { background: var(--warm); border: 1px solid var(--border); border-radius: var(--r); padding: 48px 36px; text-align: center; box-shadow: 0 2px 12px rgba(26,58,82,0.04); }
+.success-check { width: 64px; height: 64px; border-radius: 50%; background: rgba(74,124,89,0.14); color: var(--forest); display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; font-size: 1.8rem; font-weight: 800; }
+.success-title { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--ink); margin-bottom: 8px; }
+.success-sub { color: var(--muted); font-size: 0.95rem; margin-bottom: 26px; line-height: 1.6; max-width: 460px; margin-left: auto; margin-right: auto; }
+
+.book-footer { background: var(--ink); padding: 28px 24px; text-align: center; }
+.book-footer .powered { font-size: 0.8rem; color: rgba(247,244,238,0.55); }
+.book-footer .powered a { color: var(--gold); text-decoration: none; }
+.book-footer .powered a:hover { text-decoration: underline; }
+
+@media (max-width: 640px) {
+  nav.book-nav { padding: 12px 20px; }
+  .shell { padding: 90px 16px 60px; }
+  .card { padding: 22px 20px; }
+  .slot-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+  .success-card { padding: 36px 22px; }
+}
+.hidden { display: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<nav class="book-nav">
+  <a href="/" class="logo"><span class="brand-i">i</span>need<span class="brand-coaching">coaching</span>.org</a>
+</nav>
+
+<div id="state-loading" class="loading-state">
+  <div class="loading-spinner"></div>
+  <p style="color:var(--muted);font-size:0.9rem;">Loading your booking…</p>
+</div>
+
+<div id="state-error" class="error-state hidden">
+  <h1 id="error-title">This reschedule link isn't valid</h1>
+  <p id="error-message">Your link may have expired, already been used to cancel the booking, or doesn't match a booking we can find. If you need help, reply to your confirmation email.</p>
+  <a href="/" class="btn-back">&larr; Back to ineedcoaching.org</a>
+</div>
+
+<div id="state-main" class="shell hidden">
+  <div class="card">
+    <h1>Reschedule your session</h1>
+    <p class="lead" id="lead-text">Pick a new time below. Your coach will be notified by email.</p>
+    <div id="current-summary"></div>
+  </div>
+
+  <div class="card">
+    <div style="font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;color:var(--ink);margin-bottom:6px;">Choose a new time</div>
+    <div id="slot-tz-note" class="tz-note hidden"></div>
+    <div id="slot-body"></div>
+    <div id="reschedule-error" class="form-error"></div>
+    <div class="btn-row">
+      <button type="button" id="confirm-btn" class="btn-gold" disabled>Confirm new time</button>
+      <a href="/" class="btn-link">Cancel</a>
+    </div>
+  </div>
+</div>
+
+<div id="state-success" class="shell hidden">
+  <div class="success-card">
+    <div class="success-check">&#10003;</div>
+    <div class="success-title">Your session is rescheduled</div>
+    <div class="success-sub" id="success-sub">A confirmation is on its way to your inbox.</div>
+    <div id="success-summary" style="max-width:420px;margin:0 auto 24px;text-align:left;"></div>
+  </div>
+</div>
+
+<footer class="book-footer">
+  <div class="powered">Powered by <a href="https://www.ineedcoaching.org">ineedcoaching.org</a></div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+  var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+  var REST = SUPABASE_URL + '/rest/v1';
+  var HEADERS_GET = { apikey: ANON_KEY, Authorization: 'Bearer ' + ANON_KEY };
+  var HEADERS_WRITE = {
+    apikey: ANON_KEY,
+    Authorization: 'Bearer ' + ANON_KEY,
+    'Content-Type': 'application/json',
+    Prefer: 'return=minimal',
+  };
+
+  function $(id) { return document.getElementById(id); }
+  function escapeHtml(s) {
+    if (s === null || s === undefined) return '';
+    var d = document.createElement('div');
+    d.textContent = String(s);
+    return d.innerHTML;
+  }
+  function parseDurationMinutes(s) {
+    if (!s) return 60;
+    var str = String(s).toLowerCase();
+    var m = str.match(/(\d+(?:\.\d+)?)/);
+    if (!m) return 60;
+    var n = parseFloat(m[1]);
+    if (/hour|hr/.test(str)) return Math.max(5, Math.round(n * 60));
+    return Math.max(5, Math.round(n));
+  }
+
+  function showError(title, msg) {
+    $('state-loading').classList.add('hidden');
+    $('state-main').classList.add('hidden');
+    $('state-success').classList.add('hidden');
+    if (title) $('error-title').textContent = title;
+    if (msg) $('error-message').textContent = msg;
+    $('state-error').classList.remove('hidden');
+  }
+  function showMain() {
+    $('state-loading').classList.add('hidden');
+    $('state-error').classList.add('hidden');
+    $('state-success').classList.add('hidden');
+    $('state-main').classList.remove('hidden');
+  }
+  function showSuccess() {
+    $('state-loading').classList.add('hidden');
+    $('state-error').classList.add('hidden');
+    $('state-main').classList.add('hidden');
+    $('state-success').classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  var booking = null;
+  var coach = null;
+  var service = null;
+  var coachTz = 'America/Chicago';
+  var selectedSlot = null;
+
+  function formatScheduledLabels(utcIso, tz) {
+    if (!utcIso) return { day: 'TBD', time: 'TBD', tzLabel: '' };
+    var d = new Date(utcIso);
+    if (isNaN(d.getTime())) return { day: 'TBD', time: 'TBD', tzLabel: '' };
+    var opts = { timeZone: tz || 'America/Chicago' };
+    var day = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: opts.timeZone });
+    var time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: opts.timeZone });
+    var tzLabel = '';
+    try {
+      var fmt = new Intl.DateTimeFormat('en-US', { timeZone: opts.timeZone, timeZoneName: 'short' });
+      var parts = fmt.formatToParts(d);
+      var tzPart = parts.find(function (p) { return p.type === 'timeZoneName'; });
+      tzLabel = tzPart ? tzPart.value : '';
+    } catch (e) { tzLabel = ''; }
+    return { day: day, time: time, tzLabel: tzLabel };
+  }
+
+  async function init() {
+    var p = new URLSearchParams(window.location.search);
+    var bookingId = p.get('booking_id') || '';
+    var token = p.get('token') || '';
+    if (!bookingId || !token) {
+      showError('Missing reschedule link', 'This page needs a booking link from your confirmation email.');
+      return;
+    }
+    try {
+      var url = REST + '/coach_bookings'
+        + '?id=eq.' + encodeURIComponent(bookingId)
+        + '&select=id,client_email,client_name,scheduled_at,service_id,service_name,status,reschedule_token,reschedule_token_expires_at,'
+        +   'coach_profiles(id,slug,display_name,full_name,timezone),'
+        +   'coach_services(id,title,duration)'
+        + '&limit=1';
+      var res = await fetch(url, { headers: HEADERS_GET });
+      if (!res.ok) throw new Error('lookup failed');
+      var rows = await res.json();
+      booking = rows && rows[0];
+      if (!booking) { showError(); return; }
+      // Auth gates: token must match exactly, must not be expired, and the
+      // booking must still be live (no reschedule on cancelled/no_show rows).
+      if (!booking.reschedule_token || booking.reschedule_token !== token) { showError(); return; }
+      if (booking.reschedule_token_expires_at && new Date(booking.reschedule_token_expires_at).getTime() < Date.now()) {
+        showError('Your reschedule link has expired', 'Reach out to your coach by replying to your confirmation email.');
+        return;
+      }
+      if (booking.status !== 'confirmed' && booking.status !== 'manual') {
+        showError('This booking can’t be rescheduled', 'It looks like this session was already cancelled or marked as a no-show. Reply to your confirmation email if you need help.');
+        return;
+      }
+      coach = booking.coach_profiles || {};
+      service = booking.coach_services || {};
+      coachTz = coach.timezone || coachTz;
+      renderCurrentSummary();
+      await loadSlots();
+      showMain();
+    } catch (err) {
+      console.error('[reschedule] init', err);
+      showError('Something went wrong', 'Try refreshing, or reply to your confirmation email if it keeps happening.');
+    }
+  }
+
+  function renderCurrentSummary() {
+    var labels = formatScheduledLabels(booking.scheduled_at, coachTz);
+    var coachName = coach.display_name || coach.full_name || 'Your coach';
+    var sessionTitle = service.title || booking.service_name || 'Coaching session';
+    var html = ''
+      + row('Session', sessionTitle)
+      + row('Coach', coachName)
+      + row('Currently', labels.day + ' at ' + labels.time);
+    $('current-summary').innerHTML = html;
+    function row(k, v) {
+      return '<div class="summary-row"><span class="summary-key">' + escapeHtml(k) + '</span><span class="summary-val">' + escapeHtml(v) + '</span></div>';
+    }
+  }
+
+  async function loadSlots() {
+    var body = $('slot-body');
+    var tzNote = $('slot-tz-note');
+    body.innerHTML = '<div class="slot-loading"><div class="loading-spinner"></div></div>';
+    if (!service.id) {
+      body.innerHTML = '<div class="slot-empty">We can’t pull this coach’s availability right now. Reply to your confirmation email for help.</div>';
+      return;
+    }
+    try {
+      var url = '/api/availability-slots'
+        + '?coachId=' + encodeURIComponent(coach.id)
+        + '&serviceId=' + encodeURIComponent(service.id)
+        + '&excludeBookingId=' + encodeURIComponent(booking.id)
+        + '&days=14';
+      var res = await fetch(url);
+      if (!res.ok) throw new Error('slots ' + res.status);
+      var data = await res.json();
+      coachTz = data.coach_timezone || coachTz;
+      tzNote.textContent = 'All times shown in your coach’s timezone (' + coachTz + ').';
+      tzNote.classList.remove('hidden');
+      renderSlots(data.slots || []);
+    } catch (err) {
+      console.error('[reschedule] loadSlots', err);
+      body.innerHTML = '<div class="slot-empty">We couldn’t load openings right now. Please refresh and try again.</div>';
+    }
+  }
+
+  function renderSlots(slots) {
+    var body = $('slot-body');
+    if (!slots.length) {
+      body.innerHTML = '<div class="slot-empty">No openings in the next 14 days. Reply to your confirmation email and your coach can sort a time with you directly.</div>';
+      return;
+    }
+    var byDay = {};
+    var order = [];
+    slots.forEach(function (s) {
+      var iso = s.datetime || '';
+      var dateKey = iso.slice(0, 10);
+      var hh = parseInt(iso.slice(11, 13), 10);
+      var mm = parseInt(iso.slice(14, 16), 10);
+      if (!Number.isFinite(hh) || !Number.isFinite(mm)) return;
+      if (!byDay[dateKey]) {
+        byDay[dateKey] = { label: formatDayLabel(dateKey), times: [] };
+        order.push(dateKey);
+      }
+      var ampm = hh >= 12 ? 'PM' : 'AM';
+      var h12 = hh % 12 === 0 ? 12 : hh % 12;
+      var mmStr = mm < 10 ? '0' + mm : String(mm);
+      byDay[dateKey].times.push({ iso: iso, label: h12 + ':' + mmStr + ' ' + ampm });
+    });
+    order.sort();
+    body.innerHTML = order.map(function (k) {
+      var g = byDay[k];
+      var chips = g.times.map(function (t) {
+        return '<button type="button" class="slot-chip" data-iso="' + escapeHtml(t.iso) + '" data-day="' + escapeHtml(g.label) + '" data-time="' + escapeHtml(t.label) + '">' + escapeHtml(t.label) + '</button>';
+      }).join('');
+      return '<div class="slot-day"><div class="slot-day-label">' + escapeHtml(g.label) + '</div><div class="slot-grid">' + chips + '</div></div>';
+    }).join('');
+    Array.prototype.forEach.call(body.querySelectorAll('.slot-chip'), function (chip) {
+      chip.addEventListener('click', function () {
+        Array.prototype.forEach.call(body.querySelectorAll('.slot-chip'), function (c) { c.classList.remove('is-selected'); });
+        chip.classList.add('is-selected');
+        selectedSlot = { iso: chip.dataset.iso, day: chip.dataset.day, time: chip.dataset.time };
+        $('confirm-btn').disabled = false;
+      });
+    });
+  }
+
+  function formatDayLabel(dateKey) {
+    var parts = dateKey.split('-');
+    var d = new Date(Date.UTC(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), 12, 0, 0));
+    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' });
+  }
+
+  $('confirm-btn').addEventListener('click', async function () {
+    if (!selectedSlot) return;
+    var btn = $('confirm-btn');
+    var errEl = $('reschedule-error');
+    errEl.classList.remove('is-shown');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    try {
+      var patchRes = await fetch(REST + '/coach_bookings?id=eq.' + encodeURIComponent(booking.id), {
+        method: 'PATCH',
+        headers: HEADERS_WRITE,
+        body: JSON.stringify({ scheduled_at: selectedSlot.iso }),
+      });
+      if (!patchRes.ok && patchRes.status !== 204) throw new Error('patch ' + patchRes.status);
+      // Email coach + client. Best-effort — the row is already updated.
+      try {
+        await fetch('/api/booking-rescheduled', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ booking_id: booking.id }),
+        });
+      } catch (mailErr) { console.warn('[reschedule] email failed', mailErr); }
+      $('success-summary').innerHTML = ''
+        + summaryRow('Session', service.title || booking.service_name || 'Coaching session')
+        + summaryRow('Coach', coach.display_name || coach.full_name || 'Your coach')
+        + summaryRow('New time', selectedSlot.day + ' at ' + selectedSlot.time);
+      $('success-sub').textContent = 'A confirmation is on its way to ' + (booking.client_email || 'your inbox') + '.';
+      showSuccess();
+    } catch (err) {
+      console.error('[reschedule] confirm', err);
+      errEl.textContent = 'Something went wrong saving your new time. Please refresh and try again.';
+      errEl.classList.add('is-shown');
+      btn.disabled = false;
+      btn.textContent = 'Confirm new time';
+    }
+  });
+
+  function summaryRow(k, v) {
+    return '<div class="summary-row"><span class="summary-key">' + escapeHtml(k) + '</span><span class="summary-val">' + escapeHtml(v) + '</span></div>';
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

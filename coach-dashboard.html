@@ -1517,6 +1517,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
             <option value="timeGridWeek">Week</option>
             <option value="dayGridMonth">Month</option>
           </select>
+          <button type="button" id="cal-export" class="cal-btn" title="Download next 90 days as a .ics file">📅 Export .ics</button>
         </div>
 
         <!-- Filters (PR 2.A) — narrow the events the calendar renders.
@@ -4297,6 +4298,14 @@ async function initCalendar() {
     headerToolbar: false, // we render our own controls
     events: function (fetchInfo, success) { success(buildCalendarEvents()); },
     eventClick: handleCalendarEventClick,
+    // PR 3.A: drag-to-reschedule. eventStartEditable lets the coach drag
+    // events to a new start; eventDurationEditable=false locks the duration
+    // (matches the session-type's configured length — coaches change that
+    // via Session Types, not by stretching events on the grid).
+    editable: true,
+    eventStartEditable: true,
+    eventDurationEditable: false,
+    eventDrop: handleCalendarEventDrop,
     height: 'auto',
     slotMinTime: '06:00:00',
     slotMaxTime: '22:00:00',
@@ -4315,6 +4324,20 @@ async function initCalendar() {
   $('cal-today').onclick = function () { calendar.today(); };
   $('cal-next').onclick = function () { calendar.next(); };
   $('cal-view').onchange = function (e) { calendar.changeView(e.target.value); };
+  // PR 3.A: download the next 90 days as a .ics file. The endpoint sets
+  // Content-Disposition: attachment, so the browser triggers a download
+  // rather than navigating away.
+  var exportBtn = $('cal-export');
+  if (exportBtn) exportBtn.onclick = function () {
+    if (!coachProfile || !coachProfile.id) return;
+    var startIso = new Date().toISOString();
+    var endIso = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+    var url = '/api/export-calendar'
+      + '?coach_id=' + encodeURIComponent(coachProfile.id)
+      + '&start=' + encodeURIComponent(startIso)
+      + '&end=' + encodeURIComponent(endIso);
+    window.location.href = url;
+  };
 
   // Filter controls (PR 2.A). Client name is debounced lightly so we don't
   // hit Supabase on every keystroke — the actual fetch already filters
@@ -4532,10 +4555,30 @@ function handleCalendarEventClick(info) {
   openEventModal();
 }
 
-// Status patch + email side-effect — extracted so the cancel/no-show flow
-// from the calendar event modal stays small and testable.
+// Status patch + refund + email side-effects — sequenced so the email
+// reads the refund_* columns the refund endpoint just stamped.
 async function cancelBooking(bookingId) {
   await supabasePatch('coach_bookings', { id: 'eq.' + bookingId }, { status: 'cancelled' });
+  // PR 3.A: process Stripe refund (no-op for free / unpaid bookings).
+  // Refund failure is logged but doesn't block the cancellation flow —
+  // the booking is already cancelled in the DB; the email will fall back
+  // to the softer 'refund being processed by your coach's practice' line
+  // that booking-cancelled.js renders when refund_id is null.
+  try {
+    var refundRes = await fetch('/api/process-refund', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ booking_id: bookingId }),
+    });
+    if (refundRes.ok) {
+      var refundData = await refundRes.json().catch(function () { return {}; });
+      if (refundData.refunded) console.log('[calendar] refund processed', refundData.refund_id);
+    } else {
+      console.warn('[calendar] refund endpoint returned', refundRes.status);
+    }
+  } catch (e) {
+    console.warn('[calendar] refund processing failed', e);
+  }
   // Email is best-effort: a transient Resend hiccup shouldn't undo the
   // status change, which is the source of truth for the dashboard.
   try {
@@ -4546,6 +4589,39 @@ async function cancelBooking(bookingId) {
     });
   } catch (e) {
     console.warn('[calendar] cancellation email failed', e);
+  }
+}
+
+// Drag-to-reschedule handler. FullCalendar fires this after a user drops an
+// event on a new slot. We confirm explicitly because drag is easy to do by
+// accident; on cancel or any error, info.revert() puts the event back.
+async function handleCalendarEventDrop(info) {
+  var bookingId = info.event.extendedProps && info.event.extendedProps.bookingId;
+  var newStart = info.event.start;
+  if (!bookingId || !newStart) { info.revert(); return; }
+  var label = newStart.toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  if (!confirm('Reschedule this session to ' + label + '? The client will be emailed.')) {
+    info.revert();
+    return;
+  }
+  try {
+    await supabasePatch('coach_bookings', { id: 'eq.' + bookingId }, { scheduled_at: newStart.toISOString() });
+    try {
+      await fetch('/api/booking-rescheduled', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ booking_id: bookingId }),
+      });
+    } catch (mailErr) {
+      console.warn('[calendar] drag-reschedule email failed', mailErr);
+    }
+    // Refresh so the cached row reflects the new scheduled_at, otherwise
+    // the next event-modal click would still see the stale value.
+    await refreshCalendarEvents();
+  } catch (e) {
+    console.error('[calendar] drag-reschedule patch failed', e);
+    alert('Could not save the new time. Please refresh and try again.');
+    info.revert();
   }
 }
 
