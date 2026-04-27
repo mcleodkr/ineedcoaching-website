@@ -1412,6 +1412,51 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
           <span class="save-msg" id="save-availability-msg">Saved</span>
         </div>
       </div>
+
+      <!-- Blocked Dates — vacations, personal appointments, one-off conflicts.
+           Read/written from coach_blocked_times. The slot-availability endpoint
+           subtracts these before returning bookable times. -->
+      <div class="form-section" id="blocked-times-section">
+        <h2 class="form-section-title">Blocked Dates</h2>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">Mark vacations, personal appointments, or any specific times you do not want to be bookable. Each entry overrides your weekly availability.</p>
+
+        <div id="blocked-times-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;"></div>
+
+        <div style="border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;background:var(--white);">
+          <div style="font-size:0.82rem;font-weight:600;color:var(--ink);margin-bottom:10px;">Block a new date</div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <label for="block-date" style="font-size:0.76rem;color:var(--muted);">Date</label>
+              <input type="date" id="block-date" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'Cabinet Grotesk',sans-serif;font-size:0.85rem;background:var(--cream);color:var(--ink);">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <label style="font-size:0.76rem;color:var(--muted);">Type</label>
+              <select id="block-mode" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'Cabinet Grotesk',sans-serif;font-size:0.85rem;background:var(--cream);color:var(--ink);">
+                <option value="all_day" selected>All day</option>
+                <option value="range">Time range</option>
+              </select>
+            </div>
+            <div id="block-range-fields" style="display:none;flex-direction:row;gap:8px;align-items:flex-end;">
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label for="block-start" style="font-size:0.76rem;color:var(--muted);">From</label>
+                <input type="time" id="block-start" value="09:00" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'Cabinet Grotesk',sans-serif;font-size:0.85rem;background:var(--cream);color:var(--ink);">
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label for="block-end" style="font-size:0.76rem;color:var(--muted);">To</label>
+                <input type="time" id="block-end" value="17:00" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'Cabinet Grotesk',sans-serif;font-size:0.85rem;background:var(--cream);color:var(--ink);">
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:180px;">
+              <label for="block-reason" style="font-size:0.76rem;color:var(--muted);">Reason (optional)</label>
+              <input type="text" id="block-reason" placeholder="Vacation, appointment…" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'Cabinet Grotesk',sans-serif;font-size:0.85rem;background:var(--cream);color:var(--ink);">
+            </div>
+          </div>
+          <div style="margin-top:14px;">
+            <button class="save-btn" id="add-blocked-time-btn">Add block</button>
+            <span class="save-msg" id="add-blocked-time-msg">Saved</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- CLIENTS TAB -->
@@ -3592,6 +3637,144 @@ function loadScheduling() {
   $('f-calendly-url').addEventListener('input', function() {
     $('availability-section').style.display = this.value.trim() ? 'none' : '';
   });
+
+  // Wire Blocked Dates UI — toggle range fields, list current blocks, add/remove.
+  var blockMode = $('block-mode');
+  if (blockMode) {
+    blockMode.addEventListener('change', function() {
+      $('block-range-fields').style.display = this.value === 'range' ? 'flex' : 'none';
+    });
+  }
+  var addBlockBtn = $('add-blocked-time-btn');
+  if (addBlockBtn) addBlockBtn.onclick = addBlockedTime;
+  loadBlockedTimes();
+}
+
+// Load + render existing blocked times in the Scheduling tab.
+async function loadBlockedTimes() {
+  var listEl = $('blocked-times-list');
+  if (!listEl) return;
+  listEl.innerHTML = '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;">Loading…</div>';
+  try {
+    var todayIso = new Date().toISOString().slice(0, 10);
+    var url = SUPABASE_URL + '/rest/v1/coach_blocked_times?coach_id=eq.' + coachProfile.id
+      + '&blocked_date=gte.' + todayIso
+      + '&order=blocked_date.asc'
+      + '&select=id,blocked_date,start_time,end_time,all_day,reason';
+    var res = await fetch(url, { headers: apiHeaders() });
+    if (!res.ok) throw new Error('Failed to load blocked times: ' + res.status);
+    var rows = await res.json();
+    if (!Array.isArray(rows) || rows.length === 0) {
+      listEl.innerHTML = '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;padding:8px 0;">No upcoming blocks.</div>';
+      return;
+    }
+    listEl.innerHTML = rows.map(function(r) {
+      var dateStr = new Date(r.blocked_date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+      var timeLabel = r.all_day ? 'All day' : (formatTimeShort(r.start_time) + ' – ' + formatTimeShort(r.end_time));
+      var reason = r.reason ? '<span style="color:var(--muted);font-style:italic;margin-left:8px;">' + escapeHtml(r.reason) + '</span>' : '';
+      return '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);">'
+        + '<div style="font-size:0.85rem;color:var(--ink);">'
+        +   '<strong>' + escapeHtml(dateStr) + '</strong>'
+        +   '<span style="color:var(--muted);margin-left:8px;">' + escapeHtml(timeLabel) + '</span>'
+        +   reason
+        + '</div>'
+        + '<button class="remove-block-btn" data-block-id="' + escapeHtml(r.id) + '" style="font-size:0.76rem;color:#c44;background:none;border:1px solid #c44;border-radius:50px;padding:4px 12px;cursor:pointer;">Remove</button>'
+        + '</div>';
+    }).join('');
+    // Wire remove buttons
+    listEl.querySelectorAll('.remove-block-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() { removeBlockedTime(this.dataset.blockId); });
+    });
+  } catch (e) {
+    console.error('[loadBlockedTimes]', e);
+    listEl.innerHTML = '<div style="color:#c44;font-size:0.82rem;">Error loading blocks: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function formatTimeShort(t) {
+  if (!t) return '';
+  var parts = String(t).split(':');
+  var h = parseInt(parts[0], 10);
+  var m = parts[1] || '00';
+  var ampm = h >= 12 ? 'PM' : 'AM';
+  var h12 = h % 12 || 12;
+  return h12 + ':' + m + ' ' + ampm;
+}
+
+async function addBlockedTime() {
+  var btn = $('add-blocked-time-btn');
+  var msg = $('add-blocked-time-msg');
+  var date = $('block-date').value;
+  var mode = $('block-mode').value;
+  var reason = $('block-reason').value.trim();
+  if (!date) {
+    msg.textContent = 'Pick a date.';
+    msg.style.color = '#c44';
+    msg.classList.add('show');
+    return;
+  }
+  var allDay = mode === 'all_day';
+  var startTime = allDay ? null : $('block-start').value;
+  var endTime = allDay ? null : $('block-end').value;
+  if (!allDay && (!startTime || !endTime || endTime <= startTime)) {
+    msg.textContent = 'End time must be after start.';
+    msg.style.color = '#c44';
+    msg.classList.add('show');
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Adding...';
+  msg.classList.remove('show');
+  try {
+    var row = {
+      coach_id: coachProfile.id,
+      blocked_date: date,
+      all_day: allDay,
+      start_time: startTime,
+      end_time: endTime,
+      reason: reason || null,
+    };
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_blocked_times', {
+      method: 'POST',
+      headers: { ...apiHeaders(), Prefer: 'return=minimal' },
+      body: JSON.stringify(row),
+    });
+    if (!res.ok) {
+      var body = await res.text();
+      throw new Error('Insert failed: ' + res.status + ' ' + body);
+    }
+    // Clear the form, reload list
+    $('block-date').value = '';
+    $('block-reason').value = '';
+    msg.textContent = 'Added.';
+    msg.style.color = 'var(--forest)';
+    msg.classList.add('show');
+    setTimeout(function() { msg.classList.remove('show'); }, 2500);
+    loadBlockedTimes();
+  } catch (e) {
+    console.error('[addBlockedTime]', e);
+    msg.textContent = 'Error: ' + e.message;
+    msg.style.color = '#c44';
+    msg.classList.add('show');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Add block';
+}
+
+async function removeBlockedTime(id) {
+  if (!id) return;
+  if (!confirm('Remove this block? This cannot be undone.')) return;
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_blocked_times?id=eq.' + encodeURIComponent(id), {
+      method: 'DELETE',
+      headers: apiHeaders(),
+    });
+    if (!res.ok) throw new Error('Delete failed: ' + res.status);
+    loadBlockedTimes();
+  } catch (e) {
+    console.error('[removeBlockedTime]', e);
+    alert('Error removing block: ' + e.message);
+  }
 }
 
 async function saveCalendlyUrl() {
@@ -3647,6 +3830,10 @@ async function saveZoomLink() {
   btn.textContent = 'Save Meeting Link';
 }
 
+// Day name → integer mapping used by both the legacy JSONB shape and the
+// normalized coach_weekly_availability table (0=Sunday … 6=Saturday).
+var DAY_NAME_TO_INDEX = { Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6 };
+
 async function saveAvailability() {
   var btn = $('save-availability-btn');
   var msg = $('save-availability-msg');
@@ -3662,13 +3849,46 @@ async function saveAvailability() {
       var end = document.querySelector('.avail-end[data-day="' + day + '"]').value;
       availability.push({ day: day, start: start, end: end });
     });
+    // Dual-write: keep the legacy JSONB on coach_profiles (read by
+    // coach-profile.html) and replace rows in the normalized
+    // coach_weekly_availability (read by the booking flow / slot endpoint).
+    // Replace strategy is "delete-then-insert" — simpler and correct because
+    // the UI submits the full edited set every time.
     await supabasePatch('coach_profiles', { id: 'eq.' + coachProfile.id }, { weekly_availability: availability });
     coachProfile.weekly_availability = availability;
+
+    var delRes = await fetch(SUPABASE_URL + '/rest/v1/coach_weekly_availability?coach_id=eq.' + coachProfile.id, {
+      method: 'DELETE',
+      headers: apiHeaders(),
+    });
+    if (!delRes.ok) throw new Error('Failed to clear normalized availability: ' + delRes.status);
+
+    if (availability.length) {
+      var rows = availability.map(function(a) {
+        return {
+          coach_id: coachProfile.id,
+          day_of_week: DAY_NAME_TO_INDEX[a.day],
+          start_time: a.start,
+          end_time: a.end,
+          active: true,
+        };
+      }).filter(function(r) { return r.day_of_week !== undefined; });
+      if (rows.length) {
+        var insRes = await fetch(SUPABASE_URL + '/rest/v1/coach_weekly_availability', {
+          method: 'POST',
+          headers: { ...apiHeaders(), Prefer: 'return=minimal' },
+          body: JSON.stringify(rows),
+        });
+        if (!insRes.ok) throw new Error('Failed to write normalized availability: ' + insRes.status);
+      }
+    }
+
     msg.textContent = 'Saved';
     msg.style.color = 'var(--forest)';
     msg.classList.add('show');
     setTimeout(function() { msg.classList.remove('show'); }, 3000);
   } catch (e) {
+    console.error('[saveAvailability]', e);
     msg.textContent = 'Error saving.';
     msg.style.color = '#c44';
     msg.classList.add('show');
