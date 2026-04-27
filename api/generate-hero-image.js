@@ -22,7 +22,7 @@ export default async function handler(req, res) {
       'Content-Type': 'application/json',
     };
 
-    // 1. Generate image via OpenAI gpt-image-1
+    // 1. Generate image via OpenAI dall-e-3
     const prompt = `Editorial hero image for an article titled '${title}' about ${category || 'coaching'}. Warm professional photography style. Color palette: navy blue #1a3a52, gold #c49a3c, and cream. No text, no words, no letters in the image. Cinematic lighting, high quality.`;
 
     const openaiRes = await fetch('https://api.openai.com/v1/images/generations', {
@@ -32,7 +32,7 @@ export default async function handler(req, res) {
         Authorization: `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'gpt-image-1',
+        model: 'dall-e-3',
         prompt,
         n: 1,
         size: '1792x1024',
