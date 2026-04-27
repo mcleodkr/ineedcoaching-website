@@ -1403,6 +1403,19 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
         </div>
       </div>
 
+      <!-- Session Types — what clients can book. Stored in coach_services.
+           Soft-delete only (is_active=false) because coach_bookings.service_id
+           references this row. Slot granularity is per-service so a clarity
+           call can offer 15-min increments while a 90-min intensive uses 60. -->
+      <div class="form-section" id="session-types-section">
+        <h2 class="form-section-title">Session Types</h2>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">What clients can book with you. Each type has its own duration, price, and slot increment.</p>
+
+        <div id="session-types-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;"></div>
+
+        <button class="save-btn" id="add-session-type-btn">+ Add session type</button>
+      </div>
+
       <div class="form-section" id="availability-section">
         <h2 class="form-section-title">Weekly Availability</h2>
         <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">Set your available hours for each day. Only shown if you do not use an external scheduler.</p>
@@ -3648,6 +3661,22 @@ function loadScheduling() {
   var addBlockBtn = $('add-blocked-time-btn');
   if (addBlockBtn) addBlockBtn.onclick = addBlockedTime;
   loadBlockedTimes();
+
+  // Wire Session Types UI — list, add, edit, deactivate.
+  var addStBtn = $('add-session-type-btn');
+  if (addStBtn) addStBtn.onclick = function() { openSessionTypeModal(null); };
+  var stClose = $('session-type-modal-close');
+  if (stClose) stClose.onclick = closeSessionTypeModal;
+  var stCancel = $('session-type-modal-cancel');
+  if (stCancel) stCancel.onclick = closeSessionTypeModal;
+  var stSave = $('session-type-modal-save');
+  if (stSave) stSave.onclick = saveSessionType;
+  // Click outside modal closes it
+  var stModal = $('session-type-modal');
+  if (stModal) stModal.addEventListener('click', function(e) {
+    if (e.target === stModal) closeSessionTypeModal();
+  });
+  loadSessionTypes();
 }
 
 // Load + render existing blocked times in the Scheduling tab.
@@ -3774,6 +3803,199 @@ async function removeBlockedTime(id) {
   } catch (e) {
     console.error('[removeBlockedTime]', e);
     alert('Error removing block: ' + e.message);
+  }
+}
+
+// ── Session Types (coach_services) — list, create, edit, soft-delete ─────────
+// editing state for the modal; null = create mode, otherwise the row being edited
+var sessionTypeEditing = null;
+
+async function loadSessionTypes() {
+  var listEl = $('session-types-list');
+  if (!listEl) return;
+  listEl.innerHTML = '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;">Loading…</div>';
+  try {
+    var url = SUPABASE_URL + '/rest/v1/coach_services'
+      + '?coach_id=eq.' + coachProfile.id
+      + '&order=is_active.desc,title.asc'
+      + '&select=id,title,description,duration,price,price_type,slot_increment_minutes,is_active';
+    var res = await fetch(url, { headers: apiHeaders() });
+    if (!res.ok) throw new Error('Failed to load session types: ' + res.status);
+    var rows = await res.json();
+    if (!Array.isArray(rows) || rows.length === 0) {
+      listEl.innerHTML = '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;padding:8px 0;">No session types yet. Add one so clients can book.</div>';
+      return;
+    }
+    listEl.innerHTML = rows.map(function(s) {
+      var priceLabel = (s.price === 0 || s.price === null || s.price === '0') ? 'Free' : '$' + Number(s.price).toFixed(2).replace(/\.00$/, '');
+      var dur = (s.duration || '').toString();
+      var inc = s.slot_increment_minutes || 30;
+      var inactive = s.is_active === false;
+      var border = inactive ? '#edeae4' : '#c49a3c';
+      return '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;background:var(--white);border:1px solid var(--border);border-left:3px solid ' + border + ';border-radius:var(--r-sm);' + (inactive ? 'opacity:0.6;' : '') + '">'
+        + '<div style="flex:1;min-width:0;">'
+        +   '<div style="font-size:0.92rem;font-weight:700;color:var(--ink);margin-bottom:2px;">' + escapeHtml(s.title || 'Untitled')
+        +     (inactive ? ' <span style="font-size:0.7rem;font-weight:600;color:#9a9490;background:rgba(0,0,0,0.04);padding:1px 6px;border-radius:3px;margin-left:6px;">INACTIVE</span>' : '')
+        +   '</div>'
+        +   '<div style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(dur) + ' &bull; ' + escapeHtml(priceLabel) + ' &bull; ' + inc + '-min slots</div>'
+        +   (s.description ? '<div style="font-size:0.78rem;color:var(--muted);margin-top:4px;font-style:italic;">' + escapeHtml(s.description) + '</div>' : '')
+        + '</div>'
+        + '<div style="display:flex;gap:6px;flex-shrink:0;">'
+        +   '<button class="edit-st-btn" data-id="' + escapeHtml(s.id) + '" style="font-size:0.76rem;color:var(--ink);background:none;border:1px solid var(--border);border-radius:50px;padding:4px 12px;cursor:pointer;">Edit</button>'
+        +   (inactive
+              ? '<button class="reactivate-st-btn" data-id="' + escapeHtml(s.id) + '" style="font-size:0.76rem;color:#2d6a4f;background:none;border:1px solid #2d6a4f;border-radius:50px;padding:4px 12px;cursor:pointer;">Reactivate</button>'
+              : '<button class="delete-st-btn" data-id="' + escapeHtml(s.id) + '" data-title="' + escapeHtml(s.title || '') + '" style="font-size:0.76rem;color:#c44;background:none;border:1px solid #c44;border-radius:50px;padding:4px 12px;cursor:pointer;">Deactivate</button>')
+        + '</div>'
+        + '</div>';
+    }).join('');
+    // Cache rows for edit pre-fill
+    listEl.dataset.rows = JSON.stringify(rows);
+    listEl.querySelectorAll('.edit-st-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var rowList = JSON.parse(listEl.dataset.rows || '[]');
+        var row = rowList.find(function(r) { return r.id === btn.dataset.id; });
+        if (row) openSessionTypeModal(row);
+      });
+    });
+    listEl.querySelectorAll('.delete-st-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() { deactivateSessionType(btn.dataset.id, btn.dataset.title); });
+    });
+    listEl.querySelectorAll('.reactivate-st-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() { reactivateSessionType(btn.dataset.id); });
+    });
+  } catch (e) {
+    console.error('[loadSessionTypes]', e);
+    listEl.innerHTML = '<div style="color:#c44;font-size:0.82rem;">Error loading: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function openSessionTypeModal(row) {
+  sessionTypeEditing = row || null;
+  $('session-type-modal-title').textContent = row ? 'Edit session type' : 'Add session type';
+  $('st-name').value = row ? (row.title || '') : '';
+  $('st-description').value = row ? (row.description || '') : '';
+  // Snap duration to nearest matching option, or fall back to "60"
+  var durMin = parseSessionDurationMinutes(row && row.duration) || 60;
+  var durSel = $('st-duration');
+  var match = Array.prototype.find.call(durSel.options, function(o) { return parseInt(o.value, 10) === durMin; });
+  durSel.value = match ? match.value : '60';
+  var inc = (row && row.slot_increment_minutes) || 30;
+  var incSel = $('st-slot-increment');
+  var incMatch = Array.prototype.find.call(incSel.options, function(o) { return parseInt(o.value, 10) === inc; });
+  incSel.value = incMatch ? incMatch.value : '30';
+  $('st-price').value = row && row.price !== null && row.price !== undefined ? row.price : 0;
+  $('st-active').checked = row ? (row.is_active !== false) : true;
+  $('st-error').style.display = 'none';
+  $('session-type-modal').style.display = 'flex';
+}
+
+function closeSessionTypeModal() {
+  sessionTypeEditing = null;
+  $('session-type-modal').style.display = 'none';
+}
+
+// Mirror of parseDurationMinutes in /api/availability-slots.js — keeps the
+// modal in sync with what the backend will read.
+function parseSessionDurationMinutes(s) {
+  if (!s) return null;
+  var str = String(s).toLowerCase();
+  var m = str.match(/(\d+(?:\.\d+)?)/);
+  if (!m) return null;
+  var n = parseFloat(m[1]);
+  if (/hour|hr/.test(str)) return Math.round(n * 60);
+  return Math.round(n);
+}
+
+async function saveSessionType() {
+  var btn = $('session-type-modal-save');
+  var errEl = $('st-error');
+  errEl.style.display = 'none';
+  var name = $('st-name').value.trim();
+  var description = $('st-description').value.trim();
+  var duration = parseInt($('st-duration').value, 10);
+  var increment = parseInt($('st-slot-increment').value, 10);
+  var priceRaw = $('st-price').value.trim();
+  var price = priceRaw === '' ? 0 : parseFloat(priceRaw);
+  var active = $('st-active').checked;
+
+  if (!name) { errEl.textContent = 'Name is required.'; errEl.style.display = 'block'; return; }
+  if (!Number.isFinite(duration) || duration <= 0) { errEl.textContent = 'Duration must be greater than 0.'; errEl.style.display = 'block'; return; }
+  if (!Number.isFinite(increment) || increment <= 0) { errEl.textContent = 'Slot increment must be greater than 0.'; errEl.style.display = 'block'; return; }
+  if (increment > duration) { errEl.textContent = 'Slot increment cannot exceed duration.'; errEl.style.display = 'block'; return; }
+  if (!Number.isFinite(price) || price < 0) { errEl.textContent = 'Price must be 0 or greater.'; errEl.style.display = 'block'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  try {
+    var payload = {
+      coach_id: coachProfile.id,
+      service_type: 'session',
+      title: name,
+      description: description || null,
+      duration: duration + ' minutes',
+      price: price,
+      price_type: 'fixed', // CHECK constraint: fixed | starting_at | contact
+      slot_increment_minutes: increment,
+      is_active: active,
+    };
+    var url, method;
+    if (sessionTypeEditing && sessionTypeEditing.id) {
+      url = SUPABASE_URL + '/rest/v1/coach_services?id=eq.' + sessionTypeEditing.id;
+      method = 'PATCH';
+    } else {
+      url = SUPABASE_URL + '/rest/v1/coach_services';
+      method = 'POST';
+    }
+    var res = await fetch(url, {
+      method: method,
+      headers: { ...apiHeaders(), Prefer: 'return=minimal' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      var body = await res.text();
+      throw new Error('Save failed: ' + res.status + ' ' + body);
+    }
+    closeSessionTypeModal();
+    loadSessionTypes();
+  } catch (e) {
+    console.error('[saveSessionType]', e);
+    errEl.textContent = 'Error: ' + e.message;
+    errEl.style.display = 'block';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Save';
+}
+
+async function deactivateSessionType(id, title) {
+  if (!id) return;
+  if (!confirm('Deactivate "' + (title || 'this session type') + '"?\n\nPast bookings are unaffected, but clients can no longer book this service. You can reactivate it later.')) return;
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_services?id=eq.' + encodeURIComponent(id), {
+      method: 'PATCH',
+      headers: { ...apiHeaders(), Prefer: 'return=minimal' },
+      body: JSON.stringify({ is_active: false }),
+    });
+    if (!res.ok) throw new Error('Deactivate failed: ' + res.status);
+    loadSessionTypes();
+  } catch (e) {
+    console.error('[deactivateSessionType]', e);
+    alert('Error: ' + e.message);
+  }
+}
+
+async function reactivateSessionType(id) {
+  if (!id) return;
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_services?id=eq.' + encodeURIComponent(id), {
+      method: 'PATCH',
+      headers: { ...apiHeaders(), Prefer: 'return=minimal' },
+      body: JSON.stringify({ is_active: true }),
+    });
+    if (!res.ok) throw new Error('Reactivate failed: ' + res.status);
+    loadSessionTypes();
+  } catch (e) {
+    console.error('[reactivateSessionType]', e);
+    alert('Error: ' + e.message);
   }
 }
 
@@ -12296,5 +12518,61 @@ function journalIntelRefField(label, val) {
   });
 })();
 </script>
+
+<!-- Session Type modal — create + edit reuse the same shell. -->
+<div id="session-type-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(26,58,82,0.45);align-items:center;justify-content:center;padding:24px;">
+  <div style="background:#fff;border-radius:12px;max-width:480px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,0.18);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid #edeae4;">
+      <h3 id="session-type-modal-title" style="font-family:'Cormorant Garamond',serif;font-size:1.25rem;font-weight:600;color:#1a3a52;margin:0;">Add session type</h3>
+      <button id="session-type-modal-close" style="background:none;border:none;font-size:1.4rem;color:#9a9490;cursor:pointer;line-height:1;padding:0 4px;">&times;</button>
+    </div>
+    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <label for="st-name" style="font-size:0.78rem;font-weight:600;color:#1a3a52;">Name</label>
+        <input type="text" id="st-name" placeholder="Clarity Call" style="padding:10px 12px;border:1px solid #edeae4;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:0.9rem;color:#1a3a52;background:#fdfbf8;">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <label for="st-description" style="font-size:0.78rem;font-weight:600;color:#1a3a52;">Description (optional)</label>
+        <textarea id="st-description" rows="2" placeholder="15-minute intro call to discuss fit." style="padding:10px 12px;border:1px solid #edeae4;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:0.9rem;color:#1a3a52;background:#fdfbf8;resize:vertical;"></textarea>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:140px;">
+          <label for="st-duration" style="font-size:0.78rem;font-weight:600;color:#1a3a52;">Duration</label>
+          <select id="st-duration" style="padding:10px 12px;border:1px solid #edeae4;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:0.9rem;color:#1a3a52;background:#fdfbf8;">
+            <option value="15">15 minutes</option>
+            <option value="30">30 minutes</option>
+            <option value="45">45 minutes</option>
+            <option value="60" selected>60 minutes</option>
+            <option value="90">90 minutes</option>
+            <option value="120">120 minutes</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:140px;">
+          <label for="st-slot-increment" style="font-size:0.78rem;font-weight:600;color:#1a3a52;">Slot increment</label>
+          <select id="st-slot-increment" style="padding:10px 12px;border:1px solid #edeae4;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:0.9rem;color:#1a3a52;background:#fdfbf8;">
+            <option value="15">15 minutes</option>
+            <option value="30" selected>30 minutes</option>
+            <option value="60">60 minutes</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <label for="st-price" style="font-size:0.78rem;font-weight:600;color:#1a3a52;">Price (USD)</label>
+        <input type="number" id="st-price" min="0" step="1" value="0" style="padding:10px 12px;border:1px solid #edeae4;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:0.9rem;color:#1a3a52;background:#fdfbf8;">
+        <div style="font-size:0.72rem;color:#9a9490;">Use 0 for free sessions like clarity calls.</div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="st-active" checked style="width:18px;height:18px;accent-color:#c49a3c;">
+        <span style="font-size:0.85rem;font-weight:600;color:#1a3a52;">Active &mdash; clients can book this</span>
+      </label>
+      <div id="st-error" style="display:none;font-size:0.82rem;color:#c44;background:rgba(196,68,68,0.08);border:1px solid rgba(196,68,68,0.25);border-radius:6px;padding:8px 12px;"></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;padding:16px 24px;border-top:1px solid #edeae4;background:#fdfbf8;border-radius:0 0 12px 12px;">
+      <button id="session-type-modal-cancel" style="padding:9px 18px;background:none;border:1px solid #edeae4;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:600;color:#9a9490;cursor:pointer;">Cancel</button>
+      <button id="session-type-modal-save" class="save-btn">Save</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
