@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Book a session — ineedcoaching.org</title>
+<meta name="description" content="Book a free coaching session.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #1a3a52;
+  --forest: #4a7c59;
+  --cream: #f7f4ee;
+  --warm: #ffffff;
+  --gold: #c49a3c;
+  --gold-hover: #a87d1f;
+  --muted: #6b6b60;
+  --border: #e0ddd5;
+  --r: 14px;
+  --r-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); color: var(--ink); }
+
+/* Nav (mirrors coach-profile.html for visual continuity) */
+nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; align-items: center; justify-content: space-between; padding: 14px 52px; background: rgba(26,58,82,0.95); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(255,255,255,0.1); }
+.book-nav .logo { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: #f7f4ee; text-decoration: none; }
+.book-nav .logo .brand-i, .book-nav .logo .brand-coaching { color: var(--gold); font-style: italic; }
+.book-nav .nav-back { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: rgba(247,244,238,0.65); text-decoration: none; transition: color 0.2s; }
+.book-nav .nav-back:hover { color: var(--gold); }
+
+/* Page shell */
+.shell { padding: 110px 24px 80px; max-width: 880px; margin: 0 auto; }
+
+/* Loading + error */
+.loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 16px; }
+.loading-spinner { width: 44px; height: 44px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.error-state { text-align: center; padding: 80px 24px; }
+.error-state h1 { font-family: 'Playfair Display', serif; font-size: 2.2rem; color: var(--ink); margin-bottom: 12px; }
+.error-state p { color: var(--muted); font-size: 1rem; max-width: 460px; margin: 0 auto 24px; line-height: 1.6; }
+.error-state .btn-back { display: inline-flex; align-items: center; gap: 6px; padding: 12px 24px; border-radius: 50px; border: 1.5px solid var(--border); color: var(--ink); text-decoration: none; font-weight: 700; font-size: 0.85rem; transition: all 0.2s; }
+.error-state .btn-back:hover { border-color: var(--gold); color: var(--gold); }
+
+/* Coach card */
+.coach-card { display: flex; align-items: center; gap: 20px; background: var(--warm); border: 1px solid var(--border); border-radius: var(--r); padding: 24px; margin-bottom: 32px; box-shadow: 0 2px 12px rgba(26,58,82,0.04); }
+.coach-avatar { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.coach-initials { width: 72px; height: 72px; border-radius: 50%; background: var(--ink); color: var(--gold); display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 900; flex-shrink: 0; }
+.coach-meta { flex: 1; min-width: 0; }
+.coach-name { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; line-height: 1.2; }
+.coach-headline { font-size: 0.92rem; color: var(--muted); line-height: 1.5; }
+.coach-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 0.78rem; font-weight: 700; color: var(--gold); text-decoration: none; letter-spacing: 0.02em; }
+.coach-link:hover { color: var(--gold-hover); }
+
+/* Step heading */
+.step { background: var(--warm); border: 1px solid var(--border); border-radius: var(--r); padding: 32px; margin-bottom: 20px; box-shadow: 0 2px 12px rgba(26,58,82,0.04); transition: opacity 0.2s; }
+.step.is-disabled { opacity: 0.45; pointer-events: none; }
+.step-head { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.step-num { width: 28px; height: 28px; border-radius: 50%; background: var(--gold); color: var(--warm); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.85rem; flex-shrink: 0; }
+.step.is-disabled .step-num { background: var(--border); color: var(--muted); }
+.step-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; font-weight: 700; color: var(--ink); }
+.step-sub { font-size: 0.88rem; color: var(--muted); margin-top: 2px; line-height: 1.5; }
+
+/* Service list */
+.service-list { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.service-row { display: flex; align-items: center; gap: 16px; padding: 18px 20px; border: 1.5px solid var(--border); border-radius: var(--r-sm); background: var(--cream); cursor: pointer; transition: all 0.15s ease; text-align: left; font-family: inherit; width: 100%; }
+.service-row:hover { border-color: var(--gold); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(26,58,82,0.06); }
+.service-row.is-selected { border-color: var(--gold); background: rgba(196,154,60,0.08); }
+.service-row-body { flex: 1; min-width: 0; }
+.service-row-title { font-family: 'Playfair Display', serif; font-size: 1.05rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+.service-row-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.5; margin-bottom: 8px; }
+.service-row-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 50px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.pill-duration { background: var(--cream); color: var(--ink); border: 1px solid var(--border); }
+.pill-free { background: rgba(74,124,89,0.14); color: var(--forest); }
+.service-row-arrow { color: var(--muted); font-size: 1.1rem; flex-shrink: 0; transition: color 0.15s; }
+.service-row:hover .service-row-arrow { color: var(--gold); }
+
+/* Slot picker */
+.slot-tz-note { font-size: 0.78rem; color: var(--muted); margin-bottom: 16px; padding: 10px 14px; background: var(--cream); border-left: 3px solid var(--gold); border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.slot-day { margin-bottom: 22px; }
+.slot-day:last-child { margin-bottom: 0; }
+.slot-day-label { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 700; color: var(--ink); margin-bottom: 10px; }
+.slot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+.slot-chip { padding: 10px 8px; border: 1.5px solid var(--border); border-radius: var(--r-sm); background: var(--warm); color: var(--ink); font-family: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
+.slot-chip:hover { border-color: var(--gold); color: var(--gold); transform: translateY(-1px); }
+.slot-chip.is-selected { background: var(--gold); border-color: var(--gold); color: var(--warm); }
+.slot-empty { padding: 24px; text-align: center; color: var(--muted); font-size: 0.9rem; background: var(--cream); border-radius: var(--r-sm); border: 1px dashed var(--border); }
+.slot-loading { padding: 32px; text-align: center; }
+.slot-loading .loading-spinner { width: 32px; height: 32px; border-width: 2px; margin: 0 auto; }
+
+/* Confirm form */
+.confirm-summary { background: var(--cream); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 18px 20px; margin-bottom: 22px; }
+.confirm-summary-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: 0.88rem; }
+.confirm-summary-row + .confirm-summary-row { border-top: 1px dashed var(--border); }
+.confirm-summary-key { color: var(--muted); font-weight: 600; }
+.confirm-summary-val { color: var(--ink); font-weight: 700; text-align: right; }
+.form-group { margin-bottom: 18px; }
+.form-group label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--ink); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+.form-group label .opt { color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; }
+.form-group input, .form-group textarea { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; color: var(--ink); background: var(--warm); transition: border-color 0.15s; }
+.form-group input:focus, .form-group textarea:focus { outline: none; border-color: var(--gold); }
+.form-group textarea { min-height: 90px; resize: vertical; }
+.form-error { display: none; padding: 10px 14px; background: rgba(196,68,68,0.08); border-left: 3px solid #c44; border-radius: 0 var(--r-sm) var(--r-sm) 0; font-size: 0.85rem; color: #8a2828; margin-bottom: 14px; }
+.form-error.is-shown { display: block; }
+.btn-row { display: flex; gap: 10px; align-items: center; }
+.btn-gold { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--gold); color: var(--warm); padding: 14px 28px; border-radius: 50px; font-family: inherit; font-size: 0.92rem; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
+.btn-gold:hover:not(:disabled) { background: var(--gold-hover); transform: translateY(-1px); }
+.btn-gold:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-link { background: none; border: none; color: var(--muted); font-family: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; padding: 8px 4px; text-decoration: underline; }
+.btn-link:hover { color: var(--ink); }
+
+/* Success */
+.success-card { background: var(--warm); border: 1px solid var(--border); border-radius: var(--r); padding: 48px 36px; text-align: center; box-shadow: 0 2px 12px rgba(26,58,82,0.04); }
+.success-check { width: 64px; height: 64px; border-radius: 50%; background: rgba(74,124,89,0.14); color: var(--forest); display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; font-size: 1.8rem; font-weight: 800; }
+.success-title { font-family: 'Playfair Display', serif; font-size: 1.7rem; color: var(--ink); margin-bottom: 8px; }
+.success-sub { color: var(--muted); font-size: 0.95rem; margin-bottom: 26px; line-height: 1.6; max-width: 460px; margin-left: auto; margin-right: auto; }
+.success-summary { max-width: 420px; margin: 0 auto 28px; text-align: left; }
+.success-zoom { display: none; max-width: 480px; margin: 0 auto 26px; padding: 16px; background: var(--cream); border: 1px solid var(--border); border-radius: var(--r-sm); text-align: left; }
+.success-zoom.is-shown { display: block; }
+.success-zoom-label { font-weight: 700; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink); margin-bottom: 8px; }
+.success-zoom a { color: var(--gold); font-weight: 600; word-break: break-all; text-decoration: none; }
+.success-zoom a:hover { text-decoration: underline; }
+.success-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.success-actions .btn-outline { display: inline-flex; align-items: center; padding: 12px 24px; border-radius: 50px; border: 1.5px solid var(--border); color: var(--ink); text-decoration: none; font-weight: 700; font-size: 0.85rem; transition: all 0.2s; background: none; cursor: pointer; font-family: inherit; }
+.success-actions .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+
+/* Footer */
+.book-footer { background: var(--ink); padding: 32px 24px; text-align: center; }
+.book-footer .powered { font-size: 0.8rem; color: rgba(247,244,238,0.55); }
+.book-footer .powered a { color: var(--gold); text-decoration: none; }
+.book-footer .powered a:hover { text-decoration: underline; }
+.book-footer .crisis { font-size: 0.68rem; color: rgba(247,244,238,0.3); margin-top: 10px; }
+
+@media (max-width: 640px) {
+  nav.book-nav { padding: 12px 20px; }
+  .shell { padding: 90px 16px 60px; }
+  .step { padding: 22px 18px; }
+  .coach-card { padding: 18px; gap: 14px; flex-wrap: wrap; }
+  .coach-avatar, .coach-initials { width: 56px; height: 56px; font-size: 1.3rem; }
+  .coach-name { font-size: 1.25rem; }
+  .slot-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+  .success-card { padding: 36px 22px; }
+}
+.hidden { display: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<nav class="book-nav">
+  <a href="/" class="logo"><span class="brand-i">i</span>need<span class="brand-coaching">coaching</span>.org</a>
+  <a href="/coaches.html" class="nav-back">&larr; Browse coaches</a>
+</nav>
+
+<!-- Loading -->
+<div id="state-loading" class="loading-state">
+  <div class="loading-spinner"></div>
+  <p style="color:var(--muted);font-size:0.9rem;">Loading…</p>
+</div>
+
+<!-- Error -->
+<div id="state-error" class="error-state hidden">
+  <h1 id="error-title">Coach not found</h1>
+  <p id="error-message">This profile doesn't exist or isn't currently accepting bookings.</p>
+  <a href="/coaches.html" class="btn-back">&larr; Browse coaches</a>
+</div>
+
+<!-- Main flow -->
+<div id="state-main" class="shell hidden">
+
+  <!-- Coach card -->
+  <div id="coach-card" class="coach-card"></div>
+
+  <!-- Step 1: choose service -->
+  <section id="step-service" class="step">
+    <div class="step-head">
+      <div class="step-num">1</div>
+      <div>
+        <div class="step-title">Choose a session</div>
+        <div class="step-sub">Pick the session you'd like to book.</div>
+      </div>
+    </div>
+    <div id="service-list" class="service-list"></div>
+  </section>
+
+  <!-- Step 2: pick a time -->
+  <section id="step-slot" class="step is-disabled">
+    <div class="step-head">
+      <div class="step-num">2</div>
+      <div>
+        <div class="step-title">Pick a time</div>
+        <div class="step-sub" id="step-slot-sub">Available openings in the next 14 days.</div>
+      </div>
+    </div>
+    <div id="slot-tz-note" class="slot-tz-note hidden"></div>
+    <div id="slot-body"></div>
+  </section>
+
+  <!-- Step 3: confirm -->
+  <section id="step-confirm" class="step is-disabled">
+    <div class="step-head">
+      <div class="step-num">3</div>
+      <div>
+        <div class="step-title">Confirm your details</div>
+        <div class="step-sub">We'll email you a confirmation with the session link.</div>
+      </div>
+    </div>
+    <div id="confirm-summary" class="confirm-summary hidden"></div>
+    <div id="confirm-error" class="form-error"></div>
+    <form id="confirm-form" novalidate>
+      <div class="form-group">
+        <label for="bk-name">Your name</label>
+        <input type="text" id="bk-name" autocomplete="name" required maxlength="120" placeholder="Full name">
+      </div>
+      <div class="form-group">
+        <label for="bk-email">Email</label>
+        <input type="email" id="bk-email" autocomplete="email" required maxlength="180" placeholder="email@example.com">
+      </div>
+      <div class="form-group">
+        <label for="bk-phone">Phone <span class="opt">(optional, for reminders)</span></label>
+        <input type="tel" id="bk-phone" autocomplete="tel" maxlength="40" placeholder="(555) 555-5555">
+      </div>
+      <div class="form-group">
+        <label for="bk-notes">What you'd like to focus on <span class="opt">(optional)</span></label>
+        <textarea id="bk-notes" maxlength="2000" placeholder="A quick line on what brought you here helps the coach prepare."></textarea>
+      </div>
+      <div class="btn-row">
+        <button type="submit" id="confirm-submit" class="btn-gold">Confirm booking</button>
+        <button type="button" id="confirm-back" class="btn-link">Pick a different time</button>
+      </div>
+    </form>
+  </section>
+
+</div>
+
+<!-- Success -->
+<div id="state-success" class="shell hidden">
+  <div class="success-card">
+    <div class="success-check">&#10003;</div>
+    <div class="success-title">You're booked</div>
+    <div class="success-sub" id="success-sub">A confirmation is on its way to your inbox.</div>
+    <div id="success-summary" class="confirm-summary success-summary"></div>
+    <div id="success-zoom" class="success-zoom"></div>
+    <div class="success-actions">
+      <a id="success-back-coach" href="/" class="btn-outline">Back to coach profile</a>
+      <a href="/coaches.html" class="btn-outline">Browse more coaches</a>
+    </div>
+  </div>
+</div>
+
+<footer class="book-footer">
+  <div class="powered">Powered by <a href="https://www.ineedcoaching.org">ineedcoaching.org</a></div>
+  <p class="crisis">Not a crisis service. In crisis? Call or text 988.</p>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+  var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+  var REST = SUPABASE_URL + '/rest/v1';
+  var HEADERS_GET = { apikey: ANON_KEY, Authorization: 'Bearer ' + ANON_KEY };
+  var HEADERS_WRITE = {
+    apikey: ANON_KEY,
+    Authorization: 'Bearer ' + ANON_KEY,
+    'Content-Type': 'application/json',
+    Prefer: 'return=representation',
+  };
+
+  // Slug param: brief specifies ?coach=<slug>; we also accept ?slug= for parity with /coach/:slug.
+  function getSlug() {
+    var p = new URLSearchParams(window.location.search);
+    var s = p.get('coach') || p.get('slug') || '';
+    return s.trim();
+  }
+
+  function $(id) { return document.getElementById(id); }
+  function escapeHtml(s) {
+    if (s === null || s === undefined) return '';
+    var d = document.createElement('div');
+    d.textContent = String(s);
+    return d.innerHTML;
+  }
+  function getInitials(name) {
+    if (!name) return '?';
+    var parts = String(name).trim().split(/\s+/);
+    return parts.map(function (w) { return w[0]; }).join('').toUpperCase().slice(0, 2);
+  }
+  function isValidEmail(e) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || '').trim());
+  }
+
+  // Parse "60 minutes", "1 hour", "30 min" → integer minutes. Mirrors api/availability-slots.js.
+  function parseDurationMinutes(s) {
+    if (!s) return 60;
+    var str = String(s).toLowerCase();
+    var m = str.match(/(\d+(?:\.\d+)?)/);
+    if (!m) return 60;
+    var n = parseFloat(m[1]);
+    if (/hour|hr/.test(str)) return Math.max(5, Math.round(n * 60));
+    return Math.max(5, Math.round(n));
+  }
+
+  function showError(title, msg) {
+    $('state-loading').classList.add('hidden');
+    $('state-main').classList.add('hidden');
+    $('state-success').classList.add('hidden');
+    if (title) $('error-title').textContent = title;
+    if (msg) $('error-message').textContent = msg;
+    $('state-error').classList.remove('hidden');
+  }
+
+  function showMain() {
+    $('state-loading').classList.add('hidden');
+    $('state-error').classList.add('hidden');
+    $('state-success').classList.add('hidden');
+    $('state-main').classList.remove('hidden');
+  }
+
+  function showSuccess() {
+    $('state-loading').classList.add('hidden');
+    $('state-error').classList.add('hidden');
+    $('state-main').classList.add('hidden');
+    $('state-success').classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Page state
+  var coach = null;
+  var services = [];
+  var selectedService = null;
+  var coachTz = 'America/Chicago';
+  var selectedSlot = null; // { datetime, label, dayLabel }
+
+  // ── Load coach + services ──
+  async function loadCoach() {
+    var slug = getSlug();
+    if (!slug) {
+      showError('No coach selected', 'Add a coach to the link, e.g. /book?coach=jane-doe.');
+      return;
+    }
+    try {
+      var url = REST + '/coach_profiles?slug=eq.' + encodeURIComponent(slug)
+        + '&is_published=eq.true'
+        + '&select=id,slug,display_name,full_name,headline,profile_image_url,timezone,zoom_meeting_link'
+        + '&limit=1';
+      var res = await fetch(url, { headers: HEADERS_GET });
+      if (!res.ok) throw new Error('Profile lookup failed');
+      var rows = await res.json();
+      if (!rows || !rows.length) { showError(); return; }
+      coach = rows[0];
+      coachTz = coach.timezone || 'America/Chicago';
+      renderCoachCard();
+      document.title = 'Book a session with ' + (coach.display_name || coach.full_name || 'a coach') + ' — ineedcoaching.org';
+      var backLink = $('success-back-coach');
+      if (backLink && coach.slug) backLink.href = '/coach/' + encodeURIComponent(coach.slug);
+      await loadServices();
+      showMain();
+    } catch (err) {
+      console.error('[book] loadCoach', err);
+      showError('Something went wrong', 'We could not load this coach right now. Please try again.');
+    }
+  }
+
+  function renderCoachCard() {
+    var name = coach.display_name || coach.full_name || 'Your Coach';
+    var headline = coach.headline || '';
+    var avatar = coach.profile_image_url
+      ? '<img class="coach-avatar" src="' + escapeHtml(coach.profile_image_url) + '" alt="' + escapeHtml(name) + '">'
+      : '<div class="coach-initials">' + escapeHtml(getInitials(name)) + '</div>';
+    var html = avatar + '<div class="coach-meta">'
+      + '<div class="coach-name">' + escapeHtml(name) + '</div>'
+      + (headline ? '<div class="coach-headline">' + escapeHtml(headline) + '</div>' : '')
+      + (coach.slug ? '<a class="coach-link" href="/coach/' + encodeURIComponent(coach.slug) + '">View full profile &rarr;</a>' : '')
+      + '</div>';
+    $('coach-card').innerHTML = html;
+  }
+
+  async function loadServices() {
+    var listEl = $('service-list');
+    listEl.innerHTML = '<div class="slot-loading"><div class="loading-spinner"></div></div>';
+    try {
+      // Free flow only (PR 1.C). Paid sessions land in PR 1.D once Stripe is wired.
+      // Brief refers to "price_cents=0"; the actual schema column is `price` (USD numeric),
+      // so we filter price=eq.0 and treat NULL as free for safety on legacy rows.
+      var url = REST + '/coach_services'
+        + '?coach_id=eq.' + encodeURIComponent(coach.id)
+        + '&is_active=eq.true'
+        + '&or=(price.eq.0,price.is.null)'
+        + '&select=id,title,description,duration,slot_increment_minutes,price'
+        + '&order=title.asc';
+      var res = await fetch(url, { headers: HEADERS_GET });
+      if (!res.ok) throw new Error('Service lookup failed');
+      services = await res.json();
+      if (!services.length) {
+        listEl.innerHTML = '<div class="slot-empty">No free sessions are available right now. Check back soon, or visit the coach’s profile to message them directly.</div>';
+        return;
+      }
+      listEl.innerHTML = services.map(function (s, i) {
+        var dur = parseDurationMinutes(s.duration);
+        var desc = s.description ? '<div class="service-row-desc">' + escapeHtml(s.description) + '</div>' : '';
+        return '<button type="button" class="service-row" data-idx="' + i + '">'
+          + '<div class="service-row-body">'
+          +   '<div class="service-row-title">' + escapeHtml(s.title || 'Session') + '</div>'
+          +   desc
+          +   '<div class="service-row-pills">'
+          +     '<span class="pill pill-duration">' + dur + ' min</span>'
+          +     '<span class="pill pill-free">Free</span>'
+          +   '</div>'
+          + '</div>'
+          + '<span class="service-row-arrow">&rarr;</span>'
+          + '</button>';
+      }).join('');
+      Array.prototype.forEach.call(listEl.querySelectorAll('.service-row'), function (btn) {
+        btn.addEventListener('click', function () {
+          var idx = parseInt(btn.dataset.idx, 10);
+          selectService(idx, btn);
+        });
+      });
+    } catch (err) {
+      console.error('[book] loadServices', err);
+      listEl.innerHTML = '<div class="slot-empty">We could not load sessions. Please refresh the page.</div>';
+    }
+  }
+
+  function selectService(idx, btnEl) {
+    selectedService = services[idx];
+    Array.prototype.forEach.call(document.querySelectorAll('.service-row'), function (b) {
+      b.classList.toggle('is-selected', b === btnEl);
+    });
+    selectedSlot = null;
+    $('step-confirm').classList.add('is-disabled');
+    $('confirm-summary').classList.add('hidden');
+    $('step-slot').classList.remove('is-disabled');
+    $('step-slot-sub').textContent = 'Available openings for ' + (selectedService.title || 'this session') + ' in the next 14 days.';
+    $('step-slot').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    loadSlots();
+  }
+
+  // ── Slots ──
+  async function loadSlots() {
+    var body = $('slot-body');
+    var tzNote = $('slot-tz-note');
+    tzNote.classList.add('hidden');
+    body.innerHTML = '<div class="slot-loading"><div class="loading-spinner"></div></div>';
+    try {
+      var url = '/api/availability-slots'
+        + '?coachId=' + encodeURIComponent(coach.id)
+        + '&serviceId=' + encodeURIComponent(selectedService.id)
+        + '&days=14';
+      var res = await fetch(url);
+      if (!res.ok) {
+        var errBody = '';
+        try { errBody = (await res.json()).error || ''; } catch (e) {}
+        throw new Error(errBody || ('Slot lookup failed: ' + res.status));
+      }
+      var data = await res.json();
+      coachTz = data.coach_timezone || coachTz;
+      tzNote.textContent = 'All times shown in the coach’s timezone (' + coachTz + ').';
+      tzNote.classList.remove('hidden');
+      renderSlots(data.slots || []);
+    } catch (err) {
+      console.error('[book] loadSlots', err);
+      body.innerHTML = '<div class="slot-empty">We couldn’t load openings right now. Please try a different session or refresh the page.</div>';
+    }
+  }
+
+  // Group ISO-with-offset slots by their coach-local calendar date.
+  // Each slot looks like "2026-05-05T10:30:00-05:00" — the offset is the coach's
+  // local offset, so the date and clock-time shown are coach-local already.
+  function groupSlotsByDay(slots) {
+    var groups = [];
+    var byKey = {};
+    slots.forEach(function (s) {
+      var iso = s.datetime || '';
+      var dateKey = iso.slice(0, 10); // YYYY-MM-DD
+      var hh = parseInt(iso.slice(11, 13), 10);
+      var mm = parseInt(iso.slice(14, 16), 10);
+      if (!Number.isFinite(hh) || !Number.isFinite(mm)) return;
+      if (!byKey[dateKey]) {
+        byKey[dateKey] = { key: dateKey, label: formatDayLabel(dateKey), times: [] };
+        groups.push(byKey[dateKey]);
+      }
+      byKey[dateKey].times.push({
+        iso: iso,
+        timeLabel: formatTimeLabel(hh, mm),
+      });
+    });
+    groups.sort(function (a, b) { return a.key < b.key ? -1 : 1; });
+    return groups;
+  }
+
+  function formatDayLabel(dateKey) {
+    // dateKey = "YYYY-MM-DD" — render in coach-local context (we use UTC noon + en-US to avoid TZ flip).
+    var parts = dateKey.split('-');
+    var d = new Date(Date.UTC(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), 12, 0, 0));
+    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' });
+  }
+
+  function formatTimeLabel(hh, mm) {
+    var ampm = hh >= 12 ? 'PM' : 'AM';
+    var h12 = hh % 12 === 0 ? 12 : hh % 12;
+    var mmStr = mm < 10 ? '0' + mm : String(mm);
+    return h12 + ':' + mmStr + ' ' + ampm;
+  }
+
+  function renderSlots(slots) {
+    var body = $('slot-body');
+    if (!slots.length) {
+      body.innerHTML = '<div class="slot-empty">No openings in the next 14 days. Try checking back, or message the coach from their profile.</div>';
+      return;
+    }
+    var groups = groupSlotsByDay(slots);
+    body.innerHTML = groups.map(function (g) {
+      var chips = g.times.map(function (t) {
+        return '<button type="button" class="slot-chip" data-iso="' + escapeHtml(t.iso) + '" data-day="' + escapeHtml(g.label) + '" data-time="' + escapeHtml(t.timeLabel) + '">'
+          + escapeHtml(t.timeLabel)
+          + '</button>';
+      }).join('');
+      return '<div class="slot-day">'
+        + '<div class="slot-day-label">' + escapeHtml(g.label) + '</div>'
+        + '<div class="slot-grid">' + chips + '</div>'
+        + '</div>';
+    }).join('');
+    Array.prototype.forEach.call(body.querySelectorAll('.slot-chip'), function (chip) {
+      chip.addEventListener('click', function () { selectSlot(chip); });
+    });
+  }
+
+  function selectSlot(chipEl) {
+    Array.prototype.forEach.call(document.querySelectorAll('.slot-chip'), function (c) {
+      c.classList.toggle('is-selected', c === chipEl);
+    });
+    selectedSlot = {
+      iso: chipEl.dataset.iso,
+      timeLabel: chipEl.dataset.time,
+      dayLabel: chipEl.dataset.day,
+    };
+    $('step-confirm').classList.remove('is-disabled');
+    renderConfirmSummary($('confirm-summary'));
+    $('confirm-summary').classList.remove('hidden');
+    $('step-confirm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(function () { var el = $('bk-name'); if (el) el.focus(); }, 250);
+  }
+
+  function renderConfirmSummary(el) {
+    var dur = parseDurationMinutes(selectedService && selectedService.duration);
+    el.innerHTML = ''
+      + row('Session', selectedService.title || 'Coaching session')
+      + row('Coach', coach.display_name || coach.full_name || '')
+      + row('When', (selectedSlot.dayLabel || '') + ' at ' + (selectedSlot.timeLabel || ''))
+      + row('Length', dur + ' minutes')
+      + row('Price', 'Free');
+    function row(k, v) {
+      return '<div class="confirm-summary-row">'
+        + '<span class="confirm-summary-key">' + escapeHtml(k) + '</span>'
+        + '<span class="confirm-summary-val">' + escapeHtml(v) + '</span>'
+        + '</div>';
+    }
+  }
+
+  // ── Submit ──
+  $('confirm-back').addEventListener('click', function () {
+    $('step-slot').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  $('confirm-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var errEl = $('confirm-error');
+    errEl.classList.remove('is-shown');
+    if (!selectedService || !selectedSlot) {
+      showFormError('Please pick a session and a time before confirming.');
+      return;
+    }
+    var name = $('bk-name').value.trim();
+    var email = $('bk-email').value.trim();
+    var phone = $('bk-phone').value.trim();
+    var notesText = $('bk-notes').value.trim();
+    if (!name) { showFormError('Please enter your name.'); $('bk-name').focus(); return; }
+    if (!isValidEmail(email)) { showFormError('Please enter a valid email address.'); $('bk-email').focus(); return; }
+
+    var btn = $('confirm-submit');
+    btn.disabled = true;
+    btn.textContent = 'Confirming…';
+
+    try {
+      var bookingId = await insertBooking({ name: name, email: email, phone: phone, notes: notesText });
+      // Fire confirmation email + auto-zoom-meeting (server-side). Don't fail the user flow if email is slow.
+      try {
+        await fetch('/api/booking-confirmation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ booking_id: bookingId }),
+        });
+      } catch (mailErr) {
+        console.warn('[book] confirmation email failed (booking still saved)', mailErr);
+      }
+      // Re-fetch booking to surface a freshly minted Zoom link if /api/booking-confirmation set one.
+      var zoomLink = '';
+      try {
+        var zRes = await fetch(REST + '/coach_bookings?id=eq.' + encodeURIComponent(bookingId) + '&select=zoom_link', { headers: HEADERS_GET });
+        if (zRes.ok) {
+          var zRows = await zRes.json();
+          if (zRows && zRows.length) zoomLink = zRows[0].zoom_link || '';
+        }
+      } catch (zErr) { /* non-fatal */ }
+      renderSuccess({ email: email, zoomLink: zoomLink });
+    } catch (err) {
+      console.error('[book] submit', err);
+      showFormError('Something went wrong saving your booking. Please try again.');
+      btn.disabled = false;
+      btn.textContent = 'Confirm booking';
+    }
+  });
+
+  function showFormError(msg) {
+    var errEl = $('confirm-error');
+    errEl.textContent = msg;
+    errEl.classList.add('is-shown');
+  }
+
+  async function insertBooking(input) {
+    var serviceTitle = selectedService.title || 'Coaching session';
+    // Notes shape mirrors coach-profile.html so existing tooling that parses
+    // /^Name:\s*(.+)/m out of coach_bookings.notes (coach-mirror, intervention-plan-panel,
+    // backfill jobs) keeps working even though we also write client_name as a column.
+    var noteLines = ['Name: ' + input.name, 'Service: ' + serviceTitle];
+    if (input.notes) noteLines.push('', input.notes);
+    var payload = {
+      coach_id: coach.id,
+      client_email: input.email,
+      client_name: input.name,
+      client_phone: input.phone || null,
+      service_id: selectedService.id,
+      service_name: serviceTitle,
+      service_price: 0,
+      scheduled_at: selectedSlot.iso,
+      notes: noteLines.join('\n'),
+      status: 'confirmed',
+    };
+    var res = await fetch(REST + '/coach_bookings', {
+      method: 'POST',
+      headers: HEADERS_WRITE,
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok && res.status !== 201) {
+      var body = '';
+      try { body = await res.text(); } catch (e) {}
+      throw new Error('Booking insert failed: ' + res.status + ' ' + body);
+    }
+    var rows = [];
+    try { rows = await res.json(); } catch (e) {}
+    if (!rows || !rows.length || !rows[0].id) throw new Error('Booking insert returned no row');
+    return rows[0].id;
+  }
+
+  function renderSuccess(info) {
+    renderConfirmSummary($('success-summary'));
+    $('success-sub').textContent = 'A confirmation is on its way to ' + (info.email || 'your inbox') + '.';
+    var zoomEl = $('success-zoom');
+    if (info.zoomLink && /^https?:\/\//.test(info.zoomLink)) {
+      zoomEl.innerHTML = '<div class="success-zoom-label">Your session link</div>'
+        + '<a href="' + escapeHtml(info.zoomLink) + '" target="_blank" rel="noopener">' + escapeHtml(info.zoomLink) + '</a>';
+      zoomEl.classList.add('is-shown');
+    } else {
+      zoomEl.classList.remove('is-shown');
+    }
+    showSuccess();
+  }
+
+  loadCoach();
+})();
+</script>
+</body>
+</html>
