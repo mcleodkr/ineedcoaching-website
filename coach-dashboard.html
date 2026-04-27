@@ -518,6 +518,23 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 #event-modal .modal-body a:hover { text-decoration: underline; }
 #event-modal .modal-actions { display: flex; gap: 8px; margin-top: 22px; flex-wrap: wrap; align-items: center; }
 
+/* Calendar filters (PR 2.A) */
+#calendar-section .calendar-filters { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+#calendar-section .cal-filter-input { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; background: var(--white); color: var(--ink); min-width: 180px; }
+#calendar-section .cal-filter-input:focus { outline: none; border-color: var(--gold); }
+#calendar-section #filter-client { flex: 1 1 220px; }
+#calendar-section #filter-clear { margin-left: auto; }
+
+/* Reschedule modal (PR 2.A) — same scoped pattern as #event-modal */
+#reschedule-modal.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; z-index: 1100; padding: 16px; }
+#reschedule-modal.modal.is-open { display: flex; }
+#reschedule-modal .modal-content { background: var(--white); border-radius: 12px; padding: 28px 32px; max-width: 440px; width: 100%; box-shadow: 0 20px 48px rgba(0,0,0,0.2); }
+#reschedule-modal .modal-title { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.4rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; line-height: 1.25; }
+#reschedule-modal .modal-body { font-size: 0.9rem; color: var(--ink); line-height: 1.6; }
+#reschedule-modal input[type="date"], #reschedule-modal input[type="time"] { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.92rem; background: var(--white); color: var(--ink); }
+#reschedule-modal input[type="date"]:focus, #reschedule-modal input[type="time"]:focus { outline: none; border-color: var(--gold); }
+#reschedule-modal .modal-actions { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; align-items: center; }
+
 </style>
 <style data-MOBILE_NAV_HAMBURGER_v1>
 /* Mobile hamburger nav */
@@ -1501,6 +1518,28 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
             <option value="dayGridMonth">Month</option>
           </select>
         </div>
+
+        <!-- Filters (PR 2.A) — narrow the events the calendar renders.
+             Status defaults to confirmed+manual to match what the calendar
+             showed pre-2.A; coaches can opt into pending/cancelled/no-show
+             buckets explicitly. Service filter populates from coach_services
+             on first calendar boot. Client name is a substring search
+             across both client_name and client_email. -->
+        <div class="calendar-filters">
+          <input type="search" id="filter-client" class="cal-filter-input" placeholder="Filter by client name or email…" autocomplete="off">
+          <select id="filter-service" class="cal-filter-input">
+            <option value="">All session types</option>
+          </select>
+          <select id="filter-status" class="cal-filter-input">
+            <option value="confirmed,manual">Confirmed only</option>
+            <option value="confirmed,manual,pending_payment">Include pending payment</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="no_show">No-shows</option>
+            <option value="">All statuses</option>
+          </select>
+          <button type="button" id="filter-clear" class="cal-btn-link">Clear filters</button>
+        </div>
+
         <div id="calendar"></div>
 
         <!-- Event detail modal (shown on event click) -->
@@ -1514,6 +1553,35 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
               <button type="button" id="event-cancel" class="cal-btn cal-btn-danger">Cancel</button>
               <button type="button" id="event-no-show" class="cal-btn">Mark No-Show</button>
               <button type="button" id="event-close" class="cal-btn-link">Close</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reschedule modal (PR 2.A) — opens on top of the event modal.
+             Date/time inputs interpret values in the coach's BROWSER local
+             timezone (matches book.html's slot ISO synthesis). The
+             "Notify client" checkbox controls whether
+             /api/booking-rescheduled fires after the PATCH lands. -->
+        <div id="reschedule-modal" class="modal" style="display:none;">
+          <div class="modal-content">
+            <h3 class="modal-title">Reschedule Session</h3>
+            <p class="modal-body" style="margin-bottom:12px;">Current time: <strong id="reschedule-current-time"></strong></p>
+            <div class="form-group">
+              <label for="reschedule-date">New date</label>
+              <input type="date" id="reschedule-date" required>
+            </div>
+            <div class="form-group">
+              <label for="reschedule-time">New time</label>
+              <input type="time" id="reschedule-time" required>
+            </div>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.88rem;color:var(--ink);text-transform:none;letter-spacing:0;font-weight:500;margin-bottom:6px;">
+              <input type="checkbox" id="reschedule-notify" checked style="width:16px;height:16px;accent-color:var(--gold);">
+              Email the client about the change
+            </label>
+            <div id="reschedule-error" class="form-error" style="display:none;color:#c44;font-size:0.85rem;margin-top:6px;"></div>
+            <div class="modal-actions">
+              <button type="button" id="reschedule-confirm" class="cal-btn cal-btn-primary">Confirm reschedule</button>
+              <button type="button" id="reschedule-cancel" class="cal-btn-link">Cancel</button>
             </div>
           </div>
         </div>
@@ -4188,6 +4256,11 @@ async function saveZoomLink() {
 
 var calendar = null; // shared FullCalendar instance
 var calendarBookingsCache = []; // last fetched bookings, used by event-click modal lookups
+// Calendar filter state (PR 2.A). Defaults match the pre-filter behavior so a
+// coach who never touches a filter sees the same calendar they had before.
+var calendarFilters = { client: '', service: '', status: 'confirmed,manual' };
+var calendarServiceFilterPopulated = false;
+var rescheduleContext = null; // { bookingId, currentTime } while the modal is open
 
 async function initCalendar() {
   var section = $('calendar-section');
@@ -4243,15 +4316,76 @@ async function initCalendar() {
   $('cal-next').onclick = function () { calendar.next(); };
   $('cal-view').onchange = function (e) { calendar.changeView(e.target.value); };
 
+  // Filter controls (PR 2.A). Client name is debounced lightly so we don't
+  // hit Supabase on every keystroke — the actual fetch already filters
+  // server-side on service+status; client name is JS-side substring search
+  // against the cached row set so we just rebuild events without a refetch.
+  var clientFilterTimer = null;
+  $('filter-client').oninput = function (e) {
+    if (clientFilterTimer) clearTimeout(clientFilterTimer);
+    var v = e.target.value;
+    clientFilterTimer = setTimeout(function () {
+      calendarFilters.client = v;
+      if (calendar) calendar.refetchEvents();
+    }, 150);
+  };
+  $('filter-service').onchange = function (e) {
+    calendarFilters.service = e.target.value;
+    refreshCalendarEvents();
+  };
+  $('filter-status').onchange = function (e) {
+    calendarFilters.status = e.target.value;
+    refreshCalendarEvents();
+  };
+  $('filter-clear').onclick = function () {
+    calendarFilters = { client: '', service: '', status: 'confirmed,manual' };
+    $('filter-client').value = '';
+    $('filter-service').value = '';
+    $('filter-status').value = 'confirmed,manual';
+    refreshCalendarEvents();
+  };
+
+  // Populate the service filter once. Failure is non-fatal — the dropdown
+  // just keeps the "All session types" default.
+  populateServiceFilter().catch(function (e) {
+    console.warn('[calendar] service filter populate failed', e);
+  });
+
   // Modal close handlers.
   $('event-close').onclick = closeEventModal;
   var modal = $('event-modal');
   if (modal) modal.addEventListener('click', function (e) {
     if (e.target === modal) closeEventModal();
   });
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && modal && modal.classList.contains('is-open')) closeEventModal();
+  var reschedModal = $('reschedule-modal');
+  if (reschedModal) reschedModal.addEventListener('click', function (e) {
+    if (e.target === reschedModal) closeRescheduleModal();
   });
+  $('reschedule-cancel').onclick = closeRescheduleModal;
+  $('reschedule-confirm').onclick = confirmReschedule;
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (reschedModal && reschedModal.classList.contains('is-open')) { closeRescheduleModal(); return; }
+    if (modal && modal.classList.contains('is-open')) closeEventModal();
+  });
+}
+
+async function populateServiceFilter() {
+  if (calendarServiceFilterPopulated || !coachProfile || !coachProfile.id) return;
+  var rows = await supabaseGet(
+    'coach_services?coach_id=eq.' + encodeURIComponent(coachProfile.id)
+    + '&is_active=eq.true&select=id,title&order=title.asc'
+  );
+  var sel = $('filter-service');
+  if (!sel) return;
+  (rows || []).forEach(function (s) {
+    if (!s || !s.id) return;
+    var opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.title || 'Untitled';
+    sel.appendChild(opt);
+  });
+  calendarServiceFilterPopulated = true;
 }
 
 async function refreshCalendarEvents() {
@@ -4260,13 +4394,14 @@ async function refreshCalendarEvents() {
     if (calendar) calendar.refetchEvents();
     return;
   }
-  // service_id needed for color hash; service_name + duration come from
-  // coach_bookings columns (set at booking time) so this stays one query.
+  // PR 2.A: status + service filters apply server-side; client-name filter
+  // applies in JS (substring against client_name OR client_email).
   var path = 'coach_bookings'
-    + '?coach_id=eq.' + encodeURIComponent(coachProfile.id)
-    + '&status=in.(confirmed,manual)'
-    + '&select=id,client_email,client_name,service_id,service_name,scheduled_at,status,zoom_link,notes,'
-    +   'coach_services(duration)'
+    + '?coach_id=eq.' + encodeURIComponent(coachProfile.id);
+  if (calendarFilters.status) path += '&status=in.(' + encodeURIComponent(calendarFilters.status) + ')';
+  if (calendarFilters.service) path += '&service_id=eq.' + encodeURIComponent(calendarFilters.service);
+  path += '&select=id,client_email,client_name,service_id,service_name,scheduled_at,status,zoom_link,notes,'
+    +     'coach_services(duration)'
     + '&order=scheduled_at.asc';
   try {
     var rows = await supabaseGet(path);
@@ -4280,7 +4415,18 @@ async function refreshCalendarEvents() {
 }
 
 function buildCalendarEvents() {
-  return calendarBookingsCache.map(function (b) {
+  // PR 2.A: client name filter applies here (server already filtered by
+  // status + service). Substring is case-insensitive across client_name and
+  // client_email so coaches can search by either.
+  var search = (calendarFilters.client || '').trim().toLowerCase();
+  var rows = search
+    ? calendarBookingsCache.filter(function (b) {
+        var name = (b.client_name || '').toLowerCase();
+        var email = (b.client_email || '').toLowerCase();
+        return name.indexOf(search) !== -1 || email.indexOf(search) !== -1;
+      })
+    : calendarBookingsCache;
+  return rows.map(function (b) {
     var clientLabel = b.client_name || b.client_email || 'Client';
     var serviceLabel = b.service_name || 'Session';
     var durationText = (b.coach_services && b.coach_services.duration) || '60 minutes';
@@ -4358,12 +4504,12 @@ function handleCalendarEventClick(info) {
     window.location.href = '/coach-dashboard.html?tab=clients&booking_id=' + encodeURIComponent(props.bookingId);
   };
   $('event-reschedule').onclick = function () {
-    alert('Reschedule is coming in Phase 2. For now, cancel this booking and ask the client to rebook from your booking page.');
+    showRescheduleModal(props.bookingId, info.event.start);
   };
   $('event-cancel').onclick = async function () {
-    if (!confirm('Cancel this booking? Status changes to cancelled. (Cancellation emails ship in Phase 2.)')) return;
+    if (!confirm('Cancel this booking? The client will be emailed.')) return;
     try {
-      await supabasePatch('coach_bookings', { id: 'eq.' + props.bookingId }, { status: 'cancelled' });
+      await cancelBooking(props.bookingId);
       closeEventModal();
       await refreshCalendarEvents();
     } catch (e) {
@@ -4372,9 +4518,9 @@ function handleCalendarEventClick(info) {
     }
   };
   $('event-no-show').onclick = async function () {
-    if (!confirm('Mark this session as a no-show?')) return;
+    if (!confirm('Mark this session as a no-show? The client will be emailed.')) return;
     try {
-      await supabasePatch('coach_bookings', { id: 'eq.' + props.bookingId }, { status: 'no_show' });
+      await markNoShow(props.bookingId);
       closeEventModal();
       await refreshCalendarEvents();
     } catch (e) {
@@ -4384,6 +4530,125 @@ function handleCalendarEventClick(info) {
   };
 
   openEventModal();
+}
+
+// Status patch + email side-effect — extracted so the cancel/no-show flow
+// from the calendar event modal stays small and testable.
+async function cancelBooking(bookingId) {
+  await supabasePatch('coach_bookings', { id: 'eq.' + bookingId }, { status: 'cancelled' });
+  // Email is best-effort: a transient Resend hiccup shouldn't undo the
+  // status change, which is the source of truth for the dashboard.
+  try {
+    await fetch('/api/booking-cancelled', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ booking_id: bookingId }),
+    });
+  } catch (e) {
+    console.warn('[calendar] cancellation email failed', e);
+  }
+}
+
+async function markNoShow(bookingId) {
+  await supabasePatch('coach_bookings', { id: 'eq.' + bookingId }, { status: 'no_show' });
+  try {
+    await fetch('/api/booking-no-show', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ booking_id: bookingId }),
+    });
+  } catch (e) {
+    console.warn('[calendar] no-show email failed', e);
+  }
+}
+
+// ── Reschedule modal (PR 2.A) ──
+function showRescheduleModal(bookingId, currentStart) {
+  rescheduleContext = { bookingId: bookingId, currentTime: currentStart };
+  var d = currentStart instanceof Date ? currentStart : new Date(currentStart);
+  $('reschedule-current-time').textContent = isFiniteDate(d)
+    ? d.toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+    : 'Unknown';
+  // Seed inputs with the existing browser-local date/time so the coach
+  // typically only needs to change one field.
+  if (isFiniteDate(d)) {
+    $('reschedule-date').value = formatDateForInput(d);
+    $('reschedule-time').value = formatTimeForInput(d);
+  } else {
+    $('reschedule-date').value = '';
+    $('reschedule-time').value = '';
+  }
+  $('reschedule-notify').checked = true;
+  $('reschedule-error').style.display = 'none';
+  $('reschedule-error').textContent = '';
+  $('reschedule-confirm').disabled = false;
+  $('reschedule-confirm').textContent = 'Confirm reschedule';
+  openRescheduleModal();
+}
+
+async function confirmReschedule() {
+  if (!rescheduleContext || !rescheduleContext.bookingId) return;
+  var dateVal = $('reschedule-date').value;
+  var timeVal = $('reschedule-time').value;
+  var errEl = $('reschedule-error');
+  errEl.style.display = 'none';
+  if (!dateVal || !timeVal) {
+    errEl.textContent = 'Pick a new date and time.';
+    errEl.style.display = 'block';
+    return;
+  }
+  var newDt = new Date(dateVal + 'T' + timeVal);
+  if (!isFiniteDate(newDt)) {
+    errEl.textContent = 'That date/time is invalid.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (newDt.getTime() < Date.now() - 60000) {
+    if (!confirm('That time is in the past. Reschedule anyway?')) return;
+  }
+  var bookingId = rescheduleContext.bookingId;
+  var notify = $('reschedule-notify').checked;
+  var btn = $('reschedule-confirm');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try {
+    await supabasePatch('coach_bookings', { id: 'eq.' + bookingId }, { scheduled_at: newDt.toISOString() });
+    if (notify) {
+      try {
+        await fetch('/api/booking-rescheduled', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ booking_id: bookingId }),
+        });
+      } catch (e) {
+        console.warn('[calendar] reschedule email failed', e);
+      }
+    }
+    closeRescheduleModal();
+    closeEventModal();
+    await refreshCalendarEvents();
+  } catch (e) {
+    console.error('[calendar] reschedule failed', e);
+    errEl.textContent = 'Could not save. Please refresh and try again.';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Confirm reschedule';
+  }
+}
+
+function isFiniteDate(d) { return d instanceof Date && !Number.isNaN(d.getTime()); }
+function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+function formatDateForInput(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+function formatTimeForInput(d) { return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+
+function openRescheduleModal() {
+  var m = $('reschedule-modal');
+  if (m) m.classList.add('is-open');
+}
+function closeRescheduleModal() {
+  rescheduleContext = null;
+  var m = $('reschedule-modal');
+  if (m) m.classList.remove('is-open');
 }
 
 function openEventModal() {
