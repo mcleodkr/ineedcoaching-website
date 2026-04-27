@@ -262,6 +262,54 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
         <label for="bk-notes">What you'd like to focus on <span class="opt">(optional)</span></label>
         <textarea id="bk-notes" maxlength="2000" placeholder="A quick line on what brought you here helps the coach prepare."></textarea>
       </div>
+
+      <!-- Coupon code (PR 4.A) — applies a coach-issued discount at
+           checkout time via Stripe `discounts: [{coupon}]`. Only shown
+           for paid services since free can't be discounted further. -->
+      <div class="form-group" id="coupon-row" style="display:none;">
+        <label for="coupon-code">Coupon code <span class="opt">(optional)</span></label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="coupon-code" autocomplete="off" maxlength="40" placeholder="FIRST20" style="flex:1;text-transform:uppercase;">
+          <button type="button" id="coupon-apply" class="btn-link" style="font-weight:700;color:var(--gold);">Apply</button>
+        </div>
+        <div id="coupon-status" style="display:none;margin-top:8px;font-size:0.82rem;"></div>
+      </div>
+
+      <!-- Gift certificate code (PR 4.A) — credit applies to the booking
+           total, may cover the full session. -->
+      <div class="form-group" id="gift-row">
+        <label for="gift-code">Gift certificate code <span class="opt">(optional)</span></label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="gift-code" autocomplete="off" maxlength="40" placeholder="ABCD2345EFGH" style="flex:1;text-transform:uppercase;letter-spacing:0.05em;">
+          <button type="button" id="gift-apply" class="btn-link" style="font-weight:700;color:var(--gold);">Apply</button>
+        </div>
+        <div id="gift-status" style="display:none;margin-top:8px;font-size:0.82rem;"></div>
+      </div>
+
+      <!-- Recurring booking (PR 4.A) — free flow only for now. Creates a
+           recurring_bookings parent + N coach_bookings children at a
+           weekly / biweekly / monthly cadence. -->
+      <div class="form-group" id="recurring-row" style="display:none;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.86rem;font-weight:600;color:var(--ink);text-transform:none;letter-spacing:0;">
+          <input type="checkbox" id="make-recurring" style="width:16px;height:16px;accent-color:var(--gold);">
+          Make this a recurring series
+        </label>
+        <div id="recurring-options" style="display:none;margin-top:10px;padding-left:24px;display:none;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <select id="recurring-frequency" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.88rem;background:var(--warm);color:var(--ink);">
+              <option value="weekly">Weekly</option>
+              <option value="biweekly">Every 2 weeks</option>
+              <option value="monthly">Monthly</option>
+            </select>
+            <select id="recurring-count" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.88rem;background:var(--warm);color:var(--ink);">
+              <option value="4">4 sessions</option>
+              <option value="8" selected>8 sessions</option>
+              <option value="12">12 sessions</option>
+              <option value="24">24 sessions</option>
+            </select>
+          </div>
+        </div>
+      </div>
       <div class="btn-row">
         <button type="submit" id="confirm-submit" class="btn-gold">Confirm booking</button>
         <button type="button" id="confirm-back" class="btn-link">Pick a different time</button>
@@ -393,6 +441,10 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
   var selectedService = null;
   var coachTz = 'America/Chicago';
   var selectedSlot = null; // { datetime, label, dayLabel }
+  // PR 4.A state — coupon + gift + recurring + waitlist
+  var appliedCoupon = null; // { code, discount_cents, ... }
+  var appliedGift = null;   // { code, gift_certificate_id, covers_full, credit_cents, ... }
+  var lastSlotResponse = null; // raw /api/availability-slots response, used to pivot to waitlist on empty
 
   // ── Load coach + services ──
   async function loadCoach() {
@@ -504,10 +556,24 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
       b.classList.toggle('is-selected', b === btnEl);
     });
     selectedSlot = null;
+    appliedCoupon = null;
+    appliedGift = null;
     $('step-confirm').classList.add('is-disabled');
     $('confirm-summary').classList.add('hidden');
     $('step-slot').classList.remove('is-disabled');
     $('step-slot-sub').textContent = 'Available openings for ' + (selectedService.title || 'this session') + ' in the next 14 days.';
+    // PR 4.A: coupons only matter for paid services; recurring is free-only.
+    var paid = isPaidService(selectedService);
+    var couponRow = $('coupon-row');
+    var recurringRow = $('recurring-row');
+    if (couponRow) couponRow.style.display = paid ? '' : 'none';
+    if (recurringRow) recurringRow.style.display = paid ? 'none' : '';
+    var couponInput = $('coupon-code');
+    if (couponInput) couponInput.value = '';
+    var couponStatus = $('coupon-status');
+    if (couponStatus) { couponStatus.style.display = 'none'; couponStatus.textContent = ''; }
+    var giftStatus = $('gift-status');
+    if (giftStatus) { giftStatus.style.display = 'none'; giftStatus.textContent = ''; }
     $('step-slot').scrollIntoView({ behavior: 'smooth', block: 'start' });
     loadSlots();
   }
@@ -582,7 +648,21 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
   function renderSlots(slots) {
     var body = $('slot-body');
     if (!slots.length) {
-      body.innerHTML = '<div class="slot-empty">No openings in the next 14 days. Try checking back, or message the coach from their profile.</div>';
+      // PR 4.A: empty state pivots to a waitlist signup so the client doesn't
+      // bounce. The form posts to /api/join-waitlist and de-dupes server-side.
+      body.innerHTML = ''
+        + '<div class="slot-empty" style="padding:24px;">'
+        +   '<div style="font-weight:700;color:var(--ink);margin-bottom:8px;">No openings in the next 14 days.</div>'
+        +   '<div style="font-size:0.88rem;color:var(--muted);line-height:1.6;margin-bottom:14px;">Join the waitlist and the coach will email you when something opens up.</div>'
+        +   '<form id="waitlist-form" style="display:grid;gap:8px;text-align:left;max-width:360px;margin:0 auto;">'
+        +     '<input type="text" id="wl-name" placeholder="Your name" maxlength="120" required style="padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.9rem;background:var(--warm);color:var(--ink);">'
+        +     '<input type="email" id="wl-email" placeholder="email@example.com" maxlength="180" required style="padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.9rem;background:var(--warm);color:var(--ink);">'
+        +     '<button type="submit" class="btn-gold" style="margin-top:6px;">Join the waitlist</button>'
+        +     '<div id="wl-status" style="display:none;font-size:0.84rem;text-align:center;"></div>'
+        +   '</form>'
+        + '</div>';
+      var form = $('waitlist-form');
+      if (form) form.addEventListener('submit', submitWaitlist);
       return;
     }
     var groups = groupSlotsByDay(slots);
@@ -684,6 +764,157 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
     $('step-slot').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
+  // PR 4.A: coupon apply
+  var couponApplyBtn = $('coupon-apply');
+  if (couponApplyBtn) couponApplyBtn.addEventListener('click', async function () {
+    var input = $('coupon-code');
+    var status = $('coupon-status');
+    if (!input || !status) return;
+    var code = (input.value || '').trim().toUpperCase();
+    if (!code) {
+      appliedCoupon = null;
+      status.textContent = '';
+      status.style.display = 'none';
+      return;
+    }
+    if (!selectedService) return;
+    var priceCents = Math.round(Number(selectedService.price || 0) * 100);
+    couponApplyBtn.disabled = true;
+    couponApplyBtn.textContent = 'Checking…';
+    try {
+      var res = await fetch('/api/validate-coupon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code, coach_id: coach.id, service_id: selectedService.id, price_cents: priceCents }),
+      });
+      var data = await res.json().catch(function () { return {}; });
+      if (data && data.valid) {
+        appliedCoupon = { code: code, ...data };
+        var dollars = (data.discount_cents / 100).toFixed(2).replace(/\.00$/, '');
+        status.textContent = '✓ Coupon applied: $' + dollars + ' off';
+        status.style.color = '#4a7c59';
+      } else {
+        appliedCoupon = null;
+        status.textContent = '✗ ' + ({ not_found: 'Code not found.', expired: 'Code expired.', exhausted: 'Code is no longer available.', wrong_service: 'Code doesn’t apply to this session.' }[data && data.reason] || 'Code can’t be applied.');
+        status.style.color = '#c44';
+      }
+      status.style.display = 'block';
+    } catch (err) {
+      console.warn('[book] coupon validate', err);
+      appliedCoupon = null;
+      status.textContent = 'Could not check the code. Try again.';
+      status.style.color = '#c44';
+      status.style.display = 'block';
+    }
+    couponApplyBtn.disabled = false;
+    couponApplyBtn.textContent = 'Apply';
+  });
+
+  // PR 4.A: gift certificate apply
+  var giftApplyBtn = $('gift-apply');
+  if (giftApplyBtn) giftApplyBtn.addEventListener('click', async function () {
+    var input = $('gift-code');
+    var status = $('gift-status');
+    if (!input || !status) return;
+    var code = (input.value || '').trim().toUpperCase();
+    if (!code) {
+      appliedGift = null;
+      status.textContent = '';
+      status.style.display = 'none';
+      return;
+    }
+    var priceCents = Math.round(Number((selectedService && selectedService.price) || 0) * 100);
+    giftApplyBtn.disabled = true;
+    giftApplyBtn.textContent = 'Checking…';
+    try {
+      var res = await fetch('/api/redeem-gift-certificate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code, coach_id: coach.id, service_price_cents: priceCents }),
+      });
+      var data = await res.json().catch(function () { return {}; });
+      if (data && data.valid) {
+        appliedGift = { code: code, ...data };
+        if (data.covers_full) {
+          status.textContent = '✓ Gift covers this session in full';
+        } else if (data.credit_cents > 0) {
+          var dollars = (data.credit_cents / 100).toFixed(2).replace(/\.00$/, '');
+          status.textContent = '✓ Gift credit applied: $' + dollars + ' off';
+        } else {
+          status.textContent = '✓ Gift accepted';
+        }
+        status.style.color = '#4a7c59';
+      } else {
+        appliedGift = null;
+        status.textContent = '✗ ' + ({ not_found: 'Code not found.', expired: 'Gift expired.', already_redeemed: 'Gift already used.', wrong_coach: 'Gift is for a different coach.' }[data && data.reason] || 'Gift can’t be applied.');
+        status.style.color = '#c44';
+      }
+      status.style.display = 'block';
+    } catch (err) {
+      console.warn('[book] gift validate', err);
+      appliedGift = null;
+      status.textContent = 'Could not check the code. Try again.';
+      status.style.color = '#c44';
+      status.style.display = 'block';
+    }
+    giftApplyBtn.disabled = false;
+    giftApplyBtn.textContent = 'Apply';
+  });
+
+  // PR 4.A: recurring options reveal on checkbox tick
+  var recurringBox = $('make-recurring');
+  if (recurringBox) recurringBox.addEventListener('change', function () {
+    var opts = $('recurring-options');
+    if (opts) opts.style.display = recurringBox.checked ? 'block' : 'none';
+  });
+
+  // PR 4.A: prefill gift code from URL (gift email link → /book?coach=&gift_code=)
+  (function prefillGiftFromUrl() {
+    var p = new URLSearchParams(window.location.search);
+    var c = (p.get('gift_code') || '').trim();
+    if (c) {
+      var el = $('gift-code');
+      if (el) el.value = c.toUpperCase();
+    }
+  })();
+
+  async function submitWaitlist(e) {
+    e.preventDefault();
+    var name = ($('wl-name').value || '').trim();
+    var email = ($('wl-email').value || '').trim();
+    var status = $('wl-status');
+    if (!name || !isValidEmail(email)) {
+      status.textContent = 'Add your name and a valid email.';
+      status.style.color = '#c44';
+      status.style.display = 'block';
+      return;
+    }
+    status.textContent = 'Saving…';
+    status.style.color = 'var(--muted)';
+    status.style.display = 'block';
+    try {
+      var payload = { coach_id: coach.id, client_email: email, client_name: name };
+      if (selectedService && selectedService.id) payload.service_id = selectedService.id;
+      var res = await fetch('/api/join-waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      var data = await res.json().catch(function () { return {}; });
+      if (res.ok && (data.added || data.updated)) {
+        status.textContent = '✓ You’re on the waitlist. We’ll email you when a slot opens.';
+        status.style.color = '#4a7c59';
+        e.target.querySelector('button[type="submit"]').disabled = true;
+      } else {
+        throw new Error('waitlist_failed');
+      }
+    } catch (err) {
+      console.warn('[book] waitlist join', err);
+      status.textContent = 'Could not join the waitlist. Please try again.';
+      status.style.color = '#c44';
+    }
+  }
+
   $('confirm-form').addEventListener('submit', async function (e) {
     e.preventDefault();
     var errEl = $('confirm-error');
@@ -705,12 +936,81 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
     var smsTimingRaw = parseInt(($('sms-timing') && $('sms-timing').value) || '30', 10);
     var smsTiming = (smsTimingRaw === 15 || smsTimingRaw === 30) ? smsTimingRaw : 30;
 
-    var btn = $('confirm-submit');
+    // PR 4.A: recurring booking branch — bypass slot/single-booking flow.
+    var recurringChecked = $('make-recurring') && $('make-recurring').checked;
     var paid = isPaidService(selectedService);
+    if (recurringChecked && !paid) {
+      var btn0 = $('confirm-submit');
+      btn0.disabled = true;
+      btn0.textContent = 'Creating series…';
+      try {
+        var freq = $('recurring-frequency').value;
+        var totalSessions = parseInt($('recurring-count').value, 10) || 8;
+        var rRes = await fetch('/api/create-recurring-series', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            coach_id: coach.id,
+            client_email: email,
+            client_name: name,
+            client_phone: phone || null,
+            service_id: selectedService.id,
+            start_iso: selectedSlot.iso,
+            frequency: freq,
+            total_sessions: totalSessions,
+            notes: notesText,
+          }),
+        });
+        if (!rRes.ok) {
+          var rErr = ''; try { rErr = (await rRes.json()).error || ''; } catch (e3) {}
+          throw new Error(rErr || ('Series creation failed: ' + rRes.status));
+        }
+        var rData = await rRes.json();
+        renderSuccess({ email: email, zoomLink: '' });
+        var sub = $('success-sub');
+        if (sub) sub.textContent = 'Series created — ' + (rData.sessions_created || totalSessions) + ' sessions starting ' + (selectedSlot.dayLabel || '') + ' at ' + (selectedSlot.timeLabel || '') + '. A confirmation is on its way to ' + email + '.';
+        return;
+      } catch (err) {
+        console.error('[book] recurring submit', err);
+        showFormError('Could not create the series. Please try again.');
+        btn0.disabled = false;
+        updateConfirmButtonLabel();
+        return;
+      }
+    }
+
+    var btn = $('confirm-submit');
     btn.disabled = true;
     btn.textContent = paid ? 'Redirecting to payment…' : 'Confirming…';
 
     try {
+      // PR 4.A: gift covers full → write a confirmed free booking with
+      // gift_certificate_id set, mark gift redeemed; skip Stripe entirely.
+      if (paid && appliedGift && appliedGift.covers_full && appliedGift.gift_certificate_id) {
+        var giftBookingId = await insertBooking({
+          name: name, email: email, phone: phone, notes: notesText,
+          status: 'confirmed', price: 0,
+          sms_opt_in: smsOptIn, sms_reminder_timing: smsTiming,
+          gift_certificate_id: appliedGift.gift_certificate_id,
+          discount_amount_cents: Math.round(Number(selectedService.price || 0) * 100),
+        });
+        try {
+          await fetch(REST + '/gift_certificates?id=eq.' + encodeURIComponent(appliedGift.gift_certificate_id), {
+            method: 'PATCH',
+            headers: { ...HEADERS_WRITE, Prefer: 'return=minimal' },
+            body: JSON.stringify({ redeemed_by: email, redeemed_at: new Date().toISOString() }),
+          });
+        } catch (giftErr) { console.warn('[book] gift redeem patch failed', giftErr); }
+        try {
+          await fetch('/api/booking-confirmation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ booking_id: giftBookingId }),
+          });
+        } catch (mailErr) { console.warn('[book] confirmation email failed', mailErr); }
+        renderSuccess({ email: email, zoomLink: '' });
+        return;
+      }
       if (paid) {
         // Paid flow (PR 1.D): pre-create the row in pending_payment so the
         // webhook has something to upgrade, then send the user to Stripe.
@@ -718,11 +1018,16 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
           name: name, email: email, phone: phone, notes: notesText,
           status: 'pending_payment', price: Number(selectedService.price || 0),
           sms_opt_in: smsOptIn, sms_reminder_timing: smsTiming,
+          gift_certificate_id: appliedGift && !appliedGift.covers_full ? appliedGift.gift_certificate_id : null,
+          discount_amount_cents: appliedGift && appliedGift.credit_cents ? appliedGift.credit_cents : null,
         });
         var checkoutRes = await fetch('/api/create-checkout-session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ booking_id: pendingId }),
+          body: JSON.stringify({
+            booking_id: pendingId,
+            coupon_code: appliedCoupon ? appliedCoupon.code : '',
+          }),
         });
         if (!checkoutRes.ok) {
           var errBody = '';
@@ -804,6 +1109,10 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
     };
     if (status === 'pending_payment') {
       payload.payment_amount_cents = Math.round(priceUsd * 100);
+    }
+    if (input.gift_certificate_id) payload.gift_certificate_id = input.gift_certificate_id;
+    if (typeof input.discount_amount_cents === 'number' && input.discount_amount_cents > 0) {
+      payload.discount_amount_cents = input.discount_amount_cents;
     }
     var res = await fetch(REST + '/coach_bookings', {
       method: 'POST',

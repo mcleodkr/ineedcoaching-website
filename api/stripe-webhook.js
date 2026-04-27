@@ -74,9 +74,15 @@ export default async function handler(req, res) {
         const session = event.data.object;
         const meta = session.metadata || {};
 
-        // Branch on metadata shape — booking_id = scheduler PR 1.D, course_id = original course flow.
+        // Branch on metadata shape — disjoint: each created session sets exactly one of these markers.
         if (meta.booking_id && !meta.course_id) {
           return handleBookingCompleted({ session, meta, stripe, SUPABASE_URL, SB_HEADERS, req, res });
+        }
+        if (meta.package_id) {
+          return handlePackageCompleted({ session, meta, SUPABASE_URL, SB_HEADERS, res });
+        }
+        if (meta.gift_certificate === 'true' || meta.gift_certificate === true) {
+          return handleGiftCompleted({ session, meta, SUPABASE_URL, SB_HEADERS, req, res });
         }
 
         const courseId = meta.course_id;
@@ -312,6 +318,14 @@ async function handleBookingCompleted({ session, meta, stripe, SUPABASE_URL, SB_
     }
   }
 
+  // Compute discount the coupon yielded by reading total_details on the
+  // session, populated by Stripe when discounts: [{coupon}] was attached.
+  let discountCents = 0;
+  try {
+    const td = session.total_details && session.total_details.amount_discount;
+    if (typeof td === 'number') discountCents = td;
+  } catch (e) { /* non-fatal */ }
+
   // Upgrade the booking. Patch is keyed on the booking id; the UNIQUE index
   // on stripe_session_id makes a duplicate write fail loudly rather than
   // silently double-confirming.
@@ -328,9 +342,46 @@ async function handleBookingCompleted({ session, meta, stripe, SUPABASE_URL, SB_
         platform_fee_cents: platformFee,
         stripe_fee_cents: stripeFee,
         coach_payout_cents: coachPayout,
+        coupon_id: meta.coupon_id || null,
+        discount_amount_cents: discountCents > 0 ? discountCents : null,
       }),
     }
   );
+
+  // PR 4.A: track coupon redemption in coupon_usage + bump times_used so
+  // the dashboard's coupon list reflects real usage and max_uses gates work.
+  if (meta.coupon_id && discountCents > 0) {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/coupon_usage`, {
+        method: 'POST',
+        headers: { ...SB_HEADERS, Prefer: 'return=minimal' },
+        body: JSON.stringify({
+          coupon_id: meta.coupon_id,
+          client_email: (meta.client_email || '').toLowerCase(),
+          booking_id: bookingId,
+          discount_amount_cents: discountCents,
+        }),
+      });
+      // Increment times_used. PostgREST doesn't natively expose increments,
+      // so we read-then-write — fine for a low-write-rate column.
+      const cur = await fetch(
+        `${SUPABASE_URL}/rest/v1/coach_coupons?id=eq.${encodeURIComponent(meta.coupon_id)}&select=times_used&limit=1`,
+        { headers: SB_HEADERS }
+      ).then(r => r.json()).catch(() => []);
+      if (Array.isArray(cur) && cur[0]) {
+        await fetch(
+          `${SUPABASE_URL}/rest/v1/coach_coupons?id=eq.${encodeURIComponent(meta.coupon_id)}`,
+          {
+            method: 'PATCH',
+            headers: { ...SB_HEADERS, Prefer: 'return=minimal' },
+            body: JSON.stringify({ times_used: (cur[0].times_used || 0) + 1 }),
+          }
+        );
+      }
+    } catch (e) {
+      console.warn('[stripe-webhook][booking] coupon usage tracking failed', e && e.message);
+    }
+  }
   if (!patchRes.ok) {
     const bodyText = await patchRes.text().catch(() => '');
     console.error('[stripe-webhook][booking] booking patch failed', patchRes.status, bodyText);
@@ -372,5 +423,148 @@ async function handleBookingCompleted({ session, meta, stripe, SUPABASE_URL, SB_
     }
   }
 
+  return res.status(200).send('ok');
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Session-package completion (PR 4.A)
+// ──────────────────────────────────────────────────────────────────────────
+//
+// Creates the client_package_purchases row that tracks credits_remaining.
+// The booking flow checks this table when a client enters their email so
+// they can spend a credit instead of paying again.
+async function handlePackageCompleted({ session, meta, SUPABASE_URL, SB_HEADERS, res }) {
+  const packageId = meta.package_id;
+  const clientEmail = (meta.client_email || session.customer_details?.email || '').toLowerCase();
+  const sessionCount = parseInt(meta.session_count || '0', 10);
+  if (!packageId || !clientEmail || !sessionCount) {
+    console.error('[stripe-webhook][package] missing metadata', meta);
+    return res.status(200).send('skipped');
+  }
+
+  // Idempotency on stripe_session_id (UNIQUE constraint on the column).
+  const dupRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/client_package_purchases?stripe_session_id=eq.${encodeURIComponent(session.id)}&select=id`,
+    { headers: SB_HEADERS }
+  );
+  const dups = await dupRes.json();
+  if (Array.isArray(dups) && dups.length) {
+    return res.status(200).send('already processed');
+  }
+
+  await fetch(`${SUPABASE_URL}/rest/v1/client_package_purchases`, {
+    method: 'POST',
+    headers: { ...SB_HEADERS, Prefer: 'return=minimal' },
+    body: JSON.stringify({
+      client_email: clientEmail,
+      coach_id: meta.coach_id || null,
+      package_id: packageId,
+      credits_total: sessionCount,
+      credits_remaining: sessionCount,
+      stripe_session_id: session.id,
+      stripe_payment_intent_id: session.payment_intent || null,
+      payment_amount_cents: session.amount_total || null,
+    }),
+  });
+
+  if (meta.coach_id) {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/coach_notifications`, {
+        method: 'POST',
+        headers: { ...SB_HEADERS, Prefer: 'return=minimal' },
+        body: JSON.stringify({
+          coach_id: meta.coach_id,
+          type: 'new_booking',
+          title: 'Package purchased',
+          body: `${clientEmail} bought a ${sessionCount}-session package.`,
+          link_url: '/coach-dashboard.html?tab=clients',
+        }),
+      });
+    } catch (e) { /* non-fatal */ }
+  }
+  return res.status(200).send('ok');
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Gift-certificate completion (PR 4.A)
+// ──────────────────────────────────────────────────────────────────────────
+//
+// Generates a unique short code, stores the gift, and fires
+// /api/send-gift-certificate to email the recipient.
+async function handleGiftCompleted({ session, meta, SUPABASE_URL, SB_HEADERS, req, res }) {
+  const recipientEmail = (meta.recipient_email || '').toLowerCase();
+  const coachId = meta.coach_id;
+  if (!recipientEmail || !coachId) {
+    console.error('[stripe-webhook][gift] missing metadata', meta);
+    return res.status(200).send('skipped');
+  }
+
+  // Idempotency via stripe_session_id lookup.
+  const dupRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/gift_certificates?stripe_session_id=eq.${encodeURIComponent(session.id)}&select=id`,
+    { headers: SB_HEADERS }
+  );
+  const dups = await dupRes.json();
+  if (Array.isArray(dups) && dups.length) return res.status(200).send('already processed');
+
+  // 12-char base32-ish code: short enough to type, long enough not to collide
+  // in practice. Loop on UNIQUE collision (vanishingly rare for the lifetime
+  // of this app, but cheap to handle).
+  const { randomBytes } = await import('crypto');
+  function genCode() {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const buf = randomBytes(12);
+    let out = '';
+    for (let i = 0; i < 12; i++) out += alphabet[buf[i] % alphabet.length];
+    return out;
+  }
+  const amountCents = parseInt(meta.amount_cents || '0', 10) || null;
+  const sessionCount = parseInt(meta.session_count || '0', 10) || null;
+  const message = meta.message || '';
+  let inserted = null;
+  for (let attempt = 0; attempt < 5 && !inserted; attempt++) {
+    const code = genCode();
+    const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/gift_certificates`, {
+      method: 'POST',
+      headers: { ...SB_HEADERS, Prefer: 'return=representation' },
+      body: JSON.stringify({
+        coach_id: coachId,
+        code,
+        amount_cents: amountCents,
+        session_count: sessionCount,
+        purchased_by: meta.purchased_by || null,
+        recipient_email: recipientEmail,
+        recipient_name: meta.recipient_name || null,
+        message: message || null,
+        stripe_session_id: session.id,
+        payment_amount_cents: session.amount_total || null,
+        is_active: true,
+      }),
+    });
+    if (insertRes.ok) {
+      const rows = await insertRes.json();
+      if (rows && rows[0]) inserted = rows[0];
+    } else if (insertRes.status === 409) {
+      // UNIQUE collision on code — try again with a fresh one.
+      continue;
+    } else {
+      const t = await insertRes.text().catch(() => '');
+      console.error('[stripe-webhook][gift] insert failed', insertRes.status, t);
+      return res.status(500).send('gift_insert_failed');
+    }
+  }
+  if (!inserted) return res.status(500).send('gift_code_collisions');
+
+  try {
+    const host = req.headers.host;
+    const origin = host ? `https://${host}` : 'https://www.ineedcoaching.org';
+    await fetch(`${origin}/api/send-gift-certificate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gift_id: inserted.id }),
+    });
+  } catch (mailErr) {
+    console.warn('[stripe-webhook][gift] send invocation failed', mailErr && mailErr.message);
+  }
   return res.status(200).send('ok');
 }

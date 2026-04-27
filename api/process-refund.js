@@ -45,11 +45,13 @@ export default async function handler(req, res) {
     const stripe = new Stripe(STRIPE_SECRET_KEY);
     const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
-    // Look up the booking — only needs the payment intent + ledger columns.
+    // Look up the booking — needs the payment intent + ledger + scheduled_at
+    // and the coach's late-cancel policy so we can compute partial refunds.
     const lookup = await fetch(
       `${SUPABASE_URL}/rest/v1/coach_bookings`
         + `?id=eq.${encodeURIComponent(bookingId)}`
-        + `&select=id,status,stripe_payment_intent_id,payment_amount_cents,refund_id`
+        + `&select=id,status,stripe_payment_intent_id,payment_amount_cents,refund_id,scheduled_at,`
+        +   `coach_profiles(late_cancel_enabled,late_cancel_window_hours,late_cancel_fee_type,late_cancel_fee_amount)`
         + `&limit=1`,
       { headers }
     );
@@ -82,14 +84,64 @@ export default async function handler(req, res) {
       });
     }
 
+    // Late-cancellation fee math (PR 4.A). When the coach has the policy
+    // enabled AND the cancellation lands inside the window, we keep a
+    // portion of the payment as a fee and refund only the difference. The
+    // policy lives on coach_profiles so a coach can update their cutoff
+    // and rate without touching individual bookings.
+    const policy = booking.coach_profiles || {};
+    let refundAmountCents = amountCents; // default = full
+    let feeCents = 0;
+    if (policy.late_cancel_enabled && booking.scheduled_at) {
+      const sessionTs = new Date(booking.scheduled_at).getTime();
+      const hoursUntil = (sessionTs - Date.now()) / 3_600_000;
+      if (hoursUntil < Number(policy.late_cancel_window_hours || 24)) {
+        if (policy.late_cancel_fee_type === 'fixed') {
+          feeCents = Math.round(Number(policy.late_cancel_fee_amount || 0) * 100);
+        } else {
+          // percentage of original payment
+          feeCents = Math.round(amountCents * Number(policy.late_cancel_fee_amount || 0) / 100);
+        }
+        feeCents = Math.max(0, Math.min(amountCents, feeCents));
+        refundAmountCents = amountCents - feeCents;
+      }
+    }
+    if (refundAmountCents <= 0) {
+      // Full fee retained — nothing to refund. Stamp the booking with a
+      // synthetic refund record so the cancellation email and dashboard
+      // know fees were applied (no Stripe call here because Stripe rejects
+      // zero-amount refunds).
+      await fetch(
+        `${SUPABASE_URL}/rest/v1/coach_bookings?id=eq.${encodeURIComponent(bookingId)}`,
+        {
+          method: 'PATCH',
+          headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: JSON.stringify({
+            refund_id: 'late_cancel_fee_full',
+            refund_amount_cents: 0,
+            refund_status: 'fee_retained',
+            refunded_at: new Date().toISOString(),
+          }),
+        }
+      );
+      return res.status(200).json({
+        refunded: false,
+        reason: 'late_cancel_full_fee',
+        fee_cents: feeCents,
+        booking_id: bookingId,
+      });
+    }
+
     // Issue the refund. Reverse the coach transfer + refund the platform
-    // fee so the client gets the full amount back.
+    // fee so the client gets the full amount back. For partial refunds
+    // (late-cancel fee), `amount` overrides the default full-amount refund.
     const refund = await stripe.refunds.create({
       payment_intent: paymentIntentId,
+      ...(refundAmountCents !== amountCents ? { amount: refundAmountCents } : {}),
       reason: 'requested_by_customer',
       reverse_transfer: true,
       refund_application_fee: true,
-      metadata: { booking_id: bookingId },
+      metadata: { booking_id: bookingId, late_cancel_fee_cents: String(feeCents) },
     });
 
     // Stamp the booking with the Stripe refund details. PATCH failure is

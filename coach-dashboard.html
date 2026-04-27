@@ -10,6 +10,8 @@
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <!-- FullCalendar v6 — auto-injects CSS at runtime; loads when the Scheduling tab boots the calendar (PR 1.F). -->
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js" defer></script>
+<!-- Chart.js for the Analytics tab (PR 4.A). -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 <style>
 :root {
   --ink: #1a2e3b;
@@ -534,6 +536,29 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 #reschedule-modal input[type="date"], #reschedule-modal input[type="time"] { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.92rem; background: var(--white); color: var(--ink); }
 #reschedule-modal input[type="date"]:focus, #reschedule-modal input[type="time"]:focus { outline: none; border-color: var(--gold); }
 #reschedule-modal .modal-actions { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; align-items: center; }
+
+/* Analytics + Phase 4 modals (PR 4.A) */
+.analytics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.analytics-card { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 20px; box-shadow: 0 2px 12px rgba(26,58,82,0.04); }
+.analytics-card-wide { grid-column: 1 / -1; }
+.analytics-card h3 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1rem; font-weight: 700; color: var(--ink); margin-bottom: 10px; }
+.metric-big { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 2.4rem; font-weight: 700; color: var(--gold); line-height: 1.1; }
+.metric-sub { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+.metric-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 8px; }
+.metric-item { background: var(--cream); border-radius: var(--r-sm); padding: 12px 14px; }
+.metric-value { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.4rem; font-weight: 700; color: var(--ink); }
+.metric-label { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-top: 2px; }
+.range-btn.is-selected, .range-btn.active { background: var(--gold); border-color: var(--gold); color: #fff; }
+.services-perf-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.services-perf-table th { text-align: left; padding: 10px 8px; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); border-bottom: 1px solid var(--border); }
+.services-perf-table td { padding: 10px 8px; border-bottom: 1px solid var(--border); color: var(--ink); }
+
+/* Generic shared modal styles for new tabs (package + coupon) */
+#package-modal.modal, #coupon-modal.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; z-index: 1100; padding: 16px; }
+#package-modal.modal.is-open, #coupon-modal.modal.is-open { display: flex; }
+#package-modal .modal-content, #coupon-modal .modal-content { background: var(--white); border-radius: 12px; padding: 28px 32px; max-width: 480px; width: 100%; box-shadow: 0 20px 48px rgba(0,0,0,0.2); }
+#package-modal .modal-title, #coupon-modal .modal-title { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.4rem; font-weight: 700; color: var(--ink); margin-bottom: 14px; }
+#package-modal .modal-actions, #coupon-modal .modal-actions { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; align-items: center; }
 
 </style>
 <style data-MOBILE_NAV_HAMBURGER_v1>
@@ -1122,6 +1147,11 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
     <div class="dash-group">Business</div>
     <button class="tab-btn" data-tab="proposals">Proposals</button>
     <button class="tab-btn" data-tab="scheduling">Scheduling</button>
+    <button class="tab-btn" data-tab="analytics">Analytics</button>
+    <button class="tab-btn" data-tab="packages">Packages</button>
+    <button class="tab-btn" data-tab="coupons">Coupons</button>
+    <button class="tab-btn" data-tab="waitlist">Waitlist</button>
+    <button class="tab-btn" data-tab="share">Share</button>
     <button class="tab-btn" data-tab="intake">Forms</button>
     <div class="dash-group">Profile</div>
     <button class="tab-btn" data-tab="profile">Profile</button>
@@ -1484,6 +1514,35 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
         </div>
         <button class="save-btn" id="save-reminder-settings-btn">Save Reminder Settings</button>
         <span class="save-msg" id="save-reminder-settings-msg">Saved</span>
+
+        <!-- Late cancellation policy (PR 4.A) — feeds the partial-refund
+             logic in api/process-refund.js. Off by default; coaches opt
+             in. -->
+        <div style="margin-top:24px;padding-top:18px;border-top:1px solid var(--border);">
+          <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:1.05rem;font-weight:700;color:var(--ink);margin-bottom:8px;">Late cancellation policy</div>
+          <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px;line-height:1.6;">When on, cancellations inside the window keep a portion of the payment as a fee instead of a full refund.</p>
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin-bottom:14px;">
+            <input type="checkbox" id="f-late-cancel-enabled" style="width:18px;height:18px;accent-color:var(--gold);margin-top:3px;flex-shrink:0;">
+            <div>
+              <div style="font-weight:700;font-size:0.92rem;color:var(--ink);">Charge a late cancellation fee</div>
+              <div style="font-size:0.8rem;color:var(--muted);">Off = always full refund.</div>
+            </div>
+          </label>
+          <div id="late-cancel-fields" style="display:none;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label for="f-late-cancel-hours">Window (hours before)</label>
+              <input type="number" id="f-late-cancel-hours" min="1" step="1" value="24">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label for="f-late-cancel-type">Fee type</label>
+              <select id="f-late-cancel-type"><option value="percentage">% of price</option><option value="fixed">Fixed $</option></select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label for="f-late-cancel-amount">Amount</label>
+              <input type="number" id="f-late-cancel-amount" min="0" step="1" value="50">
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Session Types — what clients can book. Stored in coach_services.
@@ -1639,6 +1698,172 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
           <div style="margin-top:14px;">
             <button class="save-btn" id="add-blocked-time-btn">Add block</button>
             <span class="save-msg" id="add-blocked-time-msg">Saved</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANALYTICS TAB (PR 4.A) ─────────────────────────────────────────── -->
+    <div id="tab-analytics" class="tab-panel">
+      <div class="form-section" id="analytics-section">
+        <h2 class="form-section-title">Analytics</h2>
+        <div class="date-range-selector" style="display:flex;gap:8px;margin-bottom:18px;">
+          <button type="button" class="range-btn cal-btn" data-range="7">Last 7 days</button>
+          <button type="button" class="range-btn cal-btn" data-range="30">Last 30 days</button>
+          <button type="button" class="range-btn cal-btn" data-range="90">Last 90 days</button>
+        </div>
+        <div class="analytics-grid">
+          <div class="analytics-card">
+            <h3>Revenue</h3>
+            <div class="metric-big" id="revenue-total">$0</div>
+            <div class="metric-sub"><span id="revenue-bookings">0 bookings</span> · <span id="revenue-avg">$0 avg</span></div>
+            <canvas id="revenue-chart" height="180"></canvas>
+          </div>
+          <div class="analytics-card">
+            <h3>Bookings</h3>
+            <div class="metric-grid">
+              <div class="metric-item"><div class="metric-value" id="bookings-confirmed">0</div><div class="metric-label">Confirmed</div></div>
+              <div class="metric-item"><div class="metric-value" id="bookings-cancelled">0</div><div class="metric-label">Cancelled</div></div>
+              <div class="metric-item"><div class="metric-value" id="bookings-no-show">0</div><div class="metric-label">No-shows</div></div>
+              <div class="metric-item"><div class="metric-value" id="bookings-completion">0%</div><div class="metric-label">Completion</div></div>
+            </div>
+          </div>
+          <div class="analytics-card analytics-card-wide">
+            <h3>Popular booking times</h3>
+            <canvas id="times-chart" height="220"></canvas>
+          </div>
+          <div class="analytics-card analytics-card-wide">
+            <h3>Session types performance</h3>
+            <div id="services-table"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PACKAGES TAB (PR 4.A) ──────────────────────────────────────────── -->
+    <div id="tab-packages" class="tab-panel">
+      <div class="form-section" id="packages-section">
+        <h2 class="form-section-title">Session Packages</h2>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">Bulk-discount session bundles. Clients buy via Stripe; credits land on their account and can be spent at booking time.</p>
+        <button type="button" class="save-btn" id="create-package-btn">+ Create package</button>
+        <div id="packages-list" style="display:flex;flex-direction:column;gap:8px;margin-top:14px;"></div>
+      </div>
+
+      <div id="package-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+          <h3 class="modal-title" id="package-modal-title">Create Session Package</h3>
+          <form id="package-form">
+            <div class="form-group"><label for="pkg-name">Name</label><input type="text" id="pkg-name" placeholder="5-Session Package" required></div>
+            <div class="form-group"><label for="pkg-sessions">Number of sessions</label>
+              <select id="pkg-sessions" required>
+                <option value="3">3</option><option value="5" selected>5</option><option value="10">10</option><option value="20">20</option>
+              </select>
+            </div>
+            <div class="form-group"><label for="pkg-price">Total price ($)</label><input type="number" id="pkg-price" min="0" step="0.01" required></div>
+            <div class="form-group"><label for="pkg-desc">Description (optional)</label><textarea id="pkg-desc" rows="3"></textarea></div>
+            <div id="package-error" class="form-error" style="display:none;color:#c44;font-size:0.85rem;margin-top:6px;"></div>
+            <div class="modal-actions">
+              <button type="submit" class="cal-btn cal-btn-primary">Save package</button>
+              <button type="button" id="package-cancel" class="cal-btn-link">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- COUPONS TAB (PR 4.A) ───────────────────────────────────────────── -->
+    <div id="tab-coupons" class="tab-panel">
+      <div class="form-section" id="coupons-section">
+        <h2 class="form-section-title">Coupon Codes</h2>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">Coupons are created in Stripe and applied at checkout via Stripe Checkout's discount field.</p>
+        <button type="button" class="save-btn" id="create-coupon-btn">+ Create coupon</button>
+        <div id="coupons-list" style="display:flex;flex-direction:column;gap:8px;margin-top:14px;"></div>
+      </div>
+
+      <div id="coupon-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+          <h3 class="modal-title">Create Coupon</h3>
+          <form id="coupon-form">
+            <div class="form-group"><label for="coup-code">Code</label><input type="text" id="coup-code" placeholder="FIRST20" required maxlength="40" style="text-transform:uppercase;"></div>
+            <div class="form-group"><label for="coup-type">Discount type</label>
+              <select id="coup-type"><option value="percentage">Percentage off</option><option value="fixed_amount">Fixed amount off</option></select>
+            </div>
+            <div class="form-group"><label for="coup-value">Value</label><input type="number" id="coup-value" min="1" step="1" required><small style="color:var(--muted);font-size:0.78rem;" id="coup-value-hint">For 20% off, enter 20.</small></div>
+            <div class="form-group"><label for="coup-applies">Applies to</label>
+              <select id="coup-applies"><option value="all">All session types</option><option value="specific_service">Specific session type</option></select>
+            </div>
+            <div class="form-group" id="coup-service-row" style="display:none;"><label for="coup-service">Session type</label><select id="coup-service"></select></div>
+            <div class="form-group"><label for="coup-max-uses">Max uses (blank = unlimited)</label><input type="number" id="coup-max-uses" min="1" step="1"></div>
+            <div class="form-group"><label for="coup-expires">Expires (blank = never)</label><input type="date" id="coup-expires"></div>
+            <div id="coupon-error" class="form-error" style="display:none;color:#c44;font-size:0.85rem;margin-top:6px;"></div>
+            <div class="modal-actions">
+              <button type="submit" class="cal-btn cal-btn-primary">Save coupon</button>
+              <button type="button" id="coupon-cancel" class="cal-btn-link">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- WAITLIST TAB (PR 4.A) ──────────────────────────────────────────── -->
+    <div id="tab-waitlist" class="tab-panel">
+      <div class="form-section">
+        <h2 class="form-section-title">Waitlist</h2>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">Clients who joined the waitlist when no slots were available. Click "Notify available" to email an invitation to book.</p>
+        <div id="waitlist-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+    </div>
+
+    <!-- SHARE TAB (PR 4.A) ─────────────────────────────────────────────── -->
+    <div id="tab-share" class="tab-panel">
+      <div class="form-section" id="share-section">
+        <h2 class="form-section-title">Share Your Booking Page</h2>
+
+        <div class="share-option" style="margin-top:18px;">
+          <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:1.05rem;font-weight:700;color:var(--ink);margin-bottom:8px;">Direct link</div>
+          <div class="copy-field" style="display:flex;gap:8px;align-items:center;">
+            <input type="text" id="booking-url" readonly style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.88rem;background:var(--cream);color:var(--ink);">
+            <button type="button" class="cal-btn" data-copy="booking-url">Copy</button>
+          </div>
+        </div>
+
+        <div class="share-option" style="margin-top:24px;">
+          <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:1.05rem;font-weight:700;color:var(--ink);margin-bottom:8px;">Embed on your website</div>
+          <p style="font-size:0.82rem;color:var(--muted);margin-bottom:8px;">Paste this iframe code into your site:</p>
+          <div class="copy-field" style="display:flex;gap:8px;align-items:flex-start;">
+            <textarea id="embed-iframe" readonly rows="4" style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:Menlo,Consolas,monospace;font-size:0.78rem;background:var(--cream);color:var(--ink);"></textarea>
+            <button type="button" class="cal-btn" data-copy="embed-iframe">Copy</button>
+          </div>
+        </div>
+
+        <div class="share-option" style="margin-top:24px;">
+          <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:1.05rem;font-weight:700;color:var(--ink);margin-bottom:8px;">"Book Now" button</div>
+          <p style="font-size:0.82rem;color:var(--muted);margin-bottom:8px;">Customize the button below — the snippet updates live.</p>
+          <div style="padding:18px;background:var(--cream);border-radius:var(--r-sm);text-align:center;margin-bottom:14px;">
+            <a id="preview-button" href="#" target="_blank" rel="noopener" style="display:inline-block;background:#c49a3c;color:#fff;padding:14px 28px;border-radius:50px;text-decoration:none;font-weight:700;font-size:0.92rem;">Book a Session</a>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label for="btn-text">Button text</label>
+              <input type="text" id="btn-text" value="Book a Session" maxlength="40">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label for="btn-color">Button color</label>
+              <input type="color" id="btn-color" value="#c49a3c" style="height:42px;padding:4px;">
+            </div>
+          </div>
+          <div class="copy-field" style="display:flex;gap:8px;align-items:flex-start;">
+            <textarea id="button-code" readonly rows="3" style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:Menlo,Consolas,monospace;font-size:0.78rem;background:var(--cream);color:var(--ink);"></textarea>
+            <button type="button" class="cal-btn" data-copy="button-code">Copy</button>
+          </div>
+        </div>
+
+        <div class="share-option" style="margin-top:24px;">
+          <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:1.05rem;font-weight:700;color:var(--ink);margin-bottom:8px;">Gift certificate link</div>
+          <p style="font-size:0.82rem;color:var(--muted);margin-bottom:8px;">Direct link to gift coaching with you:</p>
+          <div class="copy-field" style="display:flex;gap:8px;align-items:center;">
+            <input type="text" id="gift-url" readonly style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.88rem;background:var(--cream);color:var(--ink);">
+            <button type="button" class="cal-btn" data-copy="gift-url">Copy</button>
           </div>
         </div>
       </div>
@@ -2424,6 +2649,27 @@ function setupTabs() {
         // PR 1.F: Scheduling tab re-opened — refresh calendar + size so events
         // booked in another tab/session show up without a page reload.
         if (typeof initCalendar === 'function') initCalendar();
+      }
+      // PR 4.A: lazy-load + refresh on revisit for the new tabs.
+      if (btn.dataset.tab === 'analytics') {
+        if (!btn._loaded) btn._loaded = true;
+        if (typeof loadAnalyticsTab === 'function') loadAnalyticsTab();
+      }
+      if (btn.dataset.tab === 'packages') {
+        if (!btn._loaded) btn._loaded = true;
+        if (typeof loadPackagesTab === 'function') loadPackagesTab();
+      }
+      if (btn.dataset.tab === 'coupons') {
+        if (!btn._loaded) btn._loaded = true;
+        if (typeof loadCouponsTab === 'function') loadCouponsTab();
+      }
+      if (btn.dataset.tab === 'waitlist') {
+        if (!btn._loaded) btn._loaded = true;
+        if (typeof loadWaitlistTab === 'function') loadWaitlistTab();
+      }
+      if (btn.dataset.tab === 'share' && !btn._loaded) {
+        btn._loaded = true;
+        if (typeof loadShareTab === 'function') loadShareTab();
       }
       if (btn.dataset.tab === 'intake' && !btn._loaded) {
         btn._loaded = true;
@@ -3851,6 +4097,23 @@ function loadScheduling() {
   var saveReminderBtn = $('save-reminder-settings-btn');
   if (saveReminderBtn) saveReminderBtn.onclick = saveReminderSettings;
 
+  // PR 4.A: late-cancel fields seed from coach profile and toggle visibility on the enabled checkbox.
+  var lateCancelEnabled = $('f-late-cancel-enabled');
+  var lateCancelFields = $('late-cancel-fields');
+  if (lateCancelEnabled && lateCancelFields) {
+    lateCancelEnabled.checked = !!p.late_cancel_enabled;
+    lateCancelFields.style.display = p.late_cancel_enabled ? 'grid' : 'none';
+    lateCancelEnabled.addEventListener('change', function () {
+      lateCancelFields.style.display = lateCancelEnabled.checked ? 'grid' : 'none';
+    });
+    var hoursEl = $('f-late-cancel-hours');
+    var typeEl = $('f-late-cancel-type');
+    var amountEl = $('f-late-cancel-amount');
+    if (hoursEl) hoursEl.value = (p.late_cancel_window_hours != null ? p.late_cancel_window_hours : 24);
+    if (typeEl) typeEl.value = p.late_cancel_fee_type || 'percentage';
+    if (amountEl) amountEl.value = (p.late_cancel_fee_amount != null ? p.late_cancel_fee_amount : 50);
+  }
+
   // Boot the calendar (PR 1.F). initCalendar handles the lazy-init +
   // refetch-on-revisit logic so this is safe to call every time the
   // Scheduling tab opens.
@@ -4748,12 +5011,25 @@ async function saveReminderSettings() {
     var enabled = !!$('f-sms-reminders-enabled').checked;
     var timingRaw = parseInt($('f-sms-default-timing').value, 10);
     var timing = (timingRaw === 15 || timingRaw === 30) ? timingRaw : 30;
+    // PR 4.A: also save late-cancellation policy
+    var lcEnabled = !!($('f-late-cancel-enabled') && $('f-late-cancel-enabled').checked);
+    var lcHours = Math.max(1, parseInt(($('f-late-cancel-hours') && $('f-late-cancel-hours').value) || '24', 10) || 24);
+    var lcType = ($('f-late-cancel-type') && $('f-late-cancel-type').value) || 'percentage';
+    var lcAmount = Math.max(0, parseFloat(($('f-late-cancel-amount') && $('f-late-cancel-amount').value) || '50') || 0);
     await supabasePatch('coach_profiles', { id: 'eq.' + coachProfile.id }, {
       sms_reminders_enabled: enabled,
       sms_reminder_default_timing: timing,
+      late_cancel_enabled: lcEnabled,
+      late_cancel_window_hours: lcHours,
+      late_cancel_fee_type: lcType,
+      late_cancel_fee_amount: lcAmount,
     });
     coachProfile.sms_reminders_enabled = enabled;
     coachProfile.sms_reminder_default_timing = timing;
+    coachProfile.late_cancel_enabled = lcEnabled;
+    coachProfile.late_cancel_window_hours = lcHours;
+    coachProfile.late_cancel_fee_type = lcType;
+    coachProfile.late_cancel_fee_amount = lcAmount;
     msg.textContent = 'Saved';
     msg.style.color = 'var(--forest)';
     msg.classList.add('show');
@@ -4766,6 +5042,492 @@ async function saveReminderSettings() {
   }
   btn.disabled = false;
   btn.textContent = 'Save Reminder Settings';
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Phase 4 tabs (PR 4.A): Analytics, Packages, Coupons, Waitlist, Share
+// ─────────────────────────────────────────────────────────────────────────
+
+var analyticsRange = 30;
+var revenueChart = null;
+var timesChart = null;
+
+async function loadAnalyticsTab() {
+  if (typeof Chart === 'undefined') {
+    // Wait briefly for the deferred CDN script to land.
+    for (var i = 0; i < 10 && typeof Chart === 'undefined'; i++) {
+      await new Promise(function (r) { setTimeout(r, 100); });
+    }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('#analytics-section .range-btn'), function (btn) {
+    btn.classList.toggle('is-selected', parseInt(btn.dataset.range, 10) === analyticsRange);
+    btn.onclick = function () {
+      analyticsRange = parseInt(btn.dataset.range, 10) || 30;
+      loadAnalyticsTab();
+    };
+  });
+  await refreshAnalyticsData();
+}
+
+async function refreshAnalyticsData() {
+  if (!coachProfile || !coachProfile.id) return;
+  var since = new Date(Date.now() - analyticsRange * 86400000).toISOString();
+  var rows = await supabaseGet(
+    'coach_bookings?coach_id=eq.' + encodeURIComponent(coachProfile.id)
+    + '&created_at=gte.' + encodeURIComponent(since)
+    + '&select=id,status,service_id,service_name,service_price,payment_amount_cents,scheduled_at,created_at'
+    + '&order=created_at.asc'
+  ) || [];
+  var confirmed = rows.filter(function (b) { return b.status === 'confirmed' || b.status === 'manual'; });
+  var cancelled = rows.filter(function (b) { return b.status === 'cancelled'; }).length;
+  var noShow = rows.filter(function (b) { return b.status === 'no_show'; }).length;
+  var revenueCents = confirmed.reduce(function (sum, b) { return sum + Number(b.payment_amount_cents || 0); }, 0);
+  var revenueDollars = (revenueCents / 100);
+  var avgDollars = confirmed.length ? revenueDollars / confirmed.length : 0;
+  var totalForCompletion = confirmed.length + cancelled + noShow;
+  var completionPct = totalForCompletion ? Math.round(confirmed.length / totalForCompletion * 100) : 0;
+
+  setText('revenue-total', '$' + Math.round(revenueDollars).toLocaleString());
+  setText('revenue-bookings', confirmed.length + ' booking' + (confirmed.length === 1 ? '' : 's'));
+  setText('revenue-avg', '$' + Math.round(avgDollars) + ' avg');
+  setText('bookings-confirmed', confirmed.length);
+  setText('bookings-cancelled', cancelled);
+  setText('bookings-no-show', noShow);
+  setText('bookings-completion', completionPct + '%');
+
+  renderRevenueChart(rows);
+  renderTimesChart(confirmed);
+  renderServicesTable(rows);
+}
+function setText(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; }
+
+function renderRevenueChart(bookings) {
+  var ctx = document.getElementById('revenue-chart');
+  if (!ctx || typeof Chart === 'undefined') return;
+  // Bucket by day across the analytics range.
+  var buckets = [];
+  var labels = [];
+  for (var d = analyticsRange - 1; d >= 0; d--) {
+    var day = new Date(Date.now() - d * 86400000);
+    var key = day.toISOString().slice(0, 10);
+    labels.push(day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+    buckets.push({ key: key, dollars: 0 });
+  }
+  var byKey = {};
+  buckets.forEach(function (b, i) { byKey[b.key] = i; });
+  bookings.forEach(function (b) {
+    if (b.status !== 'confirmed' && b.status !== 'manual') return;
+    var key = (b.created_at || '').slice(0, 10);
+    if (byKey[key] != null) buckets[byKey[key]].dollars += Number(b.payment_amount_cents || 0) / 100;
+  });
+  if (revenueChart) revenueChart.destroy();
+  revenueChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Revenue ($)',
+        data: buckets.map(function (b) { return Math.round(b.dollars); }),
+        borderColor: '#c49a3c',
+        backgroundColor: 'rgba(196,154,60,0.12)',
+        fill: true,
+        tension: 0.3,
+      }],
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+  });
+}
+
+function renderTimesChart(confirmedBookings) {
+  var ctx = document.getElementById('times-chart');
+  if (!ctx || typeof Chart === 'undefined') return;
+  // Histogram of bookings by hour-of-day (0-23) in the coach's tz.
+  var counts = new Array(24).fill(0);
+  confirmedBookings.forEach(function (b) {
+    if (!b.scheduled_at) return;
+    var d = new Date(b.scheduled_at);
+    if (Number.isNaN(d.getTime())) return;
+    var hourStr;
+    try {
+      hourStr = d.toLocaleTimeString('en-US', { hour: 'numeric', hour12: false, timeZone: coachProfile.timezone || 'America/Chicago' });
+      var h = parseInt(hourStr, 10);
+      if (h >= 0 && h < 24) counts[h]++;
+    } catch (e) {
+      counts[d.getHours()]++;
+    }
+  });
+  var labels = counts.map(function (_, h) {
+    var ampm = h >= 12 ? 'pm' : 'am';
+    var h12 = h % 12 === 0 ? 12 : h % 12;
+    return h12 + ampm;
+  });
+  if (timesChart) timesChart.destroy();
+  timesChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: labels, datasets: [{ label: 'Bookings', data: counts, backgroundColor: '#1a3a52' }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
+  });
+}
+
+function renderServicesTable(bookings) {
+  var el = document.getElementById('services-table');
+  if (!el) return;
+  var byService = {};
+  bookings.forEach(function (b) {
+    var key = b.service_id || 'unknown';
+    if (!byService[key]) {
+      byService[key] = { id: key, name: b.service_name || 'Untitled', confirmed: 0, cancelled: 0, no_show: 0, revenue_cents: 0 };
+    }
+    var bucket = byService[key];
+    if (b.status === 'confirmed' || b.status === 'manual') {
+      bucket.confirmed++;
+      bucket.revenue_cents += Number(b.payment_amount_cents || 0);
+    } else if (b.status === 'cancelled') bucket.cancelled++;
+    else if (b.status === 'no_show') bucket.no_show++;
+  });
+  var rows = Object.values(byService).sort(function (a, b) { return b.confirmed - a.confirmed; });
+  if (!rows.length) {
+    el.innerHTML = '<div style="padding:18px;text-align:center;color:var(--muted);font-size:0.88rem;">No bookings in this range yet.</div>';
+    return;
+  }
+  el.innerHTML = '<table class="services-perf-table"><thead><tr>'
+    + '<th>Session type</th><th>Confirmed</th><th>Cancelled</th><th>No-shows</th><th>Revenue</th>'
+    + '</tr></thead><tbody>'
+    + rows.map(function (r) {
+        return '<tr>'
+          + '<td>' + escapeHtml(r.name) + '</td>'
+          + '<td>' + r.confirmed + '</td>'
+          + '<td>' + r.cancelled + '</td>'
+          + '<td>' + r.no_show + '</td>'
+          + '<td>$' + Math.round(r.revenue_cents / 100).toLocaleString() + '</td>'
+          + '</tr>';
+      }).join('')
+    + '</tbody></table>';
+}
+
+// ─── Packages tab ────────────────────────────────────────────────────────
+async function loadPackagesTab() {
+  if (!coachProfile || !coachProfile.id) return;
+  var listEl = document.getElementById('packages-list');
+  if (!listEl) return;
+  listEl.innerHTML = '<div style="padding:18px;text-align:center;color:var(--muted);font-size:0.88rem;">Loading…</div>';
+  var rows = await supabaseGet(
+    'coach_packages?coach_id=eq.' + encodeURIComponent(coachProfile.id)
+    + '&select=id,name,description,session_count,price_cents,savings_cents,is_active'
+    + '&order=is_active.desc,session_count.asc'
+  ) || [];
+  if (!rows.length) {
+    listEl.innerHTML = '<div style="padding:18px;text-align:center;color:var(--muted);font-size:0.88rem;">No packages yet. Create one to offer bulk discounts.</div>';
+  } else {
+    listEl.innerHTML = rows.map(function (p) {
+      var dollars = (p.price_cents / 100).toFixed(2).replace(/\.00$/, '');
+      var perSession = p.session_count ? '$' + Math.round(p.price_cents / 100 / p.session_count) + '/session' : '';
+      return '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:var(--white);border:1px solid var(--border);border-left:3px solid ' + (p.is_active ? '#c49a3c' : '#edeae4') + ';border-radius:var(--r-sm);' + (p.is_active ? '' : 'opacity:0.6;') + '">'
+        + '<div style="flex:1;min-width:0;">'
+        +   '<div style="font-weight:700;font-size:0.92rem;color:var(--ink);">' + escapeHtml(p.name) + '</div>'
+        +   '<div style="font-size:0.78rem;color:var(--muted);">' + p.session_count + ' sessions &bull; $' + escapeHtml(dollars) + ' &bull; ' + escapeHtml(perSession) + '</div>'
+        + '</div>'
+        + '<div style="display:flex;gap:6px;flex-shrink:0;">'
+        +   '<button class="cal-btn pkg-toggle-btn" data-id="' + escapeHtml(p.id) + '" data-active="' + (p.is_active ? '1' : '0') + '">' + (p.is_active ? 'Deactivate' : 'Reactivate') + '</button>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+    Array.prototype.forEach.call(listEl.querySelectorAll('.pkg-toggle-btn'), function (b) {
+      b.onclick = async function () {
+        var newActive = b.dataset.active !== '1';
+        await supabasePatch('coach_packages', { id: 'eq.' + b.dataset.id }, { is_active: newActive, updated_at: new Date().toISOString() });
+        loadPackagesTab();
+      };
+    });
+  }
+
+  var createBtn = document.getElementById('create-package-btn');
+  if (createBtn && !createBtn._wired) {
+    createBtn._wired = true;
+    createBtn.onclick = openPackageModal;
+    document.getElementById('package-cancel').onclick = closePackageModal;
+    document.getElementById('package-form').onsubmit = savePackage;
+    var pm = document.getElementById('package-modal');
+    if (pm) pm.addEventListener('click', function (e) { if (e.target === pm) closePackageModal(); });
+  }
+}
+
+function openPackageModal() {
+  document.getElementById('pkg-name').value = '';
+  document.getElementById('pkg-sessions').value = '5';
+  document.getElementById('pkg-price').value = '';
+  document.getElementById('pkg-desc').value = '';
+  document.getElementById('package-error').style.display = 'none';
+  document.getElementById('package-modal').classList.add('is-open');
+}
+function closePackageModal() { document.getElementById('package-modal').classList.remove('is-open'); }
+
+async function savePackage(e) {
+  e.preventDefault();
+  var errEl = document.getElementById('package-error');
+  errEl.style.display = 'none';
+  var name = document.getElementById('pkg-name').value.trim();
+  var sessions = parseInt(document.getElementById('pkg-sessions').value, 10) || 0;
+  var priceDollars = parseFloat(document.getElementById('pkg-price').value);
+  var desc = document.getElementById('pkg-desc').value.trim();
+  if (!name || !sessions || !Number.isFinite(priceDollars) || priceDollars < 0) {
+    errEl.textContent = 'Fill in name, sessions, and price.';
+    errEl.style.display = 'block';
+    return;
+  }
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_packages', {
+      method: 'POST',
+      headers: { ...apiHeaders(), Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        coach_id: coachProfile.id,
+        name: name,
+        description: desc || null,
+        session_count: sessions,
+        price_cents: Math.round(priceDollars * 100),
+        is_active: true,
+      }),
+    });
+    if (!res.ok) throw new Error('Save failed: ' + res.status);
+    closePackageModal();
+    loadPackagesTab();
+  } catch (err) {
+    console.error('[packages] save', err);
+    errEl.textContent = 'Could not save: ' + err.message;
+    errEl.style.display = 'block';
+  }
+}
+
+// ─── Coupons tab ─────────────────────────────────────────────────────────
+async function loadCouponsTab() {
+  if (!coachProfile || !coachProfile.id) return;
+  var listEl = document.getElementById('coupons-list');
+  if (!listEl) return;
+  listEl.innerHTML = '<div style="padding:18px;text-align:center;color:var(--muted);font-size:0.88rem;">Loading…</div>';
+  var rows = await supabaseGet(
+    'coach_coupons?coach_id=eq.' + encodeURIComponent(coachProfile.id)
+    + '&select=id,code,discount_type,discount_value,applies_to,service_id,max_uses,times_used,expires_at,is_active,stripe_coupon_id'
+    + '&order=is_active.desc,created_at.desc'
+  ) || [];
+  if (!rows.length) {
+    listEl.innerHTML = '<div style="padding:18px;text-align:center;color:var(--muted);font-size:0.88rem;">No coupons yet.</div>';
+  } else {
+    listEl.innerHTML = rows.map(function (c) {
+      var valueLabel = c.discount_type === 'percentage' ? c.discount_value + '% off' : '$' + c.discount_value + ' off';
+      var usageLabel = c.max_uses ? (c.times_used + '/' + c.max_uses + ' used') : (c.times_used + ' uses');
+      var expiresLabel = c.expires_at ? ('expires ' + new Date(c.expires_at).toLocaleDateString()) : 'no expiry';
+      return '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:var(--white);border:1px solid var(--border);border-left:3px solid ' + (c.is_active ? '#c49a3c' : '#edeae4') + ';border-radius:var(--r-sm);' + (c.is_active ? '' : 'opacity:0.6;') + '">'
+        + '<div style="flex:1;min-width:0;">'
+        +   '<div style="font-weight:700;font-size:0.92rem;color:var(--ink);font-family:Menlo,Consolas,monospace;letter-spacing:0.04em;">' + escapeHtml(c.code) + '</div>'
+        +   '<div style="font-size:0.78rem;color:var(--muted);">' + valueLabel + ' &bull; ' + usageLabel + ' &bull; ' + expiresLabel + (c.stripe_coupon_id ? '' : ' &bull; <span style="color:#c44;">no Stripe id</span>') + '</div>'
+        + '</div>'
+        + '<button class="cal-btn coup-toggle-btn" data-id="' + escapeHtml(c.id) + '" data-active="' + (c.is_active ? '1' : '0') + '">' + (c.is_active ? 'Deactivate' : 'Reactivate') + '</button>'
+        + '</div>';
+    }).join('');
+    Array.prototype.forEach.call(listEl.querySelectorAll('.coup-toggle-btn'), function (b) {
+      b.onclick = async function () {
+        var newActive = b.dataset.active !== '1';
+        await supabasePatch('coach_coupons', { id: 'eq.' + b.dataset.id }, { is_active: newActive });
+        loadCouponsTab();
+      };
+    });
+  }
+  var createBtn = document.getElementById('create-coupon-btn');
+  if (createBtn && !createBtn._wired) {
+    createBtn._wired = true;
+    createBtn.onclick = openCouponModal;
+    document.getElementById('coupon-cancel').onclick = closeCouponModal;
+    document.getElementById('coupon-form').onsubmit = saveCoupon;
+    document.getElementById('coup-applies').addEventListener('change', function (e) {
+      document.getElementById('coup-service-row').style.display = e.target.value === 'specific_service' ? 'block' : 'none';
+    });
+    var cm = document.getElementById('coupon-modal');
+    if (cm) cm.addEventListener('click', function (e) { if (e.target === cm) closeCouponModal(); });
+  }
+}
+
+async function openCouponModal() {
+  document.getElementById('coup-code').value = '';
+  document.getElementById('coup-type').value = 'percentage';
+  document.getElementById('coup-value').value = '';
+  document.getElementById('coup-applies').value = 'all';
+  document.getElementById('coup-service-row').style.display = 'none';
+  document.getElementById('coup-max-uses').value = '';
+  document.getElementById('coup-expires').value = '';
+  document.getElementById('coupon-error').style.display = 'none';
+  // Populate the service select if not already.
+  var sel = document.getElementById('coup-service');
+  if (sel && sel.children.length <= 0) {
+    var rows = await supabaseGet(
+      'coach_services?coach_id=eq.' + encodeURIComponent(coachProfile.id)
+      + '&is_active=eq.true&select=id,title&order=title.asc'
+    ) || [];
+    sel.innerHTML = rows.map(function (s) {
+      return '<option value="' + escapeHtml(s.id) + '">' + escapeHtml(s.title || 'Untitled') + '</option>';
+    }).join('');
+  }
+  document.getElementById('coupon-modal').classList.add('is-open');
+}
+function closeCouponModal() { document.getElementById('coupon-modal').classList.remove('is-open'); }
+
+async function saveCoupon(e) {
+  e.preventDefault();
+  var errEl = document.getElementById('coupon-error');
+  errEl.style.display = 'none';
+  var code = document.getElementById('coup-code').value.trim().toUpperCase();
+  var type = document.getElementById('coup-type').value;
+  var value = parseFloat(document.getElementById('coup-value').value);
+  var appliesTo = document.getElementById('coup-applies').value;
+  var serviceId = appliesTo === 'specific_service' ? document.getElementById('coup-service').value : null;
+  var maxUsesRaw = document.getElementById('coup-max-uses').value;
+  var maxUses = maxUsesRaw ? parseInt(maxUsesRaw, 10) : null;
+  var expiresRaw = document.getElementById('coup-expires').value;
+  var expiresAt = expiresRaw ? new Date(expiresRaw + 'T23:59:59').toISOString() : null;
+  if (!code || !Number.isFinite(value) || value <= 0) {
+    errEl.textContent = 'Code and value are required.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (type === 'percentage' && (value > 100 || value <= 0)) {
+    errEl.textContent = 'Percentage must be between 1 and 100.';
+    errEl.style.display = 'block';
+    return;
+  }
+  try {
+    // Insert in DB. The Stripe coupon id is created by an admin/server step
+    // (Stripe admin dashboard or a server endpoint with the secret key) and
+    // backfilled — until that lands, the coupon won't apply discounts at
+    // checkout, but it will still validate via /api/validate-coupon for
+    // display purposes.
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_coupons', {
+      method: 'POST',
+      headers: { ...apiHeaders(), Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        coach_id: coachProfile.id,
+        code: code,
+        discount_type: type,
+        discount_value: value,
+        applies_to: appliesTo,
+        service_id: serviceId,
+        max_uses: maxUses,
+        expires_at: expiresAt,
+        is_active: true,
+      }),
+    });
+    if (!res.ok) {
+      var t = await res.text().catch(function () { return ''; });
+      throw new Error('Save failed: ' + res.status + ' ' + t);
+    }
+    closeCouponModal();
+    loadCouponsTab();
+  } catch (err) {
+    console.error('[coupons] save', err);
+    errEl.textContent = err.message.includes('duplicate') ? 'That code already exists.' : err.message;
+    errEl.style.display = 'block';
+  }
+}
+
+// ─── Waitlist tab ────────────────────────────────────────────────────────
+async function loadWaitlistTab() {
+  if (!coachProfile || !coachProfile.id) return;
+  var listEl = document.getElementById('waitlist-list');
+  if (!listEl) return;
+  listEl.innerHTML = '<div style="padding:18px;text-align:center;color:var(--muted);font-size:0.88rem;">Loading…</div>';
+  var rows = await supabaseGet(
+    'booking_waitlist?coach_id=eq.' + encodeURIComponent(coachProfile.id)
+    + '&select=id,client_email,client_name,service_id,requested_date,requested_time,notes,notified_at,joined_at,coach_services:service_id(title)'
+    + '&order=joined_at.desc'
+  ) || [];
+  if (!rows.length) {
+    listEl.innerHTML = '<div style="padding:18px;text-align:center;color:var(--muted);font-size:0.88rem;">No one on the waitlist right now.</div>';
+    return;
+  }
+  listEl.innerHTML = rows.map(function (w) {
+    var svcLabel = (w.coach_services && w.coach_services.title) || 'Any session';
+    var notified = w.notified_at
+      ? '<span style="color:#4a7c59;font-weight:600;">Notified ' + new Date(w.notified_at).toLocaleDateString() + '</span>'
+      : '<button class="cal-btn cal-btn-primary wl-notify-btn" data-id="' + escapeHtml(w.id) + '">Notify available</button>';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:var(--white);border:1px solid var(--border);border-left:3px solid #c49a3c;border-radius:var(--r-sm);">'
+      + '<div style="flex:1;min-width:0;">'
+      +   '<div style="font-weight:700;font-size:0.92rem;color:var(--ink);">' + escapeHtml(w.client_name || w.client_email) + '</div>'
+      +   '<div style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(svcLabel) + ' &bull; joined ' + new Date(w.joined_at).toLocaleDateString() + (w.notes ? (' &bull; ' + escapeHtml(w.notes.slice(0, 60))) : '') + '</div>'
+      + '</div>'
+      + '<div style="flex-shrink:0;">' + notified + '</div>'
+      + '</div>';
+  }).join('');
+  Array.prototype.forEach.call(listEl.querySelectorAll('.wl-notify-btn'), function (b) {
+    b.onclick = async function () {
+      if (!confirm('Email this person that a slot is available?')) return;
+      b.disabled = true;
+      b.textContent = 'Sending…';
+      try {
+        var res = await fetch('/api/notify-waitlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ waitlist_id: b.dataset.id }),
+        });
+        if (!res.ok) throw new Error('notify ' + res.status);
+        loadWaitlistTab();
+      } catch (e) {
+        alert('Could not send. Please try again.');
+        b.disabled = false;
+        b.textContent = 'Notify available';
+      }
+    };
+  });
+}
+
+// ─── Share tab ───────────────────────────────────────────────────────────
+function loadShareTab() {
+  if (!coachProfile) return;
+  var slug = coachProfile.slug || '';
+  var url = 'https://www.ineedcoaching.org/book?coach=' + slug;
+  var giftUrl = 'https://www.ineedcoaching.org/gift?coach=' + slug;
+  var bookingUrlEl = document.getElementById('booking-url');
+  var giftUrlEl = document.getElementById('gift-url');
+  var iframeEl = document.getElementById('embed-iframe');
+  if (bookingUrlEl) bookingUrlEl.value = url;
+  if (giftUrlEl) giftUrlEl.value = giftUrl;
+  if (iframeEl) iframeEl.value = '<iframe src="' + url + '" width="100%" height="800" frameborder="0" style="border:1px solid #e0ddd5;border-radius:10px;"></iframe>';
+  // Wire copy buttons (idempotent — re-binding is cheap).
+  Array.prototype.forEach.call(document.querySelectorAll('#share-section [data-copy]'), function (btn) {
+    btn.onclick = async function () {
+      var target = document.getElementById(btn.dataset.copy);
+      if (!target) return;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(target.value);
+        } else {
+          target.select();
+          document.execCommand('copy');
+        }
+        var orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(function () { btn.textContent = orig; }, 1200);
+      } catch (e) { console.warn('[share] copy failed', e); }
+    };
+  });
+  // Wire button generator.
+  var btnText = document.getElementById('btn-text');
+  var btnColor = document.getElementById('btn-color');
+  function regen() {
+    var text = (btnText.value || 'Book a Session').slice(0, 60);
+    var color = btnColor.value || '#c49a3c';
+    var snippet = '<a href="' + url + '" style="display:inline-block;background:' + color + ';color:#fff;padding:14px 28px;border-radius:50px;text-decoration:none;font-weight:700;font-size:0.92rem;">' + text + '</a>';
+    document.getElementById('button-code').value = snippet;
+    var preview = document.getElementById('preview-button');
+    if (preview) {
+      preview.textContent = text;
+      preview.style.background = color;
+      preview.href = url;
+    }
+  }
+  if (btnText && !btnText._wired) {
+    btnText._wired = true;
+    btnText.oninput = regen;
+    btnColor.oninput = regen;
+  }
+  regen();
 }
 
 // Day name → integer mapping used by both the legacy JSONB shape and the

@@ -50,9 +50,16 @@ export default async function handler(req, res) {
 
   const body = req.body || {};
 
-  // ── Session booking branch (PR 1.D) ─────────────────────────────────────
+  // ── Session booking branch (PR 1.D, coupon-aware in PR 4.A) ────────────
   if (body.booking_id && !body.course_id) {
-    return handleSessionBooking({ booking_id: body.booking_id, stripe, SUPABASE_URL, SB_HEADERS, res });
+    return handleSessionBooking({
+      booking_id: body.booking_id,
+      coupon_code: body.coupon_code ? String(body.coupon_code).trim().toUpperCase() : '',
+      stripe,
+      SUPABASE_URL,
+      SB_HEADERS,
+      res,
+    });
   }
 
   try {
@@ -132,7 +139,7 @@ export default async function handler(req, res) {
 // book.html pre-creates it before redirecting here. We do the Stripe lookups
 // server-side so the client never sees the connected account id, the fee
 // math, or the secret key.
-async function handleSessionBooking({ booking_id, stripe, SUPABASE_URL, SB_HEADERS, res }) {
+async function handleSessionBooking({ booking_id, coupon_code, stripe, SUPABASE_URL, SB_HEADERS, res }) {
   try {
     // 1. Load booking + joined coach + service in one round-trip.
     const bookingRes = await fetch(
@@ -200,6 +207,38 @@ async function handleSessionBooking({ booking_id, stripe, SUPABASE_URL, SB_HEADE
     const successUrl = buildBookingReturnUrl(coach.slug, 'success', booking.id);
     const cancelUrl = buildBookingReturnUrl(coach.slug, 'cancelled', booking.id);
 
+    // Coupon resolution (PR 4.A). The client-side validate-coupon endpoint
+    // gave book.html a code; we re-validate here against the same booking's
+    // coach + service so the discount can't be tampered with from the page.
+    // Stripe `discounts: [{ coupon }]` only works with a real Stripe coupon
+    // id, which the dashboard creates when the coach saves the coupon.
+    const stripeDiscounts = [];
+    let appliedCouponDbId = null;
+    if (coupon_code) {
+      try {
+        const couponLookup = await fetch(
+          `${SUPABASE_URL}/rest/v1/coach_coupons`
+            + `?coach_id=eq.${encodeURIComponent(booking.coach_id || '')}`
+            + `&code=eq.${encodeURIComponent(coupon_code)}`
+            + `&is_active=eq.true`
+            + `&select=id,discount_type,discount_value,applies_to,service_id,max_uses,times_used,expires_at,stripe_coupon_id&limit=1`,
+          { headers: SB_HEADERS }
+        );
+        const couponRows = await couponLookup.json();
+        const coupon = Array.isArray(couponRows) && couponRows[0];
+        const stillUsable = coupon
+          && (!coupon.expires_at || new Date(coupon.expires_at).getTime() >= Date.now())
+          && (coupon.max_uses == null || coupon.times_used < coupon.max_uses)
+          && (coupon.applies_to !== 'specific_service' || !coupon.service_id || coupon.service_id === booking.service_id);
+        if (stillUsable && coupon.stripe_coupon_id) {
+          stripeDiscounts.push({ coupon: coupon.stripe_coupon_id });
+          appliedCouponDbId = coupon.id;
+        }
+      } catch (e) {
+        console.warn('[create-checkout-session][booking] coupon lookup failed', e && e.message);
+      }
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       // Use price_data inline — coach_services rows aren't pre-registered as
@@ -236,7 +275,9 @@ async function handleSessionBooking({ booking_id, stripe, SUPABASE_URL, SB_HEADE
         client_email: String(booking.client_email || '').toLowerCase(),
         client_name: booking.client_name || '',
         platform_fee_cents: String(platformFeeCents),
+        coupon_id: appliedCouponDbId || '',
       },
+      ...(stripeDiscounts.length ? { discounts: stripeDiscounts } : {}),
       success_url: successUrl,
       cancel_url: cancelUrl,
     });

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gift coaching — ineedcoaching.org</title>
+<meta name="description" content="Purchase a coaching gift certificate.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #1a3a52;
+  --forest: #4a7c59;
+  --cream: #f7f4ee;
+  --warm: #ffffff;
+  --gold: #c49a3c;
+  --gold-hover: #a87d1f;
+  --muted: #6b6b60;
+  --border: #e0ddd5;
+  --r: 14px;
+  --r-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); color: var(--ink); }
+nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; align-items: center; justify-content: space-between; padding: 14px 52px; background: rgba(26,58,82,0.95); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(255,255,255,0.1); }
+.book-nav .logo { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: #f7f4ee; text-decoration: none; }
+.book-nav .logo .brand-i, .book-nav .logo .brand-coaching { color: var(--gold); font-style: italic; }
+.shell { padding: 110px 24px 80px; max-width: 720px; margin: 0 auto; }
+.loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 16px; }
+.loading-spinner { width: 44px; height: 44px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.error-state { text-align: center; padding: 80px 24px; }
+.error-state h1 { font-family: 'Playfair Display', serif; font-size: 2rem; color: var(--ink); margin-bottom: 12px; }
+.error-state p { color: var(--muted); font-size: 1rem; line-height: 1.6; }
+.card { background: var(--warm); border: 1px solid var(--border); border-radius: var(--r); padding: 32px; box-shadow: 0 2px 12px rgba(26,58,82,0.04); margin-bottom: 18px; }
+.card h1 { font-family: 'Playfair Display', serif; font-size: 1.8rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; line-height: 1.2; }
+.card .lead { font-size: 0.95rem; color: var(--muted); line-height: 1.6; margin-bottom: 18px; }
+.coach-mini { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--cream); border-radius: var(--r-sm); margin-bottom: 22px; }
+.coach-mini-avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--ink); color: var(--gold); display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-weight: 900; font-size: 1.2rem; flex-shrink: 0; overflow: hidden; }
+.coach-mini-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.coach-mini-name { font-weight: 700; color: var(--ink); font-size: 0.95rem; }
+.coach-mini-sub { font-size: 0.78rem; color: var(--muted); }
+.section-label { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; color: var(--ink); margin: 18px 0 10px; }
+.gift-type-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.gift-type-tab { flex: 1; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: var(--r-sm); background: var(--warm); color: var(--ink); font-family: inherit; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; }
+.gift-type-tab.is-selected { background: var(--gold); border-color: var(--gold); color: var(--warm); }
+.amount-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+.amount-chip { padding: 12px 8px; border: 1.5px solid var(--border); border-radius: var(--r-sm); background: var(--warm); color: var(--ink); font-family: inherit; font-size: 0.92rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; }
+.amount-chip:hover { border-color: var(--gold); color: var(--gold); }
+.amount-chip.is-selected { background: var(--gold); border-color: var(--gold); color: var(--warm); }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--ink); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+.form-group input, .form-group textarea { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: inherit; font-size: 0.95rem; color: var(--ink); background: var(--warm); transition: border-color 0.15s; }
+.form-group input:focus, .form-group textarea:focus { outline: none; border-color: var(--gold); }
+.form-group textarea { min-height: 90px; resize: vertical; }
+.btn-row { display: flex; gap: 10px; align-items: center; }
+.btn-gold { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--gold); color: var(--warm); padding: 14px 28px; border-radius: 50px; font-family: inherit; font-size: 0.92rem; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; }
+.btn-gold:hover:not(:disabled) { background: var(--gold-hover); transform: translateY(-1px); }
+.btn-gold:disabled { opacity: 0.55; cursor: not-allowed; }
+.form-error { display: none; padding: 10px 14px; background: rgba(196,68,68,0.08); border-left: 3px solid #c44; border-radius: 0 var(--r-sm) var(--r-sm) 0; font-size: 0.85rem; color: #8a2828; margin-bottom: 12px; }
+.form-error.is-shown { display: block; }
+.book-footer { background: var(--ink); padding: 28px 24px; text-align: center; }
+.book-footer .powered { font-size: 0.8rem; color: rgba(247,244,238,0.55); }
+.book-footer .powered a { color: var(--gold); text-decoration: none; }
+@media (max-width: 640px) {
+  nav.book-nav { padding: 12px 20px; }
+  .shell { padding: 90px 16px 60px; }
+  .card { padding: 22px 20px; }
+  .amount-grid { grid-template-columns: repeat(2, 1fr); }
+}
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<nav class="book-nav">
+  <a href="/" class="logo"><span class="brand-i">i</span>need<span class="brand-coaching">coaching</span>.org</a>
+</nav>
+
+<div id="state-loading" class="loading-state">
+  <div class="loading-spinner"></div>
+  <p style="color:var(--muted);font-size:0.9rem;">Loading…</p>
+</div>
+
+<div id="state-error" class="error-state hidden">
+  <h1>Coach not found</h1>
+  <p id="error-message">This gift link is missing the coach. Open the link from a coach's profile to gift coaching with them.</p>
+</div>
+
+<div id="state-main" class="shell hidden">
+  <div class="card">
+    <h1>Gift coaching</h1>
+    <p class="lead">A meaningful gift for someone you care about. They’ll get a code by email and can redeem it any time.</p>
+    <div id="coach-mini" class="coach-mini"></div>
+
+    <div class="section-label">What kind of gift?</div>
+    <div class="gift-type-tabs">
+      <button type="button" class="gift-type-tab is-selected" data-type="amount">Dollar amount</button>
+      <button type="button" class="gift-type-tab" data-type="sessions">Number of sessions</button>
+    </div>
+
+    <div id="amount-pane">
+      <div class="amount-grid" id="amount-grid">
+        <button type="button" class="amount-chip" data-cents="2500">$25</button>
+        <button type="button" class="amount-chip" data-cents="5000">$50</button>
+        <button type="button" class="amount-chip" data-cents="10000">$100</button>
+        <button type="button" class="amount-chip" data-cents="25000">$250</button>
+      </div>
+      <div class="form-group">
+        <label for="amount-custom">Or enter a custom amount ($)</label>
+        <input type="number" id="amount-custom" min="10" step="1" placeholder="e.g. 75">
+      </div>
+    </div>
+
+    <div id="sessions-pane" class="hidden">
+      <div class="amount-grid">
+        <button type="button" class="amount-chip" data-sessions="1">1 session</button>
+        <button type="button" class="amount-chip" data-sessions="3">3 sessions</button>
+        <button type="button" class="amount-chip" data-sessions="5">5 sessions</button>
+        <button type="button" class="amount-chip" data-sessions="10">10 sessions</button>
+      </div>
+    </div>
+
+    <div class="section-label">Recipient</div>
+    <div class="form-group">
+      <label for="recipient-name">Their name</label>
+      <input type="text" id="recipient-name" maxlength="120" placeholder="Full name" required>
+    </div>
+    <div class="form-group">
+      <label for="recipient-email">Their email</label>
+      <input type="email" id="recipient-email" autocomplete="off" maxlength="180" placeholder="email@example.com" required>
+    </div>
+    <div class="form-group">
+      <label for="message">Personal note <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+      <textarea id="message" maxlength="500" placeholder="A short note your recipient will see in the email."></textarea>
+    </div>
+
+    <div class="section-label">Your details</div>
+    <div class="form-group">
+      <label for="purchaser-email">Your email <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(for the receipt)</span></label>
+      <input type="email" id="purchaser-email" autocomplete="email" maxlength="180" placeholder="email@example.com">
+    </div>
+
+    <div id="gift-error" class="form-error"></div>
+    <div class="btn-row">
+      <button type="button" id="purchase-btn" class="btn-gold">Continue to payment</button>
+    </div>
+  </div>
+</div>
+
+<footer class="book-footer">
+  <div class="powered">Powered by <a href="https://www.ineedcoaching.org">ineedcoaching.org</a></div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+  var SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+  var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+  var REST = SUPABASE_URL + '/rest/v1';
+  var HEADERS_GET = { apikey: ANON_KEY, Authorization: 'Bearer ' + ANON_KEY };
+  function $(id) { return document.getElementById(id); }
+  function escapeHtml(s) { if (s == null) return ''; var d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+  function isValidEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || '').trim()); }
+  function showError(msg) { $('state-loading').classList.add('hidden'); $('state-main').classList.add('hidden'); if (msg) $('error-message').textContent = msg; $('state-error').classList.remove('hidden'); }
+  function showMain() { $('state-loading').classList.add('hidden'); $('state-error').classList.add('hidden'); $('state-main').classList.remove('hidden'); }
+
+  var coach = null;
+  var giftType = 'amount'; // 'amount' or 'sessions'
+  var selectedAmountCents = 0;
+  var selectedSessionCount = 0;
+
+  async function init() {
+    var p = new URLSearchParams(window.location.search);
+    var slug = (p.get('coach') || p.get('slug') || '').trim();
+    if (!slug) { showError(); return; }
+    try {
+      var url = REST + '/coach_profiles?slug=eq.' + encodeURIComponent(slug)
+        + '&is_published=eq.true'
+        + '&select=id,slug,display_name,full_name,headline,profile_image_url,stripe_account_id&limit=1';
+      var res = await fetch(url, { headers: HEADERS_GET });
+      var rows = await res.json();
+      coach = rows && rows[0];
+      if (!coach) { showError(); return; }
+      if (!coach.stripe_account_id) {
+        showError('This coach hasn’t set up payments yet, so gift purchases aren’t available right now.');
+        return;
+      }
+      renderCoachMini();
+      wire();
+      showMain();
+    } catch (err) {
+      console.error('[gift] init', err);
+      showError('Something went wrong. Please refresh and try again.');
+    }
+  }
+
+  function renderCoachMini() {
+    var name = coach.display_name || coach.full_name || 'Your Coach';
+    var initials = name.split(/\s+/).map(function (w) { return w[0]; }).join('').slice(0, 2).toUpperCase();
+    var avatar = coach.profile_image_url
+      ? '<div class="coach-mini-avatar"><img src="' + escapeHtml(coach.profile_image_url) + '" alt="' + escapeHtml(name) + '"></div>'
+      : '<div class="coach-mini-avatar">' + escapeHtml(initials) + '</div>';
+    $('coach-mini').innerHTML = avatar
+      + '<div><div class="coach-mini-name">For ' + escapeHtml(name) + '</div>'
+      + '<div class="coach-mini-sub">' + (coach.headline ? escapeHtml(coach.headline) : 'Coaching gift certificate') + '</div></div>';
+  }
+
+  function wire() {
+    Array.prototype.forEach.call(document.querySelectorAll('.gift-type-tab'), function (btn) {
+      btn.addEventListener('click', function () {
+        Array.prototype.forEach.call(document.querySelectorAll('.gift-type-tab'), function (b) { b.classList.remove('is-selected'); });
+        btn.classList.add('is-selected');
+        giftType = btn.dataset.type;
+        $('amount-pane').classList.toggle('hidden', giftType !== 'amount');
+        $('sessions-pane').classList.toggle('hidden', giftType !== 'sessions');
+        selectedAmountCents = 0; selectedSessionCount = 0;
+        Array.prototype.forEach.call(document.querySelectorAll('.amount-chip'), function (c) { c.classList.remove('is-selected'); });
+        $('amount-custom').value = '';
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.amount-chip'), function (chip) {
+      chip.addEventListener('click', function () {
+        Array.prototype.forEach.call(document.querySelectorAll('.amount-chip'), function (c) { c.classList.remove('is-selected'); });
+        chip.classList.add('is-selected');
+        if (chip.dataset.cents) { selectedAmountCents = parseInt(chip.dataset.cents, 10); $('amount-custom').value = ''; }
+        if (chip.dataset.sessions) { selectedSessionCount = parseInt(chip.dataset.sessions, 10); }
+      });
+    });
+    $('amount-custom').addEventListener('input', function (e) {
+      var dollars = parseFloat(e.target.value);
+      if (Number.isFinite(dollars) && dollars > 0) {
+        selectedAmountCents = Math.round(dollars * 100);
+        Array.prototype.forEach.call(document.querySelectorAll('#amount-pane .amount-chip'), function (c) { c.classList.remove('is-selected'); });
+      }
+    });
+    $('purchase-btn').addEventListener('click', submitPurchase);
+  }
+
+  async function submitPurchase() {
+    var errEl = $('gift-error');
+    errEl.classList.remove('is-shown');
+    var name = $('recipient-name').value.trim();
+    var email = $('recipient-email').value.trim();
+    var message = $('message').value.trim();
+    var purchaserEmail = $('purchaser-email').value.trim();
+    if (giftType === 'amount' && (!selectedAmountCents || selectedAmountCents < 1000)) {
+      return fail('Pick an amount of at least $10.');
+    }
+    if (giftType === 'sessions' && !selectedSessionCount) {
+      return fail('Pick a number of sessions.');
+    }
+    if (!name) return fail('Add the recipient’s name.');
+    if (!isValidEmail(email)) return fail('Add a valid recipient email.');
+    if (purchaserEmail && !isValidEmail(purchaserEmail)) return fail('Your email looks invalid.');
+
+    var btn = $('purchase-btn');
+    btn.disabled = true;
+    btn.textContent = 'Redirecting to payment…';
+    try {
+      var payload = {
+        coach_id: coach.id,
+        recipient_email: email,
+        recipient_name: name,
+        message: message,
+        purchased_by_email: purchaserEmail,
+      };
+      if (giftType === 'amount') payload.amount_cents = selectedAmountCents;
+      else payload.session_count = selectedSessionCount;
+      var res = await fetch('/api/purchase-gift-certificate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        var body = '';
+        try { body = (await res.json()).error || ''; } catch (e) {}
+        throw new Error(body || ('Checkout failed: ' + res.status));
+      }
+      var data = await res.json();
+      if (!data.url) throw new Error('No checkout URL returned');
+      window.location.href = data.url;
+    } catch (err) {
+      console.error('[gift] submit', err);
+      fail('Something went wrong starting checkout. Please try again.');
+      btn.disabled = false;
+      btn.textContent = 'Continue to payment';
+    }
+    function fail(m) { errEl.textContent = m; errEl.classList.add('is-shown'); }
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
