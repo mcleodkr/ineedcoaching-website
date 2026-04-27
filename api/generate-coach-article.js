@@ -22,6 +22,36 @@ export default async function handler(req, res) {
     const { coachId } = body;
     if (!coachId) return res.status(400).json({ error: 'Missing coachId' });
 
+    // Rate limit: 1 successful article per coach per rolling 7-day window.
+    // Server-side gate only — no client trust. Filter on status='success'
+    // so failed generations don't lock the coach out for a week. If the
+    // telemetry query itself fails, fail OPEN — don't block coaches because
+    // of a transient coach_ai_usage_log issue.
+    const sevenDaysAgoIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const limitRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/coach_ai_usage_log`
+        + `?coach_id=eq.${coachId}`
+        + `&feature=eq.coach_article`
+        + `&status=eq.success`
+        + `&created_at=gte.${encodeURIComponent(sevenDaysAgoIso)}`
+        + `&select=created_at&order=created_at.desc&limit=1`,
+      { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+    );
+    if (limitRes.ok) {
+      const recent = await limitRes.json();
+      if (Array.isArray(recent) && recent.length) {
+        const lastAt = new Date(recent[0].created_at);
+        const nextAt = new Date(lastAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const nextStr = nextAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        return res.status(429).json({
+          error: `You can generate 1 article per week. Your next article will be available on ${nextStr}.`,
+          next_available_at: nextAt.toISOString(),
+        });
+      }
+    } else {
+      console.warn('[generate-article] rate-limit lookup failed (failing open):', limitRes.status);
+    }
+
     // Fetch coach profile
     const coachRes = await fetch(
       `${SUPABASE_URL}/rest/v1/coach_profiles?id=eq.${coachId}&select=display_name,full_name,headline,bio,specialties`,
