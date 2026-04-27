@@ -54,6 +54,7 @@ const VALID_DOMAINS = new Set([
 ]);
 
 import { logAIUsage } from '../lib/ai-usage.js';
+import { jsonrepair } from 'jsonrepair';
 
 async function callClaudeRaw(apiKey, model, maxTokens, system, userMessage, passName, meta) {
   const startTime = Date.now();
@@ -512,15 +513,32 @@ export default async function handler(req, res) {
     }
 
     if (!synthesisFailureReason) {
+      // Two-step parse. JSON.parse first for the fast path on clean output;
+      // on failure, run jsonrepair() to fix Claude's common drift modes
+      // (missing/trailing commas, unescaped chars, single quotes, partial
+      // truncation) and parse again. The 7 production failures we
+      // investigated were all "Expected ',' or ']' after array element" at
+      // column 6 — missing comma between objects in a long array, which
+      // jsonrepair handles directly. Repair attempts are logged so we can
+      // tell genuine recoveries from cases where output drift is getting
+      // worse.
+      const extracted = extractJSON(rawSynthesisText);
       try {
-        const extracted = extractJSON(rawSynthesisText);
         aiOutput = JSON.parse(extracted);
-      } catch (err) {
-        synthesisFailureReason = 'synthesis_parse_failed';
-        console.error('[Pattern Map] JSON parse failed', {
-          err: err.message,
-          raw: (rawSynthesisText || '').slice(0, 500),
-        });
+      } catch (parseErr) {
+        try {
+          aiOutput = JSON.parse(jsonrepair(extracted));
+          console.warn('[Pattern Map] JSON.parse failed, jsonrepair recovered', {
+            parseErr: parseErr.message,
+          });
+        } catch (repairErr) {
+          synthesisFailureReason = 'synthesis_parse_failed';
+          console.error('[Pattern Map] JSON parse failed (jsonrepair also failed)', {
+            parseErr: parseErr.message,
+            repairErr: repairErr.message,
+            raw: (rawSynthesisText || '').slice(0, 500),
+          });
+        }
       }
     }
 
