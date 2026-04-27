@@ -286,6 +286,14 @@
       return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
     });
   }
+  // Hide synthetic internal emails generated when a coach manually adds a client
+  // without an email (pattern: 'manual+...@local.ineedcoaching.org'). Returns ''
+  // for synthetic emails — the database key is never user-facing.
+  function displayClientEmail(email) {
+    if (!email) return '';
+    if (/^manual\+[^@]+@local\.ineedcoaching\.org$/i.test(email)) return '';
+    return email;
+  }
   function apiHeaders() {
     const token = localStorage.getItem(TOKEN_KEY);
     return {
@@ -1255,10 +1263,12 @@
     ]);
     sessionInfo = sessions || {};
     plan = loadedPlan;
-    const displayName = clientName || clientEmail || 'Client';
+    const visibleEmail = displayClientEmail(clientEmail);
+    const displayName = clientName || visibleEmail || 'Client';
     _cachedClientDisplayName = displayName;
     $('client-heading').textContent = displayName;
-    $('header-meta').textContent = clientEmail + ' · coach: ' + (profile.display_name || '');
+    const coachLine = 'coach: ' + (profile.display_name || '');
+    $('header-meta').textContent = visibleEmail ? (visibleEmail + ' · ' + coachLine) : coachLine;
     document.title = 'Intervention Plan · ' + displayName;
     render();
     // Note: ?plan_for_booking=<uuid> from the bookings tab is handled inside

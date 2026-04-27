@@ -1816,6 +1816,16 @@ function escapeHtml(str) {
   return d.innerHTML;
 }
 
+// Hide synthetic internal emails generated when a coach manually adds a client
+// without an email (see Add-client form: 'manual+' + timestamp + random + '@local.ineedcoaching.org').
+// Returns '' for synthetic emails so the calling site renders nothing — never expose
+// these database keys to the coach.
+function displayClientEmail(email) {
+  if (!email) return '';
+  if (/^manual\+[^@]+@local\.ineedcoaching\.org$/i.test(email)) return '';
+  return email;
+}
+
 function $(id) { return document.getElementById(id); }
 
 // Ensure token is fresh before API calls — returns true if valid, false if unrecoverable
@@ -4209,8 +4219,8 @@ function renderClientsList(filter) {
       html += '<div style="background:var(--white);border:1px solid var(--border);border-left:4px solid var(--gold);border-radius:var(--r);padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.04);transition:transform 0.2s,box-shadow 0.2s;cursor:default;" onmouseenter="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 6px 20px rgba(0,0,0,0.08)\'" onmouseleave="this.style.transform=\'\';this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.04)\'">'
         + '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;">'
         + '<div>'
-        + '<div style="font-family:\'Cormorant Garamond\',serif;font-weight:700;font-size:1.1rem;color:var(--ink);margin-bottom:2px;">' + escapeHtml(c.name || c.email) + '</div>'
-        + '<div style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(c.email) + '</div>'
+        + '<div style="font-family:\'Cormorant Garamond\',serif;font-weight:700;font-size:1.1rem;color:var(--ink);margin-bottom:2px;">' + escapeHtml(c.name || displayClientEmail(c.email) || 'Unnamed client') + '</div>'
+        + (displayClientEmail(c.email) ? '<div style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(displayClientEmail(c.email)) + '</div>' : '')
         + (c.phone ? '<div style="font-size:0.75rem;color:var(--muted);">' + escapeHtml(c.phone) + '</div>' : '')
         + '</div>'
         + '<div class="client-avatar" data-initial="' + escapeHtml(initial) + '" data-active="' + (isActive ? '1' : '0') + '" title="' + (isActive ? 'Active' : 'Inactive') + '"></div>'
@@ -4574,8 +4584,15 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
   html += '<div style="margin-bottom:24px;">'
     + '<button id="back-to-clients" style="background:none;border:none;cursor:pointer;font-size:0.85rem;font-weight:700;color:var(--gold);margin-bottom:16px;display:flex;align-items:center;gap:6px;">&larr; Back to Clients</button>'
     + '<div style="background:linear-gradient(135deg,#1a3a52 0%,#0f2535 100%);border-left:4px solid #c49a3c;border-radius:var(--r);padding:28px 32px;">'
-    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:600;color:#fff;margin-bottom:4px;">' + escapeHtml(client.name || client.email) + '</div>'
-    + '<div style="font-size:0.85rem;color:rgba(247,244,238,0.6);">' + escapeHtml(client.email) + (client.phone ? ' &bull; ' + escapeHtml(client.phone) : '') + '</div>'
+    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:600;color:#fff;margin-bottom:4px;">' + escapeHtml(client.name || displayClientEmail(client.email) || 'Unnamed client') + '</div>'
+    + (function() {
+        var em = displayClientEmail(client.email);
+        var ph = client.phone || '';
+        if (!em && !ph) return '';
+        var line = em ? escapeHtml(em) : '';
+        if (ph) line += (em ? ' &bull; ' : '') + escapeHtml(ph);
+        return '<div style="font-size:0.85rem;color:rgba(247,244,238,0.6);">' + line + '</div>';
+      })()
     + '<div style="font-size:0.8rem;color:rgba(247,244,238,0.5);margin-top:6px;">Client since ' + escapeHtml(firstStr) + ' &bull; ' + client.sessions.length + ' session' + (client.sessions.length !== 1 ? 's' : '') + '</div>'
     + '</div></div>';
 
@@ -7747,6 +7764,25 @@ function renderCoachingMirror(a, container) {
     var ciBody = '';
     var strengthColors = { high: '#2d6a4f', medium: 'var(--gold)', low: 'var(--muted)' };
     var strengthLabels = { high: 'HIGH', medium: 'MEDIUM', low: 'LOW' };
+    // Visible legend so coaches can decode badge colors at a glance — the
+    // existing native title="" tooltips on each badge are easy to miss.
+    ciBody += '<div style="background:#fdf9f1;border:1px solid #edeae4;border-radius:8px;padding:12px 16px;margin-bottom:14px;">'
+      + '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin-bottom:8px;">How to read these badges</div>'
+      + '<div style="display:flex;flex-direction:column;gap:6px;">'
+      +   '<div style="display:flex;align-items:flex-start;gap:10px;">'
+      +     '<span style="display:inline-block;flex-shrink:0;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:700;background:' + strengthColors.high + ';color:#fff;margin-top:2px;">HIGH</span>'
+      +     '<span style="font-size:0.8rem;color:var(--ink);line-height:1.5;">Major turning-point intervention. Directly shifted the client\'s thinking, emotion, or behavior in-session.</span>'
+      +   '</div>'
+      +   '<div style="display:flex;align-items:flex-start;gap:10px;">'
+      +     '<span style="display:inline-block;flex-shrink:0;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:700;background:' + strengthColors.medium + ';color:#fff;margin-top:2px;">MEDIUM</span>'
+      +     '<span style="font-size:0.8rem;color:var(--ink);line-height:1.5;">Supportive move. Solid contribution, but not the primary driver of change.</span>'
+      +   '</div>'
+      +   '<div style="display:flex;align-items:flex-start;gap:10px;">'
+      +     '<span style="display:inline-block;flex-shrink:0;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:700;background:' + strengthColors.low + ';color:#fff;margin-top:2px;">LOW</span>'
+      +     '<span style="font-size:0.8rem;color:var(--ink);line-height:1.5;">Conversational support. Present in the moment but with minimal observable impact.</span>'
+      +   '</div>'
+      + '</div>'
+      + '</div>';
     ci.forEach(function(c) {
       if (!c) return;
       var sc = strengthColors[c.signal_strength] || 'var(--muted)';
