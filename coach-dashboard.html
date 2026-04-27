@@ -1403,6 +1403,32 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
         </div>
       </div>
 
+      <!-- Reminder Settings — email reminders go out automatically at
+           48h / 24h / 1h. SMS is opt-in per booking and gated on the coach
+           toggle below; without it, the SMS section never renders on
+           book.html even when a client types a phone number. -->
+      <div class="form-section" id="reminder-settings-section">
+        <h2 class="form-section-title">Reminder Settings</h2>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;line-height:1.6;">Email reminders fire automatically at 48 hours, 24 hours, and 1 hour before each session. SMS reminders are opt-in &mdash; clients choose at booking time when this is on.</p>
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin-bottom:18px;">
+          <input type="checkbox" id="f-sms-reminders-enabled" style="width:18px;height:18px;accent-color:var(--gold);margin-top:3px;flex-shrink:0;">
+          <div>
+            <div style="font-weight:700;font-size:0.92rem;color:var(--ink);">Enable SMS reminders</div>
+            <div style="font-size:0.8rem;color:var(--muted);">Requires the platform Twilio account to be configured. Off by default.</div>
+          </div>
+        </label>
+        <div class="form-group" id="sms-default-timing-row">
+          <label for="f-sms-default-timing">Default SMS reminder timing</label>
+          <select id="f-sms-default-timing">
+            <option value="30">30 minutes before</option>
+            <option value="15">15 minutes before</option>
+          </select>
+          <p style="font-size:0.78rem;color:var(--muted);margin-top:6px;">Clients can override this on a per-booking basis.</p>
+        </div>
+        <button class="save-btn" id="save-reminder-settings-btn">Save Reminder Settings</button>
+        <span class="save-msg" id="save-reminder-settings-msg">Saved</span>
+      </div>
+
       <!-- Session Types — what clients can book. Stored in coach_services.
            Soft-delete only (is_active=false) because coach_bookings.service_id
            references this row. Slot granularity is per-service so a clarity
@@ -3662,6 +3688,19 @@ function loadScheduling() {
   if (addBlockBtn) addBlockBtn.onclick = addBlockedTime;
   loadBlockedTimes();
 
+  // Wire Reminder Settings UI (PR 1.E). Seeds from coach_profiles columns
+  // added in 20260427_scheduler_reminders.sql and saves through the same
+  // supabasePatch helper used by the rest of this tab.
+  var smsEnabledEl = $('f-sms-reminders-enabled');
+  var smsDefaultTimingEl = $('f-sms-default-timing');
+  if (smsEnabledEl) smsEnabledEl.checked = !!p.sms_reminders_enabled;
+  if (smsDefaultTimingEl) {
+    var defTiming = parseInt(p.sms_reminder_default_timing, 10);
+    smsDefaultTimingEl.value = (defTiming === 15 || defTiming === 30) ? String(defTiming) : '30';
+  }
+  var saveReminderBtn = $('save-reminder-settings-btn');
+  if (saveReminderBtn) saveReminderBtn.onclick = saveReminderSettings;
+
   // Wire Session Types UI — list, add, edit, deactivate.
   var addStBtn = $('add-session-type-btn');
   if (addStBtn) addStBtn.onclick = function() { openSessionTypeModal(null); };
@@ -4050,6 +4089,36 @@ async function saveZoomLink() {
   }
   btn.disabled = false;
   btn.textContent = 'Save Meeting Link';
+}
+
+async function saveReminderSettings() {
+  var btn = $('save-reminder-settings-btn');
+  var msg = $('save-reminder-settings-msg');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  msg.classList.remove('show');
+  try {
+    var enabled = !!$('f-sms-reminders-enabled').checked;
+    var timingRaw = parseInt($('f-sms-default-timing').value, 10);
+    var timing = (timingRaw === 15 || timingRaw === 30) ? timingRaw : 30;
+    await supabasePatch('coach_profiles', { id: 'eq.' + coachProfile.id }, {
+      sms_reminders_enabled: enabled,
+      sms_reminder_default_timing: timing,
+    });
+    coachProfile.sms_reminders_enabled = enabled;
+    coachProfile.sms_reminder_default_timing = timing;
+    msg.textContent = 'Saved';
+    msg.style.color = 'var(--forest)';
+    msg.classList.add('show');
+    setTimeout(function() { msg.classList.remove('show'); }, 3000);
+  } catch (e) {
+    console.error('Reminder settings save error:', e);
+    msg.textContent = 'Error saving.';
+    msg.style.color = '#c44';
+    msg.classList.add('show');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Save Reminder Settings';
 }
 
 // Day name → integer mapping used by both the legacy JSONB shape and the

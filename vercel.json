@@ -38,6 +38,9 @@
     }
   },
   "cleanUrls": true,
+  "crons": [
+    { "path": "/api/process-reminders", "schedule": "*/15 * * * *" }
+  ],
   "rewrites": [
     { "source": "/coach/:slug", "destination": "/coach-profile?slug=:slug" },
     { "source": "/intervention-plan", "destination": "/intervention-plan-panel" },

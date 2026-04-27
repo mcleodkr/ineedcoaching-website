@@ -80,6 +80,13 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
 .banner-cancelled { display: none; padding: 14px 18px; background: rgba(196,154,60,0.1); border: 1px solid rgba(196,154,60,0.3); border-left: 3px solid var(--gold); border-radius: var(--r-sm); margin-bottom: 20px; font-size: 0.88rem; color: var(--ink); line-height: 1.55; }
 .banner-cancelled.is-shown { display: block; }
 .banner-cancelled strong { color: var(--ink); }
+.sms-opt-in { padding: 16px 18px; background: var(--cream); border: 1px solid var(--border); border-radius: var(--r-sm); }
+.sms-opt-in-label { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 0.86rem; font-weight: 600; color: var(--ink); text-transform: none; letter-spacing: 0; }
+.sms-opt-in-label input[type="checkbox"] { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--gold); flex-shrink: 0; }
+.sms-timing-row { display: none; margin-top: 12px; padding-left: 26px; }
+.sms-timing-row .sms-timing-label { display: block; font-size: 0.74rem; color: var(--muted); text-transform: none; letter-spacing: 0; font-weight: 500; margin-bottom: 4px; }
+.sms-timing-row select { width: auto; min-width: 200px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--warm); font-family: inherit; font-size: 0.88rem; color: var(--ink); }
+.sms-opt-in.is-checked .sms-timing-row { display: block; }
 .service-row-arrow { color: var(--muted); font-size: 1.1rem; flex-shrink: 0; transition: color 0.15s; }
 .service-row:hover .service-row-arrow { color: var(--gold); }
 
@@ -235,6 +242,22 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
         <label for="bk-phone">Phone <span class="opt">(optional, for reminders)</span></label>
         <input type="tel" id="bk-phone" autocomplete="tel" maxlength="40" placeholder="(555) 555-5555">
       </div>
+      <!-- SMS opt-in: shown only when (a) the coach has SMS enabled and
+           (b) the client typed a phone number. Default timing is the
+           coach's preference; clients can override per booking. -->
+      <div class="form-group sms-opt-in" id="sms-opt-in-section" style="display:none;">
+        <label class="sms-opt-in-label" for="sms-opt-in">
+          <input type="checkbox" id="sms-opt-in">
+          <span>Send me an SMS reminder before the session</span>
+        </label>
+        <div class="sms-timing-row">
+          <label for="sms-timing" class="sms-timing-label">When to send</label>
+          <select id="sms-timing">
+            <option value="30">30 minutes before</option>
+            <option value="15">15 minutes before</option>
+          </select>
+        </div>
+      </div>
       <div class="form-group">
         <label for="bk-notes">What you'd like to focus on <span class="opt">(optional)</span></label>
         <textarea id="bk-notes" maxlength="2000" placeholder="A quick line on what brought you here helps the coach prepare."></textarea>
@@ -381,7 +404,7 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
     try {
       var url = REST + '/coach_profiles?slug=eq.' + encodeURIComponent(slug)
         + '&is_published=eq.true'
-        + '&select=id,slug,display_name,full_name,headline,profile_image_url,timezone,zoom_meeting_link,stripe_account_id'
+        + '&select=id,slug,display_name,full_name,headline,profile_image_url,timezone,zoom_meeting_link,stripe_account_id,sms_reminders_enabled,sms_reminder_default_timing'
         + '&limit=1';
       var res = await fetch(url, { headers: HEADERS_GET });
       if (!res.ok) throw new Error('Profile lookup failed');
@@ -394,6 +417,7 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
       var backLink = $('success-back-coach');
       if (backLink && coach.slug) backLink.href = '/coach/' + encodeURIComponent(coach.slug);
       await loadServices();
+      wireSmsOptInToggle();
       showMain();
     } catch (err) {
       console.error('[book] loadCoach', err);
@@ -621,6 +645,40 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
     btn.textContent = isPaidService(selectedService) ? 'Continue to payment' : 'Confirm booking';
   }
 
+  // SMS opt-in section visibility: only when the coach has SMS enabled AND
+  // the client has typed a phone number. The timing select reveals once
+  // the checkbox is ticked. Default timing = coach.sms_reminder_default_timing.
+  function wireSmsOptInToggle() {
+    var section = $('sms-opt-in-section');
+    var phoneEl = $('bk-phone');
+    var checkbox = $('sms-opt-in');
+    var timingSel = $('sms-timing');
+    if (!section || !phoneEl || !checkbox || !timingSel) return;
+    function refreshVisibility() {
+      var coachEnabled = !!(coach && coach.sms_reminders_enabled);
+      var hasPhone = phoneEl.value.trim().length > 0;
+      section.style.display = (coachEnabled && hasPhone) ? '' : 'none';
+      if (!coachEnabled || !hasPhone) {
+        // Reset state when section is hidden so we never POST a stale opt-in
+        // for a booking the client didn't intend.
+        checkbox.checked = false;
+        section.classList.remove('is-checked');
+      }
+    }
+    function refreshChecked() {
+      section.classList.toggle('is-checked', checkbox.checked);
+    }
+    phoneEl.addEventListener('input', refreshVisibility);
+    checkbox.addEventListener('change', refreshChecked);
+    // Seed the timing select from the coach's default once we know it.
+    var defaultTiming = (coach && coach.sms_reminder_default_timing) || 30;
+    var match = Array.prototype.find.call(timingSel.options, function (o) {
+      return parseInt(o.value, 10) === defaultTiming;
+    });
+    timingSel.value = match ? match.value : '30';
+    refreshVisibility();
+  }
+
   // ── Submit ──
   $('confirm-back').addEventListener('click', function () {
     $('step-slot').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -641,6 +699,12 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
     if (!name) { showFormError('Please enter your name.'); $('bk-name').focus(); return; }
     if (!isValidEmail(email)) { showFormError('Please enter a valid email address.'); $('bk-email').focus(); return; }
 
+    // SMS opt-in only counts when both the coach and the client have set it.
+    // Without a phone number the cron has nothing to text, so force-false.
+    var smsOptIn = !!(phone && coach && coach.sms_reminders_enabled && $('sms-opt-in') && $('sms-opt-in').checked);
+    var smsTimingRaw = parseInt(($('sms-timing') && $('sms-timing').value) || '30', 10);
+    var smsTiming = (smsTimingRaw === 15 || smsTimingRaw === 30) ? smsTimingRaw : 30;
+
     var btn = $('confirm-submit');
     var paid = isPaidService(selectedService);
     btn.disabled = true;
@@ -653,6 +717,7 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
         var pendingId = await insertBooking({
           name: name, email: email, phone: phone, notes: notesText,
           status: 'pending_payment', price: Number(selectedService.price || 0),
+          sms_opt_in: smsOptIn, sms_reminder_timing: smsTiming,
         });
         var checkoutRes = await fetch('/api/create-checkout-session', {
           method: 'POST',
@@ -674,6 +739,7 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
       var bookingId = await insertBooking({
         name: name, email: email, phone: phone, notes: notesText,
         status: 'confirmed', price: 0,
+        sms_opt_in: smsOptIn, sms_reminder_timing: smsTiming,
       });
       try {
         await fetch('/api/booking-confirmation', {
@@ -716,6 +782,9 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
     if (input.notes) noteLines.push('', input.notes);
     var status = input.status || 'confirmed';
     var priceUsd = Number(input.price || 0);
+    var smsOptIn = !!input.sms_opt_in;
+    var smsTimingInput = parseInt(input.sms_reminder_timing, 10);
+    var smsTiming = (smsTimingInput === 15 || smsTimingInput === 30) ? smsTimingInput : 30;
     var payload = {
       coach_id: coach.id,
       client_email: input.email,
@@ -727,6 +796,11 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
       scheduled_at: selectedSlot.iso,
       notes: noteLines.join('\n'),
       status: status,
+      // PR 1.E reminder opt-ins. Always write both fields so the row shape
+      // is uniform — sms_opt_in=false simply parks the row outside the
+      // cron's SMS query.
+      sms_opt_in: smsOptIn && !!input.phone,
+      sms_reminder_timing: smsTiming,
     };
     if (status === 'pending_payment') {
       payload.payment_amount_cents = Math.round(priceUsd * 100);
