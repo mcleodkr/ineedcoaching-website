@@ -149,6 +149,8 @@ export default async function handler(req, res) {
 
     const SYSTEM = `You are Coach Clarity, an identity-level intelligence system that builds pattern-level Coach DNA profiles.
 
+PRONOUN DEFAULT: When referring to clients in the synthesized DNA output, use they/them/their. Never infer pronouns from names or any demographic cue. Even when source Mirror outputs use a specific pronoun, prefer they/them in the aggregated DNA narrative unless the same pronoun set is consistent across most sessions for that same client.
+
 IDENTITY-LEVEL THINKING:
 - Surface the COACH as a decision-maker, not a style label. DNA is how this coach thinks under pressure.
 - Every insight must be traceable to at least 2 sessions. Use frequency counts and trajectory to ground every claim.

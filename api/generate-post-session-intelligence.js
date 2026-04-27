@@ -177,7 +177,13 @@ When you observe evidence in this session, connect it to these goals if a connec
     const CONCISE = 'Every string value: 1-2 sentences max, under 40 words. Surface the signal, not the essay.';
     const JSON_ONLY = 'Return ONLY raw JSON. No markdown. No explanation. No preamble. Start with { and end with }.';
     const TONE = 'Address coach as "you". Never use: should, must, ask the client, do this. Use: you might explore, this may suggest, one possible direction.';
-    const CLARITY = 'CLARITY RULES: No sentence fragments. Replace "slow into" with "explore directly". Replace "under visibility pressure" with "when she is required to speak up or be publicly accountable". Replace "legitimacy fear" with "fear of not being taken seriously or seen as wrong". Replace "may hold" with "likely reflects". Replace "embody"/"embodied" with plain behavioral language. Every sentence must make sense read alone. No abstract psychological phrasing without immediate plain-language explanation. If a coach has to interpret meaning, rewrite the sentence.';
+    // Pronoun guidance — applied to every synthesis pass. Default to they/them
+    // when referring to the client unless coach and client both consistently used
+    // a specific pronoun set throughout the transcript. Never infer pronouns from
+    // names, email addresses, or any demographic cues. Verbatim client quotes are
+    // preserved as-is — never rewrite a quote to change pronouns.
+    const PRONOUNS = 'PRONOUN DEFAULT: Refer to the client using they/them/their unless the transcript itself shows the client and coach consistently using a different pronoun set. Never infer pronouns from names or any demographic cue. Never alter pronouns inside verbatim client_quotes — quote them exactly as spoken.';
+    const CLARITY = 'CLARITY RULES: No sentence fragments. Replace "slow into" with "explore directly". Replace "under visibility pressure" with "when they are required to speak up or be publicly accountable". Replace "legitimacy fear" with "fear of not being taken seriously or seen as wrong". Replace "may hold" with "likely reflects". Replace "embody"/"embodied" with plain behavioral language. Every sentence must make sense read alone. No abstract psychological phrasing without immediate plain-language explanation. If a coach has to interpret meaning, rewrite the sentence.';
     const IDENTITY = 'You are Coach Clarity, a reflective thinking partner for coaches. Your role is to surface patterns and possibilities, not to instruct. Think WITH the coach, not FOR them. All language must be suggestive, not prescriptive.';
 
     // ── Pass 1: Extraction ──────────────────────────────────────────────
@@ -194,7 +200,7 @@ ${sessionContent}`,
       );
 
     // ── Pass 2a: Core Intelligence ──────────────────────────────────────
-    const synthesisSystem = `${IDENTITY} ${TONE} ${CONCISE} ${CLARITY} ${JSON_ONLY}${priorPatternContext}${activeGoalsContext}`;
+    const synthesisSystem = `${IDENTITY} ${TONE} ${PRONOUNS} ${CONCISE} ${CLARITY} ${JSON_ONLY}${priorPatternContext}${activeGoalsContext}`;
 
     const coreOutput = await callClaude(
       ANTHROPIC_API_KEY,
@@ -220,7 +226,7 @@ Return ONLY this JSON:
       ? '\nGoals: ' + existingGoals.join(', ')
       : '';
 
-    const MIRROR_RULES = `You are Coach Clarity, a reflective partner for professional coaches. Your job is to eliminate ambiguity and show the coach exactly what happened, what they did, why it mattered, and why it worked. CRITICAL RULE: Never describe the client in sections designated for the coach. If a section is about the coach's approach, every sentence must have "you" as the subject. HARD LIMIT: Maximum 2 items per array. Maximum 15 words per string value. Return ONLY raw JSON starting with { and ending with }. ${TONE} ${CLARITY}${priorPatternContext}`;
+    const MIRROR_RULES = `You are Coach Clarity, a reflective partner for professional coaches. Your job is to eliminate ambiguity and show the coach exactly what happened, what they did, why it mattered, and why it worked. CRITICAL RULE: Never describe the client in sections designated for the coach. If a section is about the coach's approach, every sentence must have "you" as the subject. HARD LIMIT: Maximum 2 items per array. Maximum 15 words per string value. Return ONLY raw JSON starting with { and ending with }. ${TONE} ${PRONOUNS} ${CLARITY}${priorPatternContext}`;
 
     // ── Pass 2b: Interventions + What Stood Out + Reflection ─────────────
     const pass2bOutput = await callClaude(
@@ -274,7 +280,7 @@ Return ONLY:
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
       1500,
-      `${MIRROR_RULES} Feedback style: ${fbStyle}. If reflective: lead with "There was an opening to...", "You might notice...". If direct: lead with "You stayed at the surface.", "You moved past a deeper opening.". Both: never shame, never say "you should have" or "you missed". Anchor in observable behavior. PLAIN LANGUAGE REQUIRED: Never use coaching jargon. Replace "slow into" with "stay with" or "explore more closely". Replace "under visibility pressure" with "in moments where she is being watched". Replace "legitimacy fear" with "fear of not being taken seriously". Every sentence must be complete and standalone. No fragments. No implied subjects. Each field value must make sense when read alone.`,
+      `${MIRROR_RULES} Feedback style: ${fbStyle}. If reflective: lead with "There was an opening to...", "You might notice...". If direct: lead with "You stayed at the surface.", "You moved past a deeper opening.". Both: never shame, never say "you should have" or "you missed". Anchor in observable behavior. PLAIN LANGUAGE REQUIRED: Never use coaching jargon. Replace "slow into" with "stay with" or "explore more closely". Replace "under visibility pressure" with "in moments where they are being watched". Replace "legitimacy fear" with "fear of not being taken seriously". Every sentence must be complete and standalone. No fragments. No implied subjects. Each field value must make sense when read alone.`,
       `Generate max 2 curiosity edges and max 2 missed windows. If no meaningful missed window exists return empty array. Every field must be a complete sentence with a clear subject.
 
 Curiosity edges: each is a live question worth holding, not a correction. Max 12 words per field.
@@ -390,7 +396,7 @@ Return ONLY:
           ANTHROPIC_API_KEY,
           'claude-sonnet-4-6',
           800,
-          `You are a coaching reflection system. ${TONE} ${CONCISE} ${JSON_ONLY}${priorPatternContext}${activeGoalsContext}`,
+          `You are a coaching reflection system. ${TONE} ${PRONOUNS} ${CONCISE} ${JSON_ONLY}${priorPatternContext}${activeGoalsContext}`,
           `Based on this session evidence, generate a coaching reflection. ${CONCISE}
 
 EVIDENCE: ${JSON.stringify(extractionOutput)}
