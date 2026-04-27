@@ -76,6 +76,10 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
 .pill { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 50px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
 .pill-duration { background: var(--cream); color: var(--ink); border: 1px solid var(--border); }
 .pill-free { background: rgba(74,124,89,0.14); color: var(--forest); }
+.pill-price { background: rgba(196,154,60,0.14); color: var(--gold-hover); }
+.banner-cancelled { display: none; padding: 14px 18px; background: rgba(196,154,60,0.1); border: 1px solid rgba(196,154,60,0.3); border-left: 3px solid var(--gold); border-radius: var(--r-sm); margin-bottom: 20px; font-size: 0.88rem; color: var(--ink); line-height: 1.55; }
+.banner-cancelled.is-shown { display: block; }
+.banner-cancelled strong { color: var(--ink); }
 .service-row-arrow { color: var(--muted); font-size: 1.1rem; flex-shrink: 0; transition: color 0.15s; }
 .service-row:hover .service-row-arrow { color: var(--gold); }
 
@@ -176,6 +180,11 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
 
   <!-- Coach card -->
   <div id="coach-card" class="coach-card"></div>
+
+  <!-- Payment cancelled banner (shown when returning from a cancelled checkout) -->
+  <div id="banner-cancelled" class="banner-cancelled">
+    <strong>Payment was cancelled.</strong> Your card wasn’t charged. Pick a session and time again to retry.
+  </div>
 
   <!-- Step 1: choose service -->
   <section id="step-service" class="step">
@@ -296,6 +305,29 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
   function isValidEmail(e) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || '').trim());
   }
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function isPaidService(s) {
+    if (!s) return false;
+    var p = Number(s.price || 0);
+    return Number.isFinite(p) && p > 0;
+  }
+  function formatPrice(price) {
+    var n = Number(price || 0);
+    if (!Number.isFinite(n) || n <= 0) return 'Free';
+    // Round to whole dollars when there's no fractional component, otherwise show 2 decimals.
+    return n % 1 === 0 ? '$' + n.toFixed(0) : '$' + n.toFixed(2);
+  }
+  // Format a UTC ISO timestamp into coach-local day + time labels for the
+  // success summary on the post-Stripe return path (where we don't have the
+  // original offset-bearing slot string anymore).
+  function formatScheduledLabels(utcIso, tz) {
+    if (!utcIso) return { day: '', time: '' };
+    var d = new Date(utcIso);
+    if (isNaN(d.getTime())) return { day: '', time: '' };
+    var day = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: tz || coachTz });
+    var time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: tz || coachTz });
+    return { day: day, time: time };
+  }
 
   // Parse "60 minutes", "1 hour", "30 min" → integer minutes. Mirrors api/availability-slots.js.
   function parseDurationMinutes(s) {
@@ -349,7 +381,7 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
     try {
       var url = REST + '/coach_profiles?slug=eq.' + encodeURIComponent(slug)
         + '&is_published=eq.true'
-        + '&select=id,slug,display_name,full_name,headline,profile_image_url,timezone,zoom_meeting_link'
+        + '&select=id,slug,display_name,full_name,headline,profile_image_url,timezone,zoom_meeting_link,stripe_account_id'
         + '&limit=1';
       var res = await fetch(url, { headers: HEADERS_GET });
       if (!res.ok) throw new Error('Profile lookup failed');
@@ -387,32 +419,44 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
     var listEl = $('service-list');
     listEl.innerHTML = '<div class="slot-loading"><div class="loading-spinner"></div></div>';
     try {
-      // Free flow only (PR 1.C). Paid sessions land in PR 1.D once Stripe is wired.
-      // Brief refers to "price_cents=0"; the actual schema column is `price` (USD numeric),
-      // so we filter price=eq.0 and treat NULL as free for safety on legacy rows.
+      // PR 1.D: load all active services. Free types still flow through the
+      // status='confirmed' direct write; paid types route through Stripe
+      // Checkout. If the coach hasn't connected a Stripe account, we drop
+      // paid types client-side so a half-onboarded coach still has a working
+      // free-only booking page.
       var url = REST + '/coach_services'
         + '?coach_id=eq.' + encodeURIComponent(coach.id)
         + '&is_active=eq.true'
-        + '&or=(price.eq.0,price.is.null)'
         + '&select=id,title,description,duration,slot_increment_minutes,price'
-        + '&order=title.asc';
+        + '&order=price.asc.nullsfirst,title.asc';
       var res = await fetch(url, { headers: HEADERS_GET });
       if (!res.ok) throw new Error('Service lookup failed');
-      services = await res.json();
+      var raw = await res.json();
+      var hasStripe = !!coach.stripe_account_id;
+      services = (raw || []).filter(function (s) {
+        var p = Number(s.price || 0);
+        return hasStripe || p === 0;
+      });
       if (!services.length) {
-        listEl.innerHTML = '<div class="slot-empty">No free sessions are available right now. Check back soon, or visit the coach’s profile to message them directly.</div>';
+        var emptyMsg = hasStripe
+          ? 'No sessions are available right now. Check back soon, or visit the coach’s profile to message them directly.'
+          : 'No free sessions are available right now. Visit the coach’s profile to message them directly.';
+        listEl.innerHTML = '<div class="slot-empty">' + emptyMsg + '</div>';
         return;
       }
       listEl.innerHTML = services.map(function (s, i) {
         var dur = parseDurationMinutes(s.duration);
         var desc = s.description ? '<div class="service-row-desc">' + escapeHtml(s.description) + '</div>' : '';
+        var pricePill = isPaidService(s)
+          ? '<span class="pill pill-price">' + escapeHtml(formatPrice(s.price)) + '</span>'
+          : '<span class="pill pill-free">Free</span>';
         return '<button type="button" class="service-row" data-idx="' + i + '">'
           + '<div class="service-row-body">'
           +   '<div class="service-row-title">' + escapeHtml(s.title || 'Session') + '</div>'
           +   desc
           +   '<div class="service-row-pills">'
           +     '<span class="pill pill-duration">' + dur + ' min</span>'
-          +     '<span class="pill pill-free">Free</span>'
+          +     pricePill
           +   '</div>'
           + '</div>'
           + '<span class="service-row-arrow">&rarr;</span>'
@@ -546,24 +590,35 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
     $('step-confirm').classList.remove('is-disabled');
     renderConfirmSummary($('confirm-summary'));
     $('confirm-summary').classList.remove('hidden');
+    updateConfirmButtonLabel();
     $('step-confirm').scrollIntoView({ behavior: 'smooth', block: 'start' });
     setTimeout(function () { var el = $('bk-name'); if (el) el.focus(); }, 250);
   }
 
   function renderConfirmSummary(el) {
     var dur = parseDurationMinutes(selectedService && selectedService.duration);
+    var priceLabel = isPaidService(selectedService) ? formatPrice(selectedService.price) : 'Free';
     el.innerHTML = ''
       + row('Session', selectedService.title || 'Coaching session')
       + row('Coach', coach.display_name || coach.full_name || '')
       + row('When', (selectedSlot.dayLabel || '') + ' at ' + (selectedSlot.timeLabel || ''))
       + row('Length', dur + ' minutes')
-      + row('Price', 'Free');
+      + row('Price', priceLabel);
     function row(k, v) {
       return '<div class="confirm-summary-row">'
         + '<span class="confirm-summary-key">' + escapeHtml(k) + '</span>'
         + '<span class="confirm-summary-val">' + escapeHtml(v) + '</span>'
         + '</div>';
     }
+  }
+
+  // Update the confirm-submit button label based on whether the selected
+  // service is free (direct confirm) or paid (Stripe redirect). Called when
+  // the slot is picked.
+  function updateConfirmButtonLabel() {
+    var btn = $('confirm-submit');
+    if (!btn) return;
+    btn.textContent = isPaidService(selectedService) ? 'Continue to payment' : 'Confirm booking';
   }
 
   // ── Submit ──
@@ -587,12 +642,39 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
     if (!isValidEmail(email)) { showFormError('Please enter a valid email address.'); $('bk-email').focus(); return; }
 
     var btn = $('confirm-submit');
+    var paid = isPaidService(selectedService);
     btn.disabled = true;
-    btn.textContent = 'Confirming…';
+    btn.textContent = paid ? 'Redirecting to payment…' : 'Confirming…';
 
     try {
-      var bookingId = await insertBooking({ name: name, email: email, phone: phone, notes: notesText });
-      // Fire confirmation email + auto-zoom-meeting (server-side). Don't fail the user flow if email is slow.
+      if (paid) {
+        // Paid flow (PR 1.D): pre-create the row in pending_payment so the
+        // webhook has something to upgrade, then send the user to Stripe.
+        var pendingId = await insertBooking({
+          name: name, email: email, phone: phone, notes: notesText,
+          status: 'pending_payment', price: Number(selectedService.price || 0),
+        });
+        var checkoutRes = await fetch('/api/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ booking_id: pendingId }),
+        });
+        if (!checkoutRes.ok) {
+          var errBody = '';
+          try { errBody = (await checkoutRes.json()).error || ''; } catch (e2) {}
+          throw new Error(errBody || ('Checkout creation failed: ' + checkoutRes.status));
+        }
+        var checkoutData = await checkoutRes.json();
+        if (!checkoutData.url) throw new Error('No checkout URL returned');
+        window.location.href = checkoutData.url;
+        return;
+      }
+
+      // Free flow (PR 1.C): direct confirm + email + zoom.
+      var bookingId = await insertBooking({
+        name: name, email: email, phone: phone, notes: notesText,
+        status: 'confirmed', price: 0,
+      });
       try {
         await fetch('/api/booking-confirmation', {
           method: 'POST',
@@ -602,7 +684,6 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
       } catch (mailErr) {
         console.warn('[book] confirmation email failed (booking still saved)', mailErr);
       }
-      // Re-fetch booking to surface a freshly minted Zoom link if /api/booking-confirmation set one.
       var zoomLink = '';
       try {
         var zRes = await fetch(REST + '/coach_bookings?id=eq.' + encodeURIComponent(bookingId) + '&select=zoom_link', { headers: HEADERS_GET });
@@ -616,7 +697,7 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
       console.error('[book] submit', err);
       showFormError('Something went wrong saving your booking. Please try again.');
       btn.disabled = false;
-      btn.textContent = 'Confirm booking';
+      updateConfirmButtonLabel();
     }
   });
 
@@ -633,6 +714,8 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
     // backfill jobs) keeps working even though we also write client_name as a column.
     var noteLines = ['Name: ' + input.name, 'Service: ' + serviceTitle];
     if (input.notes) noteLines.push('', input.notes);
+    var status = input.status || 'confirmed';
+    var priceUsd = Number(input.price || 0);
     var payload = {
       coach_id: coach.id,
       client_email: input.email,
@@ -640,11 +723,14 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
       client_phone: input.phone || null,
       service_id: selectedService.id,
       service_name: serviceTitle,
-      service_price: 0,
+      service_price: priceUsd,
       scheduled_at: selectedSlot.iso,
       notes: noteLines.join('\n'),
-      status: 'confirmed',
+      status: status,
     };
+    if (status === 'pending_payment') {
+      payload.payment_amount_cents = Math.round(priceUsd * 100);
+    }
     var res = await fetch(REST + '/coach_bookings', {
       method: 'POST',
       headers: HEADERS_WRITE,
@@ -675,7 +761,93 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
     showSuccess();
   }
 
-  loadCoach();
+  // ── Post-Stripe return path (PR 1.D) ──
+  // When Stripe redirects back to /book?coach=<slug>&payment=<status>&booking_id=<id>,
+  // we either poll the booking until the webhook upgrades it to confirmed
+  // (success) or render the main flow with a non-fatal banner (cancelled).
+  async function enterPaymentReturn(bookingId) {
+    var loadingP = document.querySelector('#state-loading p');
+    if (loadingP) loadingP.textContent = 'Confirming your payment…';
+    var maxAttempts = 15; // 15 × 2s = 30s
+    for (var i = 0; i < maxAttempts; i++) {
+      try {
+        var url = REST + '/coach_bookings'
+          + '?id=eq.' + encodeURIComponent(bookingId)
+          + '&select=id,status,scheduled_at,zoom_link,client_email,service_name,service_price,'
+          +   'coach_profiles(id,slug,display_name,full_name,timezone,zoom_meeting_link),'
+          +   'coach_services(id,title,duration,price)'
+          + '&limit=1';
+        var res = await fetch(url, { headers: HEADERS_GET });
+        if (res.ok) {
+          var rows = await res.json();
+          var b = rows && rows[0];
+          if (b && b.status === 'confirmed') {
+            renderPaidSuccess(b);
+            return;
+          }
+        }
+      } catch (err) { /* keep polling */ }
+      await sleep(2000);
+    }
+    // Webhook hasn't fired in 30s — render a soft success so the user isn't
+    // left staring at a spinner. The email + dashboard will still surface
+    // the booking once the webhook lands.
+    renderPaymentReceivedTimeout(bookingId);
+  }
+
+  function renderPaidSuccess(b) {
+    var cp = b.coach_profiles || {};
+    var svc = b.coach_services || {};
+    coach = {
+      id: cp.id,
+      slug: cp.slug,
+      display_name: cp.display_name,
+      full_name: cp.full_name,
+      timezone: cp.timezone,
+      zoom_meeting_link: cp.zoom_meeting_link,
+    };
+    coachTz = cp.timezone || coachTz;
+    selectedService = {
+      title: svc.title || b.service_name || 'Coaching session',
+      duration: svc.duration || '60 minutes',
+      price: svc.price !== undefined && svc.price !== null ? svc.price : b.service_price,
+    };
+    var labels = formatScheduledLabels(b.scheduled_at, coachTz);
+    selectedSlot = { iso: b.scheduled_at, dayLabel: labels.day, timeLabel: labels.time };
+    var backLink = $('success-back-coach');
+    if (backLink && cp.slug) backLink.href = '/coach/' + encodeURIComponent(cp.slug);
+    document.title = 'Booking confirmed — ineedcoaching.org';
+    renderSuccess({ email: b.client_email, zoomLink: b.zoom_link });
+  }
+
+  function renderPaymentReceivedTimeout(bookingId) {
+    // Minimal success render with a "we’re finalizing" message — used only
+    // when the webhook is slow. Keeps the page out of an infinite spinner.
+    $('state-loading').classList.add('hidden');
+    $('state-error').classList.add('hidden');
+    $('state-main').classList.add('hidden');
+    $('success-summary').innerHTML = '';
+    $('success-zoom').classList.remove('is-shown');
+    $('success-sub').textContent = 'Payment received. We’re finalizing your session — a confirmation email will land in your inbox in a moment.';
+    $('state-success').classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function init() {
+    var params = new URLSearchParams(window.location.search);
+    var paymentStatus = params.get('payment');
+    var bookingId = params.get('booking_id');
+    if (paymentStatus === 'success' && bookingId) {
+      return enterPaymentReturn(bookingId);
+    }
+    await loadCoach();
+    if (paymentStatus === 'cancelled' && bookingId) {
+      var banner = $('banner-cancelled');
+      if (banner) banner.classList.add('is-shown');
+    }
+  }
+
+  init();
 })();
 </script>
 </body>

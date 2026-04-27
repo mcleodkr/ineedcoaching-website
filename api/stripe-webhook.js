@@ -73,6 +73,12 @@ export default async function handler(req, res) {
       case 'checkout.session.completed': {
         const session = event.data.object;
         const meta = session.metadata || {};
+
+        // Branch on metadata shape — booking_id = scheduler PR 1.D, course_id = original course flow.
+        if (meta.booking_id && !meta.course_id) {
+          return handleBookingCompleted({ session, meta, stripe, SUPABASE_URL, SB_HEADERS, req, res });
+        }
+
         const courseId = meta.course_id;
         const coachId = meta.coach_id;
         const studentEmail = (meta.student_email || session.customer_details?.email || '').toLowerCase();
@@ -247,4 +253,124 @@ export default async function handler(req, res) {
     console.error('[stripe-webhook] handler error', e);
     return res.status(500).send(e.message || 'webhook error');
   }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Session booking completion (PR 1.D)
+// ──────────────────────────────────────────────────────────────────────────
+//
+// Upgrades the pending_payment booking row to status='confirmed', records the
+// fee + payout breakdown, fires /api/booking-confirmation (same emails +
+// auto-zoom flow the free book.html flow uses), and writes a coach
+// notification.
+//
+// Idempotency: the partial UNIQUE index on coach_bookings.stripe_session_id
+// (migration 20260427) guarantees a re-delivery can't double-write the
+// session id. We also short-circuit early if the booking is already
+// confirmed for this session.
+async function handleBookingCompleted({ session, meta, stripe, SUPABASE_URL, SB_HEADERS, req, res }) {
+  const bookingId = meta.booking_id;
+  const coachId = meta.coach_id || '';
+  if (!bookingId) {
+    console.error('[stripe-webhook][booking] missing booking_id in metadata', meta);
+    return res.status(200).send('skipped');
+  }
+
+  // Idempotency check.
+  const existingRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/coach_bookings?id=eq.${encodeURIComponent(bookingId)}&select=id,status,stripe_session_id,coach_id&limit=1`,
+    { headers: SB_HEADERS }
+  );
+  const existingRows = await existingRes.json();
+  const booking = Array.isArray(existingRows) && existingRows[0];
+  if (!booking) {
+    console.error('[stripe-webhook][booking] booking row not found', bookingId);
+    return res.status(200).send('booking_missing');
+  }
+  if (booking.status === 'confirmed' && booking.stripe_session_id === session.id) {
+    return res.status(200).send('already processed');
+  }
+
+  // Pull payment intent for the canonical fee + payout breakdown.
+  let amountPaid = session.amount_total || 0;
+  let platformFee = Number(meta.platform_fee_cents || 0);
+  let stripeFee = null;
+  let paymentIntentId = session.payment_intent || null;
+  let coachPayout = amountPaid - platformFee;
+  if (paymentIntentId) {
+    try {
+      const pi = await stripe.paymentIntents.retrieve(paymentIntentId, {
+        expand: ['latest_charge.balance_transaction'],
+      });
+      amountPaid = pi.amount_received || amountPaid;
+      if (pi.application_fee_amount != null) platformFee = pi.application_fee_amount;
+      const bt = pi.latest_charge && pi.latest_charge.balance_transaction;
+      if (bt && typeof bt.fee === 'number') stripeFee = bt.fee;
+      coachPayout = amountPaid - platformFee - (stripeFee || 0);
+    } catch (e) {
+      console.warn('[stripe-webhook][booking] payment_intent expand failed', e.message);
+    }
+  }
+
+  // Upgrade the booking. Patch is keyed on the booking id; the UNIQUE index
+  // on stripe_session_id makes a duplicate write fail loudly rather than
+  // silently double-confirming.
+  const patchRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/coach_bookings?id=eq.${encodeURIComponent(bookingId)}`,
+    {
+      method: 'PATCH',
+      headers: { ...SB_HEADERS, Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        status: 'confirmed',
+        stripe_session_id: session.id,
+        stripe_payment_intent_id: paymentIntentId,
+        payment_amount_cents: amountPaid,
+        platform_fee_cents: platformFee,
+        stripe_fee_cents: stripeFee,
+        coach_payout_cents: coachPayout,
+      }),
+    }
+  );
+  if (!patchRes.ok) {
+    const bodyText = await patchRes.text().catch(() => '');
+    console.error('[stripe-webhook][booking] booking patch failed', patchRes.status, bodyText);
+    return res.status(500).send('booking_patch_failed');
+  }
+
+  // Fire the confirmation email + zoom-meeting flow. The endpoint also runs
+  // for free bookings, so the email content stays consistent across flows.
+  // Failure here is non-fatal — the booking is already confirmed in the DB.
+  try {
+    const host = req.headers.host;
+    const origin = host ? `https://${host}` : 'https://www.ineedcoaching.org';
+    await fetch(`${origin}/api/booking-confirmation`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ booking_id: bookingId }),
+    });
+  } catch (mailErr) {
+    console.warn('[stripe-webhook][booking] booking-confirmation invocation failed', mailErr && mailErr.message);
+  }
+
+  // Notify the coach.
+  const notifyCoachId = coachId || booking.coach_id;
+  if (notifyCoachId) {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/coach_notifications`, {
+        method: 'POST',
+        headers: { ...SB_HEADERS, Prefer: 'return=minimal' },
+        body: JSON.stringify({
+          coach_id: notifyCoachId,
+          type: 'new_booking',
+          title: 'New paid booking',
+          body: `${meta.client_name || meta.client_email || 'A client'} booked and paid for a session.`,
+          link_url: '/coach-dashboard.html?tab=clients',
+        }),
+      });
+    } catch (notifyErr) {
+      console.warn('[stripe-webhook][booking] coach notification failed', notifyErr && notifyErr.message);
+    }
+  }
+
+  return res.status(200).send('ok');
 }
