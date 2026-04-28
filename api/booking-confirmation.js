@@ -66,14 +66,18 @@ export default async function handler(req, res) {
     const notes = booking.notes || 'None';
 
     // Generate Zoom meeting if no link exists yet.
-    // Fallback chain (PR 5.B):
-    //   1. existing booking.zoom_link
-    //   2. coach's recurring zoom_meeting_link
-    //   3. coach's user-OAuth Zoom (when zoom_oauth_enabled) — meeting lands
+    // Fallback chain (PR 5.B, reordered after symptom report):
+    //   1. existing booking.zoom_link (re-confirmations of already-synced rows)
+    //   2. coach's user-OAuth Zoom (when zoom_oauth_enabled) — meeting lands
     //      on the coach's own account; coach controls recording from Zoom UI
+    //   3. coach's recurring zoom_meeting_link (manual fallback for un-OAuthed coaches)
     //   4. platform Server-to-Server Zoom via /api/zoom-meeting (legacy)
     //   5. placeholder text
-    let zoomLink = booking.zoom_link || coach.zoom_meeting_link || '';
+    //
+    // Reordering matters: when a coach has BOTH a recurring link saved AND
+    // OAuth connected, OAuth wins so each booking gets its own unique meeting
+    // (which is the whole point of connecting OAuth).
+    let zoomLink = booking.zoom_link || '';
 
     if (!zoomLink && coach.zoom_oauth_enabled && booking.coach_id) {
       try {
@@ -110,6 +114,10 @@ export default async function handler(req, res) {
       } catch (oauthErr) {
         console.warn('[booking-confirmation] user-OAuth Zoom skipped:', oauthErr.message);
       }
+    }
+
+    if (!zoomLink && coach.zoom_meeting_link) {
+      zoomLink = coach.zoom_meeting_link;
     }
 
     if (!zoomLink) {

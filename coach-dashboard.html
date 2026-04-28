@@ -1533,7 +1533,24 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 
       <div class="form-section">
         <h2 class="form-section-title">Video Meetings</h2>
-        <p style="font-size:0.88rem;color:var(--muted);margin-bottom:20px;line-height:1.6;">Choose how you'll meet with clients. Most coaches use one recurring Zoom link for all sessions &mdash; it's the simplest setup.</p>
+
+        <!-- PR 5.B follow-up: when Zoom OAuth is connected, swap the manual
+             "recurring vs. per-booking link" UI for a confirmation callout —
+             coach doesn't need to do anything else, every booking gets its
+             own meeting on their account. The manual UI is hidden but kept
+             in the DOM so disconnecting Zoom OAuth restores it. -->
+        <div id="zoom-oauth-active-callout" style="display:none;padding:16px 18px;background:#e7f0ea;border:1px solid #c8d8cc;border-left:3px solid #2d6a4f;border-radius:var(--r-sm);margin-bottom:8px;">
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#2d6a4f;color:#fff;font-size:0.78rem;font-weight:700;flex-shrink:0;margin-top:1px;">&#10003;</span>
+            <div>
+              <div style="font-size:0.92rem;font-weight:700;color:#2d6a4f;margin-bottom:4px;">Video meetings handled automatically</div>
+              <div style="font-size:0.85rem;color:#1a3a52;line-height:1.55;">Your connected Zoom account creates a unique meeting link for each booking. Recordings, history, and billing all stay with you. Manage the connection in <strong>Zoom Integration</strong> above.</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="zoom-meetings-manual">
+        <p style="font-size:0.88rem;color:var(--muted);margin-bottom:20px;line-height:1.6;">Choose how you'll meet with clients. Most coaches use one recurring Zoom link for all sessions &mdash; it's the simplest setup. <a href="#" id="scroll-to-zoom-oauth" style="color:var(--gold);text-decoration:underline;font-weight:600;">Connect your Zoom account</a> for unique meeting links per booking.</p>
 
         <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
           <label class="zoom-option-card" id="zoom-option-recurring" style="display:flex;align-items:flex-start;gap:12px;padding:18px 20px;border:2px solid var(--gold);border-radius:var(--r);background:rgba(196,154,60,0.04);cursor:pointer;">
@@ -1566,6 +1583,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
         <div id="zoom-individual-msg" style="display:none;padding:16px 20px;background:var(--cream);border-radius:var(--r-sm);font-size:0.88rem;color:var(--muted);line-height:1.6;">
           After confirming a booking, you can add a unique meeting link directly to that session from your Bookings tab.
         </div>
+        </div><!-- /#zoom-meetings-manual -->
       </div>
 
       <!-- Reminder Settings — email reminders go out automatically at
@@ -2814,17 +2832,43 @@ function setupTabs() {
         if (!btn._loaded) btn._loaded = true;
         if (typeof loadAnalyticsTab === 'function') loadAnalyticsTab();
       }
+      // Packages / Coupons / Waitlist: surface loader failures into the panel
+      // so a silent throw doesn't show up as "nothing happens" (the panel
+      // becomes active above regardless — this just rescues empty-content
+      // and missing-loader cases).
+      function safeLoad(tabName, listElId, loaderName, loader) {
+        if (typeof loader !== 'function') {
+          console.error('[' + tabName + '] loader ' + loaderName + ' is not defined at click time');
+          var elMissing = document.getElementById(listElId);
+          if (elMissing) elMissing.innerHTML = '<div style="padding:18px;color:#c44;font-size:0.88rem;">Could not load ' + tabName + ' (loader missing). Refresh and try again.</div>';
+          return;
+        }
+        try {
+          var p = loader();
+          if (p && typeof p.catch === 'function') {
+            p.catch(function (err) {
+              console.error('[' + tabName + '] load failed:', err);
+              var el = document.getElementById(listElId);
+              if (el) el.innerHTML = '<div style="padding:18px;color:#c44;font-size:0.88rem;">Could not load ' + tabName + ': ' + escapeHtml(err && err.message || String(err)) + '</div>';
+            });
+          }
+        } catch (err) {
+          console.error('[' + tabName + '] load threw:', err);
+          var elT = document.getElementById(listElId);
+          if (elT) elT.innerHTML = '<div style="padding:18px;color:#c44;font-size:0.88rem;">Could not load ' + tabName + ': ' + escapeHtml(err && err.message || String(err)) + '</div>';
+        }
+      }
       if (btn.dataset.tab === 'packages') {
         if (!btn._loaded) btn._loaded = true;
-        if (typeof loadPackagesTab === 'function') loadPackagesTab();
+        safeLoad('packages', 'packages-list', 'loadPackagesTab', typeof loadPackagesTab === 'function' ? loadPackagesTab : null);
       }
       if (btn.dataset.tab === 'coupons') {
         if (!btn._loaded) btn._loaded = true;
-        if (typeof loadCouponsTab === 'function') loadCouponsTab();
+        safeLoad('coupons', 'coupons-list', 'loadCouponsTab', typeof loadCouponsTab === 'function' ? loadCouponsTab : null);
       }
       if (btn.dataset.tab === 'waitlist') {
         if (!btn._loaded) btn._loaded = true;
-        if (typeof loadWaitlistTab === 'function') loadWaitlistTab();
+        safeLoad('waitlist', 'waitlist-list', 'loadWaitlistTab', typeof loadWaitlistTab === 'function' ? loadWaitlistTab : null);
       }
       if (btn.dataset.tab === 'share' && !btn._loaded) {
         btn._loaded = true;
@@ -4290,6 +4334,16 @@ function loadScheduling() {
   renderZoomOAuthStatus();
   $('zoom-oauth-connect-btn').onclick = connectZoomOAuth;
   $('zoom-oauth-disconnect-btn').onclick = disconnectZoomOAuth;
+  // "Connect your Zoom account" inline link in the Video Meetings card —
+  // scrolls to the Zoom Integration section above.
+  var scrollLink = $('scroll-to-zoom-oauth');
+  if (scrollLink) {
+    scrollLink.onclick = function (e) {
+      e.preventDefault();
+      var target = $('zoom-oauth-section');
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+  }
 
   // Boot the calendar (PR 1.F). initCalendar handles the lazy-init +
   // refetch-on-revisit logic so this is safe to call every time the
@@ -4804,6 +4858,13 @@ function renderZoomOAuthStatus() {
     connectBtn.textContent = 'Connect Zoom Account';
     disconnectBtn.style.display = 'none';
   }
+  // Smart Video Meetings UI: when OAuth is connected, hide the manual
+  // recurring/per-booking option block and show the green confirmation
+  // callout. Reverts when disconnect is hit.
+  var callout = $('zoom-oauth-active-callout');
+  var manual = $('zoom-meetings-manual');
+  if (callout) callout.style.display = enabled ? '' : 'none';
+  if (manual) manual.style.display = enabled ? 'none' : '';
 }
 
 async function connectZoomOAuth() {
