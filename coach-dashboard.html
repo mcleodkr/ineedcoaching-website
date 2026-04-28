@@ -10231,12 +10231,18 @@ function renderCoachDNA(profile, sessionCount) {
     'Adaptive Pattern': { bg: '#eef2f6', fg: '#1a3a52', border: '#1a3a52' },
     'Overused Pattern': { bg: '#fbeae4', fg: '#B8654A', border: '#B8654A' },
     'Emerging Skill':   { bg: '#fdf9f1', fg: '#c49a3c', border: '#c49a3c' },
-    'Fading Skill':     { bg: '#f0ede6', fg: '#9a9490', border: '#9a9490' }
+    'Fading Skill':     { bg: '#f0ede6', fg: '#9a9490', border: '#9a9490' },
+    // Confirmed Bias is the escalation tier — high prevalence + documented cost.
+    // Visually stronger: thicker border + warning glyph in the badge prefix.
+    'Confirmed Bias':   { bg: '#fce4e0', fg: '#c44',    border: '#c44'    }
   };
   var classificationBadge = function(cls) {
     if (!cls || !cls.category) return '';
     var p = classificationPalette[cls.category] || classificationPalette['Adaptive Pattern'];
-    return '<span style="display:inline-block;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:' + p.fg + ';background:' + p.bg + ';border:1px solid ' + p.border + ';padding:2px 8px;border-radius:999px;margin-left:8px;">' + escapeHtml(cls.category) + '</span>';
+    var isBias = cls.category === 'Confirmed Bias';
+    var bw = isBias ? '2px' : '1px';
+    var prefix = isBias ? '⚠️ ' : '';
+    return '<span style="display:inline-block;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:' + p.fg + ';background:' + p.bg + ';border:' + bw + ' solid ' + p.border + ';padding:2px 8px;border-radius:999px;margin-left:8px;">' + prefix + escapeHtml(cls.category) + '</span>';
   };
   var classificationBlock = function(cls) {
     if (!cls || !cls.category) return '';
@@ -10271,6 +10277,37 @@ function renderCoachDNA(profile, sessionCount) {
     + '</div>';
 
   html += '<div id="dna-overview-pane">';
+
+  // Pattern Stability Classification legend. Closed by default to keep the
+  // overview scannable; opens for new coaches who want to learn the taxonomy.
+  // Mirrors the "About bias profiles" accordion idiom used below.
+  var swatch = function(category, label) {
+    var p = classificationPalette[category];
+    var isBias = category === 'Confirmed Bias';
+    var bw = isBias ? '2px' : '1px';
+    var prefix = isBias ? '⚠️ ' : '';
+    return '<div style="display:flex;align-items:flex-start;gap:10px;">'
+      +   '<span style="display:inline-block;flex-shrink:0;font-size:0.68rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:' + p.fg + ';background:' + p.bg + ';border:' + bw + ' solid ' + p.border + ';padding:2px 8px;border-radius:999px;margin-top:1px;white-space:nowrap;">' + prefix + category + '</span>'
+      +   '<span style="font-size:0.8rem;color:#1a3a52;line-height:1.5;">' + label + '</span>'
+      + '</div>';
+  };
+  html += '<details style="margin-bottom:24px;background:#fdf9f1;border:1px solid #edeae4;border-radius:8px;padding:0;">'
+    + '<summary style="cursor:pointer;list-style:none;padding:12px 16px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:600;color:#1a3a52;display:flex;align-items:center;gap:8px;">'
+    +   '<span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1.5px solid #c49a3c;color:#c49a3c;font-size:0.72rem;font-weight:700;font-family:\'Cormorant Garamond\',serif;">i</span>'
+    +   'Understanding your pattern classifications'
+    + '</summary>'
+    + '<div style="padding:14px 16px 16px 16px;border-top:1px solid #edeae4;font-family:\'DM Sans\',sans-serif;">'
+    +   '<p style="font-size:0.82rem;color:#1a3a52;line-height:1.6;margin:0 0 14px 0;">Every pattern in your DNA is classified by how it is currently working in your practice. Read these as a working hypothesis, not a verdict.</p>'
+    +   '<div style="display:grid;grid-template-columns:1fr;gap:10px;">'
+    +     swatch('Core Strength', 'Keep using. Stable, effective, and serves your clients.')
+    +     swatch('Adaptive Pattern', 'Use selectively. Powerful in some contexts, less so in others.')
+    +     swatch('Overused Pattern', 'Monitor. Was adaptive, becoming a default. Consider reducing.')
+    +     swatch('Emerging Skill', 'Develop. New, inconsistent, shows promise when deployed.')
+    +     swatch('Fading Skill', 'Revisit or release. You used to do this more often.')
+    +     swatch('Confirmed Bias', 'High-priority. Surfaces in nearly every session with documented cost.')
+    +   '</div>'
+    + '</div>'
+    + '</details>';
 
   // 1. Coaching Decision Model
   if (decisionModel.length) {

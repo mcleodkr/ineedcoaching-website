@@ -333,22 +333,39 @@ CRITICAL: Return ONLY valid JSON. No trailing commas. No comments. No markdown. 
       return acc;
     }, {});
     dnaForClassifier.evolution_signal = dnaOutput.evolution_signal || null;
+    // Confirmed Bias escalation needs visibility into missed_leverage_moments
+    // so the classifier can detect "high-frequency pattern with documented cost".
+    dnaForClassifier.missed_leverage_moments = Array.isArray(dnaOutput.missed_leverage_moments)
+      ? dnaOutput.missed_leverage_moments
+      : [];
 
     const USER_PASS3 = `${contextPreamble}
 
 PATTERN STABILITY CLASSIFICATION
 
-Classify every pattern in 6 sections of the Coach DNA below. Each pattern gets exactly one of these 5 categories:
+Classify every pattern in 6 sections of the Coach DNA below. Each pattern gets exactly one of these 6 categories:
 
-1. "Core Strength" — Stable or Increasing trajectory + frequency >= 4 of last 6 sessions + client_responses show movement.
-2. "Adaptive Pattern" — Same technique appears across sessions with different outcomes depending on context.
-3. "Overused Pattern" — Top-frequency pattern (5+ of last 6) with client responses plateauing or declining; often surfaces in bias_profile or blind_spots.
-4. "Emerging Skill" — Trajectory "Emerging" or appears in only the most recent 1-2 sessions, with positive client signal when deployed.
-5. "Fading Skill" — Trajectory "Decreasing" or listed in evolution_signal.fading_habits; was previously frequent.
+1. "Core Strength" — Stable or Increasing trajectory + frequency >= 5 of last 6 sessions + client_responses show movement + NOT surfaced in bias_profile or blind_spots.
+2. "Adaptive Pattern" — Same technique appears across sessions with variable immediate_effect; moderate frequency with different outcomes by context.
+3. "Overused Pattern" — Frequency >= 60% of sessions + trajectory "Stable" + appears in bias_profile OR blind_spots.
+4. "Emerging Skill" — Trajectory "Emerging" + frequency < 3 sessions + positive client signal when deployed.
+5. "Fading Skill" — Trajectory "Decreasing", or appears in evolution_signal.first_third_summary but declining in last_third_summary, or listed in evolution_signal.fading_habits.
+6. "Confirmed Bias" — ESCALATION from Overused Pattern. Requires ALL of: frequency >= 75% of sessions (e.g. "6 of 6", "8 of 10") AND the same pattern surfaces in missed_leverage_moments AND trajectory is "Stable" (not already self-correcting). When all three hold, label this pattern "Confirmed Bias" instead of "Overused Pattern".
+
+CLASSIFICATION ORDER:
+- Evaluate categories 1-5 first.
+- If a pattern qualifies as "Overused Pattern", check the Confirmed Bias triggers. If all three hold, escalate to "Confirmed Bias".
+- "Confirmed Bias" is reserved for patterns with both high prevalence AND documented cost — do not assign it without missed_leverage_moments evidence.
+
+FREQUENCY PARSING:
+- frequency strings are formatted "X of last Y sessions". Compute the ratio X/Y.
+- >= 5/6 (~83%) is high consistency.
+- >= 60% qualifies as Overused Pattern.
+- >= 75% qualifies for the Confirmed Bias escalation check.
 
 For EACH pattern, return a classification object with:
-- category: one of the five strings above, exact match
-- evidence: 1-2 sentences. MUST anchor in (a) session count like "X of last Y sessions", (b) trigger or signal_type from coach_moves/missed (e.g. "unprocessed_cost", "charged_language"), (c) observable behavior. Use verbatim Mirror snippets when natural. NEVER invent timing in seconds. Max 50 words.
+- category: one of the six strings above, exact match (use "Confirmed Bias", not the warning emoji — the renderer adds the icon)
+- evidence: 1-2 sentences. MUST anchor in (a) session count like "X of last Y sessions", (b) trigger or signal_type from coach_moves/missed (e.g. "unprocessed_cost", "charged_language"), (c) observable behavior. Use verbatim Mirror snippets when natural. For "Confirmed Bias", explicitly cite which missed_leverage moment establishes the cost. NEVER invent timing in seconds. Max 60 words.
 - impact: 1 sentence on what this costs the work OR what it enables. Max 25 words.
 - recommendation: 1 sentence, suggestive language only ("you might", "one possible direction is", "consider"). Never "should" or "must". Max 25 words.
 
@@ -382,7 +399,7 @@ CRITICAL: Return ONLY valid JSON. Start with { end with }. No markdown.`;
       const pass3Output = await callClaude(
         ANTHROPIC_API_KEY,
         'claude-sonnet-4-6',
-        3000,
+        4000,
         SYSTEM,
         USER_PASS3,
         'Pass 3 (Classification)',
