@@ -456,7 +456,7 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
     try {
       var url = REST + '/coach_profiles?slug=eq.' + encodeURIComponent(slug)
         + '&is_published=eq.true'
-        + '&select=id,slug,display_name,full_name,headline,profile_image_url,timezone,zoom_meeting_link,stripe_account_id,sms_reminders_enabled,sms_reminder_default_timing'
+        + '&select=id,slug,display_name,full_name,headline,photo_url,timezone,zoom_meeting_link,stripe_account_id,sms_reminders_enabled,sms_reminder_default_timing'
         + '&limit=1';
       var res = await fetch(url, { headers: HEADERS_GET });
       if (!res.ok) throw new Error('Profile lookup failed');
@@ -480,8 +480,8 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
   function renderCoachCard() {
     var name = coach.display_name || coach.full_name || 'Your Coach';
     var headline = coach.headline || '';
-    var avatar = coach.profile_image_url
-      ? '<img class="coach-avatar" src="' + escapeHtml(coach.profile_image_url) + '" alt="' + escapeHtml(name) + '">'
+    var avatar = coach.photo_url
+      ? '<img class="coach-avatar" src="' + escapeHtml(coach.photo_url) + '" alt="' + escapeHtml(name) + '">'
       : '<div class="coach-initials">' + escapeHtml(getInitials(name)) + '</div>';
     var html = avatar + '<div class="coach-meta">'
       + '<div class="coach-name">' + escapeHtml(name) + '</div>'

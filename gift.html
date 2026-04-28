@@ -178,7 +178,7 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
     try {
       var url = REST + '/coach_profiles?slug=eq.' + encodeURIComponent(slug)
         + '&is_published=eq.true'
-        + '&select=id,slug,display_name,full_name,headline,profile_image_url,stripe_account_id&limit=1';
+        + '&select=id,slug,display_name,full_name,headline,photo_url,stripe_account_id&limit=1';
       var res = await fetch(url, { headers: HEADERS_GET });
       var rows = await res.json();
       coach = rows && rows[0];
@@ -199,8 +199,8 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
   function renderCoachMini() {
     var name = coach.display_name || coach.full_name || 'Your Coach';
     var initials = name.split(/\s+/).map(function (w) { return w[0]; }).join('').slice(0, 2).toUpperCase();
-    var avatar = coach.profile_image_url
-      ? '<div class="coach-mini-avatar"><img src="' + escapeHtml(coach.profile_image_url) + '" alt="' + escapeHtml(name) + '"></div>'
+    var avatar = coach.photo_url
+      ? '<div class="coach-mini-avatar"><img src="' + escapeHtml(coach.photo_url) + '" alt="' + escapeHtml(name) + '"></div>'
       : '<div class="coach-mini-avatar">' + escapeHtml(initials) + '</div>';
     $('coach-mini').innerHTML = avatar
       + '<div><div class="coach-mini-name">For ' + escapeHtml(name) + '</div>'
