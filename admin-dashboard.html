@@ -491,9 +491,10 @@ function renderCoaches() {
     thSort('coaches', 'totalRuns', 'Total Runs') +
     thSort('coaches', 'regenerations', 'Regenerations') +
     thSort('coaches', 'usageTier', 'Usage Tier') +
+    thSort('coaches', 'aiCostThisMonth', 'AI Cost (Month)') +
     '<th>Actions</th></tr></thead><tbody>';
   if (!pageRows.length) {
-    html += '<tr><td colspan="11" class="empty">No coaches</td></tr>';
+    html += '<tr><td colspan="12" class="empty">No coaches</td></tr>';
   } else {
     pageRows.forEach(function(c) {
       var tier = c.usageTier || 'light';
@@ -512,6 +513,7 @@ function renderCoaches() {
         '<td>' + escapeHtml(c.totalRuns || 0) + '</td>' +
         '<td>' + escapeHtml(c.regenerations || 0) + '</td>' +
         '<td>' + tierBadge + '</td>' +
+        '<td>$' + (Number(c.aiCostThisMonth) || 0).toFixed(2) + '</td>' +
         '<td>' +
           '<button class="btn secondary small" data-toggle="' + escapeHtml(c.id) + '" data-pub="' + (c.is_published ? '1' : '0') + '">' +
             (c.is_published ? 'Unpublish' : 'Publish') + '</button> ' +
