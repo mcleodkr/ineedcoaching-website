@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     if (!booking_id) return res.status(400).json({ error: 'Missing booking_id' });
 
     const bRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/coach_bookings?id=eq.${booking_id}&select=*,coach_profiles(display_name,user_email,zoom_meeting_link,slug,timezone),coach_services(title,duration)`,
+      `${SUPABASE_URL}/rest/v1/coach_bookings?id=eq.${booking_id}&select=*,coach_profiles(display_name,user_email,zoom_meeting_link,zoom_oauth_enabled,slug,timezone),coach_services(title,duration)`,
       { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
     );
     const bookings = await bRes.json();
@@ -65,8 +65,53 @@ export default async function handler(req, res) {
       : 'TBD';
     const notes = booking.notes || 'None';
 
-    // Generate Zoom meeting if no link exists yet
+    // Generate Zoom meeting if no link exists yet.
+    // Fallback chain (PR 5.B):
+    //   1. existing booking.zoom_link
+    //   2. coach's recurring zoom_meeting_link
+    //   3. coach's user-OAuth Zoom (when zoom_oauth_enabled) — meeting lands
+    //      on the coach's own account; coach controls recording from Zoom UI
+    //   4. platform Server-to-Server Zoom via /api/zoom-meeting (legacy)
+    //   5. placeholder text
     let zoomLink = booking.zoom_link || coach.zoom_meeting_link || '';
+
+    if (!zoomLink && coach.zoom_oauth_enabled && booking.coach_id) {
+      try {
+        const { createZoomMeeting } = await import('../lib/zoom-helpers.js');
+        const { parseDurationMinutes } = await import('../lib/google-calendar-helpers.js');
+        const durationMin = parseDurationMinutes(
+          (booking.coach_services && booking.coach_services.duration) || booking.duration || '60 minutes'
+        );
+        const meeting = await createZoomMeeting(booking.coach_id, {
+          topic: `${serviceName} — ${clientName}`,
+          startTime: booking.scheduled_at,
+          durationMinutes: durationMin,
+        });
+        if (meeting && meeting.join_url) {
+          zoomLink = meeting.join_url;
+          await fetch(
+            `${SUPABASE_URL}/rest/v1/coach_bookings?id=eq.${encodeURIComponent(booking_id)}`,
+            {
+              method: 'PATCH',
+              headers: {
+                apikey: SUPABASE_KEY,
+                Authorization: `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                Prefer: 'return=minimal',
+              },
+              body: JSON.stringify({
+                zoom_link: meeting.join_url,
+                zoom_meeting_id: meeting.meeting_id,
+                zoom_meeting_password: meeting.password || null,
+              }),
+            }
+          );
+        }
+      } catch (oauthErr) {
+        console.warn('[booking-confirmation] user-OAuth Zoom skipped:', oauthErr.message);
+      }
+    }
+
     if (!zoomLink) {
       try {
         const origin = req.headers.host ? `https://${req.headers.host}` : 'https://www.ineedcoaching.org';

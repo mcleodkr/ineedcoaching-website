@@ -1467,6 +1467,21 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
         <span class="save-msg" id="gcal-msg"></span>
       </div>
 
+      <!-- PR 5.B: Zoom user-OAuth. When connected, new bookings create
+           a meeting on the coach's own Zoom account (recording, billing,
+           history all stay with the coach). When NOT connected, the
+           platform Server-to-Server Zoom flow remains as fallback. -->
+      <div class="form-section" id="zoom-oauth-section">
+        <h2 class="form-section-title">Zoom Integration</h2>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;line-height:1.6;">Connect your Zoom account so new bookings create meetings on your own Zoom &mdash; recordings, history, and billing all stay with you. You control recording from the Zoom UI per session.</p>
+        <div id="zoom-oauth-status" style="font-size:0.9rem;color:var(--ink);margin-bottom:14px;">Checking connection&hellip;</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="save-btn" id="zoom-oauth-connect-btn" type="button" style="display:none;">Connect Zoom Account</button>
+          <button class="save-btn" id="zoom-oauth-disconnect-btn" type="button" style="display:none;background:transparent;color:var(--ink);border:1px solid var(--border);">Disconnect</button>
+        </div>
+        <span class="save-msg" id="zoom-oauth-msg"></span>
+      </div>
+
       <div class="form-section">
         <h2 class="form-section-title">Video Meetings</h2>
         <p style="font-size:0.88rem;color:var(--muted);margin-bottom:20px;line-height:1.6;">Choose how you'll meet with clients. Most coaches use one recurring Zoom link for all sessions &mdash; it's the simplest setup.</p>
@@ -2625,31 +2640,36 @@ async function init() {
     window.history.replaceState(null, '', window.location.pathname);
   }
 
-  // PR 5.A: Google Calendar OAuth return. Open the Scheduling tab so the
-  // status pill is visible immediately, refresh coachProfile so the just-
-  // saved enabled flag shows up, then surface the outcome.
+  // PR 5.A / 5.B: OAuth return banner. Both Google Calendar and Zoom land
+  // here with ?tab=scheduling and either calendar_connected=... or
+  // zoom_connected=... — we open the Scheduling tab, refresh coachProfile so
+  // the just-saved enabled flag shows up, then surface the outcome.
   var search = new URLSearchParams(window.location.search);
   var gcalParam = search.get('calendar_connected');
-  if (gcalParam !== null) {
+  var zoomParam = search.get('zoom_connected');
+  if (gcalParam !== null || zoomParam !== null) {
     if (search.get('tab') === 'scheduling') {
       var schedBtn = document.querySelector('.tab-btn[data-tab="scheduling"]');
       if (schedBtn) schedBtn.click();
     }
-    if (gcalParam === 'true') {
+    var anyConnected = gcalParam === 'true' || zoomParam === 'true';
+    if (anyConnected) {
       try {
         var refreshed = await supabaseGet('coach_profiles?id=eq.' + coachProfile.id + '&select=*');
         if (refreshed && refreshed[0]) {
           coachProfile = Object.assign(coachProfile, refreshed[0]);
           if (typeof renderGcalStatus === 'function') renderGcalStatus();
+          if (typeof renderZoomOAuthStatus === 'function') renderZoomOAuthStatus();
         }
-      } catch (e) { console.warn('[gcal] post-connect refresh failed:', e); }
-      setTimeout(function() { alert('Google Calendar connected. New bookings will sync automatically.'); }, 400);
-    } else {
-      var reason = search.get('reason') || '';
-      setTimeout(function() {
-        alert('Google Calendar did not connect' + (reason ? ' (' + reason + ')' : '') + '. You can try again from the Scheduling tab.');
-      }, 400);
+      } catch (e) { console.warn('[oauth] post-connect refresh failed:', e); }
     }
+    var reason = search.get('reason') || '';
+    var msg = '';
+    if (gcalParam === 'true') msg = 'Google Calendar connected. New bookings will sync automatically.';
+    else if (gcalParam === 'false') msg = 'Google Calendar did not connect' + (reason ? ' (' + reason + ')' : '') + '. You can try again from the Scheduling tab.';
+    else if (zoomParam === 'true') msg = 'Zoom connected. New bookings will create meetings on your Zoom account.';
+    else if (zoomParam === 'false') msg = 'Zoom did not connect' + (reason ? ' (' + reason + ')' : '') + '. You can try again from the Scheduling tab.';
+    if (msg) setTimeout(function() { alert(msg); }, 400);
     window.history.replaceState(null, '', window.location.pathname);
   }
 }
@@ -4165,6 +4185,15 @@ function loadScheduling() {
   $('gcal-connect-btn').onclick = connectGoogleCalendar;
   $('gcal-disconnect-btn').onclick = disconnectGoogleCalendar;
 
+  // PR 5.B: Zoom user-OAuth UI. Same pattern as Google Calendar — JWT-protected
+  // /api/zoom-oauth-* endpoints, HMAC-signed state, server-side disconnect with
+  // Zoom /oauth/revoke. The token columns are REVOKEd from anon/authenticated
+  // at the DB level, so coachProfile.zoom_oauth_access_token is silently
+  // omitted by PostgREST even with select=*.
+  renderZoomOAuthStatus();
+  $('zoom-oauth-connect-btn').onclick = connectZoomOAuth;
+  $('zoom-oauth-disconnect-btn').onclick = disconnectZoomOAuth;
+
   // Boot the calendar (PR 1.F). initCalendar handles the lazy-init +
   // refetch-on-revisit logic so this is safe to call every time the
   // Scheduling tab opens.
@@ -4644,6 +4673,97 @@ async function disconnectGoogleCalendar() {
     setTimeout(function() { msg.classList.remove('show'); }, 3000);
   } catch (e) {
     console.error('[gcal] disconnect error:', e);
+    msg.textContent = 'Could not disconnect. ' + (e.message || '');
+    msg.style.color = '#c44';
+    msg.classList.add('show');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Disconnect';
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Zoom user-OAuth (PR 5.B)
+// ─────────────────────────────────────────────────────────────────────────
+//
+// Mirror of the Google Calendar handlers above. The auth-url and disconnect
+// endpoints both verify the Supabase session via Bearer token. The callback
+// verifies an HMAC-signed state minted by auth-url. The browser never sees
+// the Zoom access or refresh tokens — they're REVOKEd from anon/authenticated
+// at the database level so PostgREST silently omits them.
+
+function renderZoomOAuthStatus() {
+  var enabled = !!(coachProfile && coachProfile.zoom_oauth_enabled);
+  var statusEl = $('zoom-oauth-status');
+  var connectBtn = $('zoom-oauth-connect-btn');
+  var disconnectBtn = $('zoom-oauth-disconnect-btn');
+  if (!statusEl || !connectBtn || !disconnectBtn) return;
+  if (enabled) {
+    statusEl.innerHTML = '<span style="color:var(--forest);font-weight:600;">Connected.</span> New bookings will create meetings on your Zoom account automatically.';
+    connectBtn.style.display = 'none';
+    disconnectBtn.style.display = '';
+  } else {
+    statusEl.innerHTML = '<span style="color:var(--muted);">Not connected. Bookings will use the platform Zoom fallback.</span>';
+    connectBtn.style.display = '';
+    connectBtn.textContent = 'Connect Zoom Account';
+    disconnectBtn.style.display = 'none';
+  }
+}
+
+async function connectZoomOAuth() {
+  var btn = $('zoom-oauth-connect-btn');
+  var msg = $('zoom-oauth-msg');
+  msg.classList.remove('show');
+  btn.disabled = true;
+  btn.textContent = 'Redirecting...';
+  try {
+    var token = localStorage.getItem(TOKEN_KEY);
+    if (!token) throw new Error('Not signed in');
+    var res = await fetch('/api/zoom-oauth-auth-url', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) {
+      var err = await res.json().catch(function() { return {}; });
+      throw new Error(err.error || ('status ' + res.status));
+    }
+    var data = await res.json();
+    if (!data.url) throw new Error('Missing auth URL');
+    window.location.href = data.url;
+  } catch (e) {
+    console.error('[zoom-oauth] connect error:', e);
+    msg.textContent = 'Could not start Zoom sign-in. ' + (e.message || '');
+    msg.style.color = '#c44';
+    msg.classList.add('show');
+    btn.disabled = false;
+    btn.textContent = 'Connect Zoom Account';
+  }
+}
+
+async function disconnectZoomOAuth() {
+  if (!confirm('Disconnect Zoom? Future bookings will fall back to the platform Zoom account. Existing meetings stay on your Zoom calendar.')) return;
+  var btn = $('zoom-oauth-disconnect-btn');
+  var msg = $('zoom-oauth-msg');
+  msg.classList.remove('show');
+  btn.disabled = true;
+  btn.textContent = 'Disconnecting...';
+  try {
+    var token = localStorage.getItem(TOKEN_KEY);
+    if (!token) throw new Error('Not signed in');
+    var res = await fetch('/api/zoom-oauth-disconnect', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) {
+      var err = await res.json().catch(function() { return {}; });
+      throw new Error(err.error || ('status ' + res.status));
+    }
+    coachProfile.zoom_oauth_enabled = false;
+    renderZoomOAuthStatus();
+    msg.textContent = 'Disconnected.';
+    msg.style.color = 'var(--forest)';
+    msg.classList.add('show');
+    setTimeout(function() { msg.classList.remove('show'); }, 3000);
+  } catch (e) {
+    console.error('[zoom-oauth] disconnect error:', e);
     msg.textContent = 'Could not disconnect. ' + (e.message || '');
     msg.style.color = '#c44';
     msg.classList.add('show');
