@@ -10223,6 +10223,31 @@ function renderCoachDNA(profile, sessionCount) {
     return '<span style="font-size:0.72rem;color:#9a9490;margin-left:6px;">' + f + '</span>';
   };
 
+  // Pattern Stability Classification (DNA Pass 3). Renders only when present;
+  // legacy DNA profiles without classification fall through to the existing
+  // layout unchanged.
+  var classificationPalette = {
+    'Core Strength':    { bg: '#e7f0ea', fg: '#2d6a4f', border: '#2d6a4f' },
+    'Adaptive Pattern': { bg: '#eef2f6', fg: '#1a3a52', border: '#1a3a52' },
+    'Overused Pattern': { bg: '#fbeae4', fg: '#B8654A', border: '#B8654A' },
+    'Emerging Skill':   { bg: '#fdf9f1', fg: '#c49a3c', border: '#c49a3c' },
+    'Fading Skill':     { bg: '#f0ede6', fg: '#9a9490', border: '#9a9490' }
+  };
+  var classificationBadge = function(cls) {
+    if (!cls || !cls.category) return '';
+    var p = classificationPalette[cls.category] || classificationPalette['Adaptive Pattern'];
+    return '<span style="display:inline-block;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:' + p.fg + ';background:' + p.bg + ';border:1px solid ' + p.border + ';padding:2px 8px;border-radius:999px;margin-left:8px;">' + escapeHtml(cls.category) + '</span>';
+  };
+  var classificationBlock = function(cls) {
+    if (!cls || !cls.category) return '';
+    var html = '<div style="margin-top:10px;padding:10px 12px;background:#fdfbf8;border:1px solid #edeae4;border-radius:6px;">';
+    if (cls.evidence) html += '<p style="font-size:0.78rem;color:#5a5560;margin:0 0 6px 0;line-height:1.55;"><strong style="color:#1a3a52;">Evidence:</strong> ' + escapeHtml(cls.evidence) + '</p>';
+    if (cls.impact) html += '<p style="font-size:0.78rem;color:#5a5560;margin:0 0 6px 0;line-height:1.55;"><strong style="color:#1a3a52;">Impact:</strong> ' + escapeHtml(cls.impact) + '</p>';
+    if (cls.recommendation) html += '<p style="font-size:0.78rem;color:#2d6a4f;margin:0;line-height:1.55;"><strong style="color:#2d6a4f;">Try:</strong> ' + escapeHtml(cls.recommendation) + '</p>';
+    html += '</div>';
+    return html;
+  };
+
   var sectionHeader = function(title) {
     return '<h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;margin-bottom:14px;border-bottom:1px solid #edeae4;padding-bottom:10px;">' + title + '</h3>';
   };
@@ -10254,10 +10279,11 @@ function renderCoachDNA(profile, sessionCount) {
     html += '<p style="font-size:0.78rem;color:#9a9490;font-style:italic;margin-bottom:14px;">How you tend to respond to specific client triggers.</p>';
     decisionModel.forEach(function(d) {
       html += '<div style="background:#fff;border:1px solid #edeae4;border-radius:6px;padding:14px 16px;margin-bottom:10px;">';
-      html += '<div style="font-size:0.85rem;color:#5a5560;margin-bottom:6px;"><strong style="color:#1a3a52;">Trigger:</strong> ' + escapeHtml(d.trigger || '') + '</div>';
+      html += '<div style="font-size:0.85rem;color:#5a5560;margin-bottom:6px;"><strong style="color:#1a3a52;">Trigger:</strong> ' + escapeHtml(d.trigger || '') + classificationBadge(d.classification) + '</div>';
       html += '<div style="font-size:0.85rem;color:#5a5560;margin-bottom:6px;"><strong style="color:#c49a3c;">You tend to:</strong> ' + escapeHtml(d.default_response || '') + '</div>';
       if (d.rationale) html += '<p style="font-size:0.78rem;color:#9a9490;font-style:italic;margin-bottom:6px;">' + escapeHtml(d.rationale) + '</p>';
       html += '<div style="display:flex;gap:8px;align-items:center;margin-top:8px;">' + freqBadge(d.frequency) + trajectoryBadge(d.trajectory) + '</div>';
+      html += classificationBlock(d.classification);
       html += '</div>';
     });
     html += '</div>';
@@ -10302,12 +10328,13 @@ function renderCoachDNA(profile, sessionCount) {
     activationMap.forEach(function(p) {
       html += '<details style="margin-bottom:10px;border:1px solid #edeae4;border-radius:6px;overflow:hidden;">';
       html += '<summary style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;list-style:none;background:#fff;">';
-      html += '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.875rem;font-weight:500;color:#1a3a52;">' + escapeHtml(p.pattern_name || p.name || '') + trajectoryBadge(p.trajectory) + '</span>';
+      html += '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.875rem;font-weight:500;color:#1a3a52;">' + escapeHtml(p.pattern_name || p.name || '') + trajectoryBadge(p.trajectory) + classificationBadge(p.classification) + '</span>';
       html += '<span style="font-size:0.72rem;color:#9a9490;">' + escapeHtml(p.frequency || '') + '</span>';
       html += '</summary>';
       html += '<div style="padding:0 16px 14px;background:#fdfbf8;">';
       if (p.trigger) html += '<p style="font-size:0.82rem;color:#5a5560;margin-bottom:6px;"><strong>Trigger:</strong> ' + escapeHtml(p.trigger) + '</p>';
       if (p.typical_response) html += '<p style="font-size:0.82rem;color:#5a5560;margin-bottom:6px;"><strong>Typical response:</strong> ' + escapeHtml(p.typical_response) + '</p>';
+      html += classificationBlock(p.classification);
       html += '</div></details>';
     });
     html += '</div>';
@@ -10321,12 +10348,13 @@ function renderCoachDNA(profile, sessionCount) {
     techProfile.forEach(function(t) {
       html += '<details style="margin-bottom:10px;border:1px solid #edeae4;border-radius:6px;overflow:hidden;">';
       html += '<summary style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;list-style:none;background:#fff;">';
-      html += '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.875rem;font-weight:500;color:#1a3a52;">' + escapeHtml(t.technique || t.name || '') + trajectoryBadge(t.trajectory) + '</span>';
+      html += '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.875rem;font-weight:500;color:#1a3a52;">' + escapeHtml(t.technique || t.name || '') + trajectoryBadge(t.trajectory) + classificationBadge(t.classification) + '</span>';
       html += '<span style="font-size:0.72rem;color:#9a9490;">' + escapeHtml(t.frequency || '') + '</span>';
       html += '</summary>';
       html += '<div style="padding:0 16px 14px;background:#fdfbf8;">';
       if (t.definition) html += '<p style="font-size:0.82rem;color:#5a5560;margin-bottom:6px;">' + escapeHtml(t.definition) + '</p>';
       if (t.observed_when) html += '<p style="font-size:0.78rem;color:#9a9490;font-style:italic;">Observed when: ' + escapeHtml(t.observed_when) + '</p>';
+      html += classificationBlock(t.classification);
       html += '</div></details>';
     });
     html += '</div>';
@@ -10374,9 +10402,10 @@ function renderCoachDNA(profile, sessionCount) {
       + '</details>';
     biases.forEach(function(b) {
       html += '<div style="background:#fff;border:1px solid #edeae4;border-left:3px solid #1a3a52;border-radius:6px;padding:14px 16px;margin-bottom:10px;">';
-      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.875rem;font-weight:600;color:#1a3a52;margin-bottom:6px;">' + escapeHtml(b.bias || '') + trajectoryBadge(b.trajectory) + '</div>';
+      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.875rem;font-weight:600;color:#1a3a52;margin-bottom:6px;">' + escapeHtml(b.bias || '') + trajectoryBadge(b.trajectory) + classificationBadge(b.classification) + '</div>';
       if (b.description) html += '<p style="font-size:0.82rem;color:#5a5560;margin-bottom:6px;">' + escapeHtml(b.description) + '</p>';
       if (b.evidence) html += '<p style="font-size:0.78rem;color:#9a9490;font-style:italic;">Evidence: ' + escapeHtml(b.evidence) + '</p>';
+      html += classificationBlock(b.classification);
       html += '</div>';
     });
     html += '</div>';
@@ -10405,11 +10434,12 @@ function renderCoachDNA(profile, sessionCount) {
     html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;">';
     edges.forEach(function(e) {
       html += '<div style="background:#fff;border:1px solid #edeae4;border-left:3px solid #c49a3c;border-radius:6px;padding:16px;">';
-      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.875rem;font-weight:600;color:#1a3a52;margin-bottom:8px;">' + escapeHtml(e.pattern || e.framework || '') + trajectoryBadge(e.trajectory) + '</div>';
+      html += '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.875rem;font-weight:600;color:#1a3a52;margin-bottom:8px;">' + escapeHtml(e.pattern || e.framework || '') + trajectoryBadge(e.trajectory) + classificationBadge(e.classification) + '</div>';
       if (e.what_you_tend_to_do || e.reason) html += '<p style="font-size:0.8rem;color:#5a5560;margin-bottom:6px;"><strong>What you tend to do:</strong> ' + escapeHtml(e.what_you_tend_to_do || e.reason || '') + '</p>';
       if (e.what_is_missing) html += '<p style="font-size:0.8rem;color:#5a5560;margin-bottom:6px;"><strong>What is missing:</strong> ' + escapeHtml(e.what_is_missing) + '</p>';
       if (e.what_to_try) html += '<p style="font-size:0.8rem;color:#2d6a4f;margin-bottom:6px;"><strong>What to try:</strong> ' + escapeHtml(e.what_to_try) + '</p>';
       if (e.frequency) html += '<p style="font-size:0.72rem;color:#9a9490;margin-top:8px;">' + escapeHtml(e.frequency) + '</p>';
+      html += classificationBlock(e.classification);
       html += '</div>';
     });
     html += '</div></div>';
@@ -10423,13 +10453,14 @@ function renderCoachDNA(profile, sessionCount) {
     blindSpots.forEach(function(b) {
       html += '<details style="margin-bottom:10px;border:1px solid #edeae4;border-left:3px solid #c44;border-radius:6px;overflow:hidden;">';
       html += '<summary style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;list-style:none;background:#fff;">';
-      html += '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.875rem;font-weight:500;color:#1a3a52;">' + escapeHtml(b.pattern_name || '') + trajectoryBadge(b.trajectory) + '</span>';
+      html += '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.875rem;font-weight:500;color:#1a3a52;">' + escapeHtml(b.pattern_name || '') + trajectoryBadge(b.trajectory) + classificationBadge(b.classification) + '</span>';
       html += '<span style="font-size:0.72rem;color:#9a9490;">' + escapeHtml(b.frequency || '') + '</span>';
       html += '</summary>';
       html += '<div style="padding:0 16px 14px;background:#fdfbf8;">';
       if (b.description) html += '<p style="font-size:0.82rem;color:#5a5560;margin-bottom:6px;">' + escapeHtml(b.description) + '</p>';
       if (b.where_it_shows_up) html += '<p style="font-size:0.8rem;color:#5a5560;margin-bottom:6px;"><strong>Where it shows up:</strong> ' + escapeHtml(b.where_it_shows_up) + '</p>';
       if (b.impact || b.why_it_matters) html += '<p style="font-size:0.78rem;color:#9a9490;font-style:italic;"><strong>Impact:</strong> ' + escapeHtml(b.impact || b.why_it_matters || '') + '</p>';
+      html += classificationBlock(b.classification);
       html += '</div></details>';
     });
     html += '</div>';

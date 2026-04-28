@@ -292,6 +292,126 @@ CRITICAL: Return ONLY valid JSON. No trailing commas. No comments. No markdown. 
 
     const dnaOutput = Object.assign({}, pass1Output, pass2Output);
 
+    // ── Pass 3: Pattern Stability Classification ─────────────────────────
+    // Classifies every pattern in 6 sections into one of 5 stability categories
+    // with evidence-anchored detail (session counts, signal types, verbatim
+    // Mirror moments). Timing in seconds is intentionally omitted: Mirror
+    // outputs do not carry timestamps and DNA does not consume raw transcripts
+    // (CLAUDE.md intelligence architecture rule).
+    //
+    // Failure here is non-fatal — the two-pass DNA still saves without
+    // classifications, and the renderer falls back to the legacy layout.
+    const CLASSIFY_SECTIONS = [
+      'coaching_decision_model',
+      'pattern_activation_map',
+      'technique_profile',
+      'bias_profile',
+      'growth_edges',
+      'blind_spots',
+    ];
+
+    const classifierMirrorSlice = mirrorData.slice(0, 12).map((s) => ({
+      session_index: s.session_index,
+      coach_moves: (s.coach_moves || []).map((mv) => ({
+        move_type: mv.move_type,
+        immediate_effect: mv.immediate_effect,
+        signal_strength: mv.signal_strength,
+      })),
+      missed: (s.missed_opportunities || []).map((m) => ({
+        signal_type: m.signal_type,
+        signal_strength: m.signal_strength,
+        what_was_possible: m.what_was_possible,
+      })),
+      client_responses: (s.client_responses || []).map((c) => ({
+        title: c.title,
+        your_impact: c.your_impact,
+      })),
+    }));
+
+    const dnaForClassifier = CLASSIFY_SECTIONS.reduce((acc, k) => {
+      acc[k] = Array.isArray(dnaOutput[k]) ? dnaOutput[k] : [];
+      return acc;
+    }, {});
+    dnaForClassifier.evolution_signal = dnaOutput.evolution_signal || null;
+
+    const USER_PASS3 = `${contextPreamble}
+
+PATTERN STABILITY CLASSIFICATION
+
+Classify every pattern in 6 sections of the Coach DNA below. Each pattern gets exactly one of these 5 categories:
+
+1. "Core Strength" — Stable or Increasing trajectory + frequency >= 4 of last 6 sessions + client_responses show movement.
+2. "Adaptive Pattern" — Same technique appears across sessions with different outcomes depending on context.
+3. "Overused Pattern" — Top-frequency pattern (5+ of last 6) with client responses plateauing or declining; often surfaces in bias_profile or blind_spots.
+4. "Emerging Skill" — Trajectory "Emerging" or appears in only the most recent 1-2 sessions, with positive client signal when deployed.
+5. "Fading Skill" — Trajectory "Decreasing" or listed in evolution_signal.fading_habits; was previously frequent.
+
+For EACH pattern, return a classification object with:
+- category: one of the five strings above, exact match
+- evidence: 1-2 sentences. MUST anchor in (a) session count like "X of last Y sessions", (b) trigger or signal_type from coach_moves/missed (e.g. "unprocessed_cost", "charged_language"), (c) observable behavior. Use verbatim Mirror snippets when natural. NEVER invent timing in seconds. Max 50 words.
+- impact: 1 sentence on what this costs the work OR what it enables. Max 25 words.
+- recommendation: 1 sentence, suggestive language only ("you might", "one possible direction is", "consider"). Never "should" or "must". Max 25 words.
+
+INDEX RULES:
+- For every section, the returned classifications array MUST have the same length as the input pattern array.
+- Element i of the returned array classifies element i of the input pattern array.
+- If an input section is empty, return an empty array.
+
+DNA TO CLASSIFY (pattern arrays + evolution_signal for trajectory context):
+${JSON.stringify(dnaForClassifier)}
+
+MIRROR EVIDENCE (compact slice, most recent first):
+${JSON.stringify(classifierMirrorSlice)}
+
+Return ONLY this JSON:
+{
+  "classifications": {
+    "coaching_decision_model": [ { "category": "", "evidence": "", "impact": "", "recommendation": "" } ],
+    "pattern_activation_map": [ { "category": "", "evidence": "", "impact": "", "recommendation": "" } ],
+    "technique_profile": [ { "category": "", "evidence": "", "impact": "", "recommendation": "" } ],
+    "bias_profile": [ { "category": "", "evidence": "", "impact": "", "recommendation": "" } ],
+    "growth_edges": [ { "category": "", "evidence": "", "impact": "", "recommendation": "" } ],
+    "blind_spots": [ { "category": "", "evidence": "", "impact": "", "recommendation": "" } ]
+  }
+}
+
+CRITICAL: Return ONLY valid JSON. Start with { end with }. No markdown.`;
+
+    let classifications = null;
+    try {
+      const pass3Output = await callClaude(
+        ANTHROPIC_API_KEY,
+        'claude-sonnet-4-6',
+        3000,
+        SYSTEM,
+        USER_PASS3,
+        'Pass 3 (Classification)',
+        { feature: 'coach_dna', coachId }
+      );
+      classifications = pass3Output && pass3Output.classifications;
+    } catch (clsErr) {
+      console.warn('[generate-coach-dna] classification pass failed (non-fatal):', clsErr.message);
+    }
+
+    if (classifications) {
+      CLASSIFY_SECTIONS.forEach((section) => {
+        const arr = dnaOutput[section];
+        const cls = classifications[section];
+        if (!Array.isArray(arr) || !Array.isArray(cls)) return;
+        arr.forEach((pattern, i) => {
+          const c = cls[i];
+          if (c && c.category && pattern && typeof pattern === 'object') {
+            pattern.classification = {
+              category: c.category,
+              evidence: c.evidence || '',
+              impact: c.impact || '',
+              recommendation: c.recommendation || '',
+            };
+          }
+        });
+      });
+    }
+
     const existRes = await fetch(`${SUPABASE_URL}/rest/v1/coach_dna_profiles?coach_id=eq.${coachId}&select=id`, { headers });
     const existing = await existRes.json();
 
