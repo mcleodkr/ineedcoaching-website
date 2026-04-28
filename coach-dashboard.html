@@ -774,6 +774,47 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       border-left: 2px solid #c49a3c;
     }
 
+    /* EXPANDABLE SIDEBAR GROUP — Scheduling parent + children */
+    .dash-sidebar .sidebar-expandable { position: relative; }
+    .dash-sidebar .tab-btn.sidebar-parent {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .dash-sidebar .tab-btn.sidebar-parent .expand-icon {
+      flex-shrink: 0;
+      opacity: 0.5;
+      transition: transform 0.2s ease, opacity 0.15s ease;
+    }
+    .dash-sidebar .tab-btn.sidebar-parent[aria-expanded="true"] .expand-icon {
+      transform: rotate(180deg);
+      opacity: 0.85;
+    }
+    .dash-sidebar .tab-btn.sidebar-parent:hover .expand-icon { opacity: 0.85; }
+    .dash-sidebar .sidebar-submenu {
+      overflow: hidden;
+      background: #fbf8f2;
+      border-top: 1px solid #f1ece1;
+      border-bottom: 1px solid #f1ece1;
+    }
+    .dash-sidebar .tab-btn.sidebar-child {
+      padding-left: 36px;
+      font-size: 0.82rem;
+      font-weight: 400;
+      color: #7e7770;
+    }
+    .dash-sidebar .tab-btn.sidebar-child:hover {
+      background: #f5efe2;
+      color: #1a3a52;
+    }
+    .dash-sidebar .tab-btn.sidebar-child.active {
+      background: #fdf9f1;
+      color: #1a3a52;
+      font-weight: 500;
+      border-left: 2px solid #c49a3c;
+    }
+
     /* MAIN CONTENT AREA — warm cream canvas */
     .dash-content {
       max-width: none;
@@ -1146,12 +1187,20 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
     <button class="tab-btn" data-tab="courses">Courses</button>
     <div class="dash-group">Business</div>
     <button class="tab-btn" data-tab="proposals">Proposals</button>
-    <button class="tab-btn" data-tab="scheduling">Scheduling</button>
+    <div class="sidebar-expandable">
+      <button class="tab-btn sidebar-parent" type="button" data-expand="scheduling-submenu" aria-expanded="false" aria-controls="scheduling-submenu">
+        <span>Scheduling</span>
+        <svg class="expand-icon" width="10" height="10" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M6 8L2 4h8z"/></svg>
+      </button>
+      <div id="scheduling-submenu" class="sidebar-submenu" hidden>
+        <button class="tab-btn sidebar-child" data-tab="scheduling">Settings</button>
+        <button class="tab-btn sidebar-child" data-tab="packages">Packages</button>
+        <button class="tab-btn sidebar-child" data-tab="coupons">Coupons</button>
+        <button class="tab-btn sidebar-child" data-tab="waitlist">Waitlist</button>
+        <button class="tab-btn sidebar-child" data-tab="share">Share</button>
+      </div>
+    </div>
     <button class="tab-btn" data-tab="analytics">Analytics</button>
-    <button class="tab-btn" data-tab="packages">Packages</button>
-    <button class="tab-btn" data-tab="coupons">Coupons</button>
-    <button class="tab-btn" data-tab="waitlist">Waitlist</button>
-    <button class="tab-btn" data-tab="share">Share</button>
     <button class="tab-btn" data-tab="intake">Forms</button>
     <div class="dash-group">Profile</div>
     <button class="tab-btn" data-tab="profile">Profile</button>
@@ -2615,6 +2664,7 @@ async function init() {
 
   populateProfileForm();
   setupTabs();
+  initSidebarExpandables();
   setupProfileHandlers();
   setupNotifications();
   setupStripeConnectCard();
@@ -2677,8 +2727,50 @@ async function init() {
 /* ================================================
    TABS
    ================================================ */
+var SCHEDULING_SUBMENU_TABS = ['scheduling', 'packages', 'coupons', 'waitlist', 'share'];
+
+function setSchedulingSubmenuOpen(open) {
+  var parent = document.querySelector('[data-expand="scheduling-submenu"]');
+  var submenu = document.getElementById('scheduling-submenu');
+  if (!parent || !submenu) return;
+  parent.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) submenu.removeAttribute('hidden'); else submenu.setAttribute('hidden', '');
+}
+
+function initSidebarExpandables() {
+  var triggers = document.querySelectorAll('[data-expand]');
+  triggers.forEach(function(trigger) {
+    trigger.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var open = trigger.getAttribute('aria-expanded') === 'true';
+      var targetId = trigger.getAttribute('data-expand');
+      if (targetId === 'scheduling-submenu') {
+        setSchedulingSubmenuOpen(!open);
+      }
+    });
+  });
+
+  // Auto-expand if a scheduling-related tab is currently active or requested via ?tab=
+  var activeBtn = document.querySelector('.dash-sidebar .tab-btn.active[data-tab]');
+  var activeTab = activeBtn ? activeBtn.dataset.tab : null;
+  var urlTab = new URLSearchParams(window.location.search).get('tab');
+  if ((activeTab && SCHEDULING_SUBMENU_TABS.indexOf(activeTab) !== -1) ||
+      (urlTab && SCHEDULING_SUBMENU_TABS.indexOf(urlTab) !== -1)) {
+    setSchedulingSubmenuOpen(true);
+  }
+  // Deep-link support for submenu children — click the matching button so its
+  // panel opens and the active state syncs.
+  if (urlTab && SCHEDULING_SUBMENU_TABS.indexOf(urlTab) !== -1) {
+    var deepBtn = document.querySelector('.dash-sidebar .tab-btn[data-tab="' + urlTab + '"]');
+    if (deepBtn && !deepBtn.classList.contains('active')) deepBtn.click();
+  }
+}
+
 function setupTabs() {
-  var btns = document.querySelectorAll('.tab-btn');
+  // Only buttons that actually map to a tab panel; the Scheduling parent has
+  // [data-expand] instead of [data-tab] and is handled by initSidebarExpandables.
+  var btns = document.querySelectorAll('.tab-btn[data-tab]');
   btns.forEach(function(btn) {
     btn.addEventListener('click', function() {
       btns.forEach(function(b) { b.classList.remove('active'); });
@@ -2686,6 +2778,11 @@ function setupTabs() {
       document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
       var panel = $('tab-' + btn.dataset.tab);
       if (panel) panel.classList.add('active');
+
+      // Keep the Scheduling submenu open whenever a child tab is active.
+      if (SCHEDULING_SUBMENU_TABS.indexOf(btn.dataset.tab) !== -1) {
+        setSchedulingSubmenuOpen(true);
+      }
 
       // Lazy load tab data
       if (btn.dataset.tab === 'bookings' && !btn._loaded) {
