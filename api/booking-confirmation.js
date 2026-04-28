@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     if (!booking_id) return res.status(400).json({ error: 'Missing booking_id' });
 
     const bRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/coach_bookings?id=eq.${booking_id}&select=*,coach_profiles(display_name,user_email,zoom_meeting_link,slug)`,
+      `${SUPABASE_URL}/rest/v1/coach_bookings?id=eq.${booking_id}&select=*,coach_profiles(display_name,user_email,zoom_meeting_link,slug,timezone),coach_services(title,duration)`,
       { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
     );
     const bookings = await bRes.json();
@@ -84,6 +84,40 @@ export default async function handler(req, res) {
       }
     }
     if (!zoomLink) zoomLink = 'Will be provided before the session';
+
+    // PR 5.A: sync to coach's Google Calendar (best-effort).
+    // - Skips silently when the coach hasn't connected their calendar.
+    // - Failures never block the booking confirmation email below.
+    // - Re-confirmations: only create an event if we don't already have one.
+    if (!booking.google_calendar_event_id && booking.coach_id) {
+      try {
+        const { createCalendarEvent } = await import('../lib/google-calendar-helpers.js');
+        const eventId = await createCalendarEvent(booking.coach_id, {
+          ...booking,
+          zoom_link: zoomLink && zoomLink.startsWith('http') ? zoomLink : '',
+          service_name: serviceName,
+          service_duration: booking.coach_services && booking.coach_services.duration,
+          client_name: clientName,
+        });
+        if (eventId) {
+          await fetch(
+            `${SUPABASE_URL}/rest/v1/coach_bookings?id=eq.${encodeURIComponent(booking_id)}`,
+            {
+              method: 'PATCH',
+              headers: {
+                apikey: SUPABASE_KEY,
+                Authorization: `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                Prefer: 'return=minimal',
+              },
+              body: JSON.stringify({ google_calendar_event_id: eventId }),
+            }
+          );
+        }
+      } catch (calErr) {
+        console.warn('[booking-confirmation] Google Calendar sync skipped:', calErr.message);
+      }
+    }
 
     // Client email
     const clientSubject = `Your session with ${coachName} is confirmed`;

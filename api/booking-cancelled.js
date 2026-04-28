@@ -55,7 +55,7 @@ export default async function handler(req, res) {
     const lookup = await fetch(
       `${SUPABASE_URL}/rest/v1/coach_bookings`
         + `?id=eq.${encodeURIComponent(bookingId)}`
-        + `&select=id,client_email,client_name,scheduled_at,notes,service_name,payment_amount_cents,refund_id,refund_amount_cents,refund_status,`
+        + `&select=id,coach_id,client_email,client_name,scheduled_at,notes,service_name,payment_amount_cents,refund_id,refund_amount_cents,refund_status,google_calendar_event_id,`
         +   `coach_profiles(display_name,full_name,user_email,slug,timezone),`
         +   `coach_services(title)`
         + `&limit=1`,
@@ -135,6 +135,18 @@ export default async function handler(req, res) {
     const coachFailed = sends[1].status === 'rejected';
     if (clientFailed) console.error('[booking-cancelled] client send failed', sends[0].reason);
     if (coachFailed) console.error('[booking-cancelled] coach send failed', sends[1].reason);
+
+    // PR 5.A: drop the event from the coach's Google Calendar. No-op when
+    // the booking was never synced. Failures are logged only — the
+    // cancellation itself already succeeded client-side.
+    if (booking.google_calendar_event_id && booking.coach_id) {
+      try {
+        const { deleteCalendarEvent } = await import('../lib/google-calendar-helpers.js');
+        await deleteCalendarEvent(booking.coach_id, booking.google_calendar_event_id);
+      } catch (calErr) {
+        console.warn('[booking-cancelled] Google Calendar delete skipped:', calErr.message);
+      }
+    }
 
     return res.status(200).json({
       sent: !clientFailed,

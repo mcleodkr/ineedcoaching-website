@@ -50,9 +50,9 @@ export default async function handler(req, res) {
     const lookup = await fetch(
       `${SUPABASE_URL}/rest/v1/coach_bookings`
         + `?id=eq.${encodeURIComponent(bookingId)}`
-        + `&select=id,client_email,client_name,scheduled_at,notes,service_name,zoom_link,`
+        + `&select=id,coach_id,client_email,client_name,scheduled_at,notes,service_name,zoom_link,google_calendar_event_id,`
         +   `coach_profiles(display_name,full_name,user_email,slug,timezone,zoom_meeting_link),`
-        +   `coach_services(title)`
+        +   `coach_services(title,duration)`
         + `&limit=1`,
       { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
     );
@@ -100,6 +100,23 @@ export default async function handler(req, res) {
       const t = await sendRes.text().catch(() => '');
       console.error('[booking-rescheduled] send-email failed', sendRes.status, t);
       return res.status(502).json({ error: 'send_failed', status: sendRes.status });
+    }
+
+    // PR 5.A: keep the coach's Google Calendar event in sync with the new
+    // time. No-op when the booking was never synced or the coach has since
+    // disconnected. Failures are logged, not surfaced — the email already
+    // went out and the booking row is the source of truth.
+    if (booking.google_calendar_event_id && booking.coach_id) {
+      try {
+        const { updateCalendarEvent } = await import('../lib/google-calendar-helpers.js');
+        await updateCalendarEvent(booking.coach_id, booking.google_calendar_event_id, {
+          ...booking,
+          zoom_link: zoomLink && /^https?:\/\//.test(zoomLink) ? zoomLink : '',
+          service_duration: booking.coach_services && booking.coach_services.duration,
+        });
+      } catch (calErr) {
+        console.warn('[booking-rescheduled] Google Calendar update skipped:', calErr.message);
+      }
     }
 
     return res.status(200).json({ sent: true, to: booking.client_email });

@@ -1453,6 +1453,20 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
         <span class="save-msg" id="save-calendly-msg">Saved</span>
       </div>
 
+      <!-- PR 5.A: Google Calendar sync. Coach connects via OAuth; bookings
+           then auto-create / update / delete events on their primary calendar.
+           Status, connect, and disconnect all live here. -->
+      <div class="form-section" id="google-calendar-section">
+        <h2 class="form-section-title">Google Calendar Sync</h2>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;line-height:1.6;">Sessions are added to your primary Google Calendar automatically when a booking is confirmed, updated when it's rescheduled, and removed when it's cancelled. Clients are added as attendees.</p>
+        <div id="gcal-status" style="font-size:0.9rem;color:var(--ink);margin-bottom:14px;">Checking connection&hellip;</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="save-btn" id="gcal-connect-btn" type="button" style="display:none;">Connect Google Calendar</button>
+          <button class="save-btn" id="gcal-disconnect-btn" type="button" style="display:none;background:transparent;color:var(--ink);border:1px solid var(--border);">Disconnect</button>
+        </div>
+        <span class="save-msg" id="gcal-msg"></span>
+      </div>
+
       <div class="form-section">
         <h2 class="form-section-title">Video Meetings</h2>
         <p style="font-size:0.88rem;color:var(--muted);margin-bottom:20px;line-height:1.6;">Choose how you'll meet with clients. Most coaches use one recurring Zoom link for all sessions &mdash; it's the simplest setup.</p>
@@ -2608,6 +2622,34 @@ async function init() {
     window.history.replaceState(null, '', window.location.pathname);
   } else if (stripeParam === 'refresh') {
     setTimeout(function() { alert('Stripe setup was interrupted. Go to the Courses tab to continue.'); }, 500);
+    window.history.replaceState(null, '', window.location.pathname);
+  }
+
+  // PR 5.A: Google Calendar OAuth return. Open the Scheduling tab so the
+  // status pill is visible immediately, refresh coachProfile so the just-
+  // saved enabled flag shows up, then surface the outcome.
+  var search = new URLSearchParams(window.location.search);
+  var gcalParam = search.get('calendar_connected');
+  if (gcalParam !== null) {
+    if (search.get('tab') === 'scheduling') {
+      var schedBtn = document.querySelector('.tab-btn[data-tab="scheduling"]');
+      if (schedBtn) schedBtn.click();
+    }
+    if (gcalParam === 'true') {
+      try {
+        var refreshed = await supabaseGet('coach_profiles?id=eq.' + coachProfile.id + '&select=*');
+        if (refreshed && refreshed[0]) {
+          coachProfile = Object.assign(coachProfile, refreshed[0]);
+          if (typeof renderGcalStatus === 'function') renderGcalStatus();
+        }
+      } catch (e) { console.warn('[gcal] post-connect refresh failed:', e); }
+      setTimeout(function() { alert('Google Calendar connected. New bookings will sync automatically.'); }, 400);
+    } else {
+      var reason = search.get('reason') || '';
+      setTimeout(function() {
+        alert('Google Calendar did not connect' + (reason ? ' (' + reason + ')' : '') + '. You can try again from the Scheduling tab.');
+      }, 400);
+    }
     window.history.replaceState(null, '', window.location.pathname);
   }
 }
@@ -4114,6 +4156,15 @@ function loadScheduling() {
     if (amountEl) amountEl.value = (p.late_cancel_fee_amount != null ? p.late_cancel_fee_amount : 50);
   }
 
+  // PR 5.A: Google Calendar sync UI. Reads connection state from the already
+  // loaded coachProfile (google_calendar_enabled is selected by `select=*`),
+  // and wires the connect/disconnect buttons against the authenticated
+  // /api/google-calendar-* endpoints — no service-role keys ever touch the
+  // browser, and disconnect revokes at Google before clearing local tokens.
+  renderGcalStatus();
+  $('gcal-connect-btn').onclick = connectGoogleCalendar;
+  $('gcal-disconnect-btn').onclick = disconnectGoogleCalendar;
+
   // Boot the calendar (PR 1.F). initCalendar handles the lazy-init +
   // refetch-on-revisit logic so this is safe to call every time the
   // Scheduling tab opens.
@@ -4507,6 +4558,98 @@ async function saveZoomLink() {
   }
   btn.disabled = false;
   btn.textContent = 'Save Meeting Link';
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Google Calendar sync (PR 5.A)
+// ─────────────────────────────────────────────────────────────────────────
+//
+// All three handlers go through the authenticated /api/google-calendar-*
+// endpoints. The auth-url and disconnect endpoints both verify the
+// Supabase session via Bearer token; the callback verifies an HMAC-signed
+// state minted by auth-url. The browser never sees a service-role key.
+
+function renderGcalStatus() {
+  var enabled = !!(coachProfile && coachProfile.google_calendar_enabled);
+  var statusEl = $('gcal-status');
+  var connectBtn = $('gcal-connect-btn');
+  var disconnectBtn = $('gcal-disconnect-btn');
+  if (!statusEl || !connectBtn || !disconnectBtn) return;
+  if (enabled) {
+    statusEl.innerHTML = '<span style="color:var(--forest);font-weight:600;">Connected.</span> New, rescheduled, and cancelled bookings sync automatically.';
+    connectBtn.style.display = 'none';
+    disconnectBtn.style.display = '';
+  } else {
+    statusEl.innerHTML = '<span style="color:var(--muted);">Not connected yet.</span>';
+    connectBtn.style.display = '';
+    connectBtn.textContent = 'Connect Google Calendar';
+    disconnectBtn.style.display = 'none';
+  }
+}
+
+async function connectGoogleCalendar() {
+  var btn = $('gcal-connect-btn');
+  var msg = $('gcal-msg');
+  msg.classList.remove('show');
+  btn.disabled = true;
+  btn.textContent = 'Redirecting...';
+  try {
+    var token = localStorage.getItem(TOKEN_KEY);
+    if (!token) throw new Error('Not signed in');
+    var res = await fetch('/api/google-calendar-auth-url', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) {
+      var err = await res.json().catch(function() { return {}; });
+      throw new Error(err.error || ('status ' + res.status));
+    }
+    var data = await res.json();
+    if (!data.url) throw new Error('Missing auth URL');
+    window.location.href = data.url;
+  } catch (e) {
+    console.error('[gcal] connect error:', e);
+    msg.textContent = 'Could not start Google sign-in. ' + (e.message || '');
+    msg.style.color = '#c44';
+    msg.classList.add('show');
+    btn.disabled = false;
+    btn.textContent = 'Connect Google Calendar';
+  }
+}
+
+async function disconnectGoogleCalendar() {
+  if (!confirm('Disconnect Google Calendar? Future bookings will not be synced. Existing events stay on your calendar.')) return;
+  var btn = $('gcal-disconnect-btn');
+  var msg = $('gcal-msg');
+  msg.classList.remove('show');
+  btn.disabled = true;
+  btn.textContent = 'Disconnecting...';
+  try {
+    var token = localStorage.getItem(TOKEN_KEY);
+    if (!token) throw new Error('Not signed in');
+    var res = await fetch('/api/google-calendar-disconnect', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) {
+      var err = await res.json().catch(function() { return {}; });
+      throw new Error(err.error || ('status ' + res.status));
+    }
+    coachProfile.google_calendar_enabled = false;
+    coachProfile.google_access_token = null;
+    coachProfile.google_refresh_token = null;
+    renderGcalStatus();
+    msg.textContent = 'Disconnected.';
+    msg.style.color = 'var(--forest)';
+    msg.classList.add('show');
+    setTimeout(function() { msg.classList.remove('show'); }, 3000);
+  } catch (e) {
+    console.error('[gcal] disconnect error:', e);
+    msg.textContent = 'Could not disconnect. ' + (e.message || '');
+    msg.style.color = '#c44';
+    msg.classList.add('show');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Disconnect';
 }
 
 // ─────────────────────────────────────────────────────────────────────────
