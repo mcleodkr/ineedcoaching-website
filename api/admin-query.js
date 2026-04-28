@@ -161,24 +161,29 @@ async function overviewStats(sb) {
     sessionsThisMonth,
     clarityRunsThisMonth,
     publishedCount,
-    usageThisMonth,
+    aiUsageThisMonth,
   ] = await Promise.all([
     sb.count('coach_profiles'),
     sb.count('explorer_profiles'),
     sb.count('coach_bookings', `scheduled_at=gte.${somISO}`),
     sb.count('coach_session_notes', `post_session_analysis=not.is.null&created_at=gte.${somISO}`),
     sb.count('coach_profiles', `is_published=eq.true`),
-    sb.get(`coach_clarity_usage?select=is_regeneration,estimated_cost_usd,created_at&created_at=gte.${somISO}&limit=${MAX_ROWS}`).catch(() => []),
+    // FIX #3: Query coach_ai_usage_log instead of coach_clarity_usage
+    sb.get(`coach_ai_usage_log?select=estimated_cost_cents,created_at&created_at=gte.${somISO}&limit=${MAX_ROWS}`).catch(() => []),
   ]);
-  const usageRows = Array.isArray(usageThisMonth) ? usageThisMonth : [];
-  const clarityUsageRunsThisMonth = usageRows.length;
-  const regenerationsThisMonth = usageRows.filter(r => r && r.is_regeneration).length;
-  const estimatedAiCostThisMonth = usageRows.reduce((sum, r) => sum + (Number(r && r.estimated_cost_usd) || 0), 0);
+  const aiUsageRows = Array.isArray(aiUsageThisMonth) ? aiUsageThisMonth : [];
+  // FIX #3: Convert cents to dollars
+  const estimatedAiCostThisMonth = aiUsageRows.reduce((sum, r) => sum + (Number(r && r.estimated_cost_cents) || 0), 0) / 100;
+  
+  // Keep legacy coach_clarity_usage for regeneration count (if that table still has that data)
+  const usageRows = await sb.get(`coach_clarity_usage?select=is_regeneration,created_at&created_at=gte.${somISO}&limit=${MAX_ROWS}`).catch(() => []);
+  const regenerationsThisMonth = (Array.isArray(usageRows) ? usageRows : []).filter(r => r && r.is_regeneration).length;
+  
   return {
     totalCoaches,
     totalClients,
     sessionsThisMonth,
-    clarityRunsThisMonth: clarityUsageRunsThisMonth || clarityRunsThisMonth,
+    clarityRunsThisMonth,
     regenerationsThisMonth,
     estimatedAiCostThisMonth: Number(estimatedAiCostThisMonth.toFixed(2)),
     publishedCount,
@@ -281,11 +286,20 @@ async function coachesList(sb) {
   const usage = await fetchAllUsage(sb);
   const sessionCountByCoach = {};
   const lastActiveByCoach = {};
+  const now = new Date();
+  
   bookings.forEach(b => {
     sessionCountByCoach[b.coach_id] = (sessionCountByCoach[b.coach_id] || 0) + 1;
-    const prev = lastActiveByCoach[b.coach_id];
-    if (!prev || new Date(b.scheduled_at) > new Date(prev)) lastActiveByCoach[b.coach_id] = b.scheduled_at;
+    // FIX #1: Only consider past/current sessions for last active
+    const scheduledDate = new Date(b.scheduled_at);
+    if (scheduledDate <= now) {
+      const prev = lastActiveByCoach[b.coach_id];
+      if (!prev || scheduledDate > new Date(prev)) {
+        lastActiveByCoach[b.coach_id] = b.scheduled_at;
+      }
+    }
   });
+  
   const clarityByCoach = {};
   notes.forEach(n => {
     if (n.post_session_analysis) clarityByCoach[n.coach_id] = true;
