@@ -168,14 +168,11 @@ async function overviewStats(sb) {
     sb.count('coach_bookings', `scheduled_at=gte.${somISO}`),
     sb.count('coach_session_notes', `post_session_analysis=not.is.null&created_at=gte.${somISO}`),
     sb.count('coach_profiles', `is_published=eq.true`),
-    // FIX #3: Query coach_ai_usage_log instead of coach_clarity_usage
     sb.get(`coach_ai_usage_log?select=estimated_cost_cents,created_at&created_at=gte.${somISO}&limit=${MAX_ROWS}`).catch(() => []),
   ]);
   const aiUsageRows = Array.isArray(aiUsageThisMonth) ? aiUsageThisMonth : [];
-  // FIX #3: Convert cents to dollars
   const estimatedAiCostThisMonth = aiUsageRows.reduce((sum, r) => sum + (Number(r && r.estimated_cost_cents) || 0), 0) / 100;
   
-  // Keep legacy coach_clarity_usage for regeneration count (if that table still has that data)
   const usageRows = await sb.get(`coach_clarity_usage?select=is_regeneration,created_at&created_at=gte.${somISO}&limit=${MAX_ROWS}`).catch(() => []);
   const regenerationsThisMonth = (Array.isArray(usageRows) ? usageRows : []).filter(r => r && r.is_regeneration).length;
   
@@ -255,7 +252,6 @@ async function errorsAndLogs(sb) {
     sb.get(`coach_bookings?select=id,coach_id,client_email,scheduled_at&scheduled_at=lt.${cutoff24}&status=eq.confirmed&order=scheduled_at.desc&limit=100`),
     sb.get(`explorer_profiles?select=id,email,display_name,created_at&created_at=gte.${cutoff7}&order=created_at.desc&limit=100`),
   ]);
-  // Join coach names for display
   const coachIds = Array.from(new Set([...failedClarity.map(r => r.coach_id), ...missingAnalysis.map(r => r.coach_id)].filter(Boolean)));
   let coachMap = {};
   if (coachIds.length) {
@@ -263,7 +259,6 @@ async function errorsAndLogs(sb) {
     const coaches = await sb.get(`coach_profiles?select=id,display_name,user_email&id=in.(${idList})`);
     coachMap = Object.fromEntries(coaches.map(c => [c.id, c]));
   }
-  // Filter missingAnalysis to those that truly have no post_session_analysis
   const noteBookingIds = new Set();
   if (missingAnalysis.length) {
     const idList = missingAnalysis.map(b => `"${b.id}"`).join(',');
@@ -280,17 +275,27 @@ async function errorsAndLogs(sb) {
 }
 
 async function coachesList(sb) {
+  const somISO = startOfMonthISO();
   const coaches = await sb.get(`coach_profiles?select=id,display_name,full_name,user_email,slug,is_published,created_at&order=created_at.desc&limit=${MAX_ROWS}`);
   const bookings = await sb.get(`coach_bookings?select=coach_id,scheduled_at&limit=${MAX_ROWS}`);
   const notes = await sb.get(`coach_session_notes?select=coach_id,post_session_analysis&limit=${MAX_ROWS}`);
   const usage = await fetchAllUsage(sb);
+  
+  // NEW: Fetch per-coach AI costs for this month
+  const aiUsageThisMonth = await sb.get(`coach_ai_usage_log?select=coach_id,estimated_cost_cents,created_at&created_at=gte.${somISO}&limit=${MAX_ROWS}`).catch(() => []);
+  const aiCostByCoach = {};
+  (aiUsageThisMonth || []).forEach(u => {
+    if (u && u.coach_id) {
+      aiCostByCoach[u.coach_id] = (aiCostByCoach[u.coach_id] || 0) + (Number(u.estimated_cost_cents) || 0);
+    }
+  });
+  
   const sessionCountByCoach = {};
   const lastActiveByCoach = {};
   const now = new Date();
   
   bookings.forEach(b => {
     sessionCountByCoach[b.coach_id] = (sessionCountByCoach[b.coach_id] || 0) + 1;
-    // FIX #1: Only consider past/current sessions for last active
     const scheduledDate = new Date(b.scheduled_at);
     if (scheduledDate <= now) {
       const prev = lastActiveByCoach[b.coach_id];
@@ -304,11 +309,11 @@ async function coachesList(sb) {
   notes.forEach(n => {
     if (n.post_session_analysis) clarityByCoach[n.coach_id] = true;
   });
-  // Group usage by coach_email
+  
   const totalRunsByCoach = {};
   const regensByCoach = {};
-  const sessionsByCoach = {};          // coach_email -> Set<session_id>
-  const regensBySessionCoach = {};      // coach_email -> { session_id: regenCount }
+  const sessionsByCoach = {};
+  const regensBySessionCoach = {};
   (usage || []).forEach(u => {
     const email = (u && u.coach_email || '').toLowerCase();
     if (!email) return;
@@ -321,6 +326,7 @@ async function coachesList(sb) {
       regensBySessionCoach[email][u.session_id] = (regensBySessionCoach[email][u.session_id] || 0) + 1;
     }
   });
+  
   function tierFor(email) {
     const sessions = sessionsByCoach[email];
     if (!sessions || sessions.size === 0) return 'light';
@@ -332,8 +338,10 @@ async function coachesList(sb) {
     if (avg <= 5) return 'moderate';
     return 'heavy';
   }
+  
   return coaches.map(c => {
     const email = (c.user_email || '').toLowerCase();
+    const aiCostCents = aiCostByCoach[c.id] || 0;
     return {
       ...c,
       sessionCount: sessionCountByCoach[c.id] || 0,
@@ -342,6 +350,7 @@ async function coachesList(sb) {
       totalRuns: totalRunsByCoach[email] || 0,
       regenerations: regensByCoach[email] || 0,
       usageTier: tierFor(email),
+      aiCostThisMonth: Number((aiCostCents / 100).toFixed(2)), // NEW: AI cost in dollars
     };
   });
 }
@@ -426,7 +435,7 @@ function extractServiceName(notes) {
 async function revenue(sb) {
   const publishedCount = await sb.count('coach_profiles', `is_published=eq.true`);
   const inactive = await inactiveCoaches(sb, 14);
-  const publishedInactive = inactive.filter(() => true); // already filtered
+  const publishedInactive = inactive.filter(() => true);
   return {
     publishedCount,
     estimatedMrr: publishedCount * MRR_PER_COACH,
