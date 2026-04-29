@@ -364,8 +364,16 @@ nav.site-nav .links .nav-pill:hover { background: var(--gold-soft); color: var(-
   border-color: var(--gold);
   background: var(--warm);
 }
+/* Hide the radio visually but keep it in the document flow + pointer
+   tree. iOS Safari has a quirk where an absolutely-positioned hidden
+   radio with pointer-events:none breaks the native <label>→<input>
+   toggle for the first (default-checked) radio in a group. Keeping
+   pointer-events on means the browser's own label-tap-to-toggle path
+   still works alongside our explicit click handler. */
 .tier-pick input[type="radio"] {
-  position: absolute; opacity: 0; pointer-events: none;
+  position: absolute; opacity: 0;
+  width: 1px; height: 1px;
+  margin: 0; padding: 0;
 }
 .tier-pick label .pick-name {
   font-size: 0.7rem; font-weight: 800; letter-spacing: 0.16em;
@@ -914,6 +922,22 @@ footer.site-footer {
     });
   }
   radios.forEach(function (r) { r.addEventListener('change', syncTier); });
+
+  // Explicit tap handler on each label. Bypasses an iOS Safari quirk
+  // where the implicit <label>→<input> toggle can fail for the first
+  // (default-checked) radio in a group when the input is hidden with
+  // opacity:0. We programmatically check the radio and dispatch a
+  // change event so syncTier always runs — same behavior on every
+  // browser, identical for both Practice and Scale.
+  pickLabels.forEach(function (lbl) {
+    lbl.addEventListener('click', function () {
+      var input = lbl.querySelector('input[type="radio"]');
+      if (!input || input.checked) return;
+      input.checked = true;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  });
+
   syncTier();
 
   // Tier-card "Choose Plan" buttons in the comparison grid scroll into the
