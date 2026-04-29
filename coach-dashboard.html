@@ -1202,6 +1202,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
     </div>
     <button class="tab-btn" data-tab="analytics">Analytics</button>
     <button class="tab-btn" data-tab="intake">Forms</button>
+    <button class="tab-btn" data-tab="billing">Billing</button>
     <div class="dash-group">Profile</div>
     <button class="tab-btn" data-tab="profile">Profile</button>
     <button class="tab-btn" data-tab="testimonials">Testimonials</button>
@@ -2173,6 +2174,106 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 
     </div>
 
+    <!-- BILLING TAB ──────────────────────────────────────────────────────
+         Coach platform-billing surface. Reads coachProfile subscription
+         columns (phase 1 schema) and renders tier, status, renewal date,
+         monthly client + session usage with overage warnings, and a
+         platform-revenue summary (course + package payouts to date).
+    ─────────────────────────────────────────────────────────────────── -->
+    <div id="tab-billing" class="tab-panel">
+      <div class="form-section" id="billing-plan-section">
+        <h2 class="form-section-title" style="margin-bottom:14px;">Plan &amp; subscription</h2>
+        <p style="font-size:0.86rem;color:var(--muted);margin-bottom:18px;line-height:1.6;">Your platform subscription. Pricing covers every feature on the dashboard — capacity is the only difference between tiers.</p>
+
+        <div id="billing-plan-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
+          <div style="padding:18px 20px;background:#fdf9f1;border:1px solid #e8e0c8;border-radius:10px;">
+            <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#a87d1f;margin-bottom:6px;">Current tier</div>
+            <div id="billing-tier-name" style="font-family:'Cormorant Garamond',serif;font-size:1.6rem;font-weight:600;color:#1a3a52;line-height:1.1;">—</div>
+            <div id="billing-tier-price" style="font-size:0.84rem;color:#5a6470;margin-top:4px;">—</div>
+          </div>
+          <div style="padding:18px 20px;background:#ffffff;border:1px solid #e8e4dc;border-radius:10px;">
+            <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Status</div>
+            <div id="billing-status-badge" style="display:inline-block;padding:4px 12px;border-radius:50px;font-size:0.78rem;font-weight:600;background:#eef2f5;color:#5a6470;">Loading…</div>
+            <div id="billing-status-detail" style="font-size:0.78rem;color:var(--muted);margin-top:8px;line-height:1.5;"></div>
+          </div>
+          <div style="padding:18px 20px;background:#ffffff;border:1px solid #e8e4dc;border-radius:10px;">
+            <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Next renewal</div>
+            <div id="billing-renewal-date" style="font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:600;color:#1a3a52;line-height:1.2;">—</div>
+            <div id="billing-renewal-detail" style="font-size:0.78rem;color:var(--muted);margin-top:4px;"></div>
+          </div>
+        </div>
+
+        <div id="billing-legacy-banner" style="display:none;margin-top:18px;padding:14px 18px;background:#fdf9ee;border:1px solid #e8d8a8;border-radius:8px;">
+          <div style="font-size:0.86rem;color:#5e4914;line-height:1.55;">
+            <strong>You're on the legacy plan.</strong> The new tiered pricing (Practice $99 / Scale $179) is available — to switch, email <a href="mailto:admin@ineedcoaching.org" style="color:#a87d1f;font-weight:600;">admin@ineedcoaching.org</a> and we'll migrate your account.
+          </div>
+        </div>
+
+        <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;">
+          <a id="billing-manage-link" href="mailto:admin@ineedcoaching.org?subject=Subscription%20change" class="action-btn action-decline" style="padding:10px 18px;text-decoration:none;display:inline-block;">Update payment or cancel</a>
+        </div>
+      </div>
+
+      <div class="form-section" id="billing-usage-section" style="margin-top:20px;">
+        <h2 class="form-section-title" style="margin-bottom:14px;">This month's usage</h2>
+        <p style="font-size:0.86rem;color:var(--muted);margin-bottom:22px;line-height:1.6;">Counters reset at the start of each billing period. Overage is billed at <strong>$3 per session</strong> above the cap; client overage is informational only.</p>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;">
+          <div style="padding:20px 22px;background:#ffffff;border:1px solid #e8e4dc;border-radius:10px;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;">
+              <div style="font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);">Active clients</div>
+              <div id="billing-clients-count" style="font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:600;color:#1a3a52;line-height:1;">0 / —</div>
+            </div>
+            <div style="height:8px;background:#f1ece1;border-radius:50px;overflow:hidden;">
+              <div id="billing-clients-bar" style="height:100%;width:0%;background:#c49a3c;border-radius:50px;transition:width 0.4s ease;"></div>
+            </div>
+            <div id="billing-clients-detail" style="font-size:0.78rem;color:var(--muted);margin-top:8px;line-height:1.5;">—</div>
+          </div>
+          <div style="padding:20px 22px;background:#ffffff;border:1px solid #e8e4dc;border-radius:10px;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;">
+              <div style="font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);">Sessions run</div>
+              <div id="billing-sessions-count" style="font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:600;color:#1a3a52;line-height:1;">0 / —</div>
+            </div>
+            <div style="height:8px;background:#f1ece1;border-radius:50px;overflow:hidden;">
+              <div id="billing-sessions-bar" style="height:100%;width:0%;background:#c49a3c;border-radius:50px;transition:width 0.4s ease;"></div>
+            </div>
+            <div id="billing-sessions-detail" style="font-size:0.78rem;color:var(--muted);margin-top:8px;line-height:1.5;">—</div>
+          </div>
+        </div>
+
+        <div id="billing-overage-warning" style="display:none;margin-top:18px;padding:14px 18px;background:#fdf2ea;border:1px solid #e8c8a8;border-radius:8px;">
+          <div style="font-size:0.86rem;color:#7a4818;line-height:1.6;">
+            <strong>You're over your session cap.</strong> <span id="billing-overage-detail"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section" id="billing-revenue-section" style="margin-top:20px;">
+        <h2 class="form-section-title" style="margin-bottom:14px;">Your platform revenue</h2>
+        <p style="font-size:0.86rem;color:var(--muted);margin-bottom:22px;line-height:1.6;">Earnings from courses and session packages sold through your dashboard. Payouts go to your connected Stripe account; this is the lifetime total of your share.</p>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;">
+          <div style="padding:18px 22px;background:#ffffff;border:1px solid #e8e4dc;border-radius:10px;">
+            <div style="font-size:0.74rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">Lifetime payout</div>
+            <div id="billing-revenue-total" style="font-family:'Cormorant Garamond',serif;font-size:1.9rem;font-weight:600;color:#1a3a52;line-height:1;">$0</div>
+            <div style="font-size:0.78rem;color:var(--muted);margin-top:4px;">Courses + packages</div>
+          </div>
+          <div style="padding:18px 22px;background:#ffffff;border:1px solid #e8e4dc;border-radius:10px;">
+            <div style="font-size:0.74rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">From courses</div>
+            <div id="billing-revenue-courses" style="font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:600;color:#1a3a52;line-height:1.1;">$0</div>
+            <div id="billing-revenue-courses-count" style="font-size:0.78rem;color:var(--muted);margin-top:4px;">0 enrollments</div>
+          </div>
+          <div style="padding:18px 22px;background:#ffffff;border:1px solid #e8e4dc;border-radius:10px;">
+            <div style="font-size:0.74rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">From packages</div>
+            <div id="billing-revenue-packages" style="font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:600;color:#1a3a52;line-height:1.1;">$0</div>
+            <div id="billing-revenue-packages-count" style="font-size:0.78rem;color:var(--muted);margin-top:4px;">0 packages sold</div>
+          </div>
+        </div>
+
+        <p style="font-size:0.78rem;color:var(--muted);margin-top:14px;line-height:1.5;">Bookings revenue is tracked separately on the <a href="#" id="billing-link-analytics" style="color:#c49a3c;font-weight:600;text-decoration:none;">Analytics tab</a>.</p>
+      </div>
+    </div>
+
     <!-- MESSAGES TAB -->
     <div id="tab-messages" class="tab-panel">
       <div id="messages-loading" class="loading-state" style="min-height:30vh;">
@@ -2905,6 +3006,10 @@ function setupTabs() {
       if (btn.dataset.tab === 'proposals' && !btn._loaded) {
         btn._loaded = true;
         loadDashProposals();
+      }
+      if (btn.dataset.tab === 'billing') {
+        if (!btn._loaded) btn._loaded = true;
+        if (typeof loadBillingTab === 'function') loadBillingTab();
       }
     });
   });
@@ -5896,6 +6001,168 @@ async function loadWaitlistTab() {
       }
     };
   });
+}
+
+// ─── Billing tab ─────────────────────────────────────────────────────────
+//
+// Reads the phase-1 subscription columns off coachProfile and renders the
+// tier/status/renewal header, monthly usage progress (clients + sessions
+// against the tier cap), and a lifetime platform-revenue summary derived
+// from coach_course_purchases (coach_payout_cents) and
+// client_package_purchases (payment_amount_cents).
+//
+// Counter increments live in their respective domain handlers (a separate
+// brief): until those land, the counters stay at 0 and the bars look
+// empty — that's expected for legacy + freshly-provisioned coaches.
+
+var BILLING_TIER_INFO = {
+  practice: { label: 'Practice', price: '$99 / month', clientCap: 20, sessionCap: 60 },
+  scale:    { label: 'Scale',    price: '$179 / month', clientCap: 60, sessionCap: 180 },
+};
+var BILLING_OVERAGE_RATE_CENTS = 300;
+var BILLING_STATUS_PRESETS = {
+  active:             { label: 'Active',           bg: '#e6f1e6', fg: '#2e6a2e', detail: 'Subscription is current.' },
+  trialing:           { label: 'In trial',         bg: '#e6efef', fg: '#2c5b6b', detail: 'You\'re inside the trial window.' },
+  past_due:           { label: 'Past due',         bg: '#fdf2ea', fg: '#7a4818', detail: 'A payment failed — Stripe will retry. Update your card to avoid a pause.' },
+  canceled:           { label: 'Canceled',         bg: '#fbeaea', fg: '#7a2727', detail: 'Subscription canceled. Access continues through the end of the paid period.' },
+  incomplete:         { label: 'Incomplete',       bg: '#fdf9ee', fg: '#5e4914', detail: 'Initial payment hasn\'t cleared yet.' },
+  incomplete_expired: { label: 'Expired',          bg: '#fbeaea', fg: '#7a2727', detail: 'Initial payment expired. Re-subscribe to continue.' },
+  unpaid:             { label: 'Unpaid',           bg: '#fbeaea', fg: '#7a2727', detail: 'Subscription is unpaid — access may be limited.' },
+  paused:             { label: 'Paused',           bg: '#eef2f5', fg: '#5a6470', detail: 'Subscription is paused.' },
+};
+
+function billingFormatDate(iso) {
+  if (!iso) return '—';
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function billingDaysUntil(iso) {
+  if (!iso) return null;
+  var ms = new Date(iso).getTime() - Date.now();
+  if (!isFinite(ms)) return null;
+  return Math.round(ms / 86400000);
+}
+
+function billingDollars(cents) {
+  var n = Number(cents) || 0;
+  return '$' + Math.round(n / 100).toLocaleString();
+}
+
+async function loadBillingTab() {
+  if (!coachProfile) return;
+
+  var tierKey = coachProfile.subscription_tier || null;
+  var info = tierKey ? BILLING_TIER_INFO[tierKey] : null;
+  var legacy = !info;
+
+  // ── Plan header ─────────────────────────────────────────────────
+  setText('billing-tier-name', info ? info.label : 'Legacy plan');
+  setText('billing-tier-price', info ? info.price : 'Pre-tier pricing');
+
+  var legacyBanner = document.getElementById('billing-legacy-banner');
+  if (legacyBanner) legacyBanner.style.display = legacy ? '' : 'none';
+
+  var status = coachProfile.subscription_status || (legacy ? null : 'active');
+  var preset = (status && BILLING_STATUS_PRESETS[status]) || { label: status || 'Unknown', bg: '#eef2f5', fg: '#5a6470', detail: legacy ? 'No subscription on file. Email admin to migrate.' : '' };
+  var badge = document.getElementById('billing-status-badge');
+  if (badge) {
+    badge.textContent = preset.label;
+    badge.style.background = preset.bg;
+    badge.style.color = preset.fg;
+  }
+  setText('billing-status-detail', preset.detail || '');
+
+  setText('billing-renewal-date', billingFormatDate(coachProfile.current_period_end));
+  var days = billingDaysUntil(coachProfile.current_period_end);
+  setText('billing-renewal-detail', (days != null && days >= 0) ? ('in ' + days + ' day' + (days === 1 ? '' : 's')) : '');
+
+  // ── Usage ───────────────────────────────────────────────────────
+  var clientCap = info ? info.clientCap : 0;
+  var sessionCap = info ? info.sessionCap : 0;
+  var clientCount = Number(coachProfile.monthly_client_count) || 0;
+  var sessionCount = Number(coachProfile.monthly_session_count) || 0;
+
+  setText('billing-clients-count', clientCount + ' / ' + (clientCap || '—'));
+  setText('billing-sessions-count', sessionCount + ' / ' + (sessionCap ? '~' + sessionCap : '—'));
+
+  var clientPct = clientCap ? Math.min(100, Math.round(clientCount / clientCap * 100)) : 0;
+  var sessionPct = sessionCap ? Math.min(100, Math.round(sessionCount / sessionCap * 100)) : 0;
+  var clientBar = document.getElementById('billing-clients-bar');
+  var sessionBar = document.getElementById('billing-sessions-bar');
+  if (clientBar) {
+    clientBar.style.width = clientPct + '%';
+    clientBar.style.background = (clientCap && clientCount > clientCap) ? '#c47a3c' : '#c49a3c';
+  }
+  if (sessionBar) {
+    sessionBar.style.width = sessionPct + '%';
+    sessionBar.style.background = (sessionCap && sessionCount > sessionCap) ? '#c47a3c' : '#c49a3c';
+  }
+
+  if (info) {
+    setText('billing-clients-detail', clientCount > clientCap
+      ? (clientCount - clientCap) + ' over your tier cap'
+      : (clientCap - clientCount) + ' more before you hit the cap');
+    setText('billing-sessions-detail', sessionCount > sessionCap
+      ? (sessionCount - sessionCap) + ' over your tier cap'
+      : (sessionCap - sessionCount) + ' more before you hit the cap');
+  } else {
+    setText('billing-clients-detail', 'Caps apply once you migrate to the tiered pricing.');
+    setText('billing-sessions-detail', 'Caps apply once you migrate to the tiered pricing.');
+  }
+
+  var overOver = info && sessionCount > sessionCap;
+  var overWarn = document.getElementById('billing-overage-warning');
+  if (overWarn) overWarn.style.display = overOver ? '' : 'none';
+  if (overOver) {
+    var extra = sessionCount - sessionCap;
+    var overageCents = extra * BILLING_OVERAGE_RATE_CENTS;
+    setText('billing-overage-detail', extra + ' session' + (extra === 1 ? '' : 's') + ' over the cap × $3 = ' + billingDollars(overageCents) + ' on next invoice.');
+  }
+
+  // ── Platform revenue (lifetime) ────────────────────────────────
+  // Two parallel queries — both filtered by coach_id; both gated through
+  // existing RLS so no extra policy work is needed.
+  var coachId = coachProfile.id;
+  if (!coachId) return;
+
+  try {
+    var courseRowsP = supabaseGet(
+      'coach_course_purchases?coach_id=eq.' + encodeURIComponent(coachId)
+      + '&status=eq.completed&select=coach_payout_cents'
+    );
+    var packageRowsP = supabaseGet(
+      'client_package_purchases?coach_id=eq.' + encodeURIComponent(coachId)
+      + '&select=payment_amount_cents'
+    );
+    var results = await Promise.all([courseRowsP, packageRowsP]);
+    var courseRows = results[0] || [];
+    var packageRows = results[1] || [];
+
+    var courseTotal = courseRows.reduce(function (s, r) { return s + (Number(r.coach_payout_cents) || 0); }, 0);
+    var packageTotal = packageRows.reduce(function (s, r) { return s + (Number(r.payment_amount_cents) || 0); }, 0);
+    var grandTotal = courseTotal + packageTotal;
+
+    setText('billing-revenue-total', billingDollars(grandTotal));
+    setText('billing-revenue-courses', billingDollars(courseTotal));
+    setText('billing-revenue-courses-count', courseRows.length + ' enrollment' + (courseRows.length === 1 ? '' : 's'));
+    setText('billing-revenue-packages', billingDollars(packageTotal));
+    setText('billing-revenue-packages-count', packageRows.length + ' package' + (packageRows.length === 1 ? '' : 's') + ' sold');
+  } catch (e) {
+    console.warn('[billing] revenue fetch failed', e && e.message);
+  }
+
+  // Wire the inline Analytics deep-link.
+  var analyticsLink = document.getElementById('billing-link-analytics');
+  if (analyticsLink && !analyticsLink._wired) {
+    analyticsLink._wired = true;
+    analyticsLink.addEventListener('click', function (ev) {
+      ev.preventDefault();
+      var btn = document.querySelector('.dash-sidebar .tab-btn[data-tab="analytics"]');
+      if (btn) btn.click();
+    });
+  }
 }
 
 // ─── Share tab ───────────────────────────────────────────────────────────
