@@ -139,6 +139,36 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
 .success-actions .btn-outline { display: inline-flex; align-items: center; padding: 12px 24px; border-radius: 50px; border: 1.5px solid var(--border); color: var(--ink); text-decoration: none; font-weight: 700; font-size: 0.85rem; transition: all 0.2s; background: none; cursor: pointer; font-family: inherit; }
 .success-actions .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
 
+/* Post-booking intake questionnaire */
+.success-intake { max-width: 560px; margin: 28px auto 0; padding: 32px 32px 28px; background: var(--warm); border: 1px solid var(--border); border-radius: var(--r); text-align: left; box-shadow: 0 2px 12px rgba(26,58,82,0.04); }
+.success-intake.hidden { display: none; }
+.success-intake-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px; }
+.success-intake h3 { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--ink); margin-bottom: 6px; font-weight: 700; }
+.success-intake-sub { font-size: 0.88rem; color: var(--muted); line-height: 1.6; margin-bottom: 22px; }
+.intake-field { margin-bottom: 18px; }
+.intake-field > label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; line-height: 1.4; letter-spacing: 0.01em; }
+.intake-field textarea { width: 100%; padding: 11px 13px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 0.92rem; color: var(--ink); background: var(--cream); resize: vertical; line-height: 1.5; min-height: 72px; outline: none; transition: border-color 0.15s ease; }
+.intake-field textarea:focus { border-color: var(--gold); }
+.intake-range { width: 100%; accent-color: var(--gold); }
+.intake-range-labels { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
+.intake-urgency-value { color: var(--gold); font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 700; margin-left: 6px; }
+.intake-radios { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.intake-radio { display: flex; align-items: center; gap: 8px; font-size: 0.86rem; color: var(--ink); cursor: pointer; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; transition: border-color 0.15s ease, background 0.15s ease; font-weight: 400; background: var(--cream); }
+.intake-radio:hover { border-color: var(--gold); }
+.intake-radio input { margin: 0; accent-color: var(--gold); }
+.intake-radio.is-selected { border-color: var(--gold); background: rgba(196,154,60,0.08); font-weight: 600; }
+.intake-error { color: #b93a3a; font-size: 0.85rem; margin-bottom: 10px; min-height: 18px; }
+.intake-submit { display: block; width: 100%; padding: 14px; background: var(--gold); color: var(--ink); border: 2px solid var(--gold); border-radius: 50px; font-family: inherit; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: all 0.18s ease; letter-spacing: 0.005em; }
+.intake-submit:hover:not(:disabled) { background: #d4a94c; border-color: #d4a94c; transform: translateY(-1px); }
+.intake-submit:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+.success-intake-thanks { max-width: 560px; margin: 28px auto 0; padding: 22px; background: rgba(74,124,89,0.08); border: 1px solid rgba(74,124,89,0.25); border-radius: var(--r); text-align: center; color: var(--forest); }
+.success-intake-thanks.hidden { display: none; }
+.success-intake-thanks-icon { font-size: 1.4rem; margin-bottom: 4px; }
+.success-intake-thanks p { color: var(--ink); font-size: 0.92rem; }
+@media (max-width: 600px) {
+  .intake-radios { grid-template-columns: 1fr; }
+}
+
 /* Footer */
 .book-footer { background: var(--ink); padding: 32px 24px; text-align: center; }
 .book-footer .powered { font-size: 0.8rem; color: rgba(247,244,238,0.55); }
@@ -332,6 +362,56 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
       <a href="/coaches.html" class="btn-outline">Browse more coaches</a>
     </div>
   </div>
+
+  <!-- Post-booking intake. Optional — submission is not required to keep
+       the booking valid, but coaches see these answers in their booking
+       detail and use them to prep. Hidden until renderSuccess() unlocks it. -->
+  <div id="success-intake" class="success-intake hidden">
+    <div class="success-intake-eyebrow"><span>One quick step</span></div>
+    <h3>Tell your coach what matters</h3>
+    <p class="success-intake-sub">This goes straight to your coach so they can prep around what you actually want from the session. Takes about two minutes.</p>
+    <form id="intake-form" novalidate>
+      <div class="intake-field">
+        <label for="intake-q1">What brings you to coaching now?</label>
+        <textarea id="intake-q1" placeholder="What's going on that made you reach out?"></textarea>
+      </div>
+      <div class="intake-field">
+        <label for="intake-q2">What does success look like in 90 days?</label>
+        <textarea id="intake-q2" placeholder="If we worked together for three months, what would be different?"></textarea>
+      </div>
+      <div class="intake-field">
+        <label for="intake-q3">What has gotten in your way before?</label>
+        <textarea id="intake-q3" placeholder="What patterns or obstacles came up when you tried this kind of change before?"></textarea>
+      </div>
+      <div class="intake-field">
+        <label for="intake-q4">How urgent is this on a scale of 1&ndash;10?<span class="intake-urgency-value" id="intake-urgency-value">5</span></label>
+        <input type="range" id="intake-q4" class="intake-range" min="1" max="10" value="5">
+        <div class="intake-range-labels"><span>Just curious</span><span>Need this now</span></div>
+      </div>
+      <div class="intake-field">
+        <label>Which area are you focused on?</label>
+        <div class="intake-radios" role="radiogroup" aria-label="Focus area">
+          <label class="intake-radio"><input type="radio" name="focus_area" value="Career &amp; Leadership"> Career &amp; Leadership</label>
+          <label class="intake-radio"><input type="radio" name="focus_area" value="Burnout &amp; Stress"> Burnout &amp; Stress</label>
+          <label class="intake-radio"><input type="radio" name="focus_area" value="Life Transitions"> Life Transitions</label>
+          <label class="intake-radio"><input type="radio" name="focus_area" value="Relationships"> Relationships</label>
+          <label class="intake-radio"><input type="radio" name="focus_area" value="Health &amp; Wellness"> Health &amp; Wellness</label>
+          <label class="intake-radio"><input type="radio" name="focus_area" value="Business Growth"> Business Growth</label>
+        </div>
+      </div>
+      <div class="intake-field">
+        <label for="intake-q6">Anything your coach should know?</label>
+        <textarea id="intake-q6" placeholder="Anything you want them to walk in already knowing."></textarea>
+      </div>
+      <div id="intake-error" class="intake-error" aria-live="polite"></div>
+      <button type="submit" id="intake-submit" class="intake-submit">Submit Request</button>
+    </form>
+  </div>
+
+  <div id="success-intake-thanks" class="success-intake-thanks hidden">
+    <div class="success-intake-thanks-icon">&#10003;</div>
+    <p><strong>Thanks &mdash; your coach will see this before your session.</strong></p>
+  </div>
 </div>
 
 <footer class="book-footer">
@@ -445,6 +525,7 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
   var appliedCoupon = null; // { code, discount_cents, ... }
   var appliedGift = null;   // { code, gift_certificate_id, covers_full, credit_cents, ... }
   var lastSlotResponse = null; // raw /api/availability-slots response, used to pivot to waitlist on empty
+  var lastBookingId = null;    // set by every success path; powers the post-booking intake form
 
   // ── Load coach + services ──
   async function loadCoach() {
@@ -1008,6 +1089,7 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
             body: JSON.stringify({ booking_id: giftBookingId }),
           });
         } catch (mailErr) { console.warn('[book] confirmation email failed', mailErr); }
+        lastBookingId = giftBookingId;
         renderSuccess({ email: email, zoomLink: '' });
         return;
       }
@@ -1063,6 +1145,7 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
           if (zRows && zRows.length) zoomLink = zRows[0].zoom_link || '';
         }
       } catch (zErr) { /* non-fatal */ }
+      lastBookingId = bookingId;
       renderSuccess({ email: email, zoomLink: zoomLink });
     } catch (err) {
       console.error('[book] submit', err);
@@ -1141,6 +1224,15 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
     } else {
       zoomEl.classList.remove('is-shown');
     }
+    // Show the intake questionnaire only when we know the booking id (every
+    // path except recurring sets lastBookingId before calling renderSuccess).
+    var intakeEl = $('success-intake');
+    var intakeThanksEl = $('success-intake-thanks');
+    if (intakeEl) {
+      if (lastBookingId) intakeEl.classList.remove('hidden');
+      else intakeEl.classList.add('hidden');
+    }
+    if (intakeThanksEl) intakeThanksEl.classList.add('hidden');
     showSuccess();
   }
 
@@ -1200,6 +1292,7 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
     var backLink = $('success-back-coach');
     if (backLink && cp.slug) backLink.href = '/coach/' + encodeURIComponent(cp.slug);
     document.title = 'Booking confirmed — ineedcoaching.org';
+    lastBookingId = b.id;
     renderSuccess({ email: b.client_email, zoomLink: b.zoom_link });
   }
 
@@ -1229,6 +1322,82 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
       if (banner) banner.classList.add('is-shown');
     }
   }
+
+  // ── Post-booking intake form ───────────────────────────────────────────
+  // Wired once. Reads lastBookingId set by every success path (free, gift,
+  // paid-return). Submission is optional — failure messaging stays inside
+  // the form; the booking itself is already valid regardless.
+  (function wireIntakeForm() {
+    var form = $('intake-form');
+    if (!form) return;
+    var rangeEl = $('intake-q4');
+    var rangeOut = $('intake-urgency-value');
+    if (rangeEl && rangeOut) {
+      rangeEl.addEventListener('input', function () {
+        rangeOut.textContent = rangeEl.value;
+      });
+    }
+    // Highlight the selected radio card visually (input is the styled
+    // checkmark; the visual state lives on the label).
+    var radios = form.querySelectorAll('input[name="focus_area"]');
+    function syncFocusRadios() {
+      Array.prototype.forEach.call(radios, function (r) {
+        r.parentNode.classList.toggle('is-selected', r.checked);
+      });
+    }
+    Array.prototype.forEach.call(radios, function (r) {
+      r.addEventListener('change', syncFocusRadios);
+    });
+
+    form.addEventListener('submit', async function (ev) {
+      ev.preventDefault();
+      var errEl = $('intake-error');
+      errEl.textContent = '';
+      if (!lastBookingId) {
+        errEl.textContent = 'Booking ID not available — refresh the page to retry.';
+        return;
+      }
+      var btn = $('intake-submit');
+      btn.disabled = true;
+      var prevLabel = btn.textContent;
+      btn.textContent = 'Submitting…';
+      var focusInput = form.querySelector('input[name="focus_area"]:checked');
+      var payload = {
+        booking_id: lastBookingId,
+        what_brings_you: $('intake-q1').value.trim() || null,
+        success_in_90_days: $('intake-q2').value.trim() || null,
+        whats_gotten_in_way: $('intake-q3').value.trim() || null,
+        urgency_score: parseInt($('intake-q4').value, 10) || null,
+        focus_area: focusInput ? focusInput.value : null,
+        anything_else: $('intake-q6').value.trim() || null,
+      };
+      try {
+        var res = await fetch(REST + '/booking_intake_responses', {
+          method: 'POST',
+          headers: HEADERS_WRITE,
+          body: JSON.stringify(payload),
+        });
+        if (res.status === 409) {
+          errEl.textContent = 'It looks like you already submitted intake for this booking.';
+          btn.disabled = false;
+          btn.textContent = prevLabel;
+          return;
+        }
+        if (!res.ok) {
+          var t = ''; try { t = await res.text(); } catch (e) {}
+          throw new Error(t || ('HTTP ' + res.status));
+        }
+        $('success-intake').classList.add('hidden');
+        var thx = $('success-intake-thanks');
+        if (thx) thx.classList.remove('hidden');
+      } catch (err) {
+        console.warn('[book] intake submit failed', err);
+        errEl.textContent = 'Could not save your responses. Please retry.';
+        btn.disabled = false;
+        btn.textContent = prevLabel;
+      }
+    });
+  })();
 
   init();
 })();

@@ -131,7 +131,7 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
 .rec-company { font-size: 0.8rem; color: rgba(247,244,238,0.5); }
 
 /* BOOKING */
-.booking-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 900px; margin: 0 auto; }
+.booking-cards { display: grid; grid-template-columns: 1fr; gap: 24px; max-width: 540px; margin: 0 auto; }
 .booking-card { background: white; border: 1px solid var(--border); border-radius: var(--r); padding: 36px; position: relative; overflow: hidden; }
 .booking-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; }
 .booking-card.card-gold::before { background: var(--gold); }
@@ -347,69 +347,10 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
     <h2 class="section-title" style="text-align:center;">Get in Touch</h2>
     <div class="booking-cards">
 
-      <!-- CARD 1: Book a Session -->
-      <div class="booking-card card-gold" id="booking-form-container">
-        <h3>Book a Session</h3>
-        <p>Ready to get started? Request a session and I'll confirm within 24 hours.</p>
-        <form id="booking-form">
-          <div class="form-group">
-            <label for="booking-service">Service</label>
-            <select id="booking-service" required>
-              <option value="">Select a service...</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="booking-name">Your Name</label>
-            <input type="text" id="booking-name" required placeholder="Full name">
-          </div>
-          <div class="form-group">
-            <label for="booking-email">Your Email</label>
-            <input type="email" id="booking-email" required placeholder="email@example.com">
-          </div>
-          <div class="form-group">
-            <label for="booking-phone">Phone Number (for reminders)</label>
-            <input type="tel" id="booking-phone" placeholder="Phone number (for reminders)">
-          </div>
-          <div class="form-group">
-            <label for="booking-date">Preferred Date</label>
-            <input type="date" id="booking-date" required>
-          </div>
-          <div class="form-group">
-            <label for="booking-time">Preferred Time</label>
-            <select id="booking-time" required>
-              <option value="">Select a time</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="booking-notes">Notes (optional)</label>
-            <textarea id="booking-notes" placeholder="Tell the coach what you're looking for..."></textarea>
-          </div>
-          <button type="submit" class="btn-gold booking-submit">Request Booking</button>
-        </form>
-        <div id="intake-step" class="hidden" style="padding:32px 0;">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-            <span style="background:var(--gold);color:#fff;font-size:0.7rem;font-weight:700;padding:4px 10px;border-radius:50px;letter-spacing:0.04em;">STEP 2 OF 2</span>
-          </div>
-          <h3 style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--ink);margin-bottom:6px;" id="intake-step-title">A few questions before your session</h3>
-          <p style="font-size:0.88rem;color:var(--muted);margin-bottom:24px;">Your answers help the coach prepare for a focused, productive first session.</p>
-          <div id="intake-questions-render"></div>
-          <div style="display:flex;gap:12px;margin-top:20px;">
-            <button class="btn-outline" id="intake-back-btn" style="flex:0 0 auto;color:var(--ink);border-color:var(--border);padding:14px 24px;">Back</button>
-            <button class="btn-gold booking-submit" id="submit-intake-btn" style="flex:1;">Submit Request</button>
-          </div>
-        </div>
-        <div class="booking-success" id="booking-success">
-          <h3>Your request has been sent!</h3>
-          <p id="booking-success-msg">The coach will confirm within 24 hours.</p>
-          <div id="zoom-link-display" class="hidden" style="margin-top:20px;padding:16px;background:var(--cream);border:1px solid var(--border);border-radius:var(--r-sm);text-align:left;">
-            <div style="font-weight:700;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink);margin-bottom:8px;">Your Session Link</div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <a id="zoom-link-url" href="#" target="_blank" style="flex:1;color:var(--gold);font-weight:600;font-size:0.92rem;word-break:break-all;"></a>
-              <button id="copy-zoom-btn" style="padding:8px 16px;background:var(--ink);color:var(--cream);border:none;border-radius:var(--r-sm);font-family:'Cabinet Grotesk',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;">Copy</button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- CARD 1: removed — public booking now happens via /book?coach={slug}.
+           Service "Book Now" buttons in the services grid above route to that
+           flow directly; the inline form was duplicate UX with a payload that
+           drifted from book.html. -->
 
       <!-- CARD 2: Send a Message -->
       <div class="booking-card card-navy">
@@ -479,34 +420,7 @@ const GET_HEADERS = {
 
 let coachData = null;
 
-function populateTimeSlots(availability) {
-  const select = document.getElementById('booking-time');
-  const dateInput = document.getElementById('booking-date');
-  select.innerHTML = '<option value="">Select a time</option>';
-
-  let startHour = 9, endHour = 17;
-
-  if (availability && dateInput.value) {
-    const dayOfWeek = new Date(dateInput.value + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-    const dayAvail = Array.isArray(availability)
-      ? availability.find(function(d) { return (d.day || '').toLowerCase() === dayOfWeek; })
-      : null;
-    if (dayAvail && dayAvail.start_time && dayAvail.end_time) {
-      startHour = parseInt(dayAvail.start_time.split(':')[0], 10);
-      endHour = parseInt(dayAvail.end_time.split(':')[0], 10);
-    }
-  }
-
-  for (let h = startHour; h < endHour; h++) {
-    for (let m = 0; m < 60; m += 30) {
-      const hour12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
-      const ampm = h >= 12 ? 'PM' : 'AM';
-      const label = hour12 + ':' + (m === 0 ? '00' : '30') + ' ' + ampm;
-      const val = (h < 10 ? '0' : '') + h + ':' + (m === 0 ? '00' : '30');
-      select.innerHTML += '<option value="' + val + '">' + label + '</option>';
-    }
-  }
-}
+// populateTimeSlots() removed alongside the inline booking form.
 
 function getSlug() {
   const params = new URLSearchParams(window.location.search);
@@ -580,12 +494,6 @@ async function loadProfile() {
     const articles = await articlesRes.json();
 
     renderProfile(coachData, services, testimonials, recommendations, courses, articles);
-
-    // Populate time slots and re-populate on date change
-    populateTimeSlots(coachData.weekly_availability);
-    document.getElementById('booking-date').addEventListener('change', function() {
-      populateTimeSlots(coachData.weekly_availability);
-    });
 
     // Update hero book button for calendly
     if (coachData.calendly_url && coachData.calendly_url.trim()) {
@@ -722,15 +630,6 @@ function renderProfile(coach, services, testimonials, recommendations, courses, 
   });
   document.getElementById('services-grid').innerHTML = servicesHtml;
 
-  // Populate booking dropdown
-  const bookingSelect = document.getElementById('booking-service');
-  allServices.forEach((svc, idx) => {
-    const opt = document.createElement('option');
-    opt.value = svc.id || `jsonb-${idx}`;
-    opt.textContent = svc.name || svc.title || 'Service';
-    bookingSelect.appendChild(opt);
-  });
-
   // Courses
   if (courses && courses.length > 0) {
     document.getElementById('courses-section').classList.remove('hidden');
@@ -847,219 +746,10 @@ function renderProfile(coach, services, testimonials, recommendations, courses, 
   document.getElementById('profile').classList.remove('hidden');
 }
 
-function scrollToBooking(serviceIndex) {
-  const select = document.getElementById('booking-service');
-  if (select.options[serviceIndex + 1]) {
-    select.selectedIndex = serviceIndex + 1;
-  }
-  document.getElementById('booking').scrollIntoView({ behavior: 'smooth' });
-}
-
-// Booking form submission
-document.getElementById('booking-form').addEventListener('submit', async function(e) {
-  e.preventDefault();
-
-  const btn = this.querySelector('.booking-submit');
-  btn.disabled = true;
-  btn.textContent = 'Submitting...';
-
-  const serviceVal = document.getElementById('booking-service').value;
-  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(serviceVal);
-
-  const clientEmail = document.getElementById('booking-email').value;
-  const clientPhone = document.getElementById('booking-phone').value.trim();
-
-  const payload = {
-    coach_id: coachData.id,
-    client_email: clientEmail,
-    client_phone: clientPhone || null,
-    scheduled_at: new Date(document.getElementById('booking-date').value + 'T' + (document.getElementById('booking-time').value || '09:00') + ':00').toISOString(),
-    notes: `Name: ${document.getElementById('booking-name').value}\nService: ${document.getElementById('booking-service').selectedOptions[0].textContent}\n${document.getElementById('booking-notes').value}`,
-    status: 'pending',
-    zoom_link: coachData.zoom_meeting_link || null
-  };
-
-  if (isUuid) {
-    payload.service_id = serviceVal;
-  }
-
-  try {
-    const bookingHeaders = { ...HEADERS, 'Prefer': 'return=representation' };
-    const res = await fetch(`${API}/coach_bookings`, {
-      method: 'POST',
-      headers: bookingHeaders,
-      body: JSON.stringify(payload)
-    });
-
-    if (res.ok || res.status === 201) {
-      let bookingResult = null;
-      try { bookingResult = await res.json(); } catch(e) {}
-      const bookingId = bookingResult && bookingResult.length > 0 ? bookingResult[0].id : null;
-
-      document.getElementById('booking-form').style.display = 'none';
-
-      // Check for intake form
-      try {
-        const intakeRes = await fetch(
-          `${API}/coach_intake_forms?coach_id=eq.${coachData.id}&is_active=eq.true&limit=1`,
-          { headers: GET_HEADERS }
-        );
-        const intakeForms = await intakeRes.json();
-        if (intakeForms && intakeForms.length > 0 && intakeForms[0].questions && intakeForms[0].questions.length > 0) {
-          renderIntakeForm(intakeForms[0], clientEmail, bookingId);
-          return;
-        }
-      } catch(e) { console.log('Intake check failed', e); }
-
-      // Show success directly
-      showBookingSuccess();
-    } else {
-      throw new Error('Booking failed');
-    }
-  } catch (err) {
-    console.error('Booking error:', err);
-    btn.disabled = false;
-    btn.textContent = 'Request Booking';
-    alert('Something went wrong. Please try again.');
-  }
-});
-
-function showBookingSuccess() {
-  document.getElementById('intake-step').classList.add('hidden');
-  var coachName = coachData.display_name || coachData.full_name || 'The coach';
-  document.getElementById('booking-success-msg').textContent = coachName + ' will confirm within 24 hours.';
-  document.getElementById('booking-success').style.display = 'block';
-
-  // Show zoom link if available
-  if (coachData && coachData.zoom_meeting_link && coachData.zoom_meeting_link.trim()) {
-    const zoomDisplay = document.getElementById('zoom-link-display');
-    const zoomUrl = document.getElementById('zoom-link-url');
-    zoomUrl.href = coachData.zoom_meeting_link;
-    zoomUrl.textContent = coachData.zoom_meeting_link;
-    zoomDisplay.classList.remove('hidden');
-
-    document.getElementById('copy-zoom-btn').addEventListener('click', function() {
-      navigator.clipboard.writeText(coachData.zoom_meeting_link).then(() => {
-        this.textContent = 'Copied!';
-        setTimeout(() => { this.textContent = 'Copy'; }, 2000);
-      });
-    });
-  }
-}
-
-function renderIntakeForm(form, clientEmail, bookingId) {
-  const questions = form.questions;
-  const container = document.getElementById('intake-questions-render');
-  let html = '';
-
-  questions.forEach((q, idx) => {
-    const reqMark = q.required ? ' <span style="color:#c44;">*</span>' : '';
-    html += `<div class="form-group" style="margin-bottom:20px;">`;
-    html += `<label style="display:block;font-size:0.82rem;font-weight:700;color:var(--ink);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;">${escapeHtml(q.text)}${reqMark}</label>`;
-
-    switch(q.type) {
-      case 'short_text':
-        html += `<input type="text" class="intake-answer" data-idx="${idx}" style="width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'Cabinet Grotesk',sans-serif;font-size:0.95rem;color:var(--ink);background:var(--cream);" ${q.required ? 'required' : ''}>`;
-        break;
-      case 'long_text':
-        html += `<textarea class="intake-answer" data-idx="${idx}" style="width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'Cabinet Grotesk',sans-serif;font-size:0.95rem;color:var(--ink);background:var(--cream);min-height:100px;resize:vertical;" ${q.required ? 'required' : ''}></textarea>`;
-        break;
-      case 'multiple_choice':
-        (q.options || []).forEach((opt, oi) => {
-          html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-            <input type="radio" name="intake-q-${idx}" class="intake-answer-radio" data-idx="${idx}" value="${escapeHtml(opt)}" id="iq-${idx}-${oi}" style="accent-color:var(--gold);width:18px;height:18px;">
-            <label for="iq-${idx}-${oi}" style="font-size:0.92rem;color:var(--ink);text-transform:none;letter-spacing:0;font-weight:400;">${escapeHtml(opt)}</label>
-          </div>`;
-        });
-        break;
-      case 'yes_no':
-        html += `<div style="display:flex;gap:16px;">
-          <label style="display:flex;align-items:center;gap:6px;font-size:0.92rem;color:var(--ink);text-transform:none;letter-spacing:0;font-weight:400;"><input type="radio" name="intake-q-${idx}" class="intake-answer-radio" data-idx="${idx}" value="Yes" style="accent-color:var(--gold);width:18px;height:18px;"> Yes</label>
-          <label style="display:flex;align-items:center;gap:6px;font-size:0.92rem;color:var(--ink);text-transform:none;letter-spacing:0;font-weight:400;"><input type="radio" name="intake-q-${idx}" class="intake-answer-radio" data-idx="${idx}" value="No" style="accent-color:var(--gold);width:18px;height:18px;"> No</label>
-        </div>`;
-        break;
-      case 'scale':
-        html += `<div style="display:flex;align-items:center;gap:12px;">
-          <span style="font-size:0.82rem;color:var(--muted);">1</span>
-          <input type="range" min="1" max="10" value="5" class="intake-answer" data-idx="${idx}" style="flex:1;accent-color:var(--gold);" oninput="document.getElementById('scale-val-${idx}').textContent=this.value">
-          <span style="font-size:0.82rem;color:var(--muted);">10</span>
-          <span id="scale-val-${idx}" style="font-weight:700;font-size:1rem;color:var(--gold);min-width:24px;text-align:center;">5</span>
-        </div>`;
-        break;
-    }
-    html += `</div>`;
-  });
-
-  container.innerHTML = html;
-  var coachName = coachData.display_name || coachData.full_name || 'your coach';
-  document.getElementById('intake-step-title').textContent = 'A few questions for ' + coachName;
-  document.getElementById('intake-step').classList.remove('hidden');
-
-  // Wire back button
-  document.getElementById('intake-back-btn').addEventListener('click', function() {
-    document.getElementById('intake-step').classList.add('hidden');
-    document.getElementById('booking-form').style.display = '';
-    const btn = document.querySelector('.booking-submit');
-    if (btn) { btn.disabled = false; btn.textContent = 'Request Booking'; }
-  });
-
-  // Wire submit
-  document.getElementById('submit-intake-btn').addEventListener('click', async function() {
-    const btn = this;
-    btn.disabled = true;
-    btn.textContent = 'Submitting...';
-
-    // Gather responses
-    const responses = [];
-    let valid = true;
-    questions.forEach((q, idx) => {
-      let answer = '';
-      if (q.type === 'multiple_choice' || q.type === 'yes_no') {
-        const checked = document.querySelector(`input[name="intake-q-${idx}"]:checked`);
-        answer = checked ? checked.value : '';
-      } else {
-        const el = document.querySelector(`.intake-answer[data-idx="${idx}"]`);
-        answer = el ? el.value : '';
-      }
-      if (q.required && !answer) valid = false;
-      responses.push({ question: q.text, type: q.type, answer: answer });
-    });
-
-    if (!valid) {
-      alert('Please complete all required fields.');
-      btn.disabled = false;
-      btn.textContent = 'Submit Intake Form';
-      return;
-    }
-
-    try {
-      const intakePayload = {
-        coach_id: coachData.id,
-        client_email: clientEmail,
-        booking_id: bookingId,
-        responses: responses
-      };
-      // Save to intake_responses table
-      await fetch(`${API}/coach_intake_responses`, {
-        method: 'POST',
-        headers: HEADERS,
-        body: JSON.stringify(intakePayload)
-      });
-      // Also save to the booking record itself
-      if (bookingId) {
-        await fetch(`${API}/coach_bookings?id=eq.${bookingId}`, {
-          method: 'PATCH',
-          headers: { ...HEADERS, 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ intake_responses: responses })
-        });
-      }
-    } catch(e) {
-      console.log('Intake submission error', e);
-    }
-
-    showBookingSuccess();
-  });
-}
+// Inline booking flow removed — booking now lives at /book?coach={slug}.
+// The legacy scrollToBooking(), booking-form submit handler, showBookingSuccess(),
+// and renderIntakeForm() have all been deleted; the per-service Book Now buttons
+// route directly to /book?coach=<slug> (or to coach.calendly_url when set).
 
 // Message form submission
 document.getElementById('message-form').addEventListener('submit', async function(e) {

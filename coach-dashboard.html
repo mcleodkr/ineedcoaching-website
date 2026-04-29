@@ -7093,6 +7093,7 @@ function openEditSessionModal(booking, onSaved) {
       + '<div style="margin-bottom:18px;"><label style="display:block;font-family:\'DM Sans\',sans-serif;font-size:0.8rem;font-weight:600;color:var(--ink);margin-bottom:6px;">Notes</label>'
       + '<textarea id="edit-session-notes" rows="5" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--cream);resize:vertical;"></textarea>'
       + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:var(--muted);margin-top:6px;">Keep the first line as <code>Name: &lt;client name&gt;</code> so the client list recognizes this booking.</div></div>'
+      + '<div id="edit-session-intake" style="margin:0 0 18px;"></div>'
       + '<div id="edit-session-error" style="display:none;color:#b93a3a;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;margin-bottom:12px;"></div>'
       + '<div style="display:flex;gap:10px;justify-content:flex-end;">'
       + '<button id="edit-session-cancel" style="padding:10px 18px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;cursor:pointer;">Cancel</button>'
@@ -7126,6 +7127,64 @@ function openEditSessionModal(booking, onSaved) {
   errorEl.textContent = '';
   saveBtn.disabled = false;
   saveBtn.textContent = 'Save changes';
+
+  // Phase: post-booking intake (booking_intake_responses). Fetched per-open
+  // so newly-submitted responses appear without a dashboard reload. Failures
+  // are silent — the booking edit experience isn't blocked by intake.
+  var intakeEl = $('edit-session-intake');
+  if (intakeEl) {
+    intakeEl.innerHTML = '';
+    if (booking && booking.id) {
+      intakeEl.innerHTML = '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:var(--muted);">Loading intake responses…</div>';
+      (async function loadBookingIntake(bookingId) {
+        try {
+          var rows = await supabaseGet(
+            'booking_intake_responses?booking_id=eq.' + encodeURIComponent(bookingId)
+            + '&select=what_brings_you,success_in_90_days,whats_gotten_in_way,urgency_score,focus_area,anything_else,created_at'
+            + '&limit=1'
+          );
+          if (!Array.isArray(rows) || !rows.length) {
+            intakeEl.innerHTML = ''
+              + '<div style="border:1px solid var(--border);border-radius:8px;padding:14px 16px;background:var(--cream);">'
+              + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:4px;">Pre-session intake</div>'
+              + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:var(--muted);line-height:1.5;">Client hasn’t submitted intake yet. They saw the form on the booking confirmation page.</div>'
+              + '</div>';
+            return;
+          }
+          var r = rows[0];
+          function fmt(label, val) {
+            if (val == null || val === '') return '';
+            var safe = (typeof val === 'string')
+              ? val.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+              : String(val);
+            return ''
+              + '<div style="margin-bottom:10px;">'
+              + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;">' + label + '</div>'
+              + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.86rem;color:var(--ink);line-height:1.5;white-space:pre-wrap;">' + safe + '</div>'
+              + '</div>';
+          }
+          var sections = ''
+            + fmt('What brings them to coaching now', r.what_brings_you)
+            + fmt('Success in 90 days', r.success_in_90_days)
+            + fmt('What\'s gotten in the way before', r.whats_gotten_in_way)
+            + fmt('Focus area', r.focus_area)
+            + fmt('Urgency', r.urgency_score == null ? null : (r.urgency_score + ' / 10'))
+            + fmt('Anything else', r.anything_else);
+          if (!sections) sections = '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:var(--muted);">Client submitted the form but left every field blank.</div>';
+          intakeEl.innerHTML = ''
+            + '<div style="border:1px solid var(--border);border-radius:8px;padding:14px 16px;background:#fdf9f1;">'
+            + '<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;gap:10px;flex-wrap:wrap;">'
+            + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:600;color:var(--ink);">Pre-session intake</div>'
+            + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.7rem;color:var(--muted);">submitted ' + (r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '') + '</div>'
+            + '</div>'
+            + sections
+            + '</div>';
+        } catch (e) {
+          intakeEl.innerHTML = '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:var(--muted);">Could not load intake. Refresh to retry.</div>';
+        }
+      })(booking.id);
+    }
+  }
   saveBtn.onclick = async function() {
     errorEl.style.display = 'none';
     errorEl.textContent = '';
