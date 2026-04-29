@@ -6984,6 +6984,30 @@ async function submitAddClient() {
       var errBody = await res.text();
       throw new Error(errBody || ('HTTP ' + res.status));
     }
+
+    // Phase 4b — bump monthly_client_count if this is the first
+    // confirmed/manual booking for this client_email under this coach.
+    // Best-effort: failures don't block the add-client flow.
+    try {
+      var insertedRows = await res.json().catch(function () { return null; });
+      var newBookingId = (insertedRows && insertedRows[0] && insertedRows[0].id) || null;
+      var priorPath = 'coach_bookings?coach_id=eq.' + coachProfile.id
+        + '&client_email=eq.' + encodeURIComponent(effectiveEmail)
+        + '&status=in.(confirmed,manual)'
+        + (newBookingId ? '&id=neq.' + encodeURIComponent(newBookingId) : '')
+        + '&select=id&limit=1';
+      var prior = await supabaseGet(priorPath);
+      if (Array.isArray(prior) && prior.length === 0) {
+        await fetch(SUPABASE_URL + '/rest/v1/rpc/increment_coach_usage', {
+          method: 'POST',
+          headers: apiHeaders(),
+          body: JSON.stringify({ p_coach_id: coachProfile.id, p_kind: 'client' }),
+        });
+      }
+    } catch (incErr) {
+      console.warn('[add-client] usage increment failed:', incErr && incErr.message);
+    }
+
     $('add-client-modal').style.display = 'none';
     await loadClientsTab();
   } catch (e) {

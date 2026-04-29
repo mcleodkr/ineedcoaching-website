@@ -96,12 +96,15 @@ export default async function handler(req, res) {
       'Content-Type': 'application/json',
     };
 
-    // Fetch transcript and notes from coach_session_notes
+    // Fetch transcript and notes from coach_session_notes. Pull
+    // post_session_analysis too so we can detect a re-run (vs a first
+    // analysis) for the usage-counter increment below.
     const fetchRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/coach_session_notes?booking_id=eq.${bookingId}&select=raw_transcript,notes`,
+      `${SUPABASE_URL}/rest/v1/coach_session_notes?booking_id=eq.${bookingId}&select=raw_transcript,notes,post_session_analysis`,
       { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
     );
     const fetchData = await fetchRes.json();
+    const isFirstAnalysis = !(fetchData && fetchData[0] && fetchData[0].post_session_analysis);
 
     let sessionContent = '';
     if (fetchData && fetchData.length > 0) {
@@ -667,6 +670,22 @@ Limits: max 3 goal_proposals, max 3 goal_status_updates. Return empty arrays if 
           }),
         }
       );
+    }
+
+    // ── Usage counter (phase 4b) ────────────────────────────────────────
+    // Increment monthly_session_count only on a first-time analysis.
+    // Re-runs (regenerate analysis) don't double-count. Best-effort —
+    // failures are logged but never break the analysis response.
+    if (isFirstAnalysis && coachId) {
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_coach_usage`, {
+          method: 'POST',
+          headers: { ...supabaseHeaders, Prefer: 'return=minimal' },
+          body: JSON.stringify({ p_coach_id: coachId, p_kind: 'session' }),
+        });
+      } catch (incErr) {
+        console.warn('[generate-post-session-intelligence] usage increment failed:', incErr && incErr.message);
+      }
     }
 
     // ── Auto-create action items from commitments ───────────────────────

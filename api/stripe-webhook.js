@@ -411,6 +411,37 @@ async function handleBookingCompleted({ session, meta, stripe, SUPABASE_URL, SB_
     return res.status(500).send('booking_patch_failed');
   }
 
+  // ── Usage counter (phase 4b) ──────────────────────────────────────────
+  // Increment monthly_client_count when this is the first confirmed/manual
+  // booking from this client_email for this coach. Excludes the booking
+  // we just upgraded by id. Best-effort — failures don't roll back the
+  // confirmation.
+  const clientEmailForCount = (meta.client_email || '').toLowerCase();
+  const coachIdForCount = coachId || booking.coach_id;
+  if (clientEmailForCount && coachIdForCount) {
+    try {
+      const priorRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/coach_bookings`
+          + `?coach_id=eq.${encodeURIComponent(coachIdForCount)}`
+          + `&client_email=eq.${encodeURIComponent(clientEmailForCount)}`
+          + `&status=in.(confirmed,manual)`
+          + `&id=neq.${encodeURIComponent(bookingId)}`
+          + `&select=id&limit=1`,
+        { headers: SB_HEADERS }
+      );
+      const priors = await priorRes.json().catch(() => []);
+      if (Array.isArray(priors) && priors.length === 0) {
+        await fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_coach_usage`, {
+          method: 'POST',
+          headers: { ...SB_HEADERS, Prefer: 'return=minimal' },
+          body: JSON.stringify({ p_coach_id: coachIdForCount, p_kind: 'client' }),
+        });
+      }
+    } catch (incErr) {
+      console.warn('[stripe-webhook][booking] client-count increment failed', incErr && incErr.message);
+    }
+  }
+
   // Fire the confirmation email + zoom-meeting flow. The endpoint also runs
   // for free bookings, so the email content stays consistent across flows.
   // Failure here is non-fatal — the booking is already confirmed in the DB.
