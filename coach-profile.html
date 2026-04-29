@@ -702,7 +702,11 @@ function renderProfile(coach, services, testimonials, recommendations, courses, 
     if (hasCalendly) {
       bookAction = `onclick="window.open('${escapeHtml(coach.calendly_url)}', '_blank')"`;
     } else {
-      bookAction = `onclick="scrollToBooking(${idx})"`;
+      // Route to the new public booking flow (book.html). The legacy
+      // inline form below stays on the page as a fallback for direct
+      // navigation but is no longer the primary path.
+      const bookHref = '/book?coach=' + encodeURIComponent(coach.slug || '');
+      bookAction = `onclick="window.location.href='${escapeHtml(bookHref)}'"`;
     }
     servicesHtml += `
       <div class="service-card">
