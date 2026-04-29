@@ -274,6 +274,14 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
 .forcoaches-cta .price-lock { display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem; font-weight: 700; color: var(--gold); background: rgba(196,154,60,0.12); padding: 5px 14px; border-radius: 50px; margin-bottom: 22px; }
 .forcoaches-cta a { display: block; background: var(--gold); color: var(--navy); padding: 14px 28px; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.95rem; font-weight: 700; text-decoration: none; transition: all 0.2s; }
 .forcoaches-cta a:hover { background: #d4a94c; }
+.forcoaches-text .forcoaches-sub { font-size: 1.02rem; color: #5a6470; line-height: 1.65; margin-bottom: 24px; max-width: 480px; }
+.forcoaches-cta .cta-pricing-head { font-family: 'Playfair Display', serif; font-size: 1.7rem; font-weight: 700; color: var(--cream); line-height: 1.15; margin-bottom: 4px; letter-spacing: -0.005em; }
+.forcoaches-cta .cta-pricing-sub { font-size: 0.85rem; color: rgba(247,244,238,0.65); margin-bottom: 22px; }
+.forcoaches-cta .cta-tiers { list-style: none; text-align: left; margin: 0 0 18px 0; padding: 16px 18px; background: rgba(255,255,255,0.06); border-radius: var(--r-sm); }
+.forcoaches-cta .cta-tiers li { font-size: 0.85rem; color: rgba(247,244,238,0.88); padding: 5px 0; line-height: 1.5; }
+.forcoaches-cta .cta-tiers li strong { color: var(--gold); font-weight: 700; }
+.forcoaches-cta .cta-differentiator { font-style: italic; font-size: 0.86rem; color: rgba(247,244,238,0.78); line-height: 1.55; margin: 0 0 22px; }
+.forcoaches-cta .cta-trust { font-size: 0.74rem; color: rgba(247,244,238,0.55); margin-top: 14px; line-height: 1.55; }
 
 /* ═══════════ FOOTER ═══════════ */
 footer { padding: 48px 80px 32px; background: var(--navy); border-top: 1px solid var(--border); }
@@ -525,19 +533,25 @@ footer { padding: 48px 80px 32px; background: var(--navy); border-top: 1px solid
 <!-- ═══════════ FOR COACHES ═══════════ -->
 <section class="forcoaches-section">
   <div class="forcoaches-grid">
-    <div class="reveal">
-      <h2>If you're a coach, this is <em>your</em> platform.</h2>
+    <div class="forcoaches-text reveal">
+      <h2>Coach with <em>clarity</em>. Grow with every session.</h2>
+      <p class="forcoaches-sub">Stop guessing what worked. See it. Understand it. Improve it&mdash;every time.</p>
       <ul class="forcoaches-list">
-        <li><span>&#10003;</span> Professional coaching platform</li>
-        <li><span>&#10003;</span> <strong>Practice</strong> tier: $99/mo &mdash; 20 clients, ~60 sessions</li>
-        <li><span>&#10003;</span> <strong>Scale</strong> tier: $179/mo &mdash; 60 clients, ~180 sessions</li>
+        <li><span>&#10003;</span> Know exactly what moved your client forward</li>
+        <li><span>&#10003;</span> See what you did well&mdash;and what you missed</li>
+        <li><span>&#10003;</span> Walk into every session prepared</li>
       </ul>
     </div>
     <div class="forcoaches-cta reveal">
-      <div class="price-tag">Starting at</div>
-      <div class="price">$99</div>
-      <div class="price-sub">per month &middot; two tiers, cancel anytime</div>
-      <a href="/coach-signup.html">List Your Practice &rarr;</a>
+      <div class="cta-pricing-head">Starting at $99/month</div>
+      <div class="cta-pricing-sub">Two tiers. Cancel anytime.</div>
+      <ul class="cta-tiers">
+        <li><strong>Practice</strong> &mdash; $99/mo (20 clients, ~60 sessions)</li>
+        <li><strong>Scale</strong> &mdash; $179/mo (60 clients, ~180 sessions)</li>
+      </ul>
+      <p class="cta-differentiator">Powered by session intelligence&mdash;so you don't just coach, you improve.</p>
+      <a href="/coach-signup.html">Start Coaching Smarter &rarr;</a>
+      <p class="cta-trust">No contracts. Cancel anytime. Built for real coaching sessions&mdash;not templates.</p>
     </div>
   </div>
 </section>
