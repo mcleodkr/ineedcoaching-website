@@ -1,11 +1,18 @@
 // Stripe webhook receiver. Verifies the signature against the configured
 // signing secret, then handles the events relevant to the course commerce
-// flow:
+// flow and the platform-billing subscription flow:
 //
-//   checkout.session.completed → create the enrollment + purchase ledger
-//                                row (idempotent on stripe_session_id).
-//   charge.refunded            → mark the matching purchase row refunded.
-//   charge.dispute.created     → mark disputed + write a coach notification.
+//   checkout.session.completed       → course / booking / package / gift
+//                                       (existing branched handlers).
+//   charge.refunded                  → mark the matching purchase row
+//                                       refunded.
+//   charge.dispute.created           → mark disputed + write a coach
+//                                       notification.
+//   customer.subscription.created    → provision coach_profiles + auth user
+//                                       for a new platform subscription.
+//   customer.subscription.updated    → sync tier / status / period_end.
+//   customer.subscription.deleted    → mark canceled.
+//   invoice.payment_succeeded        → refresh current_period_end on renewal.
 //
 // IMPORTANT: bodyParser must be disabled for signature verification — we
 // need the raw request body bytes.
@@ -250,6 +257,22 @@ export default async function handler(req, res) {
           });
         }
         return res.status(200).send('ok');
+      }
+
+      case 'customer.subscription.created': {
+        return handleSubscriptionCreated({ subscription: event.data.object, stripe, SUPABASE_URL, SB_HEADERS, res });
+      }
+
+      case 'customer.subscription.updated': {
+        return handleSubscriptionUpdated({ subscription: event.data.object, SUPABASE_URL, SB_HEADERS, res });
+      }
+
+      case 'customer.subscription.deleted': {
+        return handleSubscriptionDeleted({ subscription: event.data.object, SUPABASE_URL, SB_HEADERS, res });
+      }
+
+      case 'invoice.payment_succeeded': {
+        return handleInvoicePaymentSucceeded({ invoice: event.data.object, stripe, SUPABASE_URL, SB_HEADERS, res });
       }
 
       default:
@@ -566,5 +589,254 @@ async function handleGiftCompleted({ session, meta, SUPABASE_URL, SB_HEADERS, re
   } catch (mailErr) {
     console.warn('[stripe-webhook][gift] send invocation failed', mailErr && mailErr.message);
   }
+  return res.status(200).send('ok');
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Platform-billing subscription events (Phase 2)
+// ──────────────────────────────────────────────────────────────────────────
+//
+// Provisioning + lifecycle for the Practice $99 / Scale $179 subscriptions
+// created via /api/create-subscription-checkout. Source of truth lives on
+// Stripe; coach_profiles columns mirror the Stripe state per event.
+
+function tierFromPriceId(priceId) {
+  if (!priceId) return null;
+  const mode = (process.env.STRIPE_MODE || 'test').toLowerCase();
+  const practice = mode === 'live'
+    ? process.env.STRIPE_PRICE_PRACTICE_LIVE
+    : process.env.STRIPE_PRICE_PRACTICE_TEST;
+  const scale = mode === 'live'
+    ? process.env.STRIPE_PRICE_SCALE_LIVE
+    : process.env.STRIPE_PRICE_SCALE_TEST;
+  if (priceId === practice) return 'practice';
+  if (priceId === scale) return 'scale';
+  return null;
+}
+
+function periodEndIso(subscription) {
+  const ts = subscription && subscription.current_period_end;
+  return Number.isFinite(ts) ? new Date(ts * 1000).toISOString() : null;
+}
+
+function isCoachSignup(subscription) {
+  const meta = (subscription && subscription.metadata) || {};
+  return meta.signup_intent === 'coach_subscription';
+}
+
+// Create or upsert the Supabase auth user for a paid coach + send the
+// invite/recovery email so they can sign in. Tolerant of the user already
+// existing (e.g., the email was previously a client account).
+async function ensureCoachAuthUser({ email, SUPABASE_URL, SB_HEADERS }) {
+  if (!email) return;
+  try {
+    const createRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
+      method: 'POST',
+      headers: SB_HEADERS,
+      body: JSON.stringify({ email, email_confirm: true }),
+    });
+    if (!createRes.ok && createRes.status !== 422 && createRes.status !== 409) {
+      const txt = await createRes.text().catch(() => '');
+      console.warn('[stripe-webhook][sub] auth user create non-ok', createRes.status, txt);
+    }
+  } catch (e) {
+    console.warn('[stripe-webhook][sub] auth user create threw', e.message);
+  }
+  // Send a recovery / magic-link email so the coach can set up their
+  // password and land on the dashboard. Idempotent on Supabase's side —
+  // safe to re-trigger on subscription updates.
+  try {
+    await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
+      method: 'POST',
+      headers: SB_HEADERS,
+      body: JSON.stringify({ email }),
+    });
+  } catch (e) {
+    console.warn('[stripe-webhook][sub] recover email threw', e.message);
+  }
+}
+
+async function handleSubscriptionCreated({ subscription, stripe, SUPABASE_URL, SB_HEADERS, res }) {
+  if (!isCoachSignup(subscription)) {
+    // Not from /api/create-subscription-checkout — leave it alone. Connect
+    // destination charges or other future subscription products won't have
+    // this metadata flag.
+    return res.status(200).send('not_coach_signup');
+  }
+
+  const meta = subscription.metadata || {};
+  const item = subscription.items && subscription.items.data && subscription.items.data[0];
+  const priceId = item && item.price && item.price.id;
+  const tier = meta.tier || tierFromPriceId(priceId);
+  if (!tier) {
+    console.warn('[stripe-webhook][sub.created] could not resolve tier', { subId: subscription.id, priceId });
+    return res.status(200).send('tier_unresolved');
+  }
+
+  // Customer email — prefer the Stripe customer, fall back to metadata.
+  let email = (meta.signup_email || '').toLowerCase();
+  let stripeCustomerId = typeof subscription.customer === 'string'
+    ? subscription.customer
+    : (subscription.customer && subscription.customer.id) || null;
+  if (!email && stripeCustomerId) {
+    try {
+      const customer = await stripe.customers.retrieve(stripeCustomerId);
+      if (customer && !customer.deleted && customer.email) {
+        email = customer.email.toLowerCase();
+      }
+    } catch (e) {
+      console.warn('[stripe-webhook][sub.created] customer retrieve failed', e.message);
+    }
+  }
+  if (!email) {
+    console.error('[stripe-webhook][sub.created] no email resolvable', { subId: subscription.id });
+    return res.status(200).send('email_missing');
+  }
+
+  // Idempotency — if a coach_profile already carries this subscription id,
+  // we've already provisioned. Treat as success.
+  const dupRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/coach_profiles?stripe_subscription_id=eq.${encodeURIComponent(subscription.id)}&select=id&limit=1`,
+    { headers: SB_HEADERS }
+  );
+  const dups = await dupRes.json().catch(() => []);
+  if (Array.isArray(dups) && dups.length) {
+    return res.status(200).send('already provisioned');
+  }
+
+  // Existing coach (legacy / re-signup) — patch the subscription columns.
+  // Otherwise, insert a fresh row.
+  const existingRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/coach_profiles?user_email=eq.${encodeURIComponent(email)}&select=id&limit=1`,
+    { headers: SB_HEADERS }
+  );
+  const existing = await existingRes.json().catch(() => []);
+  const subscriptionFields = {
+    subscription_tier: tier,
+    subscription_status: subscription.status || 'active',
+    stripe_customer_id: stripeCustomerId,
+    stripe_subscription_id: subscription.id,
+    current_period_end: periodEndIso(subscription),
+  };
+
+  if (Array.isArray(existing) && existing.length) {
+    const id = existing[0].id;
+    const patchRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/coach_profiles?id=eq.${encodeURIComponent(id)}`,
+      {
+        method: 'PATCH',
+        headers: { ...SB_HEADERS, Prefer: 'return=minimal' },
+        body: JSON.stringify(subscriptionFields),
+      }
+    );
+    if (!patchRes.ok) {
+      const t = await patchRes.text().catch(() => '');
+      console.error('[stripe-webhook][sub.created] patch failed', patchRes.status, t);
+      return res.status(500).send('patch_failed');
+    }
+  } else {
+    const profileRow = {
+      ...subscriptionFields,
+      user_email: email,
+      full_name: meta.signup_full_name || null,
+      display_name: meta.signup_display_name || meta.signup_full_name || null,
+      bio: meta.signup_bio || null,
+      years_experience: meta.signup_years_experience ? parseInt(meta.signup_years_experience, 10) : null,
+      // specialty: meta.signup_specialty — coach_profiles uses an array
+      // column `specialties`, populated when the coach edits their profile.
+      // We deliberately leave it null here so the coach's own selections
+      // become the source of truth on first login.
+    };
+    const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/coach_profiles`, {
+      method: 'POST',
+      headers: { ...SB_HEADERS, Prefer: 'return=minimal' },
+      body: JSON.stringify(profileRow),
+    });
+    if (!insertRes.ok) {
+      const t = await insertRes.text().catch(() => '');
+      console.error('[stripe-webhook][sub.created] insert failed', insertRes.status, t);
+      return res.status(500).send('insert_failed');
+    }
+  }
+
+  await ensureCoachAuthUser({ email, SUPABASE_URL, SB_HEADERS });
+  return res.status(200).send('provisioned');
+}
+
+async function handleSubscriptionUpdated({ subscription, SUPABASE_URL, SB_HEADERS, res }) {
+  if (!isCoachSignup(subscription)) return res.status(200).send('not_coach_signup');
+
+  const item = subscription.items && subscription.items.data && subscription.items.data[0];
+  const priceId = item && item.price && item.price.id;
+  const tier = tierFromPriceId(priceId) || subscription.metadata?.tier || null;
+
+  const patch = {
+    subscription_status: subscription.status || null,
+    current_period_end: periodEndIso(subscription),
+  };
+  if (tier) patch.subscription_tier = tier;
+
+  const r = await fetch(
+    `${SUPABASE_URL}/rest/v1/coach_profiles?stripe_subscription_id=eq.${encodeURIComponent(subscription.id)}`,
+    {
+      method: 'PATCH',
+      headers: { ...SB_HEADERS, Prefer: 'return=minimal' },
+      body: JSON.stringify(patch),
+    }
+  );
+  if (!r.ok) {
+    const t = await r.text().catch(() => '');
+    console.warn('[stripe-webhook][sub.updated] patch non-ok', r.status, t);
+  }
+  return res.status(200).send('ok');
+}
+
+async function handleSubscriptionDeleted({ subscription, SUPABASE_URL, SB_HEADERS, res }) {
+  if (!isCoachSignup(subscription)) return res.status(200).send('not_coach_signup');
+
+  await fetch(
+    `${SUPABASE_URL}/rest/v1/coach_profiles?stripe_subscription_id=eq.${encodeURIComponent(subscription.id)}`,
+    {
+      method: 'PATCH',
+      headers: { ...SB_HEADERS, Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        subscription_status: 'canceled',
+        current_period_end: periodEndIso(subscription),
+      }),
+    }
+  );
+  return res.status(200).send('ok');
+}
+
+async function handleInvoicePaymentSucceeded({ invoice, stripe, SUPABASE_URL, SB_HEADERS, res }) {
+  // Only renewal invoices have a subscription attached; one-off invoices skip.
+  const subscriptionId = typeof invoice.subscription === 'string'
+    ? invoice.subscription
+    : (invoice.subscription && invoice.subscription.id) || null;
+  if (!subscriptionId) return res.status(200).send('not_subscription_invoice');
+
+  // We need the latest period_end for the renewal. Fetching the subscription
+  // (rather than trusting invoice.lines) keeps the column aligned with what
+  // customer.subscription.updated would write.
+  let subscription = null;
+  try {
+    subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  } catch (e) {
+    console.warn('[stripe-webhook][invoice] retrieve subscription failed', e.message);
+    return res.status(200).send('retrieve_failed');
+  }
+  if (!isCoachSignup(subscription)) return res.status(200).send('not_coach_signup');
+
+  await fetch(
+    `${SUPABASE_URL}/rest/v1/coach_profiles?stripe_subscription_id=eq.${encodeURIComponent(subscriptionId)}`,
+    {
+      method: 'PATCH',
+      headers: { ...SB_HEADERS, Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        subscription_status: subscription.status || 'active',
+        current_period_end: periodEndIso(subscription),
+      }),
+    }
+  );
   return res.status(200).send('ok');
 }
