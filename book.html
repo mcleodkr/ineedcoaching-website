@@ -165,8 +165,42 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
 .success-intake-thanks.hidden { display: none; }
 .success-intake-thanks-icon { font-size: 1.4rem; margin-bottom: 4px; }
 .success-intake-thanks p { color: var(--ink); font-size: 0.92rem; }
+/* Brief 1: post-booking client self-serve actions */
+.success-manage { max-width: 560px; margin: 22px auto 0; padding: 22px 26px; background: var(--warm); border: 1px solid var(--border); border-radius: var(--r); text-align: left; box-shadow: 0 2px 12px rgba(26,58,82,0.04); }
+.success-manage.hidden { display: none; }
+.success-manage h4 { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--ink); margin-bottom: 4px; font-weight: 700; }
+.success-manage p { font-size: 0.84rem; color: var(--muted); line-height: 1.5; margin-bottom: 14px; }
+.success-manage-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn-manage { display: inline-flex; align-items: center; justify-content: center; padding: 10px 18px; border-radius: 50px; font-family: inherit; font-size: 0.84rem; font-weight: 700; cursor: pointer; transition: all 0.18s ease; text-decoration: none; }
+.btn-manage-reschedule { background: var(--ink); color: var(--warm); border: 1.5px solid var(--ink); }
+.btn-manage-reschedule:hover { background: transparent; color: var(--ink); }
+.btn-manage-cancel { background: transparent; color: var(--muted); border: 1.5px solid var(--border); }
+.btn-manage-cancel:hover { color: #b93a3a; border-color: #b93a3a; }
+.success-cancelled { max-width: 560px; margin: 22px auto 0; padding: 22px 26px; background: rgba(196,68,68,0.06); border: 1px solid rgba(196,68,68,0.25); border-radius: var(--r); text-align: center; color: var(--ink); font-size: 0.92rem; line-height: 1.55; }
+.success-cancelled.hidden { display: none; }
+.success-cancelled strong { color: var(--ink); }
+/* Cancel modal */
+.cancel-modal { display: none; position: fixed; inset: 0; background: rgba(26,58,82,0.55); z-index: 600; align-items: center; justify-content: center; padding: 20px; }
+.cancel-modal.is-open { display: flex; }
+.cancel-modal-card { background: var(--warm); border-radius: var(--r); max-width: 460px; width: 100%; padding: 30px 32px; box-shadow: 0 16px 48px rgba(0,0,0,0.18); position: relative; }
+.cancel-modal-card h3 { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+.cancel-modal-summary { font-size: 0.88rem; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
+.cancel-modal-refund { padding: 14px 16px; background: var(--cream); border-left: 3px solid var(--gold); border-radius: 0 var(--r-sm, 8px) var(--r-sm, 8px) 0; font-size: 0.88rem; color: var(--ink); margin-bottom: 18px; line-height: 1.5; }
+.cancel-modal-refund strong { color: var(--ink); }
+.cancel-modal-refund.is-no-refund { border-color: #b93a3a; background: rgba(196,68,68,0.06); }
+.cancel-modal-error { display: none; padding: 12px 14px; background: rgba(196,68,68,0.08); border-left: 3px solid #b93a3a; border-radius: 0 8px 8px 0; font-size: 0.85rem; color: #8a2828; margin-bottom: 14px; line-height: 1.5; }
+.cancel-modal-error.is-shown { display: block; }
+.cancel-modal-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+.cancel-modal-btn { padding: 10px 20px; border-radius: 50px; font-family: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; border: 1.5px solid transparent; transition: all 0.15s ease; }
+.cancel-modal-btn-back { background: transparent; color: var(--muted); border-color: var(--border); }
+.cancel-modal-btn-back:hover { color: var(--ink); border-color: var(--ink); }
+.cancel-modal-btn-confirm { background: #b93a3a; color: var(--warm); border-color: #b93a3a; }
+.cancel-modal-btn-confirm:hover:not(:disabled) { background: #9a2c2c; border-color: #9a2c2c; }
+.cancel-modal-btn-confirm:disabled { opacity: 0.55; cursor: not-allowed; }
 @media (max-width: 600px) {
   .intake-radios { grid-template-columns: 1fr; }
+  .success-manage-actions { flex-direction: column; align-items: stretch; }
+  .btn-manage { width: 100%; }
 }
 
 /* Footer */
@@ -412,6 +446,38 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
     <div class="success-intake-thanks-icon">&#10003;</div>
     <p><strong>Thanks &mdash; your coach will see this before your session.</strong></p>
   </div>
+
+  <!-- Brief 1: post-booking client self-serve actions. Hidden until
+       lastBookingId AND lastRescheduleToken are both populated. Hidden
+       again once the booking is cancelled — success-cancelled takes over. -->
+  <div id="success-manage" class="success-manage hidden">
+    <h4>Need to change something?</h4>
+    <p>Plans shift. You can reschedule or cancel right here without emailing your coach.</p>
+    <div class="success-manage-actions">
+      <a id="manage-reschedule-link" class="btn-manage btn-manage-reschedule" href="#">Reschedule this session</a>
+      <button id="manage-cancel-btn" type="button" class="btn-manage btn-manage-cancel">Cancel booking</button>
+    </div>
+  </div>
+
+  <div id="success-cancelled" class="success-cancelled hidden">
+    <p id="success-cancelled-text"><strong>This session has been cancelled.</strong></p>
+  </div>
+</div>
+
+<!-- Brief 1: cancel confirmation modal. Refund preview is fetched from
+     /api/cancel-preview on open so the client sees the actual amount
+     before confirming. -->
+<div id="cancel-modal" class="cancel-modal" role="dialog" aria-modal="true" aria-labelledby="cancel-modal-title">
+  <div class="cancel-modal-card">
+    <h3 id="cancel-modal-title">Cancel this session?</h3>
+    <p id="cancel-modal-summary" class="cancel-modal-summary">We're calculating your refund&hellip;</p>
+    <div id="cancel-modal-refund" class="cancel-modal-refund" style="display:none;"></div>
+    <div id="cancel-modal-error" class="cancel-modal-error" aria-live="polite"></div>
+    <div class="cancel-modal-actions">
+      <button id="cancel-modal-back" type="button" class="cancel-modal-btn cancel-modal-btn-back">Keep booking</button>
+      <button id="cancel-modal-confirm" type="button" class="cancel-modal-btn cancel-modal-btn-confirm" disabled>Cancel session</button>
+    </div>
+  </div>
 </div>
 
 <footer class="book-footer">
@@ -526,6 +592,12 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
   var appliedGift = null;   // { code, gift_certificate_id, covers_full, credit_cents, ... }
   var lastSlotResponse = null; // raw /api/availability-slots response, used to pivot to waitlist on empty
   var lastBookingId = null;    // set by every success path; powers the post-booking intake form
+  // Brief 1: post-booking self-serve. Token is minted server-side by
+  // /api/booking-confirmation; we fetch it after the booking is confirmed
+  // so the reschedule + cancel buttons can pass it as URL/auth.
+  var lastRescheduleToken = null;
+  var lastRescheduleTokenExpiry = null;
+  var lastBookingCancelled = false;
 
   // ── Load coach + services ──
   async function loadCoach() {
@@ -1233,7 +1305,71 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
       else intakeEl.classList.add('hidden');
     }
     if (intakeThanksEl) intakeThanksEl.classList.add('hidden');
+    // Brief 1: post-booking manage block. Token fetch is async and lazy —
+    // the buttons stay hidden until the row's reschedule_token is readable.
+    var manageEl = $('success-manage');
+    var cancelledEl = $('success-cancelled');
+    if (manageEl) manageEl.classList.add('hidden');
+    if (cancelledEl) cancelledEl.classList.add('hidden');
+    lastBookingCancelled = false;
+    if (lastBookingId) revealManageActions(lastBookingId);
     showSuccess();
+  }
+
+  // Brief 1: the reschedule_token is minted by /api/booking-confirmation
+  // server-side. Each success path either fires that endpoint directly
+  // (free, gift) or polls until status='confirmed' (paid via Stripe webhook),
+  // so by the time we land here the token row is populated. Reads happen
+  // through the public anon key — same gates the existing /reschedule.html
+  // page already uses.
+  async function fetchRescheduleToken(bookingId) {
+    if (!bookingId) return null;
+    try {
+      var res = await fetch(REST + '/coach_bookings?id=eq.' + encodeURIComponent(bookingId)
+        + '&select=reschedule_token,reschedule_token_expires_at,status&limit=1', { headers: HEADERS_GET });
+      if (!res.ok) return null;
+      var rows = await res.json();
+      var row = rows && rows[0];
+      if (!row) return null;
+      return {
+        token: row.reschedule_token || null,
+        expiry: row.reschedule_token_expires_at || null,
+        status: row.status || null,
+      };
+    } catch (e) {
+      console.warn('[book] reschedule token fetch failed', e);
+      return null;
+    }
+  }
+
+  async function revealManageActions(bookingId) {
+    var manageEl = $('success-manage');
+    if (!manageEl) return;
+    // Quick poll loop — token is usually present immediately, but on the
+    // paid path the webhook may have just fired and we want to give it a
+    // beat. Three attempts × 1s.
+    var info = null;
+    for (var attempt = 0; attempt < 3; attempt++) {
+      info = await fetchRescheduleToken(bookingId);
+      if (info && info.token) break;
+      await sleep(1000);
+    }
+    if (!info || !info.token) {
+      // Couldn't get a token — leave the manage block hidden. The
+      // confirmation email still includes a /reschedule link.
+      return;
+    }
+    if (info.status && info.status !== 'confirmed' && info.status !== 'manual') {
+      return;
+    }
+    lastRescheduleToken = info.token;
+    lastRescheduleTokenExpiry = info.expiry;
+    var link = $('manage-reschedule-link');
+    if (link) {
+      link.href = '/reschedule?booking_id=' + encodeURIComponent(bookingId)
+        + '&token=' + encodeURIComponent(info.token);
+    }
+    manageEl.classList.remove('hidden');
   }
 
   // ── Post-Stripe return path (PR 1.D) ──
@@ -1395,6 +1531,164 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
         errEl.textContent = 'Could not save your responses. Please retry.';
         btn.disabled = false;
         btn.textContent = prevLabel;
+      }
+    });
+  })();
+
+  // ── Post-booking manage actions (Brief 1) ──────────────────────────────
+  // Reschedule → /reschedule.html (already token-validated end-to-end).
+  // Cancel → /api/cancel-preview for refund math, then /api/booking-cancel-self.
+  // Refund preview is fetched on modal open so the client sees the actual
+  // amount (full vs late-cancel fee) before confirming.
+  (function wireManageActions() {
+    var cancelBtn = $('manage-cancel-btn');
+    var modal = $('cancel-modal');
+    if (!cancelBtn || !modal) return;
+    var modalSummary = $('cancel-modal-summary');
+    var modalRefund = $('cancel-modal-refund');
+    var modalError = $('cancel-modal-error');
+    var modalBack = $('cancel-modal-back');
+    var modalConfirm = $('cancel-modal-confirm');
+
+    function formatMoney(cents) {
+      var dollars = (Number(cents || 0) / 100);
+      return '$' + dollars.toFixed(2).replace(/\.00$/, '');
+    }
+
+    function setError(msg) {
+      if (!msg) {
+        modalError.textContent = '';
+        modalError.classList.remove('is-shown');
+        return;
+      }
+      modalError.textContent = msg;
+      modalError.classList.add('is-shown');
+    }
+
+    function closeModal() {
+      modal.classList.remove('is-open');
+    }
+
+    function openModal() {
+      modal.classList.add('is-open');
+      setError('');
+      modalRefund.style.display = 'none';
+      modalRefund.classList.remove('is-no-refund');
+      modalRefund.innerHTML = '';
+      modalSummary.textContent = 'Calculating your refund…';
+      modalConfirm.disabled = true;
+      modalConfirm.textContent = 'Cancel session';
+    }
+
+    modalBack.addEventListener('click', closeModal);
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal) closeModal();
+    });
+
+    cancelBtn.addEventListener('click', async function () {
+      if (!lastBookingId || !lastRescheduleToken) {
+        // Defensive — the manage block shouldn't have shown without these.
+        return;
+      }
+      openModal();
+      try {
+        var res = await fetch('/api/cancel-preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ booking_id: lastBookingId, token: lastRescheduleToken }),
+        });
+        var data = await res.json().catch(function () { return {}; });
+        if (!res.ok || !data.ok) {
+          var msg = 'We couldn\'t load the refund details. Please try again or reply to your confirmation email.';
+          if (data.error === 'token_expired') msg = 'Your cancellation link has expired. Reply to your confirmation email and your coach will help.';
+          else if (data.error === 'session_in_past') msg = 'This session is in the past — please reach out to your coach directly.';
+          else if (data.error === 'not_cancelable') msg = 'This booking can\'t be cancelled from here. Reply to your confirmation email.';
+          setError(msg);
+          modalConfirm.disabled = true;
+          modalSummary.textContent = '';
+          return;
+        }
+        modalSummary.textContent = 'Once you confirm, your coach will be notified and the session will be removed from both calendars.';
+        if (!data.is_paid) {
+          modalRefund.innerHTML = '<strong>This was a free session</strong>, so there\'s nothing to refund. You can cancel without penalty.';
+          modalRefund.style.display = 'block';
+        } else if (Number(data.refund_cents) <= 0) {
+          modalRefund.classList.add('is-no-refund');
+          var hours = data.late_cancel_window_hours || 24;
+          modalRefund.innerHTML = '<strong>This session cannot be refunded.</strong> ' + escapeHtml(data.coach_name) + '\'s policy doesn\'t issue refunds for cancellations within ' + hours + ' hours of the session. Cancel anyway?';
+          modalRefund.style.display = 'block';
+        } else if (Number(data.fee_cents) > 0) {
+          modalRefund.innerHTML = '<strong>' + formatMoney(data.refund_cents) + ' will be refunded</strong> to your original payment method (' + formatMoney(data.fee_cents) + ' late-cancellation fee applies). Refunds usually appear in 5–10 business days.';
+          modalRefund.style.display = 'block';
+        } else {
+          modalRefund.innerHTML = '<strong>' + formatMoney(data.refund_cents) + ' will be refunded</strong> in full to your original payment method. Refunds usually appear in 5–10 business days.';
+          modalRefund.style.display = 'block';
+        }
+        modalConfirm.disabled = false;
+      } catch (err) {
+        console.warn('[book] cancel preview failed', err);
+        setError('We couldn\'t reach the refund service. Please try again in a moment.');
+        modalConfirm.disabled = true;
+      }
+    });
+
+    modalConfirm.addEventListener('click', async function () {
+      if (!lastBookingId || !lastRescheduleToken) return;
+      modalConfirm.disabled = true;
+      modalBack.disabled = true;
+      modalConfirm.textContent = 'Cancelling…';
+      setError('');
+      try {
+        var res = await fetch('/api/booking-cancel-self', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ booking_id: lastBookingId, token: lastRescheduleToken }),
+        });
+        var data = await res.json().catch(function () { return {}; });
+        if (res.status === 502 && data && data.needs_manual_review) {
+          // Refund failed — booking left as confirmed, coach notified.
+          // Show the verbatim message from the server (already formatted
+          // with the coach's email).
+          setError(data.message || 'We couldn\'t process your cancellation automatically. Please contact your coach directly.');
+          modalConfirm.disabled = true;
+          modalConfirm.textContent = 'Cancel session';
+          modalBack.disabled = false;
+          modalBack.textContent = 'Close';
+          return;
+        }
+        if (!res.ok || !data.ok) {
+          setError('Could not cancel the session. ' + (data && data.error ? '(' + data.error + ')' : '') + ' Please reply to your confirmation email.');
+          modalConfirm.disabled = false;
+          modalConfirm.textContent = 'Cancel session';
+          modalBack.disabled = false;
+          return;
+        }
+        // Success — flip the post-booking UI to the cancelled state.
+        lastBookingCancelled = true;
+        var manageEl = $('success-manage');
+        var cancelledEl = $('success-cancelled');
+        var cancelledText = $('success-cancelled-text');
+        if (manageEl) manageEl.classList.add('hidden');
+        var intakeEl = $('success-intake');
+        var intakeThanksEl = $('success-intake-thanks');
+        if (intakeEl) intakeEl.classList.add('hidden');
+        if (intakeThanksEl) intakeThanksEl.classList.add('hidden');
+        if (cancelledEl) {
+          if (cancelledText) {
+            var refundLine = (Number(data.refund_cents) > 0)
+              ? ' A refund of ' + formatMoney(data.refund_cents) + ' is on its way to your original payment method.'
+              : '';
+            cancelledText.innerHTML = '<strong>This session has been cancelled.</strong>' + refundLine + ' We sent you and your coach a confirmation email.';
+          }
+          cancelledEl.classList.remove('hidden');
+        }
+        closeModal();
+      } catch (err) {
+        console.warn('[book] cancel failed', err);
+        setError('We couldn\'t reach the cancellation service. Please try again in a moment.');
+        modalConfirm.disabled = false;
+        modalConfirm.textContent = 'Cancel session';
+        modalBack.disabled = false;
       }
     });
   })();
