@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pricing — ineedcoaching.org</title>
+<meta name="description" content="Simple pricing for coaches. Practice $99/month or Scale $179/month — every feature included on both tiers. AI session intelligence, client experience, and business tools.">
+<meta property="og:title" content="Pricing — ineedcoaching.org">
+<meta property="og:description" content="Practice $99/mo or Scale $179/mo. Every feature on both tiers — capacity is the only difference.">
+<meta property="og:url" content="https://www.ineedcoaching.org/pricing">
+<meta property="og:type" content="website">
+<link rel="canonical" href="https://www.ineedcoaching.org/pricing">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #1a3a52;
+  --navy-deep: #122a3d;
+  --gold: #c49a3c;
+  --gold-soft: #d4a94c;
+  --gold-deep: #a87d1f;
+  --gold-tint: rgba(196,154,60,0.10);
+  --cream: #f7f4ee;
+  --cream-warm: #f3eee2;
+  --warm: #ffffff;
+  --ink: #1a3a52;
+  --ink-muted: #5a6470;
+  --muted: #8a8a9a;
+  --border: #e8e4dc;
+  --border-strong: #d8d2c4;
+  --rule: rgba(26,58,82,0.08);
+  --r: 14px;
+  --r-sm: 8px;
+  --r-lg: 20px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Cabinet Grotesk', sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── NAV ─────────────────────────────────────────────────────────── */
+nav.site-nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 300;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 52px;
+  background: rgba(26,58,82,0.95);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+nav.site-nav .logo {
+  font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700;
+  color: var(--cream); text-decoration: none;
+}
+nav.site-nav .logo em { color: var(--gold); font-style: italic; }
+nav.site-nav .links { display: flex; align-items: center; gap: 22px; }
+nav.site-nav .links a {
+  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  color: rgba(247,244,238,0.7); text-decoration: none; transition: color 0.15s;
+}
+nav.site-nav .links a:hover { color: var(--cream); }
+nav.site-nav .links .nav-pill {
+  font-size: 0.78rem; font-weight: 700; background: var(--gold); color: var(--navy);
+  padding: 8px 18px; border-radius: 50px; text-transform: none; letter-spacing: 0;
+}
+nav.site-nav .links .nav-pill:hover { background: var(--gold-soft); color: var(--navy); }
+
+/* ── HERO ────────────────────────────────────────────────────────── */
+.hero {
+  position: relative;
+  padding: 150px 24px 56px;
+  text-align: center;
+  background: var(--cream);
+  isolation: isolate;
+}
+.hero::before {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(196,154,60,0.10), transparent 45%),
+    radial-gradient(circle at 80% 20%, rgba(26,58,82,0.06), transparent 50%);
+  z-index: -1;
+}
+.hero .eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-size: 0.7rem; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 24px;
+}
+.eyebrow-dot {
+  width: 6px; height: 6px; background: var(--gold); border-radius: 50%;
+  animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.55); } }
+.hero h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2.2rem, 4.6vw, 3.8rem);
+  line-height: 1.08; letter-spacing: -0.025em;
+  color: var(--navy);
+  max-width: 880px; margin: 0 auto 22px;
+  font-weight: 700;
+}
+.hero h1 em { color: var(--gold); font-style: italic; font-weight: 700; }
+.hero .lede {
+  font-size: clamp(1rem, 1.3vw, 1.15rem);
+  line-height: 1.7; color: var(--ink-muted);
+  max-width: 600px; margin: 0 auto;
+}
+
+/* ── TIERS ──────────────────────────────────────────────────────── */
+.tiers { padding: 56px 24px 80px; background: var(--cream); }
+.tiers-inner { max-width: 940px; margin: 0 auto; }
+.tier-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px;
+}
+.tier-card {
+  position: relative;
+  background: var(--warm);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 40px 36px 36px;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.tier-card.is-featured {
+  background: var(--navy);
+  color: var(--cream);
+  border-color: var(--navy);
+}
+.tier-card .tier-name {
+  font-size: 0.7rem; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 16px;
+}
+.tier-card .tier-price {
+  font-family: 'Playfair Display', serif;
+  font-size: 3rem; font-weight: 700; line-height: 1;
+  color: var(--navy);
+  margin-bottom: 4px;
+  letter-spacing: -0.02em;
+}
+.tier-card .tier-price .period {
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-size: 0.9rem; font-weight: 500; color: var(--muted);
+  margin-left: 6px; letter-spacing: 0;
+}
+.tier-card.is-featured .tier-price { color: var(--cream); }
+.tier-card.is-featured .tier-price .period { color: rgba(247,244,238,0.6); }
+.tier-card .tier-pitch {
+  font-size: 0.92rem; line-height: 1.6; color: var(--ink-muted);
+  margin: 18px 0 22px;
+}
+.tier-card.is-featured .tier-pitch { color: rgba(247,244,238,0.8); }
+.tier-capacity {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  padding: 18px;
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  margin-bottom: 22px;
+}
+.tier-card.is-featured .tier-capacity {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.08);
+}
+.tier-capacity .cap-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.6rem; font-weight: 700; color: var(--navy); line-height: 1;
+}
+.tier-card.is-featured .tier-capacity .cap-num { color: var(--gold); }
+.tier-capacity .cap-label {
+  font-size: 0.74rem; color: var(--muted); margin-top: 6px;
+  letter-spacing: 0.02em;
+}
+.tier-card.is-featured .tier-capacity .cap-label { color: rgba(247,244,238,0.65); }
+.tier-card .tier-overage {
+  font-size: 0.78rem; color: var(--muted);
+  text-align: center; padding-top: 4px;
+}
+.tier-card.is-featured .tier-overage { color: rgba(247,244,238,0.55); }
+.tier-card .pick-tier-btn {
+  display: block; width: 100%; margin-top: 18px;
+  padding: 14px 24px; border-radius: 50px;
+  font-family: inherit; font-size: 0.9rem; font-weight: 700;
+  cursor: pointer; text-decoration: none; text-align: center;
+  background: var(--navy); color: var(--cream);
+  border: 2px solid var(--navy);
+  transition: all 0.18s ease;
+}
+.tier-card.is-featured .pick-tier-btn {
+  background: var(--gold); color: var(--navy); border-color: var(--gold);
+}
+.tier-card .pick-tier-btn:hover { background: var(--navy-deep); border-color: var(--navy-deep); }
+.tier-card.is-featured .pick-tier-btn:hover { background: var(--gold-soft); border-color: var(--gold-soft); }
+
+.tier-shared-note {
+  text-align: center; max-width: 640px; margin: 36px auto 0;
+  padding: 18px 24px;
+  background: var(--gold-tint);
+  border: 1px solid rgba(196,154,60,0.28);
+  border-radius: var(--r);
+  font-size: 0.92rem; color: var(--navy); line-height: 1.65;
+}
+.tier-shared-note strong { color: var(--gold-deep); font-weight: 700; }
+
+/* ── FEATURE LIST ───────────────────────────────────────────────── */
+.features { padding: 80px 24px; background: var(--cream-warm); }
+.features-inner { max-width: 800px; margin: 0 auto; }
+.features-header { text-align: center; margin-bottom: 56px; }
+.features-eyebrow {
+  font-size: 0.7rem; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 14px;
+}
+.features-header h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  line-height: 1.15; letter-spacing: -0.02em;
+  color: var(--navy);
+  margin-bottom: 14px; font-weight: 700;
+}
+.features-header h2 em { color: var(--gold); font-style: italic; }
+.features-header p {
+  font-size: 1rem; line-height: 1.7; color: var(--ink-muted);
+  max-width: 560px; margin: 0 auto;
+}
+
+.feature-category { margin-bottom: 48px; }
+.feature-category:last-child { margin-bottom: 0; }
+.feature-category h3 {
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-size: 0.74rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--gold-deep);
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(196,154,60,0.28);
+  margin-bottom: 8px;
+}
+.feature-list {
+  list-style: none;
+}
+.feature-item {
+  border-bottom: 1px solid var(--rule);
+}
+.feature-item:last-child { border-bottom: none; }
+
+.feature-row {
+  width: 100%;
+  display: flex; align-items: center; gap: 16px;
+  padding: 18px 4px;
+  background: none; border: none;
+  font-family: inherit; text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.feature-row:hover { background: rgba(196,154,60,0.05); }
+.feature-row:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; border-radius: 6px; }
+.feature-check {
+  flex-shrink: 0;
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--gold-tint); color: var(--gold-deep);
+  border-radius: 50%; font-size: 0.78rem; font-weight: 800;
+}
+.feature-name {
+  flex: 1;
+  font-size: 1rem; font-weight: 500; color: var(--navy);
+  line-height: 1.4;
+}
+.feature-toggle {
+  flex-shrink: 0;
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted); font-size: 0.85rem;
+  transition: transform 0.2s ease, color 0.15s ease;
+}
+.feature-row[aria-expanded="true"] .feature-toggle {
+  transform: rotate(180deg);
+  color: var(--gold);
+}
+.feature-row[aria-expanded="true"] { background: rgba(196,154,60,0.05); }
+.feature-row[aria-expanded="true"] + .feature-explain {
+  max-height: 200px;
+  padding-bottom: 18px;
+}
+.feature-explain {
+  max-height: 0;
+  overflow: hidden;
+  padding: 0 4px 0 50px;
+  font-size: 0.92rem; line-height: 1.65;
+  color: var(--ink-muted);
+  transition: max-height 0.25s ease, padding 0.25s ease;
+}
+
+/* ── BOTTOM CTA ─────────────────────────────────────────────────── */
+.cta {
+  padding: 80px 24px;
+  background: var(--cream);
+  text-align: center;
+}
+.cta-inner { max-width: 640px; margin: 0 auto; }
+.cta h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.7rem, 2.6vw, 2.2rem);
+  color: var(--navy); line-height: 1.2; letter-spacing: -0.015em;
+  margin-bottom: 14px; font-weight: 700;
+}
+.cta h2 em { color: var(--gold); font-style: italic; }
+.cta p {
+  font-size: 1rem; color: var(--ink-muted); line-height: 1.7;
+  margin-bottom: 28px; max-width: 540px; margin-left: auto; margin-right: auto;
+}
+.cta .btn-primary {
+  display: inline-block; padding: 16px 32px; border-radius: 50px;
+  background: var(--gold); color: var(--navy);
+  border: 2px solid var(--gold);
+  font-family: inherit; font-size: 0.95rem; font-weight: 700;
+  text-decoration: none; cursor: pointer;
+  transition: all 0.18s ease;
+}
+.cta .btn-primary:hover { background: var(--gold-soft); border-color: var(--gold-soft); transform: translateY(-1px); }
+.cta-fine {
+  font-size: 0.78rem; color: var(--muted); margin-top: 14px;
+}
+
+/* ── FOOTER ─────────────────────────────────────────────────────── */
+footer.site-footer {
+  padding: 48px 24px;
+  background: var(--navy);
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  text-align: center;
+}
+.footer-logo { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--cream); text-decoration: none; }
+.footer-logo em { color: var(--gold); font-style: italic; }
+.footer-links { display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; }
+.footer-links a { font-size: 0.74rem; color: rgba(247,244,238,0.6); text-decoration: none; transition: color 0.15s; }
+.footer-links a:hover { color: var(--gold); }
+.footer-note { font-size: 0.74rem; color: rgba(247,244,238,0.5); }
+.footer-note a { color: var(--gold); text-decoration: none; }
+.footer-crisis { font-size: 0.7rem; color: rgba(247,244,238,0.45); }
+
+/* ── RESPONSIVE ─────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  nav.site-nav { padding: 12px 24px; }
+  .tier-grid { grid-template-columns: 1fr; }
+  .tier-card { padding: 32px 24px 28px; }
+  .hero { padding: 120px 18px 48px; }
+  .features { padding: 64px 18px; }
+  .cta { padding: 64px 18px; }
+  .feature-row { padding: 16px 4px; gap: 12px; }
+  .feature-name { font-size: 0.94rem; }
+  .feature-explain { padding: 0 4px 0 42px; font-size: 0.88rem; }
+}
+</style>
+<style data-MOBILE_NAV_HAMBURGER_v1>
+@media (max-width: 900px) {
+  #nav-hamburger { display: flex !important; }
+  #nav-links-container {
+    position: fixed; top: 60px; left: 0; right: 0;
+    background: rgba(26,58,82,0.98); backdrop-filter: blur(14px);
+    flex-direction: column !important; align-items: stretch !important;
+    gap: 0 !important; padding: 16px 24px 24px !important;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    transform: translateY(-110%); transition: transform 0.25s ease;
+    max-height: calc(100vh - 60px); overflow-y: auto;
+  }
+  #nav-links-container.nav-open { transform: translateY(0); }
+  #nav-links-container > a {
+    display: block; padding: 14px 8px !important;
+    border-bottom: 1px solid rgba(255,255,255,0.06); text-align: left;
+  }
+  #nav-links-container > a.nav-pill {
+    margin-top: 8px; border-radius: 8px !important;
+    text-align: center; border-bottom: none;
+  }
+  #nav-hamburger.is-open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  #nav-hamburger.is-open span:nth-child(2) { opacity: 0; }
+  #nav-hamburger.is-open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+}
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="/" class="logo"><em>i</em>need<em>coaching</em>.org</a>
+  <button id="nav-hamburger" aria-label="Open menu" aria-expanded="false" style="display:none;background:none;border:none;cursor:pointer;padding:8px;flex-direction:column;gap:5px;">
+    <span style="width:24px;height:2px;background:#f7f4ee;border-radius:2px;transition:transform 0.2s;"></span>
+    <span style="width:24px;height:2px;background:#f7f4ee;border-radius:2px;transition:opacity 0.2s;"></span>
+    <span style="width:24px;height:2px;background:#f7f4ee;border-radius:2px;transition:transform 0.2s;"></span>
+  </button>
+  <div id="nav-links-container" class="links">
+    <a href="/coaches.html">Coaches</a>
+    <a href="/sessions.html">Sessions</a>
+    <a href="/coach-courses.html">Courses</a>
+    <a href="/#articles">Articles</a>
+    <a href="/coaching-commons.html">Commons</a>
+    <a href="/coach-dashboard.html">Dashboard</a>
+    <a href="/coach-signup.html" class="nav-pill">List your practice</a>
+  </div>
+</nav>
+
+<!-- ─── HERO ──────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="eyebrow"><span class="eyebrow-dot"></span> Pricing</div>
+  <h1>Simple pricing. <em>Every feature</em> on every plan.</h1>
+  <p class="lede">Two tiers, one feature set. The only difference is how many active clients and sessions you handle each month.</p>
+</section>
+
+<!-- ─── TIERS ─────────────────────────────────────────────────────── -->
+<section class="tiers">
+  <div class="tiers-inner">
+    <div class="tier-grid">
+      <div class="tier-card">
+        <div class="tier-name">Practice</div>
+        <div class="tier-price">$99<span class="period">/ month</span></div>
+        <p class="tier-pitch">For solo coaches building a steady book of clients. Plenty of room to run a real practice without crowding your week.</p>
+        <div class="tier-capacity">
+          <div>
+            <div class="cap-num">20</div>
+            <div class="cap-label">active clients</div>
+          </div>
+          <div>
+            <div class="cap-num">~60</div>
+            <div class="cap-label">sessions / month</div>
+          </div>
+        </div>
+        <a href="/coach-signup.html" class="pick-tier-btn">Start with Practice</a>
+        <p class="tier-overage">Overage: $3 / session above the cap.</p>
+      </div>
+
+      <div class="tier-card is-featured">
+        <div class="tier-name">Scale</div>
+        <div class="tier-price">$179<span class="period">/ month</span></div>
+        <p class="tier-pitch">For established coaches running a full caseload — or coaching teams running shared workflows under one practice.</p>
+        <div class="tier-capacity">
+          <div>
+            <div class="cap-num">60</div>
+            <div class="cap-label">active clients</div>
+          </div>
+          <div>
+            <div class="cap-num">~180</div>
+            <div class="cap-label">sessions / month</div>
+          </div>
+        </div>
+        <a href="/coach-signup.html" class="pick-tier-btn">Start with Scale</a>
+        <p class="tier-overage">Overage: $3 / session above the cap.</p>
+      </div>
+    </div>
+
+    <p class="tier-shared-note"><strong>Same toolkit on both tiers.</strong> You're picking capacity, not capability. Switch between Practice and Scale anytime from your dashboard — billing prorates automatically.</p>
+  </div>
+</section>
+
+<!-- ─── FEATURE LIST ──────────────────────────────────────────────── -->
+<section class="features">
+  <div class="features-inner">
+    <div class="features-header">
+      <div class="features-eyebrow">What's included</div>
+      <h2>Everything you need to <em>run a coaching practice</em>.</h2>
+      <p>Tap any feature for a plain-English explanation of what it does for you.</p>
+    </div>
+
+    <!-- AI & COACHING INTELLIGENCE -->
+    <div class="feature-category">
+      <h3>AI &amp; Coaching Intelligence</h3>
+      <ul class="feature-list">
+        <li class="feature-item">
+          <button type="button" class="feature-row" aria-expanded="false">
+            <span class="feature-check">&#10003;</span>
+            <span class="feature-name">Coach Clarity</span>
+            <span class="feature-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="feature-explain">AI analyzes every session to show you what landed with your client, what you missed, and patterns over time. See exactly what's working.</div>
+        </li>
+        <li class="feature-item">
+          <button type="button" class="feature-row" aria-expanded="false">
+            <span class="feature-check">&#10003;</span>
+            <span class="feature-name">Pattern Map</span>
+            <span class="feature-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="feature-explain">Track how each client evolves across all your sessions. Spot patterns you'd never see on your own.</div>
+        </li>
+        <li class="feature-item">
+          <button type="button" class="feature-row" aria-expanded="false">
+            <span class="feature-check">&#10003;</span>
+            <span class="feature-name">Pre-session prep briefs</span>
+            <span class="feature-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="feature-explain">Walk into every session with a one-page brief on what your client said last time, what shifted, and what to revisit. No more flipping through old notes.</div>
+        </li>
+        <li class="feature-item">
+          <button type="button" class="feature-row" aria-expanded="false">
+            <span class="feature-check">&#10003;</span>
+            <span class="feature-name">Session recordings &amp; transcripts</span>
+            <span class="feature-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="feature-explain">Upload a recording or paste a transcript and we structure it into searchable session notes. Your full history, in one place.</div>
+        </li>
+        <li class="feature-item">
+          <button type="button" class="feature-row" aria-expanded="false">
+            <span class="feature-check">&#10003;</span>
+            <span class="feature-name">Session notes &amp; templates</span>
+            <span class="feature-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="feature-explain">Auto-formatted session notes in GROW, CLEAR, or OSKAR &mdash; or build your own template. Stop reinventing the page every time.</div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- CLIENT EXPERIENCE -->
+    <div class="feature-category">
+      <h3>Client Experience</h3>
+      <ul class="feature-list">
+        <li class="feature-item">
+          <button type="button" class="feature-row" aria-expanded="false">
+            <span class="feature-check">&#10003;</span>
+            <span class="feature-name">Client intake &amp; check-in forms</span>
+            <span class="feature-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="feature-explain">Send clients structured intake before the first session and lightweight check-ins between sessions. They walk in ready to work.</div>
+        </li>
+        <li class="feature-item">
+          <button type="button" class="feature-row" aria-expanded="false">
+            <span class="feature-check">&#10003;</span>
+            <span class="feature-name">Client progress tracking</span>
+            <span class="feature-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="feature-explain">Goals, milestones, and progress markers your clients can see. Their wins are visible to both of you.</div>
+        </li>
+        <li class="feature-item">
+          <button type="button" class="feature-row" aria-expanded="false">
+            <span class="feature-check">&#10003;</span>
+            <span class="feature-name">Client messaging</span>
+            <span class="feature-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="feature-explain">Two-way messaging that doesn't get lost in your inbox or theirs. Everything threaded by client.</div>
+        </li>
+        <li class="feature-item">
+          <button type="button" class="feature-row" aria-expanded="false">
+            <span class="feature-check">&#10003;</span>
+            <span class="feature-name">Automated booking &amp; reminders</span>
+            <span class="feature-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="feature-explain">Clients book themselves through your scheduler. Automated SMS and email reminders so no-shows stop being a thing.</div>
+        </li>
+        <li class="feature-item">
+          <button type="button" class="feature-row" aria-expanded="false">
+            <span class="feature-check">&#10003;</span>
+            <span class="feature-name">Zoom integration</span>
+            <span class="feature-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="feature-explain">Connect your Zoom account once. Every booking gets its own meeting link automatically &mdash; no manual scheduling.</div>
+        </li>
+        <li class="feature-item">
+          <button type="button" class="feature-row" aria-expanded="false">
+            <span class="feature-check">&#10003;</span>
+            <span class="feature-name">Calendar sync (Google)</span>
+            <span class="feature-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="feature-explain">Bookings flow into your Google Calendar in real time. Cancel or reschedule from either side and both stay in sync.</div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- BUSINESS TOOLS -->
+    <div class="feature-category">
+      <h3>Business Tools</h3>
+      <ul class="feature-list">
+        <li class="feature-item">
+          <button type="button" class="feature-row" aria-expanded="false">
+            <span class="feature-check">&#10003;</span>
+            <span class="feature-name">Professional coach profile page</span>
+            <span class="feature-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="feature-explain">Your own page on the marketplace, searchable by specialty. Clients find you instead of the other way around.</div>
+        </li>
+        <li class="feature-item">
+          <button type="button" class="feature-row" aria-expanded="false">
+            <span class="feature-check">&#10003;</span>
+            <span class="feature-name">Custom packages &amp; coupons</span>
+            <span class="feature-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="feature-explain">Sell session bundles with credit tracking. Issue coupons for promotions or referrals. All ledgered cleanly.</div>
+        </li>
+        <li class="feature-item">
+          <button type="button" class="feature-row" aria-expanded="false">
+            <span class="feature-check">&#10003;</span>
+            <span class="feature-name">Payment processing (Stripe)</span>
+            <span class="feature-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="feature-explain">Take card payments directly. Funds land in your Stripe account. Zero commission &mdash; your revenue stays yours.</div>
+        </li>
+        <li class="feature-item">
+          <button type="button" class="feature-row" aria-expanded="false">
+            <span class="feature-check">&#10003;</span>
+            <span class="feature-name">Course builder (lessons, quizzes, certificates)</span>
+            <span class="feature-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="feature-explain">Create and sell courses with lessons, quizzes, and certificates. Turn your expertise into passive income.</div>
+        </li>
+        <li class="feature-item">
+          <button type="button" class="feature-row" aria-expanded="false">
+            <span class="feature-check">&#10003;</span>
+            <span class="feature-name">Proposal builder</span>
+            <span class="feature-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="feature-explain">Send polished proposals to prospective clients in minutes. Close the deal without leaving the platform.</div>
+        </li>
+        <li class="feature-item">
+          <button type="button" class="feature-row" aria-expanded="false">
+            <span class="feature-check">&#10003;</span>
+            <span class="feature-name">Client testimonials</span>
+            <span class="feature-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="feature-explain">Request, collect, and display client testimonials right on your profile page. Social proof that compounds over time.</div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ─── BOTTOM CTA ────────────────────────────────────────────────── -->
+<section class="cta">
+  <div class="cta-inner">
+    <h2>Start your practice on <em>ineedcoaching.org</em>.</h2>
+    <p>Two minutes to set up. No contracts. Cancel anytime. Built for real coaching sessions &mdash; not templates.</p>
+    <a href="/coach-signup.html" class="btn-primary">Start Coaching Smarter &rarr;</a>
+    <p class="cta-fine">Practice $99/mo &middot; Scale $179/mo &middot; same features, switch anytime.</p>
+  </div>
+</section>
+
+<!-- ─── FOOTER ────────────────────────────────────────────────────── -->
+<footer class="site-footer">
+  <a class="footer-logo" href="/"><em>i</em>need<em>coaching</em>.org</a>
+  <div class="footer-links">
+    <a href="/coaches.html">Coaches</a>
+    <a href="/sessions.html">Sessions</a>
+    <a href="/coach-courses.html">Courses</a>
+    <a href="/pricing.html">Pricing</a>
+    <a href="/#articles">Articles</a>
+    <a href="/coaching-commons.html">Commons</a>
+    <a href="/coach-dashboard.html">Dashboard</a>
+  </div>
+  <p class="footer-note">A project from <a href="https://www.ineedtherapy.org">ineedtherapy.org</a></p>
+  <p class="footer-crisis">Not a crisis service &mdash; in crisis? Call or text 988.</p>
+</footer>
+
+<script>
+(function () {
+  // Feature-row expand/collapse. Click toggles aria-expanded; CSS reads
+  // [aria-expanded="true"] to slide the explanation open. Keyboard
+  // accessible via the native button + Enter/Space behavior.
+  var rows = document.querySelectorAll('.feature-row');
+  Array.prototype.forEach.call(rows, function (row) {
+    row.addEventListener('click', function () {
+      var open = row.getAttribute('aria-expanded') === 'true';
+      row.setAttribute('aria-expanded', open ? 'false' : 'true');
+    });
+  });
+})();
+</script>
+
+<script data-MOBILE_NAV_HAMBURGER_v1>
+(function() {
+  var btn = document.getElementById('nav-hamburger');
+  var menu = document.getElementById('nav-links-container');
+  if (!btn || !menu) return;
+  btn.addEventListener('click', function() {
+    var isOpen = menu.classList.toggle('nav-open');
+    btn.classList.toggle('is-open', isOpen);
+    btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    btn.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
+  });
+  menu.querySelectorAll('a').forEach(function(a) {
+    a.addEventListener('click', function() {
+      menu.classList.remove('nav-open');
+      btn.classList.remove('is-open');
+      btn.setAttribute('aria-expanded', 'false');
+      btn.setAttribute('aria-label', 'Open menu');
+    });
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && menu.classList.contains('nav-open')) {
+      menu.classList.remove('nav-open');
+      btn.classList.remove('is-open');
+      btn.setAttribute('aria-expanded', 'false');
+      btn.setAttribute('aria-label', 'Open menu');
+      btn.focus();
+    }
+  });
+})();
+</script>
+</body>
+</html>
