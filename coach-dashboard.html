@@ -175,6 +175,32 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 .booking-zoom-link { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; color: var(--gold); text-decoration: none; font-weight: 600; margin-top: 6px; cursor: pointer; }
 .booking-zoom-link:hover { text-decoration: underline; }
 
+/* Brief 2: bookings row action stack — uniform widths, vertical, consistent
+   spacing. The flex column on .booking-actions-cell makes children stretch
+   to the cell width regardless of their own display rules. */
+.bookings-table th:nth-child(3), .bookings-table td:nth-child(3) { white-space: nowrap; }
+.bookings-table th:nth-child(4), .bookings-table td:nth-child(4) { white-space: nowrap; width: 1%; }
+.bookings-table th:nth-child(5), .bookings-table td:nth-child(5) { width: 200px; }
+.booking-actions-cell { min-width: 200px; }
+.booking-actions-cell { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+.booking-row-action { display: block; width: 100%; padding: 9px 14px; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 600; line-height: 1.2; text-align: center; cursor: pointer; border: 1px solid transparent; box-sizing: border-box; white-space: nowrap; text-decoration: none; letter-spacing: 0.01em; transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease; margin: 0; }
+.booking-row-action--gold { background: var(--gold); color: #fff; border-color: var(--gold); }
+.booking-row-action--gold:hover { background: var(--gold-hover); border-color: var(--gold-hover); }
+.booking-row-action--ink { background: var(--ink); color: #fff; border-color: var(--ink); }
+.booking-row-action--ink:hover { opacity: 0.88; }
+.booking-row-action--ghost { background: transparent; color: var(--ink); border-color: var(--ink); }
+.booking-row-action--ghost:hover { background: var(--ink); color: #fff; }
+.booking-row-action--cancel { background: transparent; color: var(--muted); border-color: var(--muted); }
+.booking-row-action--cancel:hover { color: #b93a3a; border-color: #b93a3a; }
+.booking-row-action--zoom { background: rgba(196,154,60,0.10); color: var(--gold); border-color: rgba(196,154,60,0.35); display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.booking-row-action--zoom:hover { background: rgba(196,154,60,0.18); }
+/* Check-in status block — keeps the stack rhythm when the form is sent */
+.booking-checkin-status { display: flex; flex-direction: column; gap: 4px; padding: 6px 0; font-family: 'DM Sans', sans-serif; font-size: 0.74rem; line-height: 1.4; align-items: stretch; }
+.booking-checkin-name { color: var(--gold); font-weight: 700; font-size: 0.74rem; }
+.booking-checkin-link { color: var(--gold); font-weight: 700; text-decoration: none; font-size: 0.74rem; }
+.booking-checkin-link:hover { text-decoration: underline; }
+.booking-checkin-pill { font-size: 0.6rem; padding: 2px 8px; align-self: flex-start; }
+
 /* PREVIEW MODAL */
 .preview-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 500; align-items: center; justify-content: center; }
 .preview-overlay.open { display: flex; }
@@ -3565,42 +3591,40 @@ async function loadBookings() {
     var detailsCounter = 0;
 
     function buildActionsHtml(b, status, clientName) {
+      // Brief 2: bookings auto-confirm now — the Pending workflow (Confirm/
+      // Decline) is gone. Cancelled rows surface in the All tab for context
+      // but stay read-only because the booking is already done. Layout
+      // consistency comes from the .booking-row-action class which forces
+      // a uniform width + vertical stack via the parent flex column.
+      if (status !== 'confirmed' && status !== 'manual') return '';
       var actions = '';
-      if (status === 'pending') {
-        actions = '<button class="action-btn action-confirm" data-booking-id="' + b.id + '" data-action="confirmed">Confirm</button>'
-          + '<button class="action-btn action-decline" data-booking-id="' + b.id + '" data-action="rejected">Decline</button>';
-      } else if (status === 'confirmed' || status === 'manual') {
-        if (b.zoom_link) {
-          actions = '<a href="' + escapeHtml(b.zoom_link) + '" target="_blank" rel="noopener noreferrer" class="booking-zoom-link" title="Click to open meeting link">&#127909; Meeting link</a>';
-        } else {
-          actions = '<button class="booking-zoom-btn" data-booking-id="' + b.id + '">Add meeting link</button>';
-        }
-        var existingCheckin = checkinByBooking[b.id];
-        if (existingCheckin) {
-          var ciUrl = window.location.origin + '/checkin.html?token=' + existingCheckin.token;
-          actions += ' <span style="display:inline-flex;align-items:center;gap:6px;margin-left:4px;">'
-            + '<span style="font-size:0.72rem;color:var(--gold);font-weight:600;">' + escapeHtml(existingCheckin.formName) + '</span>'
-            + '<a href="' + escapeHtml(ciUrl) + '" target="_blank" style="font-size:0.72rem;color:var(--gold);font-weight:700;text-decoration:none;">View form &rarr;</a>'
-            + '<button onclick="navigator.clipboard.writeText(\'' + escapeHtml(ciUrl) + '\');this.textContent=\'Copied!\';setTimeout(()=>this.textContent=\'Copy link\',1500)" style="font-size:0.68rem;color:var(--muted);background:none;border:1px solid var(--border);padding:2px 8px;border-radius:50px;cursor:pointer;">Copy link</button>'
-            + (existingCheckin.submitted ? '<span class="status-pill status-confirmed" style="font-size:0.62rem;padding:2px 8px;">Submitted</span>' : '<span class="status-pill status-pending" style="font-size:0.62rem;padding:2px 8px;">Pending</span>')
-            + '</span>';
-        } else {
-          actions += ' <button class="booking-checkin-btn" data-send-checkin="' + b.id + '" data-client-email="' + escapeHtml(b.client_email || '') + '" data-client-name="' + escapeHtml(clientName) + '" title="Send the pre-session reflection form" style="font-size:0.75rem;color:var(--ink);cursor:pointer;border:1px solid var(--ink);background:none;font-weight:700;padding:4px 10px;border-radius:50px;margin-left:4px;">Send check-in form</button>';
-          actions += ' <button class="booking-testimonial-btn" data-client-email="' + escapeHtml(b.client_email || '') + '" data-client-name="' + escapeHtml(clientName) + '" style="font-size:0.75rem;color:var(--gold);cursor:pointer;border:1px solid var(--gold);background:none;font-weight:700;padding:4px 10px;border-radius:50px;margin-left:4px;">Request Testimonial</button>';
-        }
-        actions += ' <button class="booking-precheck-btn" data-precheck-booking-id="' + b.id + '" title="Email the client the Zoom meeting link for this session" style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#fff;cursor:pointer;border:none;background:var(--gold);font-weight:500;padding:6px 14px;border-radius:50px;margin-left:4px;transition:background 0.15s ease;" onmouseenter="this.style.background=\'var(--gold-hover)\'" onmouseleave="if(!this.disabled)this.style.background=\'var(--gold)\'">Send Zoom link</button>';
-        // Plan this session — opens the IP panel scoped to this booking, which
-        // auto-triggers /api/generate-session-plan and renders the result inline
-        // beneath the Session 1 arc card. Same render component as the IP panel
-        // entry point.
-        actions += ' <a class="booking-plan-session-btn" href="/intervention-plan?client_email=' + encodeURIComponent(b.client_email || '') + '&plan_for_booking=' + encodeURIComponent(b.id) + '" target="_blank" rel="noopener" title="Generate a tactical session plan for this booking" style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#fff;cursor:pointer;border:none;background:var(--navy);font-weight:500;padding:6px 14px;border-radius:50px;margin-left:4px;text-decoration:none;display:inline-block;transition:opacity 0.15s ease;" onmouseenter="this.style.opacity=\'0.85\'" onmouseleave="this.style.opacity=\'1\'">Plan this session</a>';
-        actions += ' <span class="booking-precheck-msg" id="precheck-msg-' + b.id + '" style="display:none;font-family:\'DM Sans\',sans-serif;font-size:0.75rem;margin-left:6px;"></span>';
+      if (b.zoom_link) {
+        actions += '<a href="' + escapeHtml(b.zoom_link) + '" target="_blank" rel="noopener noreferrer" class="booking-row-action booking-row-action--zoom" title="Open meeting link">&#127909; Meeting link</a>';
+      } else {
+        actions += '<button class="booking-row-action booking-row-action--ghost booking-zoom-btn" data-booking-id="' + b.id + '">Add meeting link</button>';
       }
-      // Reschedule + Cancel on every row — matches Services pattern.
-      // Class names kept (.booking-edit-btn / .booking-delete-btn) so the
-      // delegation handler in setupBookingsDelegation keeps working.
-      actions += ' <button class="booking-edit-btn" data-edit-booking-id="' + b.id + '" style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#fff;cursor:pointer;border:none;background:var(--gold);font-weight:500;padding:6px 14px;border-radius:50px;margin-left:4px;transition:background 0.15s ease;" onmouseenter="this.style.background=\'var(--gold-hover)\'" onmouseleave="this.style.background=\'var(--gold)\'">Reschedule</button>';
-      actions += ' <button class="booking-delete-btn" data-delete-booking-id="' + b.id + '" style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:var(--muted);cursor:pointer;border:1px solid var(--muted);background:transparent;font-weight:500;padding:5px 14px;border-radius:50px;margin-left:4px;transition:color 0.15s ease,border-color 0.15s ease;" onmouseenter="this.style.color=\'#b93a3a\';this.style.borderColor=\'#b93a3a\'" onmouseleave="this.style.color=\'var(--muted)\';this.style.borderColor=\'var(--muted)\'">Cancel booking</button>';
+      var existingCheckin = checkinByBooking[b.id];
+      if (existingCheckin) {
+        var ciUrl = window.location.origin + '/checkin.html?token=' + existingCheckin.token;
+        actions += '<div class="booking-checkin-status">'
+          + '<span class="booking-checkin-name">' + escapeHtml(existingCheckin.formName) + '</span>'
+          + '<a href="' + escapeHtml(ciUrl) + '" target="_blank" rel="noopener" class="booking-checkin-link">View form &rarr;</a>'
+          + (existingCheckin.submitted
+              ? '<span class="status-pill status-confirmed booking-checkin-pill">Submitted</span>'
+              : '<span class="status-pill status-pending booking-checkin-pill">Awaiting</span>')
+          + '</div>';
+      } else {
+        actions += '<button class="booking-row-action booking-row-action--ghost booking-checkin-btn" data-send-checkin="' + b.id + '" data-client-email="' + escapeHtml(b.client_email || '') + '" data-client-name="' + escapeHtml(clientName) + '" title="Send the pre-session reflection form">Send check-in form</button>';
+      }
+      // Plan this session — opens the IP panel scoped to this booking, which
+      // auto-triggers /api/generate-session-plan and renders the result inline
+      // beneath the Session 1 arc card.
+      actions += '<a class="booking-row-action booking-row-action--ink booking-plan-session-btn" href="/intervention-plan?client_email=' + encodeURIComponent(b.client_email || '') + '&plan_for_booking=' + encodeURIComponent(b.id) + '" target="_blank" rel="noopener" title="Generate a tactical session plan for this booking">Plan this session</a>';
+      // Reschedule + Cancel — Brief 1. Class names kept (.booking-edit-btn /
+      // .booking-delete-btn) so the delegation handler in
+      // setupBookingsDelegation keeps working.
+      actions += '<button class="booking-row-action booking-row-action--gold booking-edit-btn" data-edit-booking-id="' + b.id + '">Reschedule</button>';
+      actions += '<button class="booking-row-action booking-row-action--cancel booking-delete-btn" data-delete-booking-id="' + b.id + '">Cancel booking</button>';
       return actions;
     }
 
@@ -3720,26 +3744,8 @@ async function loadBookings() {
         });
       });
 
-      $('bookings-content').querySelectorAll('.action-btn').forEach(function(btn) {
-        btn.addEventListener('click', async function() {
-          var id = this.dataset.bookingId;
-          var action = this.dataset.action;
-          this.disabled = true;
-          await supabasePatch('coach_bookings', { id: 'eq.' + id }, { status: action });
-          if (action === 'confirmed') {
-            try {
-              await fetch('/api/booking-confirmation', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ booking_id: id })
-              });
-            } catch(e) { console.warn('Confirmation email failed:', e); }
-          }
-          var booking = allBookings.find(function(b) { return b.id === id; });
-          if (booking) booking.status = action;
-          renderBookingsTable();
-        });
-      });
+      // Brief 2: Confirm/Decline (.action-btn) handler removed — the Pending
+      // workflow is gone. Bookings ship as 'confirmed' from the booking flow.
 
       $('bookings-content').querySelectorAll('.booking-zoom-btn[data-booking-id]').forEach(function(btn) {
         if (btn.dataset.sendCheckin) return;
@@ -3853,10 +3859,17 @@ async function loadBookings() {
       }
     }
 
+    // Brief 2: visible row types post-Pending-removal. Pending /
+    // pending_payment / rejected get hidden entirely — the All tab counts
+    // and rows agree.
+    var VISIBLE_STATUSES = ['confirmed', 'manual', 'cancelled'];
+    var FILTER_TABS = ['all', 'confirmed', 'manual'];
+    function isVisibleStatus(s) { return VISIBLE_STATUSES.indexOf(s) !== -1; }
+
     function renderBookingsTable() {
       detailsCounter = 0;
       var filteredByStatus = currentFilter === 'all'
-        ? allBookings
+        ? allBookings.filter(function(b) { return isVisibleStatus(b.status || 'pending'); })
         : allBookings.filter(function(b) { return (b.status || 'pending') === currentFilter; });
       var q = currentSearch.toLowerCase().trim();
       var filtered = q
@@ -3891,10 +3904,13 @@ async function loadBookings() {
       pastRows.sort(sortFn);
 
       var html = '<div class="bookings-filter-bar">';
-      ['all', 'pending', 'confirmed', 'manual', 'rejected'].forEach(function(f) {
+      FILTER_TABS.forEach(function(f) {
+        var count = f === 'all'
+          ? allBookings.filter(function(b) { return isVisibleStatus(b.status || 'pending'); }).length
+          : allBookings.filter(function(b) { return (b.status || 'pending') === f; }).length;
         var label = f === 'all'
-          ? 'All (' + allBookings.length + ')'
-          : f.charAt(0).toUpperCase() + f.slice(1) + ' (' + allBookings.filter(function(b) { return (b.status || 'pending') === f; }).length + ')';
+          ? 'All (' + count + ')'
+          : f.charAt(0).toUpperCase() + f.slice(1) + ' (' + count + ')';
         html += '<button class="bookings-filter-btn' + (f === currentFilter ? ' active' : '') + '" data-filter="' + f + '">' + label + '</button>';
       });
       html += '</div>';
