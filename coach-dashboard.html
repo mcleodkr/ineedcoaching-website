@@ -185,13 +185,13 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 .booking-zoom-link { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; color: var(--gold); text-decoration: none; font-weight: 600; margin-top: 6px; cursor: pointer; }
 .booking-zoom-link:hover { text-decoration: underline; }
 
-/* Brief 7: percentage-based column distribution so the table fills the
+/* Brief 7/8: percentage-based column distribution so the table fills the
    full content width edge-to-edge. table-layout:fixed (above) honors
    these as exact widths, and they sum to 100% so there's no slack to
    redistribute. TODAY/UPCOMING/PAST stay aligned because every table
    computes the same percentage of the same container width. */
-.bookings-table th:nth-child(1), .bookings-table td:nth-child(1) { width: 25%; }
-.bookings-table th:nth-child(2), .bookings-table td:nth-child(2) { width: 25%; }
+.bookings-table th:nth-child(1), .bookings-table td:nth-child(1) { width: 20%; }
+.bookings-table th:nth-child(2), .bookings-table td:nth-child(2) { width: 30%; }
 .bookings-table th:nth-child(3), .bookings-table td:nth-child(3) { width: 15%; white-space: nowrap; }
 .bookings-table th:nth-child(4), .bookings-table td:nth-child(4) { width: 10%; white-space: nowrap; }
 .bookings-table th:nth-child(5), .bookings-table td:nth-child(5) { width: 25%; }
@@ -212,13 +212,9 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 .booking-row-action--cancel:hover { color: #b93a3a; border-color: #b93a3a; }
 .booking-row-action--zoom { background: rgba(196,154,60,0.10); color: var(--gold); border-color: rgba(196,154,60,0.35); display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .booking-row-action--zoom:hover { background: rgba(196,154,60,0.18); }
-/* Brief 5: check-in status compacts to a single inline row so it sits
-   alongside the action buttons in the horizontal flex flow. */
-.booking-checkin-status { display: inline-flex; flex-direction: row; align-items: center; gap: 6px; padding: 0; font-family: 'DM Sans', sans-serif; font-size: 0.7rem; line-height: 1.2; }
-.booking-checkin-name { color: var(--gold); font-weight: 700; font-size: 0.7rem; }
-.booking-checkin-link { color: var(--gold); font-weight: 700; text-decoration: none; font-size: 0.7rem; }
-.booking-checkin-link:hover { text-decoration: underline; }
-.booking-checkin-pill { font-size: 0.58rem; padding: 1px 7px; }
+/* Brief 8: removed .booking-checkin-status rules — the green submission
+   badge no longer renders in the bookings list. Check-in form delivery
+   status lives on the client detail view now. */
 /* Brief 3: client-name jump — looks like an inline button-link, jumps to
    the Clients tab detail view on click. */
 .booking-client-jump { display: inline-block; padding: 0; margin: 0; background: none; border: none; font-family: inherit; font-size: 0.92rem; font-weight: 600; color: var(--ink); text-align: left; cursor: pointer; line-height: 1.3; transition: color 0.15s ease; }
@@ -3657,19 +3653,11 @@ async function loadBookings() {
       } else {
         actions += '<button class="booking-row-action booking-row-action--ghost booking-zoom-btn" data-booking-id="' + b.id + '">Add meeting link</button>';
       }
-      var existingCheckin = checkinByBooking[b.id];
-      if (existingCheckin) {
-        var ciUrl = window.location.origin + '/checkin.html?token=' + existingCheckin.token;
-        actions += '<div class="booking-checkin-status">'
-          + '<span class="booking-checkin-name">' + escapeHtml(existingCheckin.formName) + '</span>'
-          + '<a href="' + escapeHtml(ciUrl) + '" target="_blank" rel="noopener" class="booking-checkin-link">View form &rarr;</a>'
-          + (existingCheckin.submitted
-              ? '<span class="status-pill status-confirmed booking-checkin-pill">Submitted</span>'
-              : '<span class="status-pill status-pending booking-checkin-pill">Awaiting</span>')
-          + '</div>';
-      } else {
-        actions += '<button class="booking-row-action booking-row-action--ghost booking-checkin-btn" data-send-checkin="' + b.id + '" data-client-email="' + escapeHtml(b.client_email || '') + '" data-client-name="' + escapeHtml(clientName) + '" title="Send the pre-session reflection form">Send check-in form</button>';
-      }
+      // Brief 8: Send check-in form always renders. The previous status
+      // block (form name + View link + Submitted/Awaiting pill) was the
+      // "green submission badge" the user wanted gone — check-in delivery
+      // status surfaces in the client detail view instead.
+      actions += '<button class="booking-row-action booking-row-action--ghost booking-checkin-btn" data-send-checkin="' + b.id + '" data-client-email="' + escapeHtml(b.client_email || '') + '" data-client-name="' + escapeHtml(clientName) + '" title="Send the pre-session reflection form">Send check-in form</button>';
       // Plan this session — opens the IP panel scoped to this booking, which
       // auto-triggers /api/generate-session-plan and renders the result inline
       // beneath the Session 1 arc card.
