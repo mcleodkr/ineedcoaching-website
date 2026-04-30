@@ -518,6 +518,42 @@ footer.site-footer {
 .footer-note a { color: var(--gold); text-decoration: none; }
 .footer-crisis { font-size: 0.7rem; color: rgba(247,244,238,0.45); }
 
+/* ── FEATURE CHECKLIST (chk-*) ──────────────────────────────────── */
+/* Prefixed to avoid colliding with the orphan .feature-* CSS that
+   styled the old editorial feature sections. Cleanup of the orphan
+   rules can land in a separate brief. */
+.chk-section { padding: 88px 24px; background: var(--cream-warm); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.chk-inner { max-width: 800px; margin: 0 auto; }
+.chk-header { text-align: center; margin-bottom: 48px; }
+.chk-eyebrow { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); margin-bottom: 14px; }
+.chk-header h2 { font-family: 'Playfair Display', serif; font-size: clamp(1.7rem, 2.8vw, 2.3rem); line-height: 1.18; letter-spacing: -0.02em; color: var(--navy); margin-bottom: 12px; font-weight: 700; }
+.chk-header h2 em { color: var(--gold); font-style: italic; }
+.chk-header p { font-size: 1rem; line-height: 1.65; color: var(--ink-muted); max-width: 540px; margin: 0 auto; }
+
+.chk-category { margin-bottom: 44px; }
+.chk-category:last-of-type { margin-bottom: 0; }
+.chk-category h3 { font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold-deep); padding-bottom: 10px; border-bottom: 1px solid rgba(196,154,60,0.28); margin-bottom: 6px; }
+.chk-list { list-style: none; }
+.chk-item { border-bottom: 1px solid var(--rule); }
+.chk-item:last-child { border-bottom: none; }
+.chk-row { width: 100%; display: flex; align-items: center; gap: 16px; padding: 16px 4px; background: none; border: none; font-family: inherit; text-align: left; cursor: pointer; transition: background 0.15s ease; color: inherit; }
+.chk-row:hover { background: rgba(196,154,60,0.05); }
+.chk-row:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; border-radius: 6px; }
+.chk-check { flex-shrink: 0; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; background: var(--gold-tint); color: var(--gold-deep); border-radius: 50%; font-size: 0.78rem; font-weight: 800; }
+.chk-name { flex: 1; font-size: 1rem; font-weight: 500; color: var(--navy); line-height: 1.4; }
+.chk-toggle { flex-shrink: 0; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 0.85rem; transition: transform 0.2s ease, color 0.15s ease; }
+.chk-row[aria-expanded="true"] .chk-toggle { transform: rotate(180deg); color: var(--gold); }
+.chk-row[aria-expanded="true"] { background: rgba(196,154,60,0.05); }
+.chk-row[aria-expanded="true"] + .chk-explain { max-height: 220px; padding-bottom: 16px; }
+.chk-explain { max-height: 0; overflow: hidden; padding: 0 4px 0 50px; font-size: 0.92rem; line-height: 1.65; color: var(--ink-muted); transition: max-height 0.25s ease, padding 0.25s ease; }
+
+.chk-cta-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 56px; max-width: 600px; margin-left: auto; margin-right: auto; }
+.chk-cta-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 18px 24px; border-radius: 50px; font-family: inherit; font-size: 0.92rem; font-weight: 700; text-decoration: none; cursor: pointer; transition: all 0.18s ease; border: 2px solid var(--navy); background: var(--warm); color: var(--navy); text-align: center; }
+.chk-cta-btn:hover { background: var(--navy); color: var(--cream); transform: translateY(-1px); }
+.chk-cta-btn .chk-cta-price { font-size: 0.72rem; font-weight: 600; opacity: 0.7; letter-spacing: 0.02em; }
+.chk-cta-btn-featured { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+.chk-cta-btn-featured:hover { background: var(--gold-soft); border-color: var(--gold-soft); color: var(--navy); }
+
 /* ── RESPONSIVE ─────────────────────────────────────────────────── */
 @media (max-width: 960px) {
   nav.site-nav { padding: 12px 24px; }
@@ -528,10 +564,14 @@ footer.site-footer {
   .field-row { grid-template-columns: 1fr; }
   .tier-pick { grid-template-columns: 1fr; }
   .feature-stack { grid-template-columns: 1fr; }
+  .chk-cta-row { grid-template-columns: 1fr; max-width: 360px; }
 }
 @media (max-width: 600px) {
   .hero { padding: 130px 18px 64px; }
-  .section, .feature-section, .signup, .tiers { padding: 72px 18px; }
+  .section, .feature-section, .signup, .tiers, .chk-section { padding: 72px 18px; }
+  .chk-row { padding: 14px 4px; gap: 12px; }
+  .chk-name { font-size: 0.94rem; }
+  .chk-explain { padding: 0 4px 0 42px; font-size: 0.88rem; }
   .signup-card { padding: 28px 22px; }
   .tier-card { padding: 32px 24px 28px; }
 }
@@ -586,25 +626,19 @@ footer.site-footer {
 
 <!-- ─── HERO ──────────────────────────────────────────────────────── -->
 <section class="hero">
-  <div class="eyebrow"><span class="eyebrow-dot"></span> A platform for working coaches</div>
-  <h1>Build and scale your<br>coaching practice with<br><em>AI-powered intelligence</em></h1>
-  <p class="lede">Session intelligence, client engagement, and the business operations of coaching — all in one place. Built around how you actually coach, not how a generic tool thinks you should.</p>
+  <div class="eyebrow"><span class="eyebrow-dot"></span> Pricing</div>
+  <h1>Pick the size of your <em>practice</em>.</h1>
+  <p class="lede">Two tiers, one feature set. The only difference is how many active clients and sessions you handle each month.</p>
   <div class="hero-cta-row">
-    <a href="#choose-tier" class="btn-primary">Pick a plan</a>
-    <a href="#features" class="btn-secondary">See what's inside</a>
+    <a href="#choose-tier" class="btn-primary">See plans</a>
+    <a href="#features" class="btn-secondary">What's included</a>
   </div>
-  <p class="hero-fine">Two plans. Same features. Cancel anytime.</p>
+  <p class="hero-fine">Same features on both. Cancel anytime.</p>
 </section>
 
 <!-- ─── TIERS ─────────────────────────────────────────────────────── -->
 <section class="tiers section" id="choose-tier">
   <div class="section-inner">
-    <div class="tier-header">
-      <div class="section-eyebrow">Pricing</div>
-      <h2 class="section-title">Pick the size of your practice<br><em>— not the size of the toolset.</em></h2>
-      <p class="section-lede">Both plans include every feature. The only difference is how many active clients and sessions you handle each month.</p>
-    </div>
-
     <div class="tier-grid">
       <div class="tier-card">
         <div class="tier-name">Practice</div>
@@ -647,122 +681,183 @@ footer.site-footer {
   </div>
 </section>
 
-<!-- ─── FEATURE SHOWCASE ──────────────────────────────────────────── -->
-<a id="features"></a>
-
-<!-- 1. Session Intelligence — light -->
-<section class="feature-section">
-  <div class="feature-frame">
-    <div class="feature-copy">
-      <div class="section-eyebrow">Session Intelligence</div>
-      <h2 class="section-title">Walk out of every session<br>with <em>insight</em>, not just notes.</h2>
-      <p class="section-lede">Upload a transcript and watch it become structured session notes. Then go a layer deeper — what the client actually said, what they avoided, and what's shifting underneath.</p>
-      <div class="feature-stack">
-        <div class="stack-item"><strong>GROW · CLEAR · OSKAR</strong>Auto-structured session notes in the framework that fits how you actually work.</div>
-        <div class="stack-item"><strong>Pre-Session Intelligence</strong>The full pattern map, surfaced before the next call — not after.</div>
-      </div>
+<!-- ─── FEATURE CHECKLIST ─────────────────────────────────────────── -->
+<section class="chk-section" id="features">
+  <div class="chk-inner">
+    <div class="chk-header">
+      <div class="chk-eyebrow">What's included</div>
+      <h2>Everything you need to <em>run a coaching practice</em>.</h2>
+      <p>Tap any feature for a plain-English explanation of what it does for you.</p>
     </div>
-    <div>
-      <ul class="feature-list">
-        <li>
-          <h4>Coach Clarity</h4>
-          <p>Post-session client analysis. What they said, what they sidestepped, what's emerging — translated into observable patterns, never clinical labels.</p>
+
+    <!-- AI &amp; Coaching Intelligence -->
+    <div class="chk-category">
+      <h3>AI &amp; Coaching Intelligence</h3>
+      <ul class="chk-list">
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span>
+            <span class="chk-name">Coach Clarity</span>
+            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">AI analyzes every session to show you what landed with your client, what you missed, and patterns over time. See exactly what's working.</div>
         </li>
-        <li>
-          <h4>Coaching Mirror</h4>
-          <p>Reflects your own moves back at you. Where you advanced the work, where you played safe, where you grew. Built for honest practice.</p>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span>
+            <span class="chk-name">Pattern Map</span>
+            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">Track how each client evolves across all your sessions. Spot patterns you'd never see on your own.</div>
         </li>
-        <li>
-          <h4>Coach DNA</h4>
-          <p>A longitudinal profile of your coaching identity — your patterns, your blindspots, your edge — derived only from your real session data.</p>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span>
+            <span class="chk-name">Pre-session prep briefs</span>
+            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">Walk into every session with a one-page brief on what your client said last time, what shifted, and what to revisit. No more flipping through old notes.</div>
         </li>
-        <li>
-          <h4>Approach Lab</h4>
-          <p>Simulate how a different coaching lens would have unfolded the same session. Emotion regulation, values-based action, change talk — your call.</p>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span>
+            <span class="chk-name">Session recordings &amp; transcripts</span>
+            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">Upload a recording or paste a transcript and we structure it into searchable session notes. Your full history, in one place.</div>
         </li>
-        <li>
-          <h4>Session &amp; Intervention Plans</h4>
-          <p>Next-session prep grounded in what already happened. Plan what to deepen, what to revisit, and what to leave alone.</p>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span>
+            <span class="chk-name">Session notes &amp; templates</span>
+            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">Auto-formatted session notes in GROW, CLEAR, or OSKAR &mdash; or build your own template. Stop reinventing the page every time.</div>
         </li>
       </ul>
     </div>
-  </div>
-</section>
 
-<!-- 2. Client Experience — warm cream alt -->
-<section class="feature-section alt">
-  <div class="feature-frame">
-    <div class="feature-copy">
-      <div class="section-eyebrow">Client Experience</div>
-      <h2 class="section-title">Give your clients a place that <em>works for them</em> — and gives you signal.</h2>
-      <p class="section-lede">A real client portal. Not a glorified booking page. Pre-session forms preload the state of the work. Goals, journals, and check-ins surface what shifted between sessions.</p>
-      <div class="feature-stack">
-        <div class="stack-item"><strong>Preloaded form templates</strong>Intake and pre-session forms ready to go — or build your own from scratch.</div>
-        <div class="stack-item"><strong>Two-way messaging</strong>Coach-client messaging that doesn't get lost in your inbox or theirs.</div>
-      </div>
-    </div>
-    <div>
-      <ul class="feature-list">
-        <li>
-          <h4>Pre-session forms</h4>
-          <p>Captures the client's current state right before each appointment. You start the call knowing what changed since last time.</p>
+    <!-- Client Experience -->
+    <div class="chk-category">
+      <h3>Client Experience</h3>
+      <ul class="chk-list">
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span>
+            <span class="chk-name">Client intake &amp; check-in forms</span>
+            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">Send clients structured intake before the first session and lightweight check-ins between sessions. They walk in ready to work.</div>
         </li>
-        <li>
-          <h4>Goal tracking &amp; milestones</h4>
-          <p>Goals broken into milestones with progress markers. The client owns their trajectory; you see it without asking every session.</p>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span>
+            <span class="chk-name">Client progress tracking</span>
+            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">Goals, milestones, and progress markers your clients can see. Their wins are visible to both of you.</div>
         </li>
-        <li>
-          <h4>Journaling &amp; mood tracker</h4>
-          <p>Client-facing journaling and mood ratings between sessions. Optional, lightweight, and visible to you when the client opts in.</p>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span>
+            <span class="chk-name">Client messaging</span>
+            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">Two-way messaging that doesn't get lost in your inbox or theirs. Everything threaded by client.</div>
         </li>
-        <li>
-          <h4>Homework &amp; check-ins</h4>
-          <p>Send reflection assignments, action steps, and lightweight check-ins. The client portal pulls everything into one place.</p>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span>
+            <span class="chk-name">Automated booking &amp; reminders</span>
+            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">Clients book themselves through your scheduler. Automated SMS and email reminders so no-shows stop being a thing.</div>
         </li>
-        <li>
-          <h4>Session history</h4>
-          <p>Every session, every form, every note — searchable by the client and by you. No more "I don't remember which doc that's in".</p>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span>
+            <span class="chk-name">Zoom integration</span>
+            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">Connect your Zoom account once. Every booking gets its own meeting link automatically &mdash; no manual scheduling.</div>
+        </li>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span>
+            <span class="chk-name">Calendar sync (Google)</span>
+            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">Bookings flow into your Google Calendar in real time. Cancel or reschedule from either side and both stay in sync.</div>
         </li>
       </ul>
     </div>
-  </div>
-</section>
 
-<!-- 3. Business Tools — dark -->
-<section class="feature-section dark">
-  <div class="feature-frame">
-    <div class="feature-copy">
-      <div class="section-eyebrow">Business Tools</div>
-      <h2 class="section-title">Run the <em>business</em> of coaching without leaving your zone.</h2>
-      <p class="section-lede">Scheduling, payments, courses, proposals, your profile in the directory — all wired to the same source of truth, all working with how you already coach.</p>
-      <div class="feature-stack">
-        <div class="stack-item"><strong>Stripe Connect</strong>Sessions, packages, gifts, refunds. Coupons. Zero commission on your revenue.</div>
-        <div class="stack-item"><strong>Marketplace listing</strong>Profile in our directory, searchable by specialty and style. Clients come to you.</div>
-      </div>
-    </div>
-    <div>
-      <ul class="feature-list">
-        <li>
-          <h4>Custom scheduler</h4>
-          <p>Google Calendar + Zoom OAuth. Recurring bookings, waitlists, rescheduling, no-show tracking, and automated SMS / email reminders.</p>
+    <!-- Business Tools -->
+    <div class="chk-category">
+      <h3>Business Tools</h3>
+      <ul class="chk-list">
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span>
+            <span class="chk-name">Professional coach profile</span>
+            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">Your own page on the marketplace, searchable by specialty. Clients find you instead of the other way around.</div>
         </li>
-        <li>
-          <h4>Packages, coupons, gifts</h4>
-          <p>Sell session packages with credit tracking. Apply coupons. Issue gift certificates. All ledgered, all reconcilable.</p>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span>
+            <span class="chk-name">Custom packages &amp; coupons</span>
+            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">Sell session bundles with credit tracking. Issue coupons for promotions or referrals. All ledgered cleanly.</div>
         </li>
-        <li>
-          <h4>Course builder</h4>
-          <p>Lessons, quizzes, certificates of completion, and CCE-hour tracking for coaches running continuing-education programs.</p>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span>
+            <span class="chk-name">Payment processing</span>
+            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">Take card payments directly via Stripe. Funds land in your Stripe account. Zero commission &mdash; your revenue stays yours.</div>
         </li>
-        <li>
-          <h4>Proposals &amp; articles</h4>
-          <p>Proposal builder for prospective clients. AI-assisted article engine for the marketing surface you'd rather not babysit.</p>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span>
+            <span class="chk-name">Course builder</span>
+            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">Create and sell courses with lessons, quizzes, and certificates. Turn your expertise into passive income.</div>
         </li>
-        <li>
-          <h4>Testimonials &amp; recommendations</h4>
-          <p>Request, collect, and showcase client testimonials. Recommendations from peers compound your reputation in the directory.</p>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span>
+            <span class="chk-name">Proposal builder</span>
+            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">Send polished proposals to prospective clients in minutes. Close the deal without leaving the platform.</div>
+        </li>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span>
+            <span class="chk-name">Client testimonials</span>
+            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">Request, collect, and display client testimonials right on your profile page. Social proof that compounds over time.</div>
         </li>
       </ul>
+    </div>
+
+    <!-- Post-checklist CTAs — reuse the existing data-pick-tier wiring so
+         clicks scroll to the form AND pre-select the matching tier radio. -->
+    <div class="chk-cta-row">
+      <a href="#signup-form" class="chk-cta-btn" data-pick-tier="practice">
+        <span>Choose Practice</span>
+        <span class="chk-cta-price">$99 / month &middot; 20 clients</span>
+      </a>
+      <a href="#signup-form" class="chk-cta-btn chk-cta-btn-featured" data-pick-tier="scale">
+        <span>Choose Scale</span>
+        <span class="chk-cta-price">$179 / month &middot; 60 clients</span>
+      </a>
     </div>
   </div>
 </section>
@@ -940,13 +1035,25 @@ footer.site-footer {
 
   syncTier();
 
-  // Tier-card "Choose Plan" buttons in the comparison grid scroll into the
-  // form and pre-select the radio.
+  // Tier-card "Choose Plan" buttons in the comparison grid AND the
+  // post-checklist Choose Practice / Choose Scale CTAs both carry
+  // [data-pick-tier]. One handler covers both: scroll into the form
+  // and pre-select the matching radio.
   document.querySelectorAll('[data-pick-tier]').forEach(function (a) {
     a.addEventListener('click', function () {
       var tier = a.getAttribute('data-pick-tier');
       var match = document.querySelector('.tier-pick input[type="radio"][value="' + tier + '"]');
       if (match) { match.checked = true; syncTier(); }
+    });
+  });
+
+  // Feature-checklist click-to-expand. Each .chk-row is a real button
+  // with aria-expanded; CSS slides the .chk-explain panel open via
+  // [aria-expanded="true"]. Multiple can be open at once.
+  document.querySelectorAll('.chk-row').forEach(function (row) {
+    row.addEventListener('click', function () {
+      var open = row.getAttribute('aria-expanded') === 'true';
+      row.setAttribute('aria-expanded', open ? 'false' : 'true');
     });
   });
 
