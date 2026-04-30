@@ -185,13 +185,17 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 .booking-zoom-link { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; color: var(--gold); text-decoration: none; font-weight: 600; margin-top: 6px; cursor: pointer; }
 .booking-zoom-link:hover { text-decoration: underline; }
 
-/* Brief 2/4/5: column geometry. table-layout:fixed (above) means these
-   widths are absolute, not hints — Client takes whatever's left, and
-   TODAY/UPCOMING/PAST tables all render identical column edges. */
-.bookings-table th:nth-child(2), .bookings-table td:nth-child(2) { width: 20%; }
-.bookings-table th:nth-child(3), .bookings-table td:nth-child(3) { width: 100px; white-space: nowrap; }
-.bookings-table th:nth-child(4), .bookings-table td:nth-child(4) { width: 100px; white-space: nowrap; }
+/* Brief 2/4/5/6: column geometry. table-layout:fixed (above) means these
+   widths are absolute, not hints — TODAY/UPCOMING/PAST tables all render
+   identical column edges. Brief 6: cap Client at 200px so a short name
+   doesn't strand whitespace before Service; Service takes the remainder. */
+.bookings-table th:nth-child(1), .bookings-table td:nth-child(1) { width: 200px; }
+.bookings-table th:nth-child(3), .bookings-table td:nth-child(3) { width: 110px; white-space: nowrap; }
+.bookings-table th:nth-child(4), .bookings-table td:nth-child(4) { width: 110px; white-space: nowrap; }
 .bookings-table th:nth-child(5), .bookings-table td:nth-child(5) { width: 280px; }
+/* Brief 6: long emails wrap inside the 200px Client cell instead of pushing
+   the column wider. Phone is short enough to never need this. */
+.bookings-table td:nth-child(1) > div { overflow-wrap: anywhere; }
 /* Brief 5: horizontal action layout for spreadsheet density. Buttons wrap
    onto a second line only when the cell can't fit them — tight enough that
    most rows show actions on one line. */
