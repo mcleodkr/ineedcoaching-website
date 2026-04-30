@@ -544,8 +544,11 @@ footer.site-footer {
 .chk-toggle { flex-shrink: 0; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 0.85rem; transition: transform 0.2s ease, color 0.15s ease; }
 .chk-row[aria-expanded="true"] .chk-toggle { transform: rotate(180deg); color: var(--gold); }
 .chk-row[aria-expanded="true"] { background: rgba(196,154,60,0.05); }
-.chk-row[aria-expanded="true"] + .chk-explain { max-height: 220px; padding-bottom: 16px; }
+.chk-row[aria-expanded="true"] + .chk-explain { max-height: 280px; padding-bottom: 16px; }
 .chk-explain { max-height: 0; overflow: hidden; padding: 0 4px 0 50px; font-size: 0.92rem; line-height: 1.65; color: var(--ink-muted); transition: max-height 0.25s ease, padding 0.25s ease; }
+.chk-explain p { margin: 0 0 8px; }
+.chk-explain .chk-learn-more { display: inline-block; font-size: 0.82rem; font-weight: 700; color: var(--gold-deep); text-decoration: none; letter-spacing: 0.01em; transition: color 0.15s ease; }
+.chk-explain .chk-learn-more:hover { color: var(--gold); text-decoration: underline; }
 
 .chk-cta-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 56px; max-width: 600px; margin-left: auto; margin-right: auto; }
 .chk-cta-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 18px 24px; border-radius: 50px; font-family: inherit; font-size: 0.92rem; font-weight: 700; text-decoration: none; cursor: pointer; transition: all 0.18s ease; border: 2px solid var(--navy); background: var(--warm); color: var(--navy); text-align: center; }
@@ -687,162 +690,296 @@ footer.site-footer {
     <div class="chk-header">
       <div class="chk-eyebrow">What's included</div>
       <h2>Everything you need to <em>run a coaching practice</em>.</h2>
-      <p>Tap any feature for a plain-English explanation of what it does for you.</p>
+      <p>Tap any feature for a one-line explanation. Each opens with a "Learn more" link that jumps to the deeper section below.</p>
     </div>
 
-    <!-- AI &amp; Coaching Intelligence -->
+    <!-- AI &amp; Coaching Intelligence ─────────────────────────────── -->
     <div class="chk-category">
       <h3>AI &amp; Coaching Intelligence</h3>
       <ul class="chk-list">
         <li class="chk-item">
           <button type="button" class="chk-row" aria-expanded="false">
-            <span class="chk-check">&#10003;</span>
-            <span class="chk-name">Coach Clarity</span>
-            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+            <span class="chk-check">&#10003;</span><span class="chk-name">Coach Clarity</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
           </button>
-          <div class="chk-explain">AI analyzes every session to show you what landed with your client, what you missed, and patterns over time. See exactly what's working.</div>
+          <div class="chk-explain">
+            <p>AI analyzes every session to show you what landed with your client, what you missed, and patterns over time.</p>
+            <a href="#detail-ai" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
         </li>
         <li class="chk-item">
           <button type="button" class="chk-row" aria-expanded="false">
-            <span class="chk-check">&#10003;</span>
-            <span class="chk-name">Pattern Map</span>
-            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+            <span class="chk-check">&#10003;</span><span class="chk-name">Coaching Mirror</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
           </button>
-          <div class="chk-explain">Track how each client evolves across all your sessions. Spot patterns you'd never see on your own.</div>
+          <div class="chk-explain">
+            <p>Reflects your own moves back at you &mdash; where you advanced the work, where you played safe, where to grow.</p>
+            <a href="#detail-ai" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
         </li>
         <li class="chk-item">
           <button type="button" class="chk-row" aria-expanded="false">
-            <span class="chk-check">&#10003;</span>
-            <span class="chk-name">Pre-session prep briefs</span>
-            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+            <span class="chk-check">&#10003;</span><span class="chk-name">Coach DNA</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
           </button>
-          <div class="chk-explain">Walk into every session with a one-page brief on what your client said last time, what shifted, and what to revisit. No more flipping through old notes.</div>
+          <div class="chk-explain">
+            <p>A longitudinal profile of your coaching identity &mdash; your patterns, blindspots, and edge &mdash; built from your real sessions.</p>
+            <a href="#detail-ai" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
         </li>
         <li class="chk-item">
           <button type="button" class="chk-row" aria-expanded="false">
-            <span class="chk-check">&#10003;</span>
-            <span class="chk-name">Session recordings &amp; transcripts</span>
-            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+            <span class="chk-check">&#10003;</span><span class="chk-name">Pattern Map</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
           </button>
-          <div class="chk-explain">Upload a recording or paste a transcript and we structure it into searchable session notes. Your full history, in one place.</div>
+          <div class="chk-explain">
+            <p>Track how each client evolves across all your sessions. Spot patterns you'd never see on your own.</p>
+            <a href="#detail-ai" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
         </li>
         <li class="chk-item">
           <button type="button" class="chk-row" aria-expanded="false">
-            <span class="chk-check">&#10003;</span>
-            <span class="chk-name">Session notes &amp; templates</span>
-            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+            <span class="chk-check">&#10003;</span><span class="chk-name">Approach Lab</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
           </button>
-          <div class="chk-explain">Auto-formatted session notes in GROW, CLEAR, or OSKAR &mdash; or build your own template. Stop reinventing the page every time.</div>
+          <div class="chk-explain">
+            <p>Test how a different coaching framework would have unfolded the same session. Emotion regulation, values-based action, change talk &mdash; your call.</p>
+            <a href="#detail-ai" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
+        </li>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span><span class="chk-name">Intervention Plan</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">
+            <p>Strategic plans grounded in what's actually happening with your client. Plan what to deepen, revisit, or leave alone.</p>
+            <a href="#detail-ai" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
+        </li>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span><span class="chk-name">Session Plan Builder</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">
+            <p>Prepare for each session with a focused plan based on last session's signal &mdash; not improvising every time.</p>
+            <a href="#detail-ai" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
+        </li>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span><span class="chk-name">Pre-session intelligence briefs</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">
+            <p>A one-page brief on what your client said last time, what shifted, and what to revisit. Walk in ready.</p>
+            <a href="#detail-ai" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
+        </li>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span><span class="chk-name">Post-session intelligence reports</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">
+            <p>After every call, an analysis of what landed, what got avoided, and what's emerging in the work.</p>
+            <a href="#detail-ai" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
+        </li>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span><span class="chk-name">Session notes (GROW, CLEAR, OSKAR)</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">
+            <p>Auto-formatted session notes in the framework that fits how you actually work &mdash; or build your own template.</p>
+            <a href="#detail-ai" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
+        </li>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span><span class="chk-name">Session transcripts</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">
+            <p>Paste a transcript from Zoom, Otter, or any platform. We structure it into searchable session notes automatically.</p>
+            <a href="#detail-ai" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
         </li>
       </ul>
     </div>
 
-    <!-- Client Experience -->
+    <!-- Client Experience ────────────────────────────────────────── -->
     <div class="chk-category">
       <h3>Client Experience</h3>
       <ul class="chk-list">
         <li class="chk-item">
           <button type="button" class="chk-row" aria-expanded="false">
-            <span class="chk-check">&#10003;</span>
-            <span class="chk-name">Client intake &amp; check-in forms</span>
-            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+            <span class="chk-check">&#10003;</span><span class="chk-name">Client intake forms</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
           </button>
-          <div class="chk-explain">Send clients structured intake before the first session and lightweight check-ins between sessions. They walk in ready to work.</div>
+          <div class="chk-explain">
+            <p>Send structured intake before the first session. Preloaded templates or build your own from scratch.</p>
+            <a href="#detail-client" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
         </li>
         <li class="chk-item">
           <button type="button" class="chk-row" aria-expanded="false">
-            <span class="chk-check">&#10003;</span>
-            <span class="chk-name">Client progress tracking</span>
-            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+            <span class="chk-check">&#10003;</span><span class="chk-name">Pre-session check-in forms</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
           </button>
-          <div class="chk-explain">Goals, milestones, and progress markers your clients can see. Their wins are visible to both of you.</div>
+          <div class="chk-explain">
+            <p>Lightweight check-ins before each session so the client walks in ready and you start with their current state.</p>
+            <a href="#detail-client" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
         </li>
         <li class="chk-item">
           <button type="button" class="chk-row" aria-expanded="false">
-            <span class="chk-check">&#10003;</span>
-            <span class="chk-name">Client messaging</span>
-            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+            <span class="chk-check">&#10003;</span><span class="chk-name">Client journaling</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
           </button>
-          <div class="chk-explain">Two-way messaging that doesn't get lost in your inbox or theirs. Everything threaded by client.</div>
+          <div class="chk-explain">
+            <p>Optional client-facing journaling between sessions. Visible to you only when the client opts in &mdash; never invasive.</p>
+            <a href="#detail-client" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
         </li>
         <li class="chk-item">
           <button type="button" class="chk-row" aria-expanded="false">
-            <span class="chk-check">&#10003;</span>
-            <span class="chk-name">Automated booking &amp; reminders</span>
-            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+            <span class="chk-check">&#10003;</span><span class="chk-name">Client mood tracker</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
           </button>
-          <div class="chk-explain">Clients book themselves through your scheduler. Automated SMS and email reminders so no-shows stop being a thing.</div>
+          <div class="chk-explain">
+            <p>Lightweight mood ratings between sessions. Spot trends without making the client feel surveilled.</p>
+            <a href="#detail-client" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
         </li>
         <li class="chk-item">
           <button type="button" class="chk-row" aria-expanded="false">
-            <span class="chk-check">&#10003;</span>
-            <span class="chk-name">Zoom integration</span>
-            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+            <span class="chk-check">&#10003;</span><span class="chk-name">Client progress tracking</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
           </button>
-          <div class="chk-explain">Connect your Zoom account once. Every booking gets its own meeting link automatically &mdash; no manual scheduling.</div>
+          <div class="chk-explain">
+            <p>Goals, milestones, and progress markers your clients can see. Their wins are visible to both of you.</p>
+            <a href="#detail-client" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
         </li>
         <li class="chk-item">
           <button type="button" class="chk-row" aria-expanded="false">
-            <span class="chk-check">&#10003;</span>
-            <span class="chk-name">Calendar sync (Google)</span>
-            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+            <span class="chk-check">&#10003;</span><span class="chk-name">Client messaging</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
           </button>
-          <div class="chk-explain">Bookings flow into your Google Calendar in real time. Cancel or reschedule from either side and both stay in sync.</div>
+          <div class="chk-explain">
+            <p>Two-way messaging that doesn't get lost in your inbox or theirs. Everything threaded by client.</p>
+            <a href="#detail-client" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
+        </li>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span><span class="chk-name">Goal tracking</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">
+            <p>Goals owned by the client, visible to you. Status updates flow from sessions automatically into the goal record.</p>
+            <a href="#detail-client" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
+        </li>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span><span class="chk-name">Homework assignments</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">
+            <p>Send reflection assignments and action steps. Everything lands in the client's portal in one place.</p>
+            <a href="#detail-client" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
+        </li>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span><span class="chk-name">Automated booking &amp; reminders</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">
+            <p>Clients book themselves. Automated SMS and email reminders so no-shows stop being a thing.</p>
+            <a href="#detail-client" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
+        </li>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span><span class="chk-name">Zoom integration</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">
+            <p>Connect your Zoom account once. Every booking gets its own meeting link automatically &mdash; no manual scheduling.</p>
+            <a href="#detail-client" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
+        </li>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span><span class="chk-name">Calendar sync (Google)</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">
+            <p>Bookings flow into your Google Calendar in real time. Cancel or reschedule from either side and both stay in sync.</p>
+            <a href="#detail-client" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
         </li>
       </ul>
     </div>
 
-    <!-- Business Tools -->
+    <!-- Business Tools ───────────────────────────────────────────── -->
     <div class="chk-category">
       <h3>Business Tools</h3>
       <ul class="chk-list">
         <li class="chk-item">
           <button type="button" class="chk-row" aria-expanded="false">
-            <span class="chk-check">&#10003;</span>
-            <span class="chk-name">Professional coach profile</span>
-            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+            <span class="chk-check">&#10003;</span><span class="chk-name">Professional coach profile page</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
           </button>
-          <div class="chk-explain">Your own page on the marketplace, searchable by specialty. Clients find you instead of the other way around.</div>
+          <div class="chk-explain">
+            <p>Your own page on the marketplace, searchable by specialty. Clients find you instead of the other way around.</p>
+            <a href="#detail-business" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
         </li>
         <li class="chk-item">
           <button type="button" class="chk-row" aria-expanded="false">
-            <span class="chk-check">&#10003;</span>
-            <span class="chk-name">Custom packages &amp; coupons</span>
-            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+            <span class="chk-check">&#10003;</span><span class="chk-name">Custom packages &amp; coupons</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
           </button>
-          <div class="chk-explain">Sell session bundles with credit tracking. Issue coupons for promotions or referrals. All ledgered cleanly.</div>
+          <div class="chk-explain">
+            <p>Sell session bundles with credit tracking. Issue coupons for promotions or referrals. All ledgered cleanly.</p>
+            <a href="#detail-business" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
         </li>
         <li class="chk-item">
           <button type="button" class="chk-row" aria-expanded="false">
-            <span class="chk-check">&#10003;</span>
-            <span class="chk-name">Payment processing</span>
-            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+            <span class="chk-check">&#10003;</span><span class="chk-name">Payment processing (Stripe)</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
           </button>
-          <div class="chk-explain">Take card payments directly via Stripe. Funds land in your Stripe account. Zero commission &mdash; your revenue stays yours.</div>
+          <div class="chk-explain">
+            <p>Take card payments directly. Funds land in your Stripe account. Zero commission &mdash; your revenue stays yours.</p>
+            <a href="#detail-business" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
         </li>
         <li class="chk-item">
           <button type="button" class="chk-row" aria-expanded="false">
-            <span class="chk-check">&#10003;</span>
-            <span class="chk-name">Course builder</span>
-            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+            <span class="chk-check">&#10003;</span><span class="chk-name">Course builder (lessons, quizzes, certificates)</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
           </button>
-          <div class="chk-explain">Create and sell courses with lessons, quizzes, and certificates. Turn your expertise into passive income.</div>
+          <div class="chk-explain">
+            <p>Create and sell courses with lessons, quizzes, and certificates. Turn your expertise into passive income.</p>
+            <a href="#detail-business" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
         </li>
         <li class="chk-item">
           <button type="button" class="chk-row" aria-expanded="false">
-            <span class="chk-check">&#10003;</span>
-            <span class="chk-name">Proposal builder</span>
-            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+            <span class="chk-check">&#10003;</span><span class="chk-name">Proposal builder</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
           </button>
-          <div class="chk-explain">Send polished proposals to prospective clients in minutes. Close the deal without leaving the platform.</div>
+          <div class="chk-explain">
+            <p>Send polished proposals to prospective clients in minutes. Close the deal without leaving the platform.</p>
+            <a href="#detail-business" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
         </li>
         <li class="chk-item">
           <button type="button" class="chk-row" aria-expanded="false">
-            <span class="chk-check">&#10003;</span>
-            <span class="chk-name">Client testimonials</span>
-            <span class="chk-toggle" aria-hidden="true">&#9662;</span>
+            <span class="chk-check">&#10003;</span><span class="chk-name">Draft articles</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
           </button>
-          <div class="chk-explain">Request, collect, and display client testimonials right on your profile page. Social proof that compounds over time.</div>
+          <div class="chk-explain">
+            <p>AI-assisted article drafting for the marketing surface you'd rather not babysit. Edit, publish, done.</p>
+            <a href="#detail-business" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
+        </li>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span><span class="chk-name">Client testimonials</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">
+            <p>Request, collect, and display client testimonials right on your profile page. Social proof that compounds over time.</p>
+            <a href="#detail-business" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
+        </li>
+        <li class="chk-item">
+          <button type="button" class="chk-row" aria-expanded="false">
+            <span class="chk-check">&#10003;</span><span class="chk-name">White-glove onboarding</span><span class="chk-toggle" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="chk-explain">
+            <p>Personal setup from our team during your first week &mdash; profile, scheduler, calendar + Zoom OAuth, payments, dialed in for you.</p>
+            <a href="#detail-business" class="chk-learn-more">Learn more &rarr;</a>
+          </div>
         </li>
       </ul>
     </div>
@@ -858,6 +995,131 @@ footer.site-footer {
         <span>Choose Scale</span>
         <span class="chk-cta-price">$179 / month &middot; 60 clients</span>
       </a>
+    </div>
+  </div>
+</section>
+
+<!-- ─── DETAILED FEATURE SECTIONS ─────────────────────────────────────
+     Restored editorial deep-dives. Each carries an id matching the
+     "Learn more" links from the checklist above. -->
+
+<!-- 1. Session Intelligence — light -->
+<section class="feature-section" id="detail-ai">
+  <div class="feature-frame">
+    <div class="feature-copy">
+      <div class="section-eyebrow">Session Intelligence</div>
+      <h2 class="section-title">Walk out of every session<br>with <em>insight</em>, not just notes.</h2>
+      <p class="section-lede">Upload a transcript and watch it become structured session notes. Then go a layer deeper &mdash; what the client actually said, what they avoided, and what's shifting underneath.</p>
+      <div class="feature-stack">
+        <div class="stack-item"><strong>GROW &middot; CLEAR &middot; OSKAR</strong>Auto-structured session notes in the framework that fits how you actually work.</div>
+        <div class="stack-item"><strong>Pre-Session Intelligence</strong>The full pattern map, surfaced before the next call &mdash; not after.</div>
+      </div>
+    </div>
+    <div>
+      <ul class="feature-list">
+        <li>
+          <h4>Coach Clarity</h4>
+          <p>Post-session client analysis. What they said, what they sidestepped, what's emerging &mdash; translated into observable patterns, never clinical labels.</p>
+        </li>
+        <li>
+          <h4>Coaching Mirror</h4>
+          <p>Reflects your own moves back at you. Where you advanced the work, where you played safe, where you grew. Built for honest practice.</p>
+        </li>
+        <li>
+          <h4>Coach DNA</h4>
+          <p>A longitudinal profile of your coaching identity &mdash; your patterns, your blindspots, your edge &mdash; derived only from your real session data.</p>
+        </li>
+        <li>
+          <h4>Approach Lab</h4>
+          <p>Simulate how a different coaching lens would have unfolded the same session. Emotion regulation, values-based action, change talk &mdash; your call.</p>
+        </li>
+        <li>
+          <h4>Session &amp; Intervention Plans</h4>
+          <p>Next-session prep grounded in what already happened. Plan what to deepen, what to revisit, and what to leave alone.</p>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 2. Client Experience — warm cream alt -->
+<section class="feature-section alt" id="detail-client">
+  <div class="feature-frame">
+    <div class="feature-copy">
+      <div class="section-eyebrow">Client Experience</div>
+      <h2 class="section-title">Give your clients a place that <em>works for them</em> &mdash; and gives you signal.</h2>
+      <p class="section-lede">A real client portal. Not a glorified booking page. Pre-session forms preload the state of the work. Goals, journals, and check-ins surface what shifted between sessions.</p>
+      <div class="feature-stack">
+        <div class="stack-item"><strong>Preloaded form templates</strong>Intake and pre-session forms ready to go &mdash; or build your own from scratch.</div>
+        <div class="stack-item"><strong>Two-way messaging</strong>Coach-client messaging that doesn't get lost in your inbox or theirs.</div>
+      </div>
+    </div>
+    <div>
+      <ul class="feature-list">
+        <li>
+          <h4>Pre-session forms</h4>
+          <p>Captures the client's current state right before each appointment. You start the call knowing what changed since last time.</p>
+        </li>
+        <li>
+          <h4>Goal tracking &amp; milestones</h4>
+          <p>Goals broken into milestones with progress markers. The client owns their trajectory; you see it without asking every session.</p>
+        </li>
+        <li>
+          <h4>Journaling &amp; mood tracker</h4>
+          <p>Client-facing journaling and mood ratings between sessions. Optional, lightweight, and visible to you when the client opts in.</p>
+        </li>
+        <li>
+          <h4>Homework &amp; check-ins</h4>
+          <p>Send reflection assignments, action steps, and lightweight check-ins. The client portal pulls everything into one place.</p>
+        </li>
+        <li>
+          <h4>Session history</h4>
+          <p>Every session, every form, every note &mdash; searchable by the client and by you. No more "I don't remember which doc that's in".</p>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 3. Business Tools — dark -->
+<section class="feature-section dark" id="detail-business">
+  <div class="feature-frame">
+    <div class="feature-copy">
+      <div class="section-eyebrow">Business Tools</div>
+      <h2 class="section-title">Run the <em>business</em> of coaching without leaving your zone.</h2>
+      <p class="section-lede">Scheduling, payments, courses, proposals, your profile in the directory &mdash; all wired to the same source of truth, all working with how you already coach.</p>
+      <div class="feature-stack">
+        <div class="stack-item"><strong>Stripe Connect</strong>Sessions, packages, gifts, refunds. Coupons. Zero commission on your revenue.</div>
+        <div class="stack-item"><strong>Marketplace listing</strong>Profile in our directory, searchable by specialty and style. Clients come to you.</div>
+      </div>
+    </div>
+    <div>
+      <ul class="feature-list">
+        <li>
+          <h4>Custom scheduler</h4>
+          <p>Google Calendar + Zoom OAuth. Recurring bookings, waitlists, rescheduling, no-show tracking, and automated SMS / email reminders.</p>
+        </li>
+        <li>
+          <h4>Packages, coupons, gifts</h4>
+          <p>Sell session packages with credit tracking. Apply coupons. Issue gift certificates. All ledgered, all reconcilable.</p>
+        </li>
+        <li>
+          <h4>Course builder</h4>
+          <p>Lessons, quizzes, certificates of completion, and CCE-hour tracking for coaches running continuing-education programs.</p>
+        </li>
+        <li>
+          <h4>Proposals &amp; articles</h4>
+          <p>Proposal builder for prospective clients. AI-assisted article engine for the marketing surface you'd rather not babysit.</p>
+        </li>
+        <li>
+          <h4>Testimonials &amp; recommendations</h4>
+          <p>Request, collect, and showcase client testimonials. Recommendations from peers compound your reputation in the directory.</p>
+        </li>
+        <li>
+          <h4>White-glove onboarding</h4>
+          <p>Personal setup from our team during your first week. We help you configure your profile, scheduler, calendar + Zoom OAuth, and payments &mdash; so you can spend day one coaching, not configuring.</p>
+        </li>
+      </ul>
     </div>
   </div>
 </section>
