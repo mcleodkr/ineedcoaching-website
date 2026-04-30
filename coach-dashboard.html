@@ -200,6 +200,10 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 .booking-checkin-link { color: var(--gold); font-weight: 700; text-decoration: none; font-size: 0.74rem; }
 .booking-checkin-link:hover { text-decoration: underline; }
 .booking-checkin-pill { font-size: 0.6rem; padding: 2px 8px; align-self: flex-start; }
+/* Brief 3: client-name jump — looks like an inline button-link, jumps to
+   the Clients tab detail view on click. */
+.booking-client-jump { display: inline-block; padding: 0; margin: 0; background: none; border: none; font-family: inherit; font-size: 0.92rem; font-weight: 600; color: var(--ink); text-align: left; cursor: pointer; line-height: 1.3; transition: color 0.15s ease; }
+.booking-client-jump:hover, .booking-client-jump:focus { color: var(--gold); text-decoration: underline; outline: none; }
 
 /* PREVIEW MODAL */
 .preview-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 500; align-items: center; justify-content: center; }
@@ -3521,6 +3525,24 @@ function extractServiceName(notes) {
   return match ? match[1].trim() : '';
 }
 
+// Brief 3: jumps from the bookings list to the Clients tab detail view.
+// First click on the Clients tab triggers its own lazy-loader, so we mark
+// _loaded ourselves and await loadClientsTab() to avoid a race where
+// openClientDetail runs before clientsData is populated.
+async function jumpToClientDetail(email) {
+  if (!email) return;
+  var btn = document.querySelector('.tab-btn[data-tab="clients"]');
+  if (!btn) return;
+  var alreadyLoaded = !!btn._loaded;
+  if (!alreadyLoaded) btn._loaded = true;
+  btn.click();
+  if (!alreadyLoaded && typeof loadClientsTab === 'function') {
+    try { await loadClientsTab(); }
+    catch (e) { console.warn('[bookings] clients tab load failed', e); }
+  }
+  if (typeof openClientDetail === 'function') openClientDetail(email);
+}
+
 function setupBookingsDelegation() {
   var c = $('bookings-content');
   if (!c || c.dataset.delegated === '1') return;
@@ -3544,6 +3566,13 @@ function setupBookingsDelegation() {
         var booking = bookingsAll.find(function(b) { return b.id === delId; });
         if (booking) openDeleteBookingConfirm(booking, function() { loadBookings(); });
       }
+      return;
+    }
+    // Brief 3: client name → Clients tab detail view.
+    var jumpBtn = e.target.closest && e.target.closest('.booking-client-jump');
+    if (jumpBtn && c.contains(jumpBtn)) {
+      var jumpEmail = jumpBtn.dataset.jumpToClient;
+      if (jumpEmail) jumpToClientDetail(jumpEmail);
       return;
     }
   });
@@ -3640,8 +3669,14 @@ async function loadBookings() {
       var actions = buildActionsHtml(b, status, clientName);
       var hasNotes = b.notes && b.notes.trim();
       var detailsId = 'details-' + (detailsCounter++);
+      // Brief 3: client name is a jump-link to the Clients tab detail view.
+      // Falls back to plain text when email is missing (no way to look up
+      // the client without it).
+      var nameCell = b.client_email
+        ? '<button type="button" class="booking-client-jump" data-jump-to-client="' + escapeHtml(b.client_email) + '" title="Open ' + escapeHtml(clientName) + '’s profile">' + escapeHtml(clientName) + '</button>'
+        : '<div style="font-weight:600;">' + escapeHtml(clientName) + '</div>';
       var out = '<tr data-booking-id="' + b.id + '">'
-        + '<td><div style="font-weight:600;">' + escapeHtml(clientName) + '</div><div style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(b.client_email || '') + '</div>' + (b.client_phone ? '<div style="font-size:0.72rem;color:var(--muted);">' + escapeHtml(b.client_phone) + '</div>' : '') + '</td>'
+        + '<td>' + nameCell + '<div style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(b.client_email || '') + '</div>' + (b.client_phone ? '<div style="font-size:0.72rem;color:var(--muted);">' + escapeHtml(b.client_phone) + '</div>' : '') + '</td>'
         + '<td>' + escapeHtml(serviceName) + '</td>'
         + '<td><div style="font-weight:500;">' + escapeHtml(dateStr) + '</div>' + (timeStr ? '<div style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(timeStr) + '</div>' : '') + '</td>'
         + '<td class="booking-status-cell"><span class="status-pill ' + statusClass + '">' + escapeHtml(statusText) + '</span>'
