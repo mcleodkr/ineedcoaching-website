@@ -28,7 +28,7 @@
       "maxDuration": 120
     },
     "api/generate-approach-lab.js": {
-      "maxDuration": 60
+      "maxDuration": 300
     },
     "api/cron-interventions.js": {
       "maxDuration": 300
