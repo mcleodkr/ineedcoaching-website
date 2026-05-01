@@ -17,6 +17,7 @@ async function callClaude(apiKey, model, maxTokens, system, userMessage, passNam
       headers: {
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'prompt-caching-2024-07-31,extended-cache-ttl-2025-04-11',
         'content-type': 'application/json',
       },
       body: JSON.stringify({
@@ -379,7 +380,7 @@ ${approachLabBlock}${coachDnaBlock}`;
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
       16000,
-      [{ type: 'text', text: CACHED_SYSTEM, cache_control: { type: 'ephemeral' } }],
+      [{ type: 'text', text: CACHED_SYSTEM, cache_control: { type: 'ephemeral', ttl: '1h' } }],
       userPayload,
       `InterventionPlan: Revise round ${round}`,
       { feature: 'intervention_plan', coachId: existing.coach_id }
