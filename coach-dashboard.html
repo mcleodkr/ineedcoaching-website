@@ -7383,25 +7383,65 @@ async function openClientDetail(email) {
       supabaseGet('coach_checkin_responses?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&submitted_at=not.is.null&order=created_at.desc&select=*'),
       supabaseGet('coach_messages?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&order=created_at.asc&select=*'),
       supabaseGet('coach_session_notes?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&select=*'),
-      supabaseGet('coach_intake_forms?coach_id=eq.' + cid + '&form_type=eq.checkin&select=id,name')
+      supabaseGet('coach_intake_forms?coach_id=eq.' + cid + '&form_type=eq.checkin&select=id,name'),
+      supabaseGet('coach_bookings?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&select=id')
     ]);
     var goals = results[0] || [];
-    var intakeResponses = results[1] || [];
+    var legacyIntake = results[1] || [];
     var checkinResponses = results[2] || [];
     var messages = results[3] || [];
     var sessionNotes = results[4] || [];
     var checkinForms = results[5] || [];
+    var bookings = results[6] || [];
+
+    // New-shape per-booking intakes (booking_intake_responses) live on a
+    // different table than the legacy coach_intake_responses (custom forms).
+    // Fetch them only when this client has bookings with this coach; merge
+    // both into a single feed so the render block can show them together.
+    var bookingIntake = [];
+    if (bookings.length) {
+      var bookingIds = bookings.map(function(b) { return b.id; }).join(',');
+      bookingIntake = await supabaseGet(
+        'booking_intake_responses?booking_id=in.(' + bookingIds + ')'
+        + '&order=created_at.desc'
+        + '&select=id,booking_id,brings_to_coaching,success_90_days,gotten_in_way,urgency_scale,focus_area,anything_else,created_at'
+      ) || [];
+    }
+    var intakeFeed = [];
+    legacyIntake.forEach(function(r) {
+      var qas = Array.isArray(r.responses) ? r.responses : [];
+      intakeFeed.push({
+        source: 'custom',
+        date: r.created_at,
+        items: qas
+          .map(function(qa) { return { label: qa.question || '', value: qa.answer || '' }; })
+          .filter(function(i) { return i.value; })
+      });
+    });
+    bookingIntake.forEach(function(r) {
+      var items = [];
+      if (r.brings_to_coaching) items.push({ label: 'What brings them to coaching now', value: r.brings_to_coaching });
+      if (r.success_90_days) items.push({ label: 'Success in 90 days', value: r.success_90_days });
+      if (r.gotten_in_way) items.push({ label: "What's gotten in the way before", value: r.gotten_in_way });
+      if (r.focus_area) items.push({ label: 'Focus area', value: r.focus_area });
+      if (r.urgency_scale != null) items.push({ label: 'Urgency', value: r.urgency_scale + ' / 10' });
+      if (r.anything_else) items.push({ label: 'Anything else', value: r.anything_else });
+      intakeFeed.push({ source: 'booking', date: r.created_at, items: items });
+    });
+    intakeFeed.sort(function(a, b) {
+      return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+    });
 
     notesByBooking = {};
     sessionNotes.forEach(function(n) { notesByBooking[n.booking_id] = n; });
 
-    renderClientDetail(client, goals, intakeResponses, checkinResponses, messages, notesByBooking, checkinForms);
+    renderClientDetail(client, goals, intakeFeed, checkinResponses, messages, notesByBooking, checkinForms);
   } catch(e) {
     $('clients-detail-view').innerHTML = '<div class="empty-state"><p>Error loading client details.</p></div>';
   }
 }
 
-function renderClientDetail(client, goals, intakeResponses, checkinResponses, messages, notesByBooking, checkinForms) {
+function renderClientDetail(client, goals, intakeFeed, checkinResponses, messages, notesByBooking, checkinForms) {
   var statusLabels = { not_started: 'Not Started', in_progress: 'In Progress', proposed: 'Proposed', active: 'Active', progressing: 'Progressing', stalled: 'Stalled', blocked: 'Blocked', revised: 'Revised', completed: 'Completed', archived: 'Archived' };
   var statusColors = { not_started: 'background:rgba(107,107,96,0.15);color:var(--muted)', in_progress: 'background:#c49a3c;color:#fff', proposed: 'background:rgba(107,107,96,0.15);color:var(--muted)', active: 'background:rgba(26,58,82,0.12);color:var(--ink)', progressing: 'background:#c49a3c;color:#fff', stalled: 'background:#b8860b;color:#fff', blocked: 'background:#c44;color:#fff', revised: 'background:#7b5ea7;color:#fff', completed: 'background:#2d6a4f;color:#fff', archived: 'background:rgba(107,107,96,0.25);color:var(--muted)' };
   var firstStr = client.firstSession ? new Date(client.firstSession).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A';
@@ -7639,22 +7679,23 @@ function renderClientDetail(client, goals, intakeResponses, checkinResponses, me
     + '</div>'
     + '</div>';
 
-  // Section 2: Intake Responses
+  // Section 2: Intake Responses (legacy custom forms + new per-booking
+  // intakes, merged & sorted newest first by the data-fetch step above).
   html += '<div class="form-section" style="margin-bottom:24px;">'
     + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;">Intake Responses</h2>';
-  if (!intakeResponses.length) {
+  if (!intakeFeed.length) {
     html += '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;">No intake form submitted yet</p>';
   } else {
-    intakeResponses.forEach(function(r) {
-      var resps = Array.isArray(r.responses) ? r.responses : [];
-      var dateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    intakeFeed.forEach(function(entry) {
+      var dateStr = entry.date ? new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      var srcLabel = entry.source === 'booking' ? 'Pre-session intake' : 'Custom intake form';
       html += '<details style="background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px 20px;margin-bottom:8px;">'
-        + '<summary style="font-size:0.88rem;font-weight:700;color:var(--ink);cursor:pointer;">Intake — ' + escapeHtml(dateStr) + ' <span style="font-size:0.78rem;color:var(--muted);font-weight:400;">(' + resps.length + ' answers)</span></summary>'
+        + '<summary style="font-size:0.88rem;font-weight:700;color:var(--ink);cursor:pointer;">' + escapeHtml(srcLabel) + ' — ' + escapeHtml(dateStr) + ' <span style="font-size:0.78rem;color:var(--muted);font-weight:400;">(' + entry.items.length + ' answers)</span></summary>'
         + '<div style="margin-top:12px;">';
-      resps.forEach(function(resp) {
+      entry.items.forEach(function(item) {
         html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">'
-          + '<div style="font-weight:600;font-size:0.82rem;color:var(--ink);margin-bottom:2px;">' + escapeHtml(resp.question || '') + '</div>'
-          + '<div style="font-size:0.88rem;color:var(--muted);">' + escapeHtml(String(resp.answer || '')) + '</div></div>';
+          + '<div style="font-weight:600;font-size:0.82rem;color:var(--ink);margin-bottom:2px;">' + escapeHtml(item.label) + '</div>'
+          + '<div style="font-size:0.88rem;color:var(--muted);">' + escapeHtml(String(item.value)) + '</div></div>';
       });
       html += '</div></details>';
     });
