@@ -1508,9 +1508,14 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
         anything_else: $('intake-q6').value.trim() || null,
       };
       try {
+        // Prefer: return=minimal because the booking_intake_responses RLS
+        // allows anon INSERT but restricts SELECT to authenticated coaches.
+        // The default HEADERS_WRITE asks for return=representation, which
+        // forces a read-back that anon can't satisfy → bogus permission error.
+        // Other writes (e.g. coach_bookings) keep HEADERS_WRITE untouched.
         var res = await fetch(REST + '/booking_intake_responses', {
           method: 'POST',
-          headers: HEADERS_WRITE,
+          headers: { ...HEADERS_WRITE, Prefer: 'return=minimal' },
           body: JSON.stringify(payload),
         });
         if (res.status === 409) {
