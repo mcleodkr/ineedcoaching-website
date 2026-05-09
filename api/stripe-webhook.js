@@ -260,7 +260,7 @@ export default async function handler(req, res) {
       }
 
       case 'customer.subscription.created': {
-        return handleSubscriptionCreated({ subscription: event.data.object, stripe, SUPABASE_URL, SB_HEADERS, res });
+        return handleSubscriptionCreated({ subscription: event.data.object, stripe, SUPABASE_URL, SB_HEADERS, req, res });
       }
 
       case 'customer.subscription.updated': {
@@ -721,7 +721,7 @@ async function ensureCoachAuthUser({ email, SUPABASE_URL, SB_HEADERS }) {
   }
 }
 
-async function handleSubscriptionCreated({ subscription, stripe, SUPABASE_URL, SB_HEADERS, res }) {
+async function handleSubscriptionCreated({ subscription, stripe, SUPABASE_URL, SB_HEADERS, req, res }) {
   if (!isCoachSignup(subscription)) {
     // Not from /api/create-subscription-checkout — leave it alone. Connect
     // destination charges or other future subscription products won't have
@@ -784,6 +784,7 @@ async function handleSubscriptionCreated({ subscription, stripe, SUPABASE_URL, S
     current_period_end: periodEndIso(subscription),
   };
   const slugBase = meta.signup_display_name || meta.signup_full_name || (email.split('@')[0] || '');
+  let coachSlug = null;
 
   if (Array.isArray(existing) && existing.length) {
     const id = existing[0].id;
@@ -794,6 +795,7 @@ async function handleSubscriptionCreated({ subscription, stripe, SUPABASE_URL, S
     if (!existing[0].slug) {
       patchBody.slug = await generateUniqueCoachSlug({ base: slugBase, SUPABASE_URL, SB_HEADERS });
     }
+    coachSlug = patchBody.slug || existing[0].slug;
     const patchRes = await fetch(
       `${SUPABASE_URL}/rest/v1/coach_profiles?id=eq.${encodeURIComponent(id)}`,
       {
@@ -808,11 +810,11 @@ async function handleSubscriptionCreated({ subscription, stripe, SUPABASE_URL, S
       return res.status(500).send('patch_failed');
     }
   } else {
-    const slug = await generateUniqueCoachSlug({ base: slugBase, SUPABASE_URL, SB_HEADERS });
+    coachSlug = await generateUniqueCoachSlug({ base: slugBase, SUPABASE_URL, SB_HEADERS });
     const profileRow = {
       ...subscriptionFields,
       user_email: email,
-      slug,
+      slug: coachSlug,
       is_published: true,
       full_name: meta.signup_full_name || null,
       display_name: meta.signup_display_name || meta.signup_full_name || null,
@@ -836,6 +838,33 @@ async function handleSubscriptionCreated({ subscription, stripe, SUPABASE_URL, S
   }
 
   await ensureCoachAuthUser({ email, SUPABASE_URL, SB_HEADERS });
+
+  // Branded onboarding email (profile URL + dashboard URL + 5-step checklist).
+  // Best-effort, same shape as the recovery email above: failures here are
+  // caught and warn-logged but do not roll back provisioning. The Supabase
+  // recovery email is the load-bearing one — without it the coach can't
+  // sign in.
+  try {
+    const origin = req && req.headers && req.headers.host
+      ? `https://${req.headers.host}`
+      : 'https://www.ineedcoaching.org';
+    const welcomeRes = await fetch(`${origin}/api/coach-welcome`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        display_name: meta.signup_display_name || meta.signup_full_name || '',
+        slug: coachSlug,
+      }),
+    });
+    if (!welcomeRes.ok) {
+      const txt = await welcomeRes.text().catch(() => '');
+      console.warn('[stripe-webhook][sub.created] coach-welcome non-ok', welcomeRes.status, txt);
+    }
+  } catch (e) {
+    console.warn('[stripe-webhook][sub.created] coach-welcome invocation threw', e.message);
+  }
+
   return res.status(200).send('provisioned');
 }
 
