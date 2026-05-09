@@ -813,6 +813,7 @@ async function handleSubscriptionCreated({ subscription, stripe, SUPABASE_URL, S
       ...subscriptionFields,
       user_email: email,
       slug,
+      is_published: true,
       full_name: meta.signup_full_name || null,
       display_name: meta.signup_display_name || meta.signup_full_name || null,
       bio: meta.signup_bio || null,
