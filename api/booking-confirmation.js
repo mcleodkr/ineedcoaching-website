@@ -65,18 +65,21 @@ export default async function handler(req, res) {
       : 'TBD';
     const notes = booking.notes || 'None';
 
-    // Generate Zoom meeting if no link exists yet.
-    // Fallback chain (PR 5.B, reordered after symptom report):
-    //   1. existing booking.zoom_link (re-confirmations of already-synced rows)
-    //   2. coach's user-OAuth Zoom (when zoom_oauth_enabled) — meeting lands
-    //      on the coach's own account; coach controls recording from Zoom UI
-    //   3. coach's recurring zoom_meeting_link (manual fallback for un-OAuthed coaches)
-    //   4. platform Server-to-Server Zoom via /api/zoom-meeting (legacy)
-    //   5. placeholder text
+    // Resolve a Zoom URL for the booking. Priority:
+    //   1. existing booking.zoom_link (re-confirmations skip re-resolution)
+    //   2. coach's user-OAuth Zoom (when zoom_oauth_enabled): unique meeting
+    //      per booking, lands on the coach's own account. Failure falls
+    //      through silently to (3).
+    //   3. coach's static zoom_meeting_link (one-link-per-coach approach):
+    //      same recurring URL reused, no per-meeting id/password.
+    //   4. log warning, leave booking.zoom_link null. Email shows a
+    //      placeholder; coach coordinates manually.
     //
-    // Reordering matters: when a coach has BOTH a recurring link saved AND
-    // OAuth connected, OAuth wins so each booking gets its own unique meeting
-    // (which is the whole point of connecting OAuth).
+    // The previous /api/zoom-meeting (Server-to-Server) fallback was
+    // removed: it depended on a platform marketplace app that can be in
+    // any state, and bookings were losing their meeting link entirely
+    // when it 500'd. Manual coordination is strictly better than risking
+    // the booking flow on a flaky integration.
     let zoomLink = booking.zoom_link || '';
 
     if (!zoomLink && coach.zoom_oauth_enabled && booking.coach_id) {
@@ -118,25 +121,42 @@ export default async function handler(req, res) {
 
     if (!zoomLink && coach.zoom_meeting_link) {
       zoomLink = coach.zoom_meeting_link;
+      // Persist onto the booking row so the email below + Google Calendar
+      // event below + any later read-paths see the same URL. zoom_meeting_id
+      // and password are explicitly null because static links carry no
+      // per-meeting identifiers (one URL reused across bookings).
+      try {
+        await fetch(
+          `${SUPABASE_URL}/rest/v1/coach_bookings?id=eq.${encodeURIComponent(booking_id)}`,
+          {
+            method: 'PATCH',
+            headers: {
+              apikey: SUPABASE_KEY,
+              Authorization: `Bearer ${SUPABASE_KEY}`,
+              'Content-Type': 'application/json',
+              Prefer: 'return=minimal',
+            },
+            body: JSON.stringify({
+              zoom_link: zoomLink,
+              zoom_meeting_id: null,
+              zoom_meeting_password: null,
+            }),
+          }
+        );
+      } catch (patchErr) {
+        console.warn('[booking-confirmation] static zoom_link patch failed:', patchErr && patchErr.message);
+      }
     }
 
     if (!zoomLink) {
-      try {
-        const origin = req.headers.host ? `https://${req.headers.host}` : 'https://www.ineedcoaching.org';
-        const zoomRes = await fetch(`${origin}/api/zoom-meeting`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ booking_id }),
-        });
-        if (zoomRes.ok) {
-          const zoomData = await zoomRes.json();
-          zoomLink = zoomData.zoom_link || '';
-        }
-      } catch (zoomErr) {
-        console.log('Zoom meeting creation skipped:', zoomErr.message);
-      }
+      // No OAuth coach + no static link saved. We deliberately do not fall
+      // back to /api/zoom-meeting (S2S) — see comment block above.
+      // Booking row's zoom_link stays null; email below shows a placeholder
+      // so the coach can coordinate manually rather than the booking
+      // failing on a flaky integration.
+      console.warn('[booking-confirmation] no Zoom URL available for booking', booking_id);
+      zoomLink = 'Will be provided before the session';
     }
-    if (!zoomLink) zoomLink = 'Will be provided before the session';
 
     // PR 5.A: sync to coach's Google Calendar (best-effort).
     // - Skips silently when the coach hasn't connected their calendar.
