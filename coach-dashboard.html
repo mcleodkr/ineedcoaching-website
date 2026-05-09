@@ -2827,7 +2827,19 @@ async function init() {
   if (adminLink && ADMIN_EMAILS.indexOf((email || '').toLowerCase()) !== -1) {
     adminLink.style.display = 'block';
   }
-  if ($('nav-profile-link')) $('nav-profile-link').href = '/coach/' + (coachProfile.slug || '');
+  // Hide the View Profile link entirely if this coach has no slug yet, rather
+  // than producing a broken /coach/ link that 404s on Vercel. Slug is set by
+  // the signup webhook for new coaches; older slugless rows are repaired by
+  // 20260509_backfill_coach_profile_slugs.sql.
+  var profileLink = $('nav-profile-link');
+  if (profileLink) {
+    if (coachProfile.slug) {
+      profileLink.href = '/coach/' + coachProfile.slug;
+      profileLink.style.display = '';
+    } else {
+      profileLink.style.display = 'none';
+    }
+  }
 
   populateProfileForm();
   setupTabs();

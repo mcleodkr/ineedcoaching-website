@@ -650,6 +650,40 @@ function periodEndIso(subscription) {
   return Number.isFinite(ts) ? new Date(ts * 1000).toISOString() : null;
 }
 
+// Slugify a coach's display name (or fallback) into a URL-safe root: lowercase,
+// strip non-alphanumeric (keep spaces/dashes), collapse whitespace to dashes,
+// dedupe dashes, trim, cap at 60 chars. Falls back to 'coach' on empty input.
+function slugifyCoachBase(value) {
+  const root = String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60)
+    .replace(/^-|-$/g, '');
+  return root || 'coach';
+}
+
+// Probe coach_profiles.slug starting from slugify(base) and append -2, -3, ...
+// on collision until we find a free one. The DB has a UNIQUE constraint on
+// slug, so this is best-effort — a concurrent insert could still race us;
+// in that case the caller's POST/PATCH will fail with 409 and the webhook's
+// retry will re-roll. Bounded to 50 tries, then a timestamp suffix as escape.
+async function generateUniqueCoachSlug({ base, SUPABASE_URL, SB_HEADERS }) {
+  const root = slugifyCoachBase(base);
+  for (let i = 1; i <= 50; i++) {
+    const candidate = i === 1 ? root : `${root}-${i}`;
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/coach_profiles?slug=eq.${encodeURIComponent(candidate)}&select=id&limit=1`,
+      { headers: SB_HEADERS }
+    );
+    const rows = await r.json().catch(() => []);
+    if (!Array.isArray(rows) || rows.length === 0) return candidate;
+  }
+  return `${root}-${Date.now().toString(36)}`;
+}
+
 function isCoachSignup(subscription) {
   const meta = (subscription && subscription.metadata) || {};
   return meta.signup_intent === 'coach_subscription';
@@ -738,7 +772,7 @@ async function handleSubscriptionCreated({ subscription, stripe, SUPABASE_URL, S
   // Existing coach (legacy / re-signup) — patch the subscription columns.
   // Otherwise, insert a fresh row.
   const existingRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/coach_profiles?user_email=eq.${encodeURIComponent(email)}&select=id&limit=1`,
+    `${SUPABASE_URL}/rest/v1/coach_profiles?user_email=eq.${encodeURIComponent(email)}&select=id,slug&limit=1`,
     { headers: SB_HEADERS }
   );
   const existing = await existingRes.json().catch(() => []);
@@ -749,15 +783,23 @@ async function handleSubscriptionCreated({ subscription, stripe, SUPABASE_URL, S
     stripe_subscription_id: subscription.id,
     current_period_end: periodEndIso(subscription),
   };
+  const slugBase = meta.signup_display_name || meta.signup_full_name || (email.split('@')[0] || '');
 
   if (Array.isArray(existing) && existing.length) {
     const id = existing[0].id;
+    const patchBody = { ...subscriptionFields };
+    // Repair-on-resignup: if the existing row pre-dates the slug-on-insert
+    // logic below and is still slugless, mint one now so the dashboard's
+    // /coach/<slug> link stops 404ing for this coach.
+    if (!existing[0].slug) {
+      patchBody.slug = await generateUniqueCoachSlug({ base: slugBase, SUPABASE_URL, SB_HEADERS });
+    }
     const patchRes = await fetch(
       `${SUPABASE_URL}/rest/v1/coach_profiles?id=eq.${encodeURIComponent(id)}`,
       {
         method: 'PATCH',
         headers: { ...SB_HEADERS, Prefer: 'return=minimal' },
-        body: JSON.stringify(subscriptionFields),
+        body: JSON.stringify(patchBody),
       }
     );
     if (!patchRes.ok) {
@@ -766,9 +808,11 @@ async function handleSubscriptionCreated({ subscription, stripe, SUPABASE_URL, S
       return res.status(500).send('patch_failed');
     }
   } else {
+    const slug = await generateUniqueCoachSlug({ base: slugBase, SUPABASE_URL, SB_HEADERS });
     const profileRow = {
       ...subscriptionFields,
       user_email: email,
+      slug,
       full_name: meta.signup_full_name || null,
       display_name: meta.signup_display_name || meta.signup_full_name || null,
       bio: meta.signup_bio || null,
