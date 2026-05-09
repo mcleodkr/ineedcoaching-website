@@ -1500,10 +1500,10 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
       var focusInput = form.querySelector('input[name="focus_area"]:checked');
       var payload = {
         booking_id: lastBookingId,
-        what_brings_you: $('intake-q1').value.trim() || null,
+        brings_to_coaching: $('intake-q1').value.trim() || null,
         success_90_days: $('intake-q2').value.trim() || null,
-        whats_gotten_in_way: $('intake-q3').value.trim() || null,
-        urgency_score: parseInt($('intake-q4').value, 10) || null,
+        gotten_in_way: $('intake-q3').value.trim() || null,
+        urgency_scale: parseInt($('intake-q4').value, 10) || null,
         focus_area: focusInput ? focusInput.value : null,
         anything_else: $('intake-q6').value.trim() || null,
       };
