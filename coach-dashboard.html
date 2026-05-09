@@ -7194,7 +7194,7 @@ function openEditSessionModal(booking, onSaved) {
         try {
           var rows = await supabaseGet(
             'booking_intake_responses?booking_id=eq.' + encodeURIComponent(bookingId)
-            + '&select=what_brings_you,success_in_90_days,whats_gotten_in_way,urgency_score,focus_area,anything_else,created_at'
+            + '&select=brings_to_coaching,success_90_days,gotten_in_way,urgency_scale,focus_area,anything_else,created_at'
             + '&limit=1'
           );
           if (!Array.isArray(rows) || !rows.length) {
@@ -7218,11 +7218,11 @@ function openEditSessionModal(booking, onSaved) {
               + '</div>';
           }
           var sections = ''
-            + fmt('What brings them to coaching now', r.what_brings_you)
-            + fmt('Success in 90 days', r.success_in_90_days)
-            + fmt('What\'s gotten in the way before', r.whats_gotten_in_way)
+            + fmt('What brings them to coaching now', r.brings_to_coaching)
+            + fmt('Success in 90 days', r.success_90_days)
+            + fmt('What\'s gotten in the way before', r.gotten_in_way)
             + fmt('Focus area', r.focus_area)
-            + fmt('Urgency', r.urgency_score == null ? null : (r.urgency_score + ' / 10'))
+            + fmt('Urgency', r.urgency_scale == null ? null : (r.urgency_scale + ' / 10'))
             + fmt('Anything else', r.anything_else);
           if (!sections) sections = '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:var(--muted);">Client submitted the form but left every field blank.</div>';
           intakeEl.innerHTML = ''
