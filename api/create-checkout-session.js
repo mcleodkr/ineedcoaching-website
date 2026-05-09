@@ -8,7 +8,10 @@
 //   { course_id, student_email, student_name } → course flow (original)
 //   { booking_id }                              → session-booking flow (PR 1.D)
 
-const SESSION_PLATFORM_FEE_PERCENTAGE = 10; // matches coach_courses default
+// Per platform marketing: no platform fee on client-coach sessions. Stripe's
+// own processing fees still apply and come out of the coach's payout.
+// Course platform fee is independent and lives on coach_courses.platform_fee_percentage.
+const SESSION_PLATFORM_FEE_PERCENTAGE = 0;
 
 function resolveStripeKey() {
   const mode = (process.env.STRIPE_MODE || 'test').toLowerCase();

@@ -5,7 +5,9 @@
 // branch on metadata.package_id) creates the client_package_purchases
 // row with credits_remaining seeded to package.session_count.
 
-const PACKAGE_PLATFORM_FEE_PERCENTAGE = 10;
+// Per platform marketing: no platform fee on client-coach session packages.
+// Stripe's own processing fees still apply and come out of the coach's payout.
+const PACKAGE_PLATFORM_FEE_PERCENTAGE = 0;
 
 function resolveStripeKey() {
   const mode = (process.env.STRIPE_MODE || 'test').toLowerCase();
