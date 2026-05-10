@@ -448,6 +448,40 @@ footer {
           </select>
         </div>
         <div class="form-group">
+          <label for="ind-format">Format Preference</label>
+          <select id="ind-format">
+            <option>Telehealth</option>
+            <option>In-Person</option>
+            <option>Either</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="ind-country">Country <span style="font-weight:400;color:var(--muted);">(optional)</span></label>
+          <select id="ind-country" onchange="updateIndLocationFields()">
+            <option>United States</option>
+            <option>Canada</option>
+            <option>United Kingdom</option>
+            <option>Australia</option>
+            <option>Ireland</option>
+            <option>Ghana</option>
+            <option>Nigeria</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label id="ind-region-label" for="ind-us-state">Your state</label>
+          <select id="ind-us-state">
+            <option value="">Select...</option>
+            <option>Alabama</option><option>Alaska</option><option>Arizona</option><option>Arkansas</option><option>California</option><option>Colorado</option><option>Connecticut</option><option>Delaware</option><option>Florida</option><option>Georgia</option><option>Hawaii</option><option>Idaho</option><option>Illinois</option><option>Indiana</option><option>Iowa</option><option>Kansas</option><option>Kentucky</option><option>Louisiana</option><option>Maine</option><option>Maryland</option><option>Massachusetts</option><option>Michigan</option><option>Minnesota</option><option>Mississippi</option><option>Missouri</option><option>Montana</option><option>Nebraska</option><option>Nevada</option><option>New Hampshire</option><option>New Jersey</option><option>New Mexico</option><option>New York</option><option>North Carolina</option><option>North Dakota</option><option>Ohio</option><option>Oklahoma</option><option>Oregon</option><option>Pennsylvania</option><option>Rhode Island</option><option>South Carolina</option><option>South Dakota</option><option>Tennessee</option><option>Texas</option><option>Utah</option><option>Vermont</option><option>Virginia</option><option>Washington</option><option>West Virginia</option><option>Wisconsin</option><option>Wyoming</option><option>District of Columbia</option>
+          </select>
+          <select id="ind-ca-province" style="display:none;">
+            <option value="">Select...</option>
+            <option>Alberta</option><option>British Columbia</option><option>Manitoba</option><option>New Brunswick</option><option>Newfoundland and Labrador</option><option>Northwest Territories</option><option>Nova Scotia</option><option>Nunavut</option><option>Ontario</option><option>Prince Edward Island</option><option>Quebec</option><option>Saskatchewan</option><option>Yukon</option>
+          </select>
+          <input type="text" id="ind-region-text" placeholder="Your city or region (optional)" style="display:none;">
+          <p style="font-size:0.78rem;color:var(--muted);font-style:italic;margin-top:8px;">Coaches can work with clients anywhere. Location is optional.</p>
+        </div>
+        <div class="form-group">
           <label>Availability</label>
           <div class="checkbox-group" id="ind-availability">
             <label><input type="checkbox" value="Mornings"><span>Mornings</span></label>
@@ -645,6 +679,12 @@ async function submitIndividual(e) {
   var specialty = document.getElementById('ind-specialty').value;
   var budget = document.getElementById('ind-budget').value;
 
+  var country = document.getElementById('ind-country').value;
+  var region = '';
+  if (country === 'United States') region = document.getElementById('ind-us-state').value;
+  else if (country === 'Canada') region = document.getElementById('ind-ca-province').value;
+  else region = document.getElementById('ind-region-text').value.trim();
+
   var payload = {
     user_email: document.getElementById('ind-email').value.trim().toLowerCase(),
     display_name: document.getElementById('ind-name').value.trim(),
@@ -652,7 +692,9 @@ async function submitIndividual(e) {
     struggle_detail: document.getElementById('ind-description').value.trim(),
     category: specialty || null,
     support_type: 'coaching',
-    format_preference: 'No preference',
+    format_preference: document.getElementById('ind-format').value,
+    country: country,
+    state: region,
     availability: avail.length > 0 ? avail.join(', ') : 'Flexible',
     budget_range: budget || 'Not sure yet',
     payment_type: 'Self-pay',
@@ -742,6 +784,30 @@ async function submitBusiness(e) {
   }
   btn.disabled = false; btn.textContent = 'Submit Request';
 }
+
+function updateIndLocationFields() {
+  var country = document.getElementById('ind-country').value;
+  var usSel = document.getElementById('ind-us-state');
+  var caSel = document.getElementById('ind-ca-province');
+  var txt = document.getElementById('ind-region-text');
+  var label = document.getElementById('ind-region-label');
+  if (!usSel || !caSel || !txt || !label) return;
+  if (country === 'United States') {
+    usSel.style.display = ''; caSel.style.display = 'none'; txt.style.display = 'none';
+    label.textContent = 'Your state';
+    label.setAttribute('for', 'ind-us-state');
+  } else if (country === 'Canada') {
+    usSel.style.display = 'none'; caSel.style.display = ''; txt.style.display = 'none';
+    label.textContent = 'Your province';
+    label.setAttribute('for', 'ind-ca-province');
+  } else {
+    usSel.style.display = 'none'; caSel.style.display = 'none'; txt.style.display = '';
+    label.textContent = 'Your region';
+    label.setAttribute('for', 'ind-region-text');
+  }
+}
+
+updateIndLocationFields();
 </script>
 <script data-MOBILE_NAV_HAMBURGER_v1>
 (function() {
