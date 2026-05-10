@@ -1473,9 +1473,9 @@ async function updateGoal(goalId, action) {
   if (action === 'done') {
     body = { status: 'completed', completed_by: 'client', progress_marker: null };
   } else if (action === 'small_win') {
-    body = { status: 'in_progress', completed_by: null, progress_marker: 'small_win' };
+    body = { status: 'progressing', completed_by: null, progress_marker: 'small_win' };
   } else {
-    body = { status: 'in_progress', completed_by: null, progress_marker: null };
+    body = { status: 'progressing', completed_by: null, progress_marker: null };
   }
   try {
     const res = await fetch(SUPABASE_URL + '/rest/v1/coach_goals?id=eq.' + encodeURIComponent(goalId), {
@@ -1510,7 +1510,7 @@ async function addClientGoal() {
         client_email: currentEmail,
         title: title,
         description: description || null,
-        status: 'not_started',
+        status: 'active',
         created_by: 'client',
         coach_id: null
       })

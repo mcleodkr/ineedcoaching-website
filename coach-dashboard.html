@@ -8335,7 +8335,7 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
         client_name: client.name || null,
         title: title,
         target_date: $('client-goal-date').value || null,
-        status: 'not_started',
+        status: 'active',
         source: 'manual'
       })
     });
@@ -10019,7 +10019,7 @@ function renderPostSessionAnalysis(a, container) {
       try {
         await fetch(SUPABASE_URL + '/rest/v1/coach_goals', {
           method: 'POST', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ coach_id: coachProfile.id, client_email: container.dataset.clientEmail, title: self.dataset.sgTitle, description: self.dataset.sgDesc || null, target_date: self.dataset.sgDate || null, status: 'not_started', source: 'coach_clarity', booking_id: container.dataset.bookingId || null })
+          body: JSON.stringify({ coach_id: coachProfile.id, client_email: container.dataset.clientEmail, title: self.dataset.sgTitle, description: self.dataset.sgDesc || null, target_date: self.dataset.sgDate || null, status: 'active', source: 'coach_clarity', booking_id: container.dataset.bookingId || null })
         });
         self.textContent = '\u2713 Added';
         self.style.background = '#2d6a4f';
@@ -10029,7 +10029,7 @@ function renderPostSessionAnalysis(a, container) {
           var newGoal = document.createElement('div');
           newGoal.style.cssText = 'background:var(--white);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;transition:background 0.5s;';
           newGoal.innerHTML = '<div style="display:flex;align-items:center;gap:8px;' + (self.dataset.sgDesc ? 'margin-bottom:4px;' : '') + '">'
-            + '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:700;letter-spacing:0.04em;background:var(--muted);color:#fff;">NOT STARTED</span>'
+            + '<span style="display:inline-block;padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:700;letter-spacing:0.04em;background:var(--muted);color:#fff;">ACTIVE</span>'
             + '<span style="font-size:0.85rem;font-weight:600;color:var(--ink);">' + escapeHtml(self.dataset.sgTitle) + '</span></div>'
             + (self.dataset.sgDesc ? '<div style="font-size:0.78rem;color:var(--muted);line-height:1.4;">' + escapeHtml(self.dataset.sgDesc) + '</div>' : '');
           goalsSlot.appendChild(newGoal);
@@ -10085,7 +10085,7 @@ function renderPostSessionAnalysis(a, container) {
       try {
         await fetch(SUPABASE_URL + '/rest/v1/coach_goals', {
           method: 'POST', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ coach_id: coachProfile.id, client_email: container.dataset.clientEmail, title: self.dataset.practiceTitle, description: self.dataset.practiceDesc || null, status: 'not_started', source: 'session', booking_id: container.dataset.bookingId || null })
+          body: JSON.stringify({ coach_id: coachProfile.id, client_email: container.dataset.clientEmail, title: self.dataset.practiceTitle, description: self.dataset.practiceDesc || null, status: 'active', source: 'session', booking_id: container.dataset.bookingId || null })
         });
         self.textContent = '\u2713 Added';
         self.style.background = '#2d6a4f';
@@ -11703,8 +11703,8 @@ async function loadDashGoals() {
       + '<div class="form-group">'
       + '<label for="goal-status">Status</label>'
       + '<select id="goal-status">'
-      + '<option value="not_started">Not Started</option>'
-      + '<option value="in_progress">In Progress</option>'
+      + '<option value="active">Active</option>'
+      + '<option value="progressing">In Progress</option>'
       + '<option value="completed">Completed</option>'
       + '</select></div>'
       + '</div>'
@@ -11795,7 +11795,7 @@ async function addGoal() {
     $('goal-title').value = '';
     $('goal-desc').value = '';
     $('goal-date').value = '';
-    $('goal-status').value = 'not_started';
+    $('goal-status').value = 'active';
     loadDashGoals();
   } catch (e) {
     msg.textContent = 'Error adding goal.';
