@@ -394,5 +394,39 @@ loadCoaches();
   });
 })();
 </script>
+
+<script>
+(function(){
+  // Hide "List Your Practice" CTAs from logged-in coaches. Reads
+  // sb_access_token (set by coach-dashboard's login flow), looks up
+  // coach_profiles by authed email; if a coach profile exists, hides
+  // every /coach-signup.html link with that text. Anon visitors and
+  // non-coach logged-in users (clients) keep seeing the CTA — they
+  // are the intended audience. Fails silently on any error.
+  try {
+    var token = localStorage.getItem('sb_access_token');
+    if (!token) return;
+    var SB = 'https://qroizygknxdjsstkezsf.supabase.co';
+    var KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+    fetch(SB + '/auth/v1/user', { headers: { Authorization: 'Bearer ' + token, apikey: KEY } })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(u){
+        if (!u || !u.email) return null;
+        return fetch(SB + '/rest/v1/coach_profiles?user_email=eq.' + encodeURIComponent(u.email.toLowerCase()) + '&select=id&limit=1', {
+          headers: { apikey: KEY, Authorization: 'Bearer ' + KEY }
+        }).then(function(r){ return r.ok ? r.json() : []; });
+      })
+      .then(function(rows){
+        if (!Array.isArray(rows) || rows.length === 0) return;
+        document.querySelectorAll('a[href="/coach-signup.html"]').forEach(function(a){
+          if ((a.textContent || '').trim().toLowerCase() === 'list your practice') {
+            a.style.display = 'none';
+          }
+        });
+      })
+      .catch(function(){ /* fail silently — CTA stays visible on error */ });
+  } catch (e) { /* fail silently */ }
+})();
+</script>
 </body>
 </html>
