@@ -449,7 +449,7 @@ footer {
         </div>
         <div class="form-group">
           <label>Availability</label>
-          <div class="checkbox-group">
+          <div class="checkbox-group" id="ind-availability">
             <label><input type="checkbox" value="Mornings"><span>Mornings</span></label>
             <label><input type="checkbox" value="Afternoons"><span>Afternoons</span></label>
             <label><input type="checkbox" value="Evenings"><span>Evenings</span></label>
@@ -478,6 +478,14 @@ footer {
           <div class="form-group">
             <label for="ind-email">Your Email</label>
             <input type="email" id="ind-email" placeholder="you@example.com" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="checkbox-group" id="ind-audiences" style="align-items:center;">
+            <span style="font-size:0.82rem;color:var(--muted);font-weight:600;padding:10px 0;margin-right:4px;">Open to hearing from:</span>
+            <label><input type="checkbox" value="coaching" checked><span>Coaches</span></label>
+            <label><input type="checkbox" value="therapy"><span>Therapists</span></label>
+            <label><input type="checkbox" value="recovery"><span>Recovery specialists</span></label>
           </div>
         </div>
         <button type="submit" class="submit-btn">Post Your Request</button>
@@ -628,22 +636,36 @@ async function submitIndividual(e) {
   msg.textContent = ''; msg.style.color = '';
 
   var avail = [];
-  document.querySelectorAll('#panel-individual input[type="checkbox"]:checked').forEach(function(cb) { avail.push(cb.value); });
+  document.querySelectorAll('#ind-availability input[type="checkbox"]:checked').forEach(function(cb) { avail.push(cb.value); });
+
+  var audiences = [];
+  document.querySelectorAll('#ind-audiences input[type="checkbox"]:checked').forEach(function(cb) { audiences.push(cb.value); });
+  if (audiences.length === 0) audiences = ['coaching'];
+
+  var specialty = document.getElementById('ind-specialty').value;
+  var budget = document.getElementById('ind-budget').value;
 
   var payload = {
-    poster_type: 'individual',
-    email: document.getElementById('ind-email').value.trim(),
-    name: document.getElementById('ind-name').value.trim(),
-    description: document.getElementById('ind-description').value.trim(),
-    budget_range: document.getElementById('ind-budget').value,
-    availability: avail.join(', '),
-    specialty_preference: document.getElementById('ind-specialty').value
+    user_email: document.getElementById('ind-email').value.trim().toLowerCase(),
+    display_name: document.getElementById('ind-name').value.trim(),
+    struggle_type: specialty || 'Coaching',
+    struggle_detail: document.getElementById('ind-description').value.trim(),
+    category: specialty || null,
+    support_type: 'coaching',
+    format_preference: 'No preference',
+    availability: avail.length > 0 ? avail.join(', ') : 'Flexible',
+    budget_range: budget || 'Not sure yet',
+    payment_type: 'Self-pay',
+    is_anonymous: false,
+    status: 'active',
+    target_audiences: audiences,
+    posted_from_site: 'coaching'
   };
 
   try {
-    var res = await fetch(SUPABASE_URL + '/rest/v1/coaching_commons_posts', {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/explorer_requests', {
       method: 'POST',
-      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
       body: JSON.stringify(payload)
     });
     if (res.ok) {
