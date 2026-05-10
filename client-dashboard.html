@@ -318,6 +318,29 @@ a { color: var(--navy); text-decoration: none; }
   .card { padding: 18px 20px; }
   .login-card { padding: 32px 24px; }
 }
+
+/* COMMONS SURFACE — Phase 1.G port from therapy.org */
+.commons-section-label { font-family: 'Cormorant Garamond', serif; font-size: 1.15rem; font-weight: 600; color: var(--navy); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin: 0 0 14px; }
+.commons-responses-section { display: none; margin-bottom: 28px; }
+.commons-responses-section.visible { display: block; }
+.commons-request-section { margin-bottom: 28px; }
+.commons-request-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 22px; background: var(--white); border: 1px solid var(--border); border-radius: var(--r); cursor: pointer; transition: border-color 0.15s ease; box-shadow: var(--shadow-sm); }
+.commons-request-header:hover { border-color: #d9d4c7; }
+.commons-request-header-text { font-family: 'Cormorant Garamond', serif; font-size: 1.05rem; font-weight: 600; color: var(--navy); }
+.commons-request-toggle-btn { padding: 8px 18px; border-radius: var(--r-sm); border: none; background: var(--gold); color: var(--white); font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: background 0.15s ease; }
+.commons-request-toggle-btn:hover { background: var(--gold-hover); }
+.commons-request-body { display: none; padding: 22px 24px; background: var(--white); border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--r) var(--r); box-shadow: var(--shadow-sm); }
+.commons-request-body.open { display: block; }
+.commons-request-header.expanded { border-radius: var(--r) var(--r) 0 0; box-shadow: none; }
+.commons-archived-section { margin-bottom: 28px; }
+.commons-archived-content { background: var(--cream-warm); border: 1px solid var(--border); border-radius: var(--r); padding: 18px 22px; }
+.commons-audiences { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; padding: 12px 0 16px; }
+.commons-audiences > .lbl { font-size: 0.82rem; color: var(--muted); font-weight: 600; margin-right: 4px; }
+.commons-audiences label { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text); cursor: pointer; }
+.commons-audiences input[type="checkbox"] { cursor: pointer; }
+@media (max-width: 700px) {
+  .commons-request-header { flex-direction: column; align-items: stretch; text-align: center; }
+}
 </style>
 </head>
 <body>
@@ -385,6 +408,158 @@ a { color: var(--navy); text-decoration: none; }
 
         <!-- PROGRESS HOST -->
         <div id="progress-host"></div>
+
+        <!-- COMMONS — providers who want to help (Phase 1.G port) -->
+        <div class="commons-responses-section" id="responsesSection">
+          <div class="commons-section-label">Providers who want to help</div>
+          <div id="responsesContent"></div>
+        </div>
+
+        <!-- COMMONS — post a request (collapsible) -->
+        <div class="commons-request-section" id="requestSection">
+          <div class="commons-request-header" id="requestHeader" onclick="toggleRequestForm()">
+            <span class="commons-request-header-text">Ready to connect? Let a provider reach out to you.</span>
+            <button type="button" class="commons-request-toggle-btn" id="requestToggleBtn">Open</button>
+          </div>
+          <div class="commons-request-body" id="requestBody">
+            <div id="requestFormWrap">
+              <form id="requestForm" onsubmit="return false;">
+                <div style="margin-bottom:14px;">
+                  <label style="display:block;font-size:0.72rem;font-weight:700;color:var(--text);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;">What are you working on?</label>
+                  <select id="req-struggle" style="width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:0.92rem;color:var(--text);background:var(--white);">
+                    <option value="">Select...</option>
+                    <option>Life Coaching</option>
+                    <option>Executive Coaching</option>
+                    <option>Career Coaching</option>
+                    <option>Leadership</option>
+                    <option>Health &amp; Wellness</option>
+                    <option>Business Coaching</option>
+                    <option>Relationship Coaching</option>
+                    <option>Other</option>
+                  </select>
+                  <textarea id="req-struggle-detail" placeholder="Tell us more (optional)" maxlength="500" rows="4" style="width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:0.92rem;color:var(--text);margin-top:8px;min-height:140px;resize:vertical;background:var(--white);"></textarea>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+                  <div>
+                    <label style="display:block;font-size:0.72rem;font-weight:700;color:var(--text);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;">Support type</label>
+                    <select id="req-support" onchange="updateLocationFields()" style="width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:0.92rem;color:var(--text);background:var(--white);">
+                      <option value="coaching">Coaching</option>
+                      <option value="therapy">Therapy</option>
+                      <option value="recovery">Recovery</option>
+                      <option value="any">Open to any</option>
+                    </select>
+                    <div id="coaching-note" style="font-size:0.72rem;color:var(--muted);margin-top:6px;font-style:italic;">Coaches can work with clients anywhere &mdash; location is optional.</div>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:0.72rem;font-weight:700;color:var(--text);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;">Format</label>
+                    <select id="req-format" style="width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:0.92rem;color:var(--text);background:var(--white);">
+                      <option>Telehealth</option>
+                      <option>In-Person</option>
+                      <option>Either</option>
+                    </select>
+                  </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;" id="location-row">
+                  <div>
+                    <label style="display:block;font-size:0.72rem;font-weight:700;color:var(--text);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;">Your country</label>
+                    <select id="req-country" onchange="updateLocationFields()" style="width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:0.92rem;color:var(--text);background:var(--white);">
+                      <option>United States</option>
+                      <option>Canada</option>
+                      <option>United Kingdom</option>
+                      <option>Australia</option>
+                      <option>Ireland</option>
+                      <option>Ghana</option>
+                      <option>Nigeria</option>
+                      <option>Other</option>
+                    </select>
+                  </div>
+                  <div id="region-field">
+                    <label id="region-label" style="display:block;font-size:0.72rem;font-weight:700;color:var(--text);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;">Your state</label>
+                    <select id="req-us-state" style="width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:0.92rem;color:var(--text);background:var(--white);">
+                      <option value="">Select...</option>
+                      <option>Alabama</option><option>Alaska</option><option>Arizona</option><option>Arkansas</option><option>California</option><option>Colorado</option><option>Connecticut</option><option>Delaware</option><option>Florida</option><option>Georgia</option><option>Hawaii</option><option>Idaho</option><option>Illinois</option><option>Indiana</option><option>Iowa</option><option>Kansas</option><option>Kentucky</option><option>Louisiana</option><option>Maine</option><option>Maryland</option><option>Massachusetts</option><option>Michigan</option><option>Minnesota</option><option>Mississippi</option><option>Missouri</option><option>Montana</option><option>Nebraska</option><option>Nevada</option><option>New Hampshire</option><option>New Jersey</option><option>New Mexico</option><option>New York</option><option>North Carolina</option><option>North Dakota</option><option>Ohio</option><option>Oklahoma</option><option>Oregon</option><option>Pennsylvania</option><option>Rhode Island</option><option>South Carolina</option><option>South Dakota</option><option>Tennessee</option><option>Texas</option><option>Utah</option><option>Vermont</option><option>Virginia</option><option>Washington</option><option>West Virginia</option><option>Wisconsin</option><option>Wyoming</option><option>District of Columbia</option>
+                    </select>
+                    <select id="req-ca-province" style="display:none;width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:0.92rem;color:var(--text);background:var(--white);">
+                      <option value="">Select...</option>
+                      <option>Alberta</option><option>British Columbia</option><option>Manitoba</option><option>New Brunswick</option><option>Newfoundland and Labrador</option><option>Northwest Territories</option><option>Nova Scotia</option><option>Nunavut</option><option>Ontario</option><option>Prince Edward Island</option><option>Quebec</option><option>Saskatchewan</option><option>Yukon</option>
+                    </select>
+                    <input type="text" id="req-region-text" placeholder="Your region or city (optional)" style="display:none;width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:0.92rem;color:var(--text);background:var(--white);">
+                  </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+                  <div>
+                    <label style="display:block;font-size:0.72rem;font-weight:700;color:var(--text);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;">Availability</label>
+                    <select id="req-avail" style="width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:0.92rem;color:var(--text);background:var(--white);">
+                      <option>Mornings (before noon)</option>
+                      <option>Evenings (after 5pm)</option>
+                      <option>Weekends only</option>
+                      <option>Flexible schedule</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:0.72rem;font-weight:700;color:var(--text);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;">Budget range</label>
+                    <select id="req-budget" onchange="toggleProBonoMsg()" style="width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:0.92rem;color:var(--text);background:var(--white);">
+                      <option>$0 &mdash; Pro bono only</option>
+                      <option>Under $100/session</option>
+                      <option>$100-$200/session</option>
+                      <option>$200+/session</option>
+                      <option>Open to sliding scale</option>
+                      <option>Not sure yet</option>
+                    </select>
+                    <div id="pro-bono-msg" style="display:none;background:rgba(26,58,82,0.06);border-radius:var(--r-sm);padding:10px 14px;margin-top:8px;font-size:0.78rem;color:var(--navy);line-height:1.5;">Pro bono sessions are offered by providers who have volunteered these slots. You deserve support regardless of your budget.</div>
+                  </div>
+                </div>
+                <div style="margin-bottom:14px;">
+                  <label style="display:block;font-size:0.72rem;font-weight:700;color:var(--text);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;">Payment type</label>
+                  <select id="req-payment" style="width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:0.92rem;color:var(--text);background:var(--white);">
+                    <option>Self-pay</option>
+                    <option>Have insurance</option>
+                    <option>Need sliding scale</option>
+                    <option>Open to any</option>
+                  </select>
+                </div>
+                <div style="margin-bottom:14px;">
+                  <label style="display:block;font-size:0.72rem;font-weight:700;color:var(--text);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;">Anything else? <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;">(optional, 300 chars)</span></label>
+                  <textarea id="req-notes" maxlength="300" rows="3" placeholder="Anything you want providers to know..." style="width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:0.92rem;color:var(--text);background:var(--white);resize:vertical;"></textarea>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                  <input type="checkbox" id="req-anon" checked>
+                  <label for="req-anon" style="font-size:0.85rem;color:var(--text);">Post anonymously <span style="color:var(--muted);">(recommended)</span></label>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                  <input type="checkbox" id="req-share-wellness">
+                  <label for="req-share-wellness" style="font-size:0.85rem;color:var(--text);">Share my wellness snapshot with providers</label>
+                </div>
+                <p style="font-size:0.72rem;color:var(--muted);margin:0 0 12px 26px;">Your check-in and journal patterns. Nothing shared without this toggle on.</p>
+                <div class="commons-audiences" id="req-audiences">
+                  <span class="lbl">Open to hearing from:</span>
+                  <label><input type="checkbox" value="coaching" checked><span>Coaches</span></label>
+                  <label><input type="checkbox" value="therapy"><span>Therapists</span></label>
+                  <label><input type="checkbox" value="recovery"><span>Recovery specialists</span></label>
+                </div>
+                <button type="button" onclick="submitRequest()" style="background:var(--gold);color:var(--white);border:none;padding:12px 28px;border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:0.88rem;font-weight:600;cursor:pointer;transition:background 0.15s ease;" onmouseover="this.style.background='var(--gold-hover)'" onmouseout="this.style.background='var(--gold)'">Post my request &rarr;</button>
+              </form>
+            </div>
+            <div id="activeRequestWrap" style="display:none;">
+              <div id="activeRequestContent"></div>
+            </div>
+            <div id="prefillConflict" style="display:none;background:rgba(26,58,82,0.06);border:1px solid var(--navy);border-radius:var(--r-sm);padding:18px;margin-top:14px;">
+              <p style="font-size:0.92rem;font-weight:700;color:var(--text);margin-bottom:4px;">You shared something new.</p>
+              <p style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;">Would you like to update your request with it?</p>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <button onclick="prefillUpdate()" style="background:var(--gold);color:var(--white);border:none;padding:10px 18px;border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:0.82rem;font-weight:600;cursor:pointer;">Update my request</button>
+                <button onclick="prefillPauseAndNew()" style="background:var(--white);color:var(--navy);border:1px solid var(--navy);padding:10px 18px;border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:0.82rem;font-weight:600;cursor:pointer;">Pause it and post this as new</button>
+                <button onclick="prefillKeep()" style="background:none;border:none;padding:8px;font-family:'DM Sans',sans-serif;font-size:0.78rem;color:var(--muted);cursor:pointer;text-decoration:underline;">Keep as is</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- COMMONS — archived/paused requests -->
+        <div class="commons-archived-section" id="archivedSection" style="display:none;">
+          <div class="commons-section-label">Paused requests</div>
+          <div id="archivedContent" class="commons-archived-content"></div>
+        </div>
 
         <!-- SESSIONS -->
         <section class="section active" id="sec-sessions">
@@ -686,6 +861,8 @@ async function init() {
   // Surface the daily check-in modal once the dashboard is visible. Awaits
   // are intentionally not blocking the render — the modal can pop in.
   maybeShowDailyCheckin();
+  // Commons surface — fire-and-forget; cascades to responses + archived.
+  loadActiveRequest();
 }
 
 function signOutHard() {
@@ -2895,6 +3072,423 @@ async function journalConfirmShare() {
   renderJournal();
 }
 window.journalConfirmShare = journalConfirmShare;
+
+/* ================================================
+   COMMONS SURFACE — Phase 1.G port from therapy.org
+   Marketplace UI: explorers see provider responses to their request,
+   manage their active request, and view paused requests. Reads/writes
+   explorer_requests + explorer_responses (the unified marketplace tables).
+   The /coaching-commons.html standalone post form remains as the public
+   anonymous entry point — both write to the same table.
+   ================================================ */
+function supaFetch(path, opts) {
+  opts = opts || {};
+  const headers = Object.assign({
+    'apikey': ANON_KEY,
+    'Content-Type': 'application/json'
+  }, opts.headers || {});
+  if (currentToken) headers['Authorization'] = 'Bearer ' + currentToken;
+  return fetch(SUPABASE_URL + path, Object.assign({}, opts, { headers: headers }));
+}
+
+let _activeRequestData = null;
+
+async function loadActiveRequest() {
+  if (!currentEmail) return;
+  try {
+    const res = await supaFetch('/rest/v1/explorer_requests?user_email=eq.' + encodeURIComponent(currentEmail) + '&status=eq.active&select=*&limit=1');
+    if (res.ok) {
+      const rows = await res.json();
+      if (rows.length > 0) {
+        _activeRequestData = rows[0];
+        showActiveRequest(rows[0]);
+        loadResponses(rows[0].id);
+      }
+    }
+    loadArchivedRequests();
+  } catch (e) { console.error('[Commons] loadActiveRequest error:', e); }
+}
+
+async function loadArchivedRequests() {
+  try {
+    const res = await supaFetch('/rest/v1/explorer_requests?user_email=eq.' + encodeURIComponent(currentEmail) + '&status=eq.closed&select=*&order=created_at.desc&limit=10');
+    if (!res.ok) return;
+    const rows = await res.json();
+    const section = document.getElementById('archivedSection');
+    const content = document.getElementById('archivedContent');
+    if (!rows.length) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    content.innerHTML = rows.map(function(r) {
+      const posted = r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      return '<div style="padding:14px 0;border-bottom:1px solid var(--border);">' +
+        '<div style="font-size:0.92rem;font-weight:600;color:var(--text);margin-bottom:4px;">' + escapeHtml(r.struggle_type || '') + (r.struggle_detail ? ' &mdash; ' + escapeHtml(r.struggle_detail).substring(0, 80) + (r.struggle_detail.length > 80 ? '...' : '') : '') + '</div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">' +
+          '<span style="font-size:0.68rem;font-weight:700;background:rgba(196,154,60,0.18);color:var(--gold-hover);padding:2px 8px;border-radius:50px;text-transform:uppercase;letter-spacing:0.04em;">Paused</span>' +
+          (posted ? '<span style="font-size:0.72rem;color:var(--muted);">Posted ' + posted + '</span>' : '') +
+        '</div>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button onclick="reopenRequest(\'' + r.id + '\')" style="font-size:0.78rem;color:var(--navy);background:var(--white);border:1px solid var(--navy);padding:6px 14px;border-radius:var(--r-sm);cursor:pointer;font-family:\'DM Sans\',sans-serif;font-weight:600;">Reactivate</button>' +
+          '<button onclick="deleteRequest(\'' + r.id + '\')" style="font-size:0.78rem;color:var(--muted);background:var(--white);border:1px solid var(--border);padding:6px 14px;border-radius:var(--r-sm);cursor:pointer;font-family:\'DM Sans\',sans-serif;font-weight:600;">Delete</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  } catch (e) { console.error('[Commons] loadArchivedRequests error:', e); }
+}
+
+function showActiveRequest(req) {
+  document.getElementById('requestFormWrap').style.display = 'none';
+  const wrap = document.getElementById('activeRequestWrap');
+  wrap.style.display = 'block';
+  const isActive = req.status === 'active';
+  const statusPill = isActive
+    ? '<span style="font-size:0.68rem;font-weight:700;background:rgba(26,58,82,0.10);color:var(--navy);padding:4px 12px;border-radius:50px;text-transform:uppercase;letter-spacing:0.04em;">Active &mdash; visible to providers</span>'
+    : '<span style="font-size:0.68rem;font-weight:700;background:rgba(196,154,60,0.18);color:var(--gold-hover);padding:4px 12px;border-radius:50px;text-transform:uppercase;letter-spacing:0.04em;">Paused</span>';
+  const posted = req.created_at ? new Date(req.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+  const metaItems = [posted ? 'Posted ' + posted : '', req.budget_range || '', req.availability || '', req.state || ''].filter(Boolean);
+
+  wrap.querySelector('#activeRequestContent').innerHTML =
+    '<div style="background:var(--cream-warm);border-radius:var(--r-sm);padding:20px;border:1px solid var(--border-soft);">' +
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">' + statusPill + '</div>' +
+    '<div style="font-size:1rem;font-weight:600;color:var(--navy);font-family:\'Cormorant Garamond\',serif;margin-bottom:6px;">' + escapeHtml(req.struggle_type || '') + '</div>' +
+    (req.struggle_detail ? '<div style="font-size:0.9rem;color:var(--text);line-height:1.6;margin-bottom:12px;padding:12px 16px;background:var(--white);border-radius:var(--r-sm);border:1px solid var(--border);">' + escapeHtml(req.struggle_detail) + '</div>' : '') +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">' +
+      metaItems.map(function(m) { return '<span style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(m) + '</span>'; }).join('<span style="color:var(--border);">·</span>') +
+    '</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;">' +
+      '<button onclick="editRequest(\'' + req.id + '\')" style="font-size:0.82rem;color:var(--navy);background:var(--white);border:1px solid var(--navy);padding:7px 16px;border-radius:var(--r-sm);cursor:pointer;font-family:\'DM Sans\',sans-serif;font-weight:600;">Edit post</button>' +
+      (isActive
+        ? '<button onclick="pauseRequest(\'' + req.id + '\')" style="font-size:0.82rem;color:var(--gold-hover);background:var(--white);border:1px solid var(--gold);padding:7px 16px;border-radius:var(--r-sm);cursor:pointer;font-family:\'DM Sans\',sans-serif;font-weight:600;">Pause post</button>'
+        : '<button onclick="reopenRequest(\'' + req.id + '\')" style="font-size:0.82rem;color:var(--navy);background:var(--white);border:1px solid var(--navy);padding:7px 16px;border-radius:var(--r-sm);cursor:pointer;font-family:\'DM Sans\',sans-serif;font-weight:600;">Reactivate</button>') +
+      '<button onclick="deleteRequest(\'' + req.id + '\')" style="font-size:0.82rem;color:var(--muted);background:var(--white);border:1px solid var(--border);padding:7px 16px;border-radius:var(--r-sm);cursor:pointer;font-family:\'DM Sans\',sans-serif;font-weight:600;">Delete</button>' +
+    '</div>' +
+    '</div>';
+
+  document.getElementById('requestBody').classList.add('open');
+  document.getElementById('requestHeader').classList.add('expanded');
+  document.getElementById('requestToggleBtn').textContent = 'Close';
+}
+
+function editRequest(id) {
+  const req = _activeRequestData;
+  if (!req) return;
+  const wrap = document.getElementById('activeRequestContent');
+  wrap.innerHTML =
+    '<div style="background:var(--cream-warm);border-radius:var(--r-sm);padding:20px;border:1px solid var(--border-soft);">' +
+    '<div style="font-size:0.72rem;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">Edit your request</div>' +
+    '<textarea id="edit-detail" style="width:100%;min-height:120px;padding:11px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--text);resize:vertical;margin-bottom:12px;background:var(--white);">' + escapeHtml(req.struggle_detail || '') + '</textarea>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">' +
+      '<select id="edit-budget" style="width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:\'DM Sans\',sans-serif;font-size:0.9rem;background:var(--white);">' +
+        '<option' + (req.budget_range === 'Under $100/session' ? ' selected' : '') + '>Under $100/session</option>' +
+        '<option' + (req.budget_range === '$100-$200/session' ? ' selected' : '') + '>$100-$200/session</option>' +
+        '<option' + (req.budget_range === '$200+/session' ? ' selected' : '') + '>$200+/session</option>' +
+        '<option' + (req.budget_range === 'Open to sliding scale' ? ' selected' : '') + '>Open to sliding scale</option>' +
+        '<option' + (req.budget_range === 'Not sure yet' ? ' selected' : '') + '>Not sure yet</option>' +
+      '</select>' +
+      '<input id="edit-state" value="' + escapeHtml(req.state || '') + '" placeholder="State or region" style="width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:\'DM Sans\',sans-serif;font-size:0.9rem;background:var(--white);" />' +
+    '</div>' +
+    '<div style="display:flex;gap:8px;">' +
+      '<button onclick="saveEdit(\'' + id + '\')" style="background:var(--gold);color:var(--white);border:none;padding:10px 20px;border-radius:var(--r-sm);font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:600;cursor:pointer;">Save changes</button>' +
+      '<button onclick="loadActiveRequest()" style="background:var(--white);border:1px solid var(--border);padding:10px 20px;border-radius:var(--r-sm);font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:600;color:var(--muted);cursor:pointer;">Cancel</button>' +
+    '</div></div>';
+}
+
+async function saveEdit(id) {
+  await supaFetch('/rest/v1/explorer_requests?id=eq.' + id, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      struggle_detail: document.getElementById('edit-detail').value.trim(),
+      budget_range: document.getElementById('edit-budget').value,
+      state: document.getElementById('edit-state').value.trim()
+    })
+  });
+  loadActiveRequest();
+}
+
+async function pauseRequest(id) {
+  await supaFetch('/rest/v1/explorer_requests?id=eq.' + id, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'closed' })
+  });
+  _activeRequestData = null;
+  document.getElementById('activeRequestWrap').style.display = 'none';
+  document.getElementById('requestFormWrap').style.display = 'block';
+  loadArchivedRequests();
+}
+
+async function submitRequest() {
+  const struggle = document.getElementById('req-struggle').value;
+  if (!struggle) { alert('Please select what you are working on.'); return; }
+  const country = document.getElementById('req-country').value;
+  const support = document.getElementById('req-support').value;
+  const isCoachOnly = support === 'coaching';
+  let region = '';
+  if (country === 'United States') {
+    region = document.getElementById('req-us-state').value;
+    if (!isCoachOnly && !region) { alert('Please select your state.'); return; }
+  } else if (country === 'Canada') {
+    region = document.getElementById('req-ca-province').value;
+    if (!isCoachOnly && !region) { alert('Please select your province.'); return; }
+  } else {
+    region = document.getElementById('req-region-text').value.trim();
+  }
+
+  const audiences = [];
+  document.querySelectorAll('#req-audiences input[type="checkbox"]:checked').forEach(function(cb) { audiences.push(cb.value); });
+  if (audiences.length === 0) audiences.push('coaching');
+
+  const displayName = (clientProfile && (clientProfile.display_name || clientProfile.full_name || clientProfile.name)) || null;
+
+  const data = {
+    user_email: currentEmail,
+    display_name: displayName,
+    struggle_type: struggle,
+    struggle_detail: document.getElementById('req-struggle-detail').value.trim(),
+    category: struggle,
+    support_type: support,
+    format_preference: document.getElementById('req-format').value,
+    availability: document.getElementById('req-avail').value,
+    budget_range: document.getElementById('req-budget').value,
+    payment_type: document.getElementById('req-payment').value,
+    country: country,
+    state: region,
+    additional_notes: document.getElementById('req-notes').value.trim(),
+    is_anonymous: document.getElementById('req-anon').checked,
+    target_audiences: audiences,
+    posted_from_site: 'coaching',
+    status: 'active'
+  };
+  console.log('[Commons] POST /rest/v1/explorer_requests', JSON.parse(JSON.stringify(data)));
+  try {
+    const res = await supaFetch('/rest/v1/explorer_requests', {
+      method: 'POST',
+      headers: { 'Prefer': 'return=representation' },
+      body: JSON.stringify(data)
+    });
+    if (res.ok) {
+      const rows = await res.json();
+      if (rows.length > 0) {
+        _activeRequestData = rows[0];
+        showActiveRequest(rows[0]);
+      }
+    } else {
+      const err = await res.json().catch(function() { return {}; });
+      if (err.code === '23505') alert('You already have an active request. Pause or delete it first to post a new one.');
+      else alert('Could not post request. Please try again.');
+    }
+  } catch (e) { alert('Something went wrong.'); }
+}
+
+async function prefillUpdate() {
+  document.getElementById('prefillConflict').style.display = 'none';
+  if (_activeRequestData && window._pendingPrefill) {
+    await supaFetch('/rest/v1/explorer_requests?id=eq.' + _activeRequestData.id, {
+      method: 'PATCH',
+      body: JSON.stringify({ struggle_detail: window._pendingPrefill })
+    });
+    window._pendingPrefill = null;
+    loadActiveRequest();
+  }
+}
+
+async function prefillPauseAndNew() {
+  document.getElementById('prefillConflict').style.display = 'none';
+  if (_activeRequestData) {
+    await supaFetch('/rest/v1/explorer_requests?id=eq.' + _activeRequestData.id, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'closed' })
+    });
+  }
+  _activeRequestData = null;
+  document.getElementById('activeRequestWrap').style.display = 'none';
+  document.getElementById('requestFormWrap').style.display = 'block';
+  const body = document.getElementById('requestBody');
+  const header = document.getElementById('requestHeader');
+  const btn = document.getElementById('requestToggleBtn');
+  if (body) body.classList.add('open');
+  if (header) header.classList.add('expanded');
+  if (btn) btn.textContent = 'Close';
+  const detailField = document.getElementById('req-struggle-detail');
+  if (detailField && window._pendingPrefill) detailField.value = window._pendingPrefill;
+  window._pendingPrefill = null;
+  loadArchivedRequests();
+}
+
+function prefillKeep() {
+  document.getElementById('prefillConflict').style.display = 'none';
+  window._pendingPrefill = null;
+}
+
+async function deleteRequest(id) {
+  if (!confirm('Are you sure? This cannot be undone.')) return;
+  await supaFetch('/rest/v1/explorer_requests?id=eq.' + id, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'deleted' })
+  });
+  if (_activeRequestData && _activeRequestData.id === id) {
+    _activeRequestData = null;
+    document.getElementById('activeRequestWrap').style.display = 'none';
+    document.getElementById('requestFormWrap').style.display = 'block';
+    document.getElementById('responsesSection').classList.remove('visible');
+  }
+  loadArchivedRequests();
+}
+
+async function reopenRequest(id) {
+  if (_activeRequestData && _activeRequestData.status === 'active') {
+    alert('You already have an active request. Pause it first before reactivating this one.');
+    return;
+  }
+  await supaFetch('/rest/v1/explorer_requests?id=eq.' + id, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'active' })
+  });
+  loadActiveRequest();
+}
+
+async function loadResponses(requestId) {
+  try {
+    const res = await supaFetch('/rest/v1/explorer_responses?request_id=eq.' + requestId + '&select=*&order=created_at.desc');
+    if (!res.ok) return;
+    const rows = await res.json();
+    const section = document.getElementById('responsesSection');
+    const content = document.getElementById('responsesContent');
+
+    const unreadCount = rows.filter(function(r) { return r.status === 'pending'; }).length;
+
+    if (rows.length === 0) return;
+    section.classList.add('visible');
+
+    const autoCloseMsg = rows.length >= 10 ? '<div style="background:rgba(26,58,82,0.08);border-radius:var(--r-sm);padding:12px 16px;margin-bottom:14px;font-size:0.85rem;color:var(--navy);font-weight:600;">Your post has reached 10 responses and is now closed to new replies. Review your options below.</div>' : '';
+
+    content.innerHTML = autoCloseMsg + (unreadCount > 0 ? '<div style="font-size:0.85rem;color:var(--navy);font-weight:600;margin-bottom:14px;">' + unreadCount + ' new response' + (unreadCount > 1 ? 's' : '') + '</div>' : '') + rows.map(function(r) {
+      const isUnread = r.status === 'pending';
+      const isPending = r.status === 'chosen_pending';
+      const isMatched = r.status === 'matched';
+      const supBadge = r.provider_specialty && r.provider_specialty.startsWith('Supervised') ? '<span style="font-size:0.62rem;font-weight:700;background:rgba(196,154,60,0.18);color:var(--gold-hover);padding:2px 8px;border-radius:50px;margin-left:6px;text-transform:uppercase;letter-spacing:0.04em;">Supervised</span>' : '';
+      const proBono = r.provider_specialty && r.provider_specialty.indexOf('pro bono') !== -1 ? '<span style="font-size:0.62rem;font-weight:700;background:#d8ede3;color:#4a7c59;padding:2px 8px;border-radius:50px;margin-left:6px;text-transform:uppercase;letter-spacing:0.04em;">Pro bono</span>' : '';
+
+      let statusLine = '';
+      if (isMatched) {
+        statusLine = '<div style="background:rgba(26,58,82,0.08);border-radius:var(--r-sm);padding:12px 16px;margin-top:10px;"><div style="font-size:0.88rem;font-weight:700;color:var(--navy);margin-bottom:4px;">Match confirmed!</div><div style="font-size:0.85rem;color:var(--text);">Contact: ' + escapeHtml(r.provider_email || '') + '</div>' + (r.provider_booking_link ? '<a href="' + escapeHtml(r.provider_booking_link) + '" style="display:inline-block;margin-top:8px;background:var(--gold);color:var(--white);padding:8px 18px;border-radius:var(--r-sm);font-size:0.82rem;font-weight:600;text-decoration:none;">Book your session &rarr;</a>' : '') + '</div>';
+      } else if (isPending) {
+        statusLine = '<div style="background:rgba(196,154,60,0.18);border-radius:var(--r-sm);padding:10px 14px;margin-top:10px;font-size:0.85rem;color:var(--gold-hover);font-weight:600;">Waiting for ' + escapeHtml(r.provider_name || 'them') + ' to confirm availability...</div>';
+      }
+
+      let actions = '';
+      if (!isMatched && !isPending) {
+        actions = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">'
+          + '<button onclick="responseAction(\'' + r.id + '\',\'interested\')" style="background:rgba(26,58,82,0.08);color:var(--navy);border:none;padding:6px 14px;border-radius:50px;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Interested</button>'
+          + '<button onclick="responseAction(\'' + r.id + '\',\'maybe\')" style="background:rgba(196,154,60,0.18);color:var(--gold-hover);border:none;padding:6px 14px;border-radius:50px;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Maybe</button>'
+          + '<button onclick="responseAction(\'' + r.id + '\',\'dismissed\')" style="background:var(--cream-warm);color:var(--muted);border:1px solid var(--border);padding:6px 14px;border-radius:50px;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Not a fit</button>'
+          + '<button onclick="chooseProvider(\'' + r.id + '\',\'' + escapeHtml(r.provider_name || '') + '\')" style="background:var(--gold);color:var(--white);border:none;padding:6px 14px;border-radius:50px;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:\'DM Sans\',sans-serif;">I choose you</button>'
+          + '</div>';
+      }
+
+      let followup = '';
+      if (r.explorer_followup) {
+        followup = '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:0.85rem;color:var(--muted);"><strong style="color:var(--text);">Your follow-up:</strong> ' + escapeHtml(r.explorer_followup) + '</div>';
+      } else if (!isMatched) {
+        followup = '<div style="margin-top:10px;display:flex;gap:6px;align-items:center;"><input type="text" maxlength="500" placeholder="Send a follow-up question (500 chars max)" id="followup-' + r.id + '" style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:\'DM Sans\',sans-serif;font-size:0.85rem;background:var(--white);"><button onclick="sendFollowup(\'' + r.id + '\')" style="background:var(--gold);color:var(--white);border:none;padding:9px 16px;border-radius:var(--r-sm);font-size:0.82rem;font-weight:600;cursor:pointer;font-family:\'DM Sans\',sans-serif;">Send</button></div>';
+      }
+      if (r.provider_reply) {
+        followup += '<div style="margin-top:8px;font-size:0.85rem;color:var(--navy);"><strong>Provider reply:</strong> ' + escapeHtml(r.provider_reply) + '</div>';
+      }
+
+      const isInterested = r.status === 'interested';
+      const isDismissed = r.status === 'dismissed';
+      const cardBorder = isInterested ? 'border:2px solid var(--gold);' : isDismissed ? 'opacity:0.5;border:1px solid var(--border);' : (isUnread ? 'border-left:3px solid var(--navy);border-top:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border);' : 'border:1px solid var(--border);');
+      const initials = (r.provider_name || 'P').split(' ').map(function(w) { return w[0]; }).join('').substring(0, 2).toUpperCase();
+
+      return '<div style="padding:16px;background:var(--white);border-radius:var(--r-sm);margin-bottom:10px;' + cardBorder + '">'
+        + (isUnread ? '<div style="font-size:0.65rem;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">New</div>' : '')
+        + (isInterested ? '<div style="font-size:0.65rem;font-weight:700;color:var(--gold-hover);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Interested</div>' : '')
+        + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><div style="width:36px;height:36px;border-radius:50%;background:rgba(26,58,82,0.08);color:var(--navy);display:flex;align-items:center;justify-content:center;font-size:0.78rem;font-weight:700;flex-shrink:0;font-family:\'DM Sans\',sans-serif;">' + initials + '</div><span style="font-size:0.92rem;font-weight:600;color:var(--text);">' + escapeHtml(r.provider_name || '') + '</span>' + supBadge + proBono + '</div>'
+        + (r.provider_specialty && !r.provider_specialty.startsWith('Supervised') ? '<div style="font-size:0.78rem;color:var(--muted);margin-top:4px;margin-bottom:6px;">' + escapeHtml(r.provider_specialty) + '</div>' : '')
+        + '<div style="font-size:0.88rem;color:var(--text);line-height:1.6;margin-top:6px;">' + escapeHtml(r.note || '') + '</div>'
+        + statusLine + actions + followup
+        + '</div>';
+    }).join('');
+
+    rows.filter(function(r) { return r.status === 'pending'; }).forEach(function(r) {
+      supaFetch('/rest/v1/explorer_responses?id=eq.' + r.id, {
+        method: 'PATCH', body: JSON.stringify({ status: 'seen' })
+      });
+    });
+
+  } catch (e) { console.error('[Commons] loadResponses error:', e); }
+}
+
+async function sendFollowup(responseId) {
+  const input = document.getElementById('followup-' + responseId);
+  const text = input ? input.value.trim() : '';
+  if (!text) return;
+  await supaFetch('/rest/v1/explorer_responses?id=eq.' + responseId, {
+    method: 'PATCH',
+    body: JSON.stringify({ explorer_followup: text })
+  });
+  loadActiveRequest();
+}
+
+async function responseAction(responseId, action) {
+  await supaFetch('/rest/v1/explorer_responses?id=eq.' + responseId, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: action })
+  });
+  loadActiveRequest();
+}
+
+async function chooseProvider(responseId, providerName) {
+  if (!confirm('Select ' + providerName + '? They will be asked to confirm their availability.')) return;
+  await supaFetch('/rest/v1/explorer_responses?id=eq.' + responseId, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'chosen_pending' })
+  });
+  loadActiveRequest();
+}
+
+function toggleRequestForm() {
+  const body = document.getElementById('requestBody');
+  const header = document.getElementById('requestHeader');
+  const btn = document.getElementById('requestToggleBtn');
+  if (body.classList.contains('open')) {
+    body.classList.remove('open');
+    header.classList.remove('expanded');
+    btn.textContent = 'Open';
+  } else {
+    body.classList.add('open');
+    header.classList.add('expanded');
+    btn.textContent = 'Close';
+  }
+}
+
+function toggleProBonoMsg() {
+  const el = document.getElementById('pro-bono-msg');
+  const sel = document.getElementById('req-budget');
+  if (!el || !sel) return;
+  el.style.display = sel.value.indexOf('Pro bono') !== -1 ? 'block' : 'none';
+}
+
+function updateLocationFields() {
+  const country = document.getElementById('req-country').value;
+  const support = document.getElementById('req-support').value;
+  const usSel = document.getElementById('req-us-state');
+  const caSel = document.getElementById('req-ca-province');
+  const txt = document.getElementById('req-region-text');
+  const label = document.getElementById('region-label');
+  const note = document.getElementById('coaching-note');
+  if (note) note.style.display = support === 'coaching' ? 'block' : 'none';
+  if (!usSel || !caSel || !txt || !label) return;
+  if (country === 'United States') {
+    usSel.style.display = 'block'; caSel.style.display = 'none'; txt.style.display = 'none';
+    label.textContent = 'Your state';
+  } else if (country === 'Canada') {
+    usSel.style.display = 'none'; caSel.style.display = 'block'; txt.style.display = 'none';
+    label.textContent = 'Your province';
+  } else {
+    usSel.style.display = 'none'; caSel.style.display = 'none'; txt.style.display = 'block';
+    label.textContent = 'Your region';
+  }
+}
 
 /* GO */
 init();
