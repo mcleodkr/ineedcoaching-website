@@ -3369,7 +3369,14 @@ async function loadResponses(requestId) {
 
       let statusLine = '';
       if (isMatched) {
-        statusLine = '<div style="background:rgba(26,58,82,0.08);border-radius:var(--r-sm);padding:12px 16px;margin-top:10px;"><div style="font-size:0.88rem;font-weight:700;color:var(--navy);margin-bottom:4px;">Match confirmed!</div><div style="font-size:0.85rem;color:var(--text);">Contact: ' + escapeHtml(r.provider_email || '') + '</div>' + (r.provider_booking_link ? '<a href="' + escapeHtml(r.provider_booking_link) + '" style="display:inline-block;margin-top:8px;background:var(--gold);color:var(--white);padding:8px 18px;border-radius:var(--r-sm);font-size:0.82rem;font-weight:600;text-decoration:none;">Book your session &rarr;</a>' : '') + '</div>';
+        const providerNameEsc = escapeHtml(r.provider_name || 'them');
+        const providerEmailEsc = escapeHtml(r.provider_email || '');
+        statusLine = '<div style="background:rgba(26,58,82,0.08);border-radius:var(--r-sm);padding:14px 16px;margin-top:10px;">'
+          + '<div style="font-size:0.92rem;font-weight:700;color:var(--navy);margin-bottom:6px;">Match confirmed with ' + providerNameEsc + '</div>'
+          + '<div style="font-size:0.85rem;color:var(--text);line-height:1.55;margin-bottom:10px;">You and ' + providerNameEsc + ' are matched. Reach out by email, book a session, or both. Your call.</div>'
+          + (r.provider_email ? '<div style="font-size:0.85rem;color:var(--text);margin-bottom:10px;"><strong style="color:var(--navy);">Reach out by email:</strong> <a href="mailto:' + providerEmailEsc + '" style="color:var(--navy);">' + providerEmailEsc + '</a></div>' : '')
+          + '<a data-book-link href="#" style="display:inline-block;background:var(--gold);color:var(--white);padding:9px 20px;border-radius:var(--r-sm);font-size:0.85rem;font-weight:600;text-decoration:none;">Book a session &rarr;</a>'
+          + '</div>';
       } else if (isPending) {
         statusLine = '<div style="background:rgba(196,154,60,0.18);border-radius:var(--r-sm);padding:10px 14px;margin-top:10px;font-size:0.85rem;color:var(--gold-hover);font-weight:600;">Waiting for ' + escapeHtml(r.provider_name || 'them') + ' to confirm availability...</div>';
       }
@@ -3399,7 +3406,7 @@ async function loadResponses(requestId) {
       const cardBorder = isInterested ? 'border:2px solid var(--gold);' : isDismissed ? 'opacity:0.5;border:1px solid var(--border);' : (isUnread ? 'border-left:3px solid var(--navy);border-top:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border);' : 'border:1px solid var(--border);');
       const initials = (r.provider_name || 'P').split(' ').map(function(w) { return w[0]; }).join('').substring(0, 2).toUpperCase();
 
-      return '<div style="padding:16px;background:var(--white);border-radius:var(--r-sm);margin-bottom:10px;' + cardBorder + '">'
+      return '<div id="resp-card-' + r.id + '" style="padding:16px;background:var(--white);border-radius:var(--r-sm);margin-bottom:10px;' + cardBorder + '">'
         + (isUnread ? '<div style="font-size:0.65rem;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">New</div>' : '')
         + (isInterested ? '<div style="font-size:0.65rem;font-weight:700;color:var(--gold-hover);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Interested</div>' : '')
         + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><div style="width:36px;height:36px;border-radius:50%;background:rgba(26,58,82,0.08);color:var(--navy);display:flex;align-items:center;justify-content:center;font-size:0.78rem;font-weight:700;flex-shrink:0;font-family:\'DM Sans\',sans-serif;">' + initials + '</div><span style="font-size:0.92rem;font-weight:600;color:var(--text);">' + escapeHtml(r.provider_name || '') + '</span>' + supBadge + proBono + '</div>'
@@ -3413,6 +3420,23 @@ async function loadResponses(requestId) {
       supaFetch('/rest/v1/explorer_responses?id=eq.' + r.id, {
         method: 'PATCH', body: JSON.stringify({ status: 'seen' })
       });
+    });
+
+    // Progressive enhancement: for each matched response, fetch the coach's
+    // slug and rewrite the booking link href to /book.html?coach=<slug>.
+    // Card renders immediately with a placeholder href so first paint is fast.
+    rows.filter(function(r) { return r.status === 'matched' && r.provider_email; }).forEach(function(r) {
+      supaFetch('/rest/v1/coach_profiles?user_email=eq.' + encodeURIComponent(r.provider_email.toLowerCase()) + '&select=slug,display_name&limit=1')
+        .then(function(res) { return res.ok ? res.json() : []; })
+        .then(function(profileRows) {
+          const profile = Array.isArray(profileRows) && profileRows[0];
+          if (!profile || !profile.slug) return;
+          const card = document.getElementById('resp-card-' + r.id);
+          if (!card) return;
+          const link = card.querySelector('[data-book-link]');
+          if (link) link.href = 'https://www.ineedcoaching.org/book.html?coach=' + encodeURIComponent(profile.slug);
+        })
+        .catch(function() { /* slug lookup is non-critical */ });
     });
 
   } catch (e) { console.error('[Commons] loadResponses error:', e); }
@@ -3443,6 +3467,14 @@ async function chooseProvider(responseId, providerName) {
     method: 'PATCH',
     body: JSON.stringify({ status: 'chosen_pending' })
   });
+  // Best-effort coach notification — DB row is the source of truth.
+  if (_activeRequestData && _activeRequestData.id) {
+    fetch('/api/match-chosen-notification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ request_id: _activeRequestData.id, response_id: responseId })
+    }).catch(function() {});
+  }
   loadActiveRequest();
 }
 

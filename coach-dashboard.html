@@ -1235,6 +1235,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
     <button class="tab-btn" data-tab="courses">Courses</button>
     <div class="dash-group">Business</div>
     <button class="tab-btn" data-tab="proposals">Proposals</button>
+    <button class="tab-btn" data-tab="outreach">My Outreach</button>
     <div class="sidebar-expandable">
       <button class="tab-btn sidebar-parent" type="button" data-expand="scheduling-submenu" aria-expanded="false" aria-controls="scheduling-submenu">
         <span>Scheduling</span>
@@ -2379,6 +2380,14 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       <div id="proposals-content" class="hidden"></div>
     </div>
 
+    <!-- MY OUTREACH TAB (Phase 1.H) -->
+    <div id="tab-outreach" class="tab-panel">
+      <div id="outreach-loading" class="loading-state" style="min-height:30vh;">
+        <div class="loading-spinner"></div>
+      </div>
+      <div id="outreach-content" class="hidden"></div>
+    </div>
+
   </div>
 </div><!-- /dash-layout -->
 </div>
@@ -3069,6 +3078,10 @@ function setupTabs() {
       if (btn.dataset.tab === 'proposals' && !btn._loaded) {
         btn._loaded = true;
         loadDashProposals();
+      }
+      if (btn.dataset.tab === 'outreach' && !btn._loaded) {
+        btn._loaded = true;
+        loadOutreach();
       }
       if (btn.dataset.tab === 'billing') {
         if (!btn._loaded) btn._loaded = true;
@@ -14429,6 +14442,238 @@ async function loadDashProposals() {
     $('proposals-loading').style.display = 'none';
     $('proposals-content').classList.remove('hidden');
     $('proposals-content').innerHTML = '<div class="empty-state"><p>Error loading proposals.</p></div>';
+  }
+}
+
+/* ================================================
+   MY OUTREACH (Phase 1.H) — coach-side Commons response tracking.
+   Reads explorer_responses where provider_email matches the logged-in
+   coach. Sorts urgent (chosen_pending) -> in flight -> warm leads ->
+   matched. Dismissed responses tucked into a collapsible footer.
+   ================================================ */
+const OUTREACH_TIER_ORDER = ['chosen_pending', 'pending', 'seen', 'interested', 'maybe', 'matched'];
+
+function outreachTierIndex(status) {
+  const idx = OUTREACH_TIER_ORDER.indexOf(status);
+  return idx === -1 ? 99 : idx;
+}
+
+function outreachStatusPill(status) {
+  switch (status) {
+    case 'chosen_pending':
+      return '<span style="display:inline-block;padding:5px 12px;border-radius:50px;font-size:0.7rem;font-weight:700;background:var(--navy);color:var(--white);text-transform:uppercase;letter-spacing:0.04em;">They chose you. Confirm to match.</span>';
+    case 'matched':
+      return '<span style="display:inline-block;padding:4px 12px;border-radius:50px;font-size:0.68rem;font-weight:700;background:#d8ede3;color:#4a7c59;text-transform:uppercase;letter-spacing:0.04em;">Match confirmed</span>';
+    case 'interested':
+      return '<span style="display:inline-block;padding:4px 12px;border-radius:50px;font-size:0.68rem;font-weight:700;background:rgba(196,154,60,0.18);color:var(--gold-hover);text-transform:uppercase;letter-spacing:0.04em;">Marked Interested</span>';
+    case 'maybe':
+      return '<span style="display:inline-block;padding:4px 12px;border-radius:50px;font-size:0.68rem;font-weight:700;background:rgba(196,154,60,0.18);color:var(--gold-hover);text-transform:uppercase;letter-spacing:0.04em;">Marked Maybe</span>';
+    case 'pending':
+      return '<span style="display:inline-block;padding:4px 12px;border-radius:50px;font-size:0.68rem;font-weight:700;background:rgba(196,154,60,0.18);color:var(--gold-hover);text-transform:uppercase;letter-spacing:0.04em;">Sent &middot; waiting for explorer to view</span>';
+    case 'seen':
+      return '<span style="display:inline-block;padding:4px 12px;border-radius:50px;font-size:0.68rem;font-weight:700;background:rgba(107,107,96,0.12);color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;">Seen</span>';
+    case 'dismissed':
+      return '<span style="display:inline-block;padding:4px 12px;border-radius:50px;font-size:0.68rem;font-weight:700;background:rgba(107,107,96,0.12);color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;">Not selected</span>';
+    default:
+      return '<span style="display:inline-block;padding:4px 12px;border-radius:50px;font-size:0.68rem;font-weight:700;background:rgba(107,107,96,0.12);color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;">' + escapeHtml(status || '') + '</span>';
+  }
+}
+
+function outreachFormatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function renderOutreachCard(r, requestsById, opts) {
+  opts = opts || {};
+  const req = requestsById[r.request_id] || null;
+  const struggleType = req && req.struggle_type ? String(req.struggle_type) : '';
+  const detailRaw = req && req.struggle_detail ? String(req.struggle_detail) : '';
+  const detail = detailRaw.length > 220 ? detailRaw.substring(0, 220) + '...' : detailRaw;
+
+  const isChosen = r.status === 'chosen_pending';
+  const isMatched = r.status === 'matched';
+  const isDismissed = r.status === 'dismissed';
+  const showReply = !!r.explorer_followup && !isMatched && !isDismissed;
+  const cardWrapStyle = 'background:var(--white);border:' + (isChosen ? '2px solid var(--navy)' : '1px solid var(--border)') + ';border-radius:10px;padding:20px 22px;margin-bottom:14px;' + (opts.faded ? 'opacity:0.55;' : '') + 'box-shadow:0 1px 2px rgba(26,58,82,0.04);';
+
+  let confirmBtn = '';
+  if (isChosen) {
+    confirmBtn = '<button onclick="confirmAvailability(\'' + r.id + '\',\'' + r.request_id + '\')" style="margin-top:14px;background:var(--gold);color:var(--white);border:none;padding:11px 22px;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.88rem;font-weight:600;cursor:pointer;transition:background 0.15s ease;" onmouseover="this.style.background=\'var(--gold-hover)\'" onmouseout="this.style.background=\'var(--gold)\'">Confirm I&#39;m available &rarr;</button>';
+  }
+
+  let replyBlock = '';
+  if (r.provider_reply) {
+    replyBlock = '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:0.85rem;color:var(--muted);"><strong style="color:var(--navy);">Your reply:</strong> ' + escapeHtml(r.provider_reply) + '</div>';
+  } else if (showReply) {
+    replyBlock = '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">'
+      + '<label style="display:block;font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">Reply to their follow-up</label>'
+      + '<textarea id="outreach-reply-' + r.id + '" maxlength="500" rows="2" placeholder="Reply (500 chars max)" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:var(--ink);background:var(--white);resize:vertical;"></textarea>'
+      + '<button onclick="sendOutreachReply(\'' + r.id + '\')" style="margin-top:8px;background:var(--navy);color:var(--white);border:none;padding:8px 18px;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:600;cursor:pointer;">Send reply</button>'
+      + '</div>';
+  }
+
+  let followupBlock = '';
+  if (r.explorer_followup) {
+    followupBlock = '<div style="margin-top:12px;padding:12px 14px;background:var(--cream-warm);border-radius:8px;border:1px solid var(--border-soft);font-size:0.85rem;color:var(--ink);"><strong style="color:var(--navy);">Their follow-up:</strong> ' + escapeHtml(r.explorer_followup) + '</div>';
+  }
+
+  return '<div style="' + cardWrapStyle + '">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">'
+      + outreachStatusPill(r.status)
+      + '<span style="font-size:0.72rem;color:var(--muted);">Sent ' + escapeHtml(outreachFormatDate(r.created_at)) + '</span>'
+    + '</div>'
+    + (struggleType
+        ? '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:var(--navy);margin-bottom:4px;">' + escapeHtml(struggleType) + '</div>'
+        : '')
+    + (detail
+        ? '<div style="font-size:0.88rem;color:var(--ink);line-height:1.6;margin-bottom:12px;padding:12px 14px;background:var(--cream-warm);border-radius:8px;border:1px solid var(--border-soft);">' + escapeHtml(detail) + '</div>'
+        : '')
+    + (r.note
+        ? '<div style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;font-weight:600;margin-bottom:4px;">Your note</div>'
+          + '<div style="font-size:0.9rem;color:var(--ink);line-height:1.6;">' + escapeHtml(r.note) + '</div>'
+        : '')
+    + followupBlock
+    + confirmBtn
+    + replyBlock
+    + '</div>';
+}
+
+async function loadOutreach() {
+  const loadingEl = $('outreach-loading');
+  const contentEl = $('outreach-content');
+  if (!coachProfile) {
+    if (loadingEl) loadingEl.style.display = 'none';
+    if (contentEl) {
+      contentEl.classList.remove('hidden');
+      contentEl.innerHTML = '<div class="empty-state"><p>Loading your profile...</p></div>';
+    }
+    return;
+  }
+  const coachEmail = (coachProfile.user_email || '').toLowerCase();
+  if (!coachEmail) return;
+
+  if (loadingEl) loadingEl.style.display = '';
+  if (contentEl) contentEl.classList.add('hidden');
+
+  try {
+    const responses = await supabaseGet('explorer_responses?provider_email=eq.' + encodeURIComponent(coachEmail) + '&select=*&order=created_at.desc');
+    if (!Array.isArray(responses)) {
+      throw new Error('Unexpected response shape');
+    }
+
+    if (loadingEl) loadingEl.style.display = 'none';
+    if (contentEl) contentEl.classList.remove('hidden');
+
+    if (responses.length === 0) {
+      contentEl.innerHTML =
+        '<div style="padding:24px 26px;">'
+        + '<h1 style="font-family:\'Cormorant Garamond\',serif;font-size:1.7rem;color:var(--navy);margin-bottom:6px;">My Outreach</h1>'
+        + '<p style="font-size:0.95rem;color:var(--muted);margin-bottom:24px;">Track what is happening with the responses you have sent on the Coaching Commons.</p>'
+        + '<div class="empty-state" style="background:var(--cream-warm);border:1px dashed var(--border);border-radius:10px;padding:40px 24px;text-align:center;">'
+        + '<p style="font-size:0.95rem;color:var(--muted);font-style:italic;line-height:1.6;">No outreach yet. Browse open requests at <a href="/find-a-match.html" style="color:var(--navy);font-weight:600;">/find-a-match.html</a>.</p>'
+        + '</div></div>';
+      return;
+    }
+
+    const requestIds = Array.from(new Set(responses.map(function(r) { return r.request_id; }).filter(Boolean)));
+    const requestsById = {};
+    if (requestIds.length > 0) {
+      try {
+        const reqRows = await supabaseGet('explorer_requests?id=in.(' + requestIds.map(encodeURIComponent).join(',') + ')&select=id,struggle_type,struggle_detail,display_name');
+        if (Array.isArray(reqRows)) {
+          reqRows.forEach(function(r) { requestsById[r.id] = r; });
+        }
+      } catch (e) { console.error('[Outreach] requests batch lookup failed:', e); }
+    }
+
+    const sorted = responses.slice().sort(function(a, b) {
+      const ta = outreachTierIndex(a.status);
+      const tb = outreachTierIndex(b.status);
+      if (ta !== tb) return ta - tb;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+    const visible = sorted.filter(function(r) { return r.status !== 'dismissed'; });
+    const dismissed = sorted.filter(function(r) { return r.status === 'dismissed'; });
+
+    const chosenCount = visible.filter(function(r) { return r.status === 'chosen_pending'; }).length;
+    const headerBanner = chosenCount > 0
+      ? '<div style="background:rgba(26,58,82,0.08);border-left:3px solid var(--navy);border-radius:8px;padding:14px 18px;margin-bottom:18px;font-size:0.9rem;color:var(--navy);font-weight:600;">' + chosenCount + (chosenCount === 1 ? ' explorer has' : ' explorers have') + ' chosen you. Confirm availability to lock the match.</div>'
+      : '';
+
+    let html = '<div style="padding:24px 26px;">'
+      + '<h1 style="font-family:\'Cormorant Garamond\',serif;font-size:1.7rem;color:var(--navy);margin-bottom:6px;">My Outreach</h1>'
+      + '<p style="font-size:0.95rem;color:var(--muted);margin-bottom:24px;">Track what is happening with the responses you have sent on the Coaching Commons.</p>'
+      + headerBanner;
+
+    if (visible.length === 0 && dismissed.length > 0) {
+      html += '<div class="empty-state" style="background:var(--cream-warm);border:1px dashed var(--border);border-radius:10px;padding:32px 24px;text-align:center;margin-bottom:18px;">'
+        + '<p style="font-size:0.92rem;color:var(--muted);font-style:italic;line-height:1.6;">No active responses. Past responses are below.</p>'
+        + '</div>';
+    } else {
+      html += visible.map(function(r) { return renderOutreachCard(r, requestsById, { faded: false }); }).join('');
+    }
+
+    if (dismissed.length > 0) {
+      html += '<div style="margin-top:24px;border-top:1px solid var(--border-soft);padding-top:16px;">'
+        + '<button type="button" id="outreach-dismissed-toggle" onclick="toggleOutreachDismissed()" style="background:none;border:none;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:600;color:var(--muted);padding:8px 0;display:flex;align-items:center;gap:8px;">'
+        + '<span id="outreach-dismissed-arrow">&#9656;</span>'
+        + '<span>Past responses (' + dismissed.length + ')</span>'
+        + '</button>'
+        + '<div id="outreach-dismissed-list" style="display:none;margin-top:12px;">'
+        + dismissed.map(function(r) { return renderOutreachCard(r, requestsById, { faded: true }); }).join('')
+        + '</div></div>';
+    }
+
+    html += '</div>';
+    contentEl.innerHTML = html;
+  } catch (err) {
+    console.error('[Outreach] load error:', err);
+    if (loadingEl) loadingEl.style.display = 'none';
+    if (contentEl) {
+      contentEl.classList.remove('hidden');
+      contentEl.innerHTML = '<div class="empty-state"><p>Could not load your outreach. Please refresh and try again.</p></div>';
+    }
+  }
+}
+
+function toggleOutreachDismissed() {
+  const list = $('outreach-dismissed-list');
+  const arrow = $('outreach-dismissed-arrow');
+  if (!list || !arrow) return;
+  const open = list.style.display !== 'none';
+  list.style.display = open ? 'none' : 'block';
+  arrow.innerHTML = open ? '&#9656;' : '&#9662;';
+}
+
+async function confirmAvailability(responseId, requestId) {
+  if (!confirm('Confirm you are available to work with this client? They will be notified that the match is real.')) return;
+  try {
+    await supabasePatch('explorer_responses', { id: 'eq.' + responseId }, { status: 'matched' });
+    fetch('/api/match-confirmed-notification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ request_id: requestId, response_id: responseId })
+    }).catch(function() { /* email is best-effort; the DB row is the source of truth */ });
+    loadOutreach();
+  } catch (err) {
+    console.error('[Outreach] confirm availability failed:', err);
+    alert('Could not confirm. Please try again.');
+  }
+}
+
+async function sendOutreachReply(responseId) {
+  const input = $('outreach-reply-' + responseId);
+  const text = input ? input.value.trim() : '';
+  if (!text) return;
+  try {
+    await supabasePatch('explorer_responses', { id: 'eq.' + responseId }, { provider_reply: text });
+    loadOutreach();
+  } catch (err) {
+    console.error('[Outreach] reply send failed:', err);
+    alert('Could not send reply. Please try again.');
   }
 }
 
