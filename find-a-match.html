@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Find a Client &mdash; Coaching Commons | ineedcoaching.org</title>
+<meta name="description" content="Browse open coaching requests. Real people looking for support — respond directly. No algorithms. No middleman.">
+<meta property="og:title" content="Find a Client — Coaching Commons | ineedcoaching.org">
+<meta property="og:description" content="Browse anonymous requests from people seeking a coach. Listed coaches respond directly.">
+<meta property="og:url" content="https://www.ineedcoaching.org/find-a-match.html">
+<meta property="og:type" content="website">
+<link rel="canonical" href="https://www.ineedcoaching.org/find-a-match.html">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #1a3a52;
+  --gold: #c49a3c;
+  --gold-lt: #faf0dd;
+  --cream: #f7f4ee;
+  --page-bg: #f7f5f1;
+  --white: #ffffff;
+  --ink: #1a3a52;
+  --muted: #6b6b60;
+  --border: #e8e4dc;
+  --forest: #4a7c59;
+  --r: 14px;
+  --r-sm: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'DM Sans', sans-serif; font-size: 16px; background: var(--page-bg); color: var(--ink); overflow-x: hidden; min-height: 100vh; display: flex; flex-direction: column; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+/* HERO */
+.page-hero { background: var(--navy); padding: 140px 80px 90px; position: relative; overflow: hidden; }
+.page-hero::after { content: 'CLIENTS'; font-family: 'Cormorant Garamond', serif; font-size: 16rem; font-weight: 700; color: rgba(255,255,255,0.04); position: absolute; right: -40px; top: 50%; transform: translateY(-50%); pointer-events: none; user-select: none; line-height: 1; letter-spacing: 0.04em; }
+.hero-inner { max-width: 720px; position: relative; z-index: 2; }
+.hero-eyebrow { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); margin-bottom: 18px; }
+.page-hero h1 { font-family: 'Cormorant Garamond', serif; font-size: clamp(2.2rem, 4.5vw, 3.6rem); line-height: 1.12; letter-spacing: -0.02em; color: #f0f0f0; margin-bottom: 20px; font-weight: 600; }
+.page-hero h1 em { color: var(--gold); font-style: italic; }
+.page-hero .pullquote { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: clamp(1.2rem, 2.5vw, 1.6rem); color: var(--gold); margin-top: 12px; margin-bottom: 16px; line-height: 1.3; font-weight: 500; }
+.page-hero .subtitle { font-size: 1rem; line-height: 1.75; color: rgba(255,255,255,0.7); max-width: 560px; }
+
+/* BOARD SECTION */
+.board-section { background: var(--page-bg); padding: 56px 24px 80px; }
+.board-inner { max-width: 760px; margin: 0 auto; }
+
+/* FILTER BAR */
+.filter-bar { display: flex; gap: 8px; flex-wrap: wrap; }
+.filter-btn { padding: 8px 20px; border: 1.5px solid var(--border); border-radius: 50px; background: var(--white); font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 600; color: var(--muted); cursor: pointer; transition: all 0.15s ease; }
+.filter-btn:hover { border-color: var(--gold); color: var(--gold); }
+.filter-btn.active { background: var(--gold); border-color: var(--gold); color: var(--white); }
+
+.sort-select { padding: 8px 14px; border: 1.5px solid var(--border); border-radius: 50px; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 600; color: var(--muted); background: var(--white); cursor: pointer; }
+.sort-select:focus { outline: none; border-color: var(--gold); }
+
+/* REQUEST CARDS */
+.request-card { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 24px 28px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(26, 58, 82, 0.04); transition: box-shadow 0.2s ease; }
+.request-card:hover { box-shadow: 0 4px 20px rgba(26, 58, 82, 0.08); }
+.card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; }
+.card-explorer { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.card-time { font-size: 0.75rem; color: var(--muted); }
+.card-struggle { font-family: 'Cormorant Garamond', serif; font-size: 1.25rem; font-weight: 600; color: var(--ink); line-height: 1.4; margin-bottom: 14px; letter-spacing: -0.005em; }
+.card-words { font-size: 0.88rem; color: var(--muted); line-height: 1.6; margin-bottom: 12px; font-style: italic; }
+.card-words .label { font-weight: 700; font-style: normal; color: #6b6b60; }
+.card-budget { font-size: 0.82rem; color: var(--ink); font-weight: 600; margin-bottom: 12px; }
+.card-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.tag { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; padding: 4px 12px; border-radius: 50px; white-space: nowrap; }
+.tag-coaching { background: var(--gold); color: var(--white); }
+.tag-format { background: var(--cream); color: var(--navy); border: 1px solid var(--border); }
+.tag-availability { background: #f0eee8; color: var(--muted); }
+.tag-payment { background: #f0eee8; color: var(--muted); }
+.card-bottom { display: flex; justify-content: flex-end; align-items: center; gap: 12px; }
+.help-btn { display: inline-flex; align-items: center; gap: 6px; background: var(--gold); color: var(--white); padding: 10px 22px; border-radius: 50px; border: none; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
+.help-btn:hover { background: #b5862f; transform: translateY(-1px); }
+.responses-full { font-size: 0.78rem; color: var(--muted); font-style: italic; }
+
+/* STATUS PILLS */
+.status-row { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.status-text { font-size: 0.72rem; font-weight: 700; }
+
+/* PRO BONO BADGE */
+.probono-pill { font-size: 0.68rem; font-weight: 700; background: #e6f0ea; color: #4a7c59; padding: 2px 10px; border-radius: 20px; }
+
+/* WAITING BADGE */
+.waiting-pill { font-size: 0.65rem; font-weight: 700; background: var(--gold-lt); color: var(--gold); padding: 3px 10px; border-radius: 20px; margin-left: 8px; }
+
+/* EMPTY / LOADING STATES */
+.empty-state { text-align: center; padding: 60px 24px; color: var(--muted); font-size: 0.95rem; line-height: 1.7; background: var(--white); border: 1px solid var(--border); border-radius: 10px; }
+.empty-state a { color: var(--gold); font-weight: 600; text-decoration: underline; }
+.loading { text-align: center; padding: 60px 24px; color: var(--muted); }
+.loading-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); margin: 0 3px; animation: pulse 1.2s ease-in-out infinite; }
+.loading-dot:nth-child(2) { animation-delay: 0.2s; }
+.loading-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes pulse { 0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
+
+/* MODAL */
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 25, 38, 0.55); z-index: 500; align-items: center; justify-content: center; padding: 24px; }
+.modal-overlay.open { display: flex; }
+.modal-card { background: var(--white); border-radius: var(--r); padding: 36px; max-width: 480px; width: 100%; position: relative; animation: modalIn 0.25s ease; box-shadow: 0 18px 48px rgba(15, 25, 38, 0.25); }
+@keyframes modalIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+.modal-close { position: absolute; top: 14px; right: 14px; background: none; border: none; font-size: 1.4rem; color: var(--muted); cursor: pointer; line-height: 1; padding: 4px; transition: color 0.15s ease; }
+.modal-close:hover { color: var(--ink); }
+.modal-title { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 600; color: var(--ink); margin-bottom: 8px; letter-spacing: -0.01em; }
+.modal-desc { font-size: 0.9rem; color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
+.modal-textarea { width: 100%; padding: 14px 16px; border: 1.5px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.92rem; color: var(--ink); resize: vertical; min-height: 110px; outline: none; transition: border-color 0.15s ease; line-height: 1.5; background: var(--white); }
+.modal-textarea:focus { border-color: var(--gold); }
+.modal-textarea::placeholder { color: #b0ada5; }
+.char-counter { font-size: 0.75rem; color: var(--muted); text-align: right; margin-top: 6px; margin-bottom: 18px; }
+.char-counter.over { color: #c0392b; font-weight: 700; }
+.modal-checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--muted); cursor: pointer; margin-bottom: 12px; }
+.modal-checkbox-row input[type="checkbox"] { accent-color: var(--gold); cursor: pointer; }
+.modal-supervisor-input { display: none; width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; color: var(--ink); margin-bottom: 14px; outline: none; transition: border-color 0.15s ease; }
+.modal-supervisor-input:focus { border-color: var(--gold); }
+.modal-submit { display: inline-flex; align-items: center; gap: 6px; background: var(--gold); color: var(--white); padding: 13px 28px; border-radius: 50px; border: none; font-family: 'DM Sans', sans-serif; font-size: 0.92rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; width: 100%; justify-content: center; }
+.modal-submit:hover { background: #b5862f; }
+.modal-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.modal-success { text-align: center; padding: 18px 0; }
+.modal-success-icon { font-size: 2.4rem; margin-bottom: 12px; color: var(--forest); }
+.modal-success-text { font-size: 0.95rem; color: var(--ink); font-weight: 500; line-height: 1.6; }
+.modal-upsell { text-align: center; }
+.modal-upsell-btn { display: inline-flex; align-items: center; gap: 6px; background: var(--gold); color: var(--white); padding: 12px 28px; border-radius: 50px; border: none; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 600; text-decoration: none; transition: all 0.15s ease; }
+.modal-upsell-btn:hover { background: #b5862f; }
+
+/* CTA */
+.cta-section { background: var(--navy); padding: 72px 24px; text-align: center; }
+.cta-section h2 { font-family: 'Cormorant Garamond', serif; font-size: clamp(1.6rem, 3vw, 2.4rem); color: #f0f0f0; margin-bottom: 14px; font-weight: 600; letter-spacing: -0.01em; }
+.cta-section p { font-size: 1rem; color: rgba(255,255,255,0.7); line-height: 1.7; max-width: 480px; margin: 0 auto 28px; }
+.cta-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--gold); color: var(--navy); padding: 14px 32px; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-size: 0.92rem; font-weight: 700; text-decoration: none; transition: all 0.2s ease; }
+.cta-btn:hover { background: #d4ad52; transform: translateY(-2px); }
+
+/* FOOTER */
+footer { background: var(--navy); padding: 64px 52px 40px; border-top: 1px solid rgba(255, 255, 255, 0.08); margin-top: auto; }
+.footer-grid { max-width: 960px; margin: 0 auto 40px; display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 48px; }
+.footer-brand-name { font-family: 'Cormorant Garamond', serif; font-size: 1.15rem; font-weight: 700; color: var(--cream); margin-bottom: 12px; }
+.footer-brand-name .fi { color: var(--gold); font-style: italic; }
+.footer-brand-desc { font-size: 0.82rem; line-height: 1.7; color: rgba(255, 255, 255, 0.4); max-width: 280px; }
+.footer-col h4 { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255, 255, 255, 0.35); margin-bottom: 18px; }
+.footer-col a { display: block; font-size: 0.84rem; color: rgba(255, 255, 255, 0.6); text-decoration: none; margin-bottom: 12px; transition: color 0.15s ease; }
+.footer-col a:hover { color: var(--gold); }
+.footer-bottom { text-align: center; padding-top: 28px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.footer-bottom p { font-size: 0.72rem; color: rgba(255, 255, 255, 0.25); }
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .page-hero { padding: 110px 24px 70px; }
+  .page-hero::after { font-size: 6rem; right: -10px; }
+  .page-hero h1 { font-size: 1.9rem; }
+  .board-section { padding: 40px 16px 60px; }
+  .request-card { padding: 20px; }
+  .card-tags { gap: 6px; }
+  .tag { font-size: 0.65rem; padding: 3px 10px; }
+  .modal-card { padding: 28px 22px; }
+  .cta-section { padding: 56px 20px; }
+  footer { padding: 48px 24px 32px; }
+  .footer-grid { grid-template-columns: 1fr; gap: 32px; text-align: center; }
+  .footer-brand-desc { max-width: 100%; }
+}
+</style>
+<style data-MOBILE_NAV_HAMBURGER_v1>
+@media (max-width: 900px) {
+  #nav-hamburger { display: flex !important; }
+  #nav-links-container {
+    position: fixed;
+    top: 60px;
+    left: 0;
+    right: 0;
+    background: rgba(26, 58, 82, 0.98);
+    backdrop-filter: blur(14px);
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0 !important;
+    padding: 16px 24px 24px !important;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    transform: translateY(-110%);
+    transition: transform 0.25s ease;
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
+  }
+  #nav-links-container.nav-open { transform: translateY(0); }
+  #nav-links-container > a {
+    display: block;
+    padding: 14px 8px !important;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    text-align: left;
+  }
+  #nav-links-container > a[style*="background:#c49a3c"],
+  #nav-links-container > a[style*="background: #c49a3c"],
+  #nav-links-container > a[style*="background:var(--gold)"] {
+    margin-top: 8px;
+    border-radius: 8px !important;
+    text-align: center;
+    border-bottom: none;
+  }
+  #nav-hamburger.is-open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  #nav-hamburger.is-open span:nth-child(2) { opacity: 0; }
+  #nav-hamburger.is-open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav style="position:fixed;top:0;left:0;right:0;z-index:300;display:flex;align-items:center;justify-content:space-between;padding:14px 52px;background:rgba(26,58,82,0.95);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,0.1);">
+  <a href="/" style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:700;color:#f7f4ee;text-decoration:none;"><span style="color:#c49a3c;font-style:italic;">i</span>need<span style="color:#c49a3c;font-style:italic;">coaching</span>.org</a>
+  <button id="nav-hamburger" aria-label="Open menu" aria-expanded="false" style="display:none;background:none;border:none;cursor:pointer;padding:8px;flex-direction:column;gap:5px;">
+    <span style="width:24px;height:2px;background:#f7f4ee;border-radius:2px;transition:transform 0.2s;"></span>
+    <span style="width:24px;height:2px;background:#f7f4ee;border-radius:2px;transition:opacity 0.2s;"></span>
+    <span style="width:24px;height:2px;background:#f7f4ee;border-radius:2px;transition:transform 0.2s;"></span>
+  </button>
+  <div id="nav-links-container" style="display:flex;align-items:center;gap:22px;">
+    <a href="/coaches.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Coaches</a>
+    <a href="/sessions.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Sessions</a>
+    <a href="/coach-courses.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Courses</a>
+    <a href="/articles.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Articles</a>
+    <a href="/coaching-commons.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Commons</a>
+    <a href="/find-a-match.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#c49a3c;text-decoration:none;">Find Clients</a>
+    <a href="/coach-dashboard.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Dashboard</a>
+    <a href="/coach-signup.html" style="font-size:0.78rem;font-weight:700;background:#c49a3c;color:#1a3a52;padding:8px 18px;border-radius:50px;text-decoration:none;">List Your Practice</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="page-hero">
+  <div class="hero-inner">
+    <div class="hero-eyebrow">&#10022; OPEN REQUESTS</div>
+    <h1>Someone out there is looking for exactly <em>the kind of coach you are.</em></h1>
+    <p class="pullquote">Real people, real requests &mdash; respond directly.</p>
+    <p class="subtitle">Browse open coaching requests posted to The Commons. People share what they're working on; coaches who can help reach out. No algorithms. No middleman.</p>
+  </div>
+</section>
+
+<!-- BOARD -->
+<section class="board-section">
+  <div class="board-inner">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px;">
+      <div class="filter-bar">
+        <button class="filter-btn active" data-filter-format="">All</button>
+        <button class="filter-btn" data-filter-format="virtual">Virtual</button>
+        <button class="filter-btn" data-filter-format="in-person">In-Person</button>
+      </div>
+      <select id="sort-select" class="sort-select" onchange="currentSort=this.value;renderCards();">
+        <option value="newest">Newest first</option>
+        <option value="oldest">Oldest first</option>
+        <option value="no-responses">No responses yet first</option>
+      </select>
+    </div>
+    <div id="requests-container">
+      <div class="loading">
+        <span class="loading-dot"></span>
+        <span class="loading-dot"></span>
+        <span class="loading-dot"></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-card" id="modal-card">
+    <button class="modal-close" id="modal-close" aria-label="Close">&times;</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2>Not listed yet?</h2>
+  <p>List your coaching practice and start responding to clients who are actively looking for someone like you.</p>
+  <a href="/coach-signup.html" class="cta-btn">List your practice &rarr;</a>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div>
+      <div class="footer-brand-name"><span class="fi">i</span>need<span class="fi">coaching</span>.org</div>
+      <p class="footer-brand-desc">A coaching marketplace where real people find each other. No commissions. No algorithms. A project from ineedtherapy.org.</p>
+    </div>
+    <div class="footer-col">
+      <h4>For Clients</h4>
+      <a href="/coaches.html">Browse Coaches</a>
+      <a href="/coaching-commons.html">Coaching Commons</a>
+      <a href="/sessions.html">Sessions</a>
+      <a href="/coach-courses.html">Courses</a>
+    </div>
+    <div class="footer-col">
+      <h4>For Coaches</h4>
+      <a href="/coach-signup.html">List Your Practice</a>
+      <a href="/find-a-match.html">Find Clients</a>
+      <a href="/coach-dashboard.html">Dashboard</a>
+      <a href="/coach-courses.html">Create a Course</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>&copy; 2026 ineedcoaching.org</p>
+  </div>
+</footer>
+
+<script>
+const SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+
+let allRequests = [];
+let currentFormatFilter = '';
+let currentSort = 'newest';
+let isCoachListed = false;
+let currentUser = null;
+
+function timeAgo(dateStr) {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diff = Math.floor((now - date) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) { const m = Math.floor(diff / 60); return m + (m === 1 ? ' minute ago' : ' minutes ago'); }
+  if (diff < 86400) { const h = Math.floor(diff / 3600); return h + (h === 1 ? ' hour ago' : ' hours ago'); }
+  const d = Math.floor(diff / 86400);
+  if (d < 30) return d + (d === 1 ? ' day ago' : ' days ago');
+  const mo = Math.floor(d / 30);
+  return mo + (mo === 1 ? ' month ago' : ' months ago');
+}
+
+function buildTag(text, cls) {
+  if (!text) return '';
+  return '<span class="tag ' + cls + '">' + escapeHtml(text) + '</span>';
+}
+
+function escapeHtml(str) {
+  if (str == null) return '';
+  const d = document.createElement('div');
+  d.textContent = String(str);
+  return d.innerHTML;
+}
+
+function renderCards() {
+  const container = document.getElementById('requests-container');
+  let filtered = allRequests.slice();
+
+  if (currentFormatFilter) {
+    filtered = filtered.filter(function(r) {
+      const fmt = (r.format_preference || r.format || '').toLowerCase();
+      return fmt.indexOf(currentFormatFilter) !== -1;
+    });
+  }
+
+  if (currentSort === 'oldest') {
+    filtered.sort(function(a, b) { return new Date(a.created_at) - new Date(b.created_at); });
+  } else if (currentSort === 'no-responses') {
+    filtered.sort(function(a, b) { return (a._responseCount || 0) - (b._responseCount || 0); });
+  } else {
+    filtered.sort(function(a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+  }
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="empty-state">No active requests right now. Check back soon &mdash; or <a href="/coach-signup.html">list your practice</a> if you have not yet.</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(function(r) {
+    const isProBono = (r.budget_range || r.budget || '').startsWith('$0');
+    if (isProBono && !isCoachListed) return '';
+
+    let waitingBadge = '';
+    const rc = r._responseCount || 0;
+    if (rc === 0 && r.created_at) {
+      const ageDays = Math.floor((Date.now() - new Date(r.created_at).getTime()) / 86400000);
+      if (ageDays >= 2) {
+        waitingBadge = '<span class="waiting-pill">Waiting ' + ageDays + ' day' + (ageDays > 1 ? 's' : '') + '</span>';
+      }
+    }
+
+    let statusHtml = '';
+    if (r.status === 'closed' || r.status === 'matched') {
+      statusHtml = '<div class="status-row"><span class="status-dot" style="background:#1a3a52;"></span><span class="status-text" style="color:#1a3a52;">Match found</span></div>';
+    } else if (rc >= 10) {
+      statusHtml = '<div class="status-row"><span class="status-text" style="color:var(--muted);">This request has enough responses</span></div>';
+    } else if (rc > 0) {
+      const countText = rc <= 3 ? rc + ' coach' + (rc > 1 ? 'es' : '') + ' responded' : 'Several coaches responded';
+      statusHtml = '<div class="status-row"><span class="status-dot" style="background:var(--gold);"></span><span class="status-text" style="color:var(--gold);">' + countText + '</span></div>';
+    } else {
+      statusHtml = '<div class="status-row"><span class="status-dot" style="background:var(--forest);"></span><span class="status-text" style="color:var(--forest);">Accepting responses</span></div>';
+    }
+
+    const helpBtn = rc >= 10
+      ? '<span class="responses-full">Responses full</span>'
+      : '<button class="help-btn" onclick="handleHelp(\'' + r.id + '\')">I can help &rarr;</button>';
+
+    const struggle = r.struggle_type || r.category || r.specialty_preference || 'A new request';
+    const detail = r.struggle_detail || r.description || '';
+    const headlineParts = [escapeHtml(struggle)];
+    if (detail && detail !== struggle) headlineParts.push(escapeHtml(detail));
+    const headline = headlineParts.join(' &mdash; ');
+
+    const inWords = r.additional_notes || (detail && detail !== struggle ? '' : '');
+    const where = r.state || r.location || 'somewhere';
+
+    return '<div class="request-card" data-id="' + r.id + '">'
+      + '<div class="card-top">'
+      + '<span class="card-explorer">Client in ' + escapeHtml(where) + '</span>'
+      + '<span class="card-time">' + timeAgo(r.created_at) + waitingBadge + '</span>'
+      + '</div>'
+      + statusHtml
+      + (isProBono ? '<div style="margin-bottom:8px;"><span class="probono-pill">Seeking pro bono support</span></div>' : '')
+      + '<div class="card-struggle">' + headline + '</div>'
+      + (inWords ? '<div class="card-words"><span class="label">In their words:</span> ' + escapeHtml(inWords) + '</div>' : '')
+      + ((r.budget_range || r.budget) ? '<div class="card-budget">What they can manage: ' + escapeHtml(r.budget_range || r.budget) + '</div>' : '')
+      + '<div class="card-tags">'
+      + buildTag('Coaching', 'tag-coaching')
+      + buildTag(r.format_preference || r.format, 'tag-format')
+      + buildTag(r.availability, 'tag-availability')
+      + buildTag(r.payment_type, 'tag-payment')
+      + '</div>'
+      + '<div class="card-bottom">' + helpBtn + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+async function fetchRequests() {
+  try {
+    // PostgREST array contains operator: target_audiences contains the value 'coaching'
+    const url = SUPABASE_URL + '/rest/v1/explorer_requests'
+      + '?target_audiences=cs.{coaching}'
+      + '&status=eq.active'
+      + '&select=*'
+      + '&order=created_at.desc';
+    const res = await fetch(url, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+      }
+    });
+    if (!res.ok) throw new Error('Fetch failed: ' + res.status);
+    allRequests = await res.json();
+
+    // Fetch response counts in parallel
+    await Promise.all(allRequests.map(async function(r) {
+      try {
+        const cr = await fetch(SUPABASE_URL + '/rest/v1/explorer_responses?request_id=eq.' + r.id + '&select=id', {
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY }
+        });
+        const data = cr.ok ? await cr.json() : [];
+        r._responseCount = Array.isArray(data) ? data.length : 0;
+      } catch (e) { r._responseCount = 0; }
+    }));
+  } catch (e) {
+    console.error('Error fetching requests:', e);
+    allRequests = [];
+  }
+  renderCards();
+}
+
+// Filter buttons
+document.querySelectorAll('.filter-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    currentFormatFilter = btn.dataset.filterFormat || '';
+    renderCards();
+  });
+});
+
+// Modal logic
+const overlay = document.getElementById('modal-overlay');
+const modalContent = document.getElementById('modal-content');
+const modalClose = document.getElementById('modal-close');
+
+function openModal() { overlay.classList.add('open'); }
+function closeModal() { overlay.classList.remove('open'); }
+
+modalClose.addEventListener('click', closeModal);
+overlay.addEventListener('click', function(e) {
+  if (e.target === overlay) closeModal();
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && overlay.classList.contains('open')) closeModal();
+});
+
+async function getUser() {
+  const token = localStorage.getItem('sb_access_token');
+  if (!token) return null;
+  try {
+    const res = await fetch(SUPABASE_URL + '/auth/v1/user', {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+async function checkCoachProfile(email) {
+  if (!email) return null;
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles?user_email=eq.' + encodeURIComponent(email.toLowerCase()) + '&select=id,display_name&limit=1', {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + (localStorage.getItem('sb_access_token') || SUPABASE_ANON_KEY)
+      }
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return Array.isArray(data) && data.length > 0 ? data[0] : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function handleHelp(requestId) {
+  // Anonymous → send to coach signup
+  if (!currentUser) {
+    window.location.href = '/coach-signup.html?from=find-a-match';
+    return;
+  }
+
+  // Logged in but no coach_profiles row → upsell
+  if (!isCoachListed) {
+    modalContent.innerHTML = ''
+      + '<div class="modal-title">List your practice first</div>'
+      + '<p class="modal-desc">Responding to client requests is for listed coaches. Set up your profile and you can reach out directly to anyone here.</p>'
+      + '<div class="modal-upsell">'
+      + '<a href="/coach-signup.html?from=find-a-match" class="modal-upsell-btn">Subscribe and list your practice &rarr;</a>'
+      + '</div>';
+    openModal();
+    return;
+  }
+
+  // Listed coach → show response form
+  const providerName = (currentUser.user_metadata && currentUser.user_metadata.display_name)
+    || currentUser.email.split('@')[0];
+
+  modalContent.innerHTML = ''
+    + '<div class="modal-title">Respond to this client</div>'
+    + '<p class="modal-desc">Write a brief note so they know how you might help. Your name and listing will go with it.</p>'
+    + '<label class="modal-checkbox-row">'
+    + '<input type="checkbox" id="resp-supervised"> I am a supervised practitioner or in training'
+    + '</label>'
+    + '<input type="text" id="resp-supervisor-name" class="modal-supervisor-input" placeholder="Supervisor or program (e.g. ICF-ACC under Jane Smith)" maxlength="120">'
+    + '<textarea class="modal-textarea" id="response-note" maxlength="300" placeholder="Tell them a bit about your approach and how you might help…"></textarea>'
+    + '<div class="char-counter"><span id="char-count">0</span> / 300</div>'
+    + '<button class="modal-submit" id="submit-response" data-request-id="' + requestId + '" data-email="' + escapeHtml(currentUser.email) + '" data-name="' + escapeHtml(providerName) + '">Send response &rarr;</button>';
+  openModal();
+
+  document.getElementById('resp-supervised').addEventListener('change', function() {
+    document.getElementById('resp-supervisor-name').style.display = this.checked ? 'block' : 'none';
+  });
+
+  const textarea = document.getElementById('response-note');
+  const charCount = document.getElementById('char-count');
+  const counter = document.querySelector('.char-counter');
+  textarea.addEventListener('input', function() {
+    const len = textarea.value.length;
+    charCount.textContent = len;
+    counter.classList.toggle('over', len > 300);
+  });
+
+  document.getElementById('submit-response').addEventListener('click', async function() {
+    const btn = this;
+    const note = textarea.value.trim();
+    if (!note) { textarea.style.borderColor = '#c0392b'; return; }
+    if (note.length > 300) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+
+    try {
+      const supervised = document.getElementById('resp-supervised').checked;
+      const supervisorName = document.getElementById('resp-supervisor-name').value.trim();
+      const payload = {
+        request_id: btn.dataset.requestId,
+        provider_email: btn.dataset.email,
+        provider_name: btn.dataset.name,
+        provider_specialty: supervised
+          ? 'Supervised by ' + (supervisorName || 'supervisor on file')
+          : null,
+        note: note
+      };
+
+      const res = await fetch(SUPABASE_URL + '/rest/v1/explorer_responses', {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + (localStorage.getItem('sb_access_token') || SUPABASE_ANON_KEY),
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Submit failed: ' + res.status);
+
+      // Best-effort: notify the explorer by email.
+      // TODO: /api/match-notification does not yet exist on coaching.org —
+      // it lives on ineedtherapy.org. Ship without the email until the
+      // endpoint is ported here. Response itself is already saved above.
+      try {
+        const saved = await res.json();
+        const responseId = Array.isArray(saved) && saved[0] ? saved[0].id : null;
+        if (responseId) {
+          fetch('/api/match-notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ request_id: payload.request_id, response_id: responseId })
+          }).catch(function() { /* email is best-effort; the DB row is the source of truth */ });
+        }
+      } catch (e) { /* parsing failure is non-fatal */ }
+
+      modalContent.innerHTML = ''
+        + '<div class="modal-success">'
+        + '<div class="modal-success-icon">&#10003;</div>'
+        + '<div class="modal-success-text">Response sent. They will see your profile and note in their dashboard.</div>'
+        + '</div>';
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = 'Send response →';
+      alert('Something went wrong. Please try again.');
+    }
+  });
+}
+
+// Init
+(async function() {
+  currentUser = await getUser();
+  if (currentUser && currentUser.email) {
+    const profile = await checkCoachProfile(currentUser.email);
+    isCoachListed = !!profile;
+  }
+  fetchRequests();
+})();
+</script>
+
+<script data-MOBILE_NAV_HAMBURGER_v1>
+(function() {
+  var btn = document.getElementById('nav-hamburger');
+  var menu = document.getElementById('nav-links-container');
+  if (!btn || !menu) return;
+  btn.addEventListener('click', function() {
+    var isOpen = menu.classList.toggle('nav-open');
+    btn.classList.toggle('is-open', isOpen);
+    btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    btn.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
+  });
+  menu.querySelectorAll('a').forEach(function(a) {
+    a.addEventListener('click', function() {
+      menu.classList.remove('nav-open');
+      btn.classList.remove('is-open');
+      btn.setAttribute('aria-expanded', 'false');
+      btn.setAttribute('aria-label', 'Open menu');
+    });
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && menu.classList.contains('nav-open')) {
+      menu.classList.remove('nav-open');
+      btn.classList.remove('is-open');
+      btn.setAttribute('aria-expanded', 'false');
+      btn.setAttribute('aria-label', 'Open menu');
+      btn.focus();
+    }
+  });
+})();
+</script>
+<script src="/hide-coach-cta.js" defer></script>
+</body>
+</html>
