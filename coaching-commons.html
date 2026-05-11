@@ -425,7 +425,7 @@ footer {
     <button class="tab-btn active" onclick="switchTab('individual')">Individual</button>
     <button class="tab-btn" onclick="switchTab('business')">Business / Organization</button>
     <!-- Navigation link — not part of switchTab state machine. Reuses .tab-btn for visual parity. -->
-    <a class="tab-btn" href="/find-a-match.html" style="text-decoration:none;">Find Clients &rarr;</a>
+    <a class="tab-btn js-open-requests-label" href="/find-a-match.html" data-coach-label="Find Clients &rarr;" style="text-decoration:none;">Open Requests &rarr;</a>
   </div>
 </section>
 
@@ -853,6 +853,7 @@ updateIndLocationFields();
 })();
 </script>
 <script src="/hide-coach-cta.js" defer></script>
+<script src="/find-clients-label-swap.js" defer></script>
 <script src="/bug-report-widget.js" defer></script>
 </body>
 </html>

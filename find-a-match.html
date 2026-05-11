@@ -217,7 +217,7 @@ footer { background: var(--navy); padding: 64px 52px 40px; border-top: 1px solid
     <a href="/coach-courses.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Courses</a>
     <a href="/articles.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Articles</a>
     <a href="/coaching-commons.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Commons</a>
-    <a href="/find-a-match.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#c49a3c;text-decoration:none;">Find Clients</a>
+    <a class="js-open-requests-label" href="/find-a-match.html" data-coach-label="Find Clients" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#c49a3c;text-decoration:none;">Open Requests</a>
     <a href="/coach-dashboard.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Dashboard</a>
     <a href="/coach-signup.html" style="font-size:0.78rem;font-weight:700;background:#c49a3c;color:#1a3a52;padding:8px 18px;border-radius:50px;text-decoration:none;">List Your Practice</a>
   </div>
@@ -293,7 +293,7 @@ footer { background: var(--navy); padding: 64px 52px 40px; border-top: 1px solid
     <div class="footer-col">
       <h4>For Coaches</h4>
       <a href="/coach-signup.html">List Your Practice</a>
-      <a href="/find-a-match.html">Find Clients</a>
+      <a class="js-open-requests-label" href="/find-a-match.html" data-coach-label="Find Clients">Open Requests</a>
       <a href="/coach-dashboard.html">Dashboard</a>
       <a href="/coach-courses.html">Create a Course</a>
     </div>
@@ -682,6 +682,7 @@ async function handleHelp(requestId) {
 })();
 </script>
 <script src="/hide-coach-cta.js" defer></script>
+<script src="/find-clients-label-swap.js" defer></script>
 <script src="/bug-report-widget.js" defer></script>
 </body>
 </html>
