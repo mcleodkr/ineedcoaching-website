@@ -762,24 +762,92 @@ async function loadFeaturedCoaches() {
 }
 
 /* ═══════════ COMMONS FEED ═══════════ */
+// Reads from the unified explorer_requests table (Phase 1 marketplace).
+// Builds a rotating pool of cards on each load: 3 newest plus up to 5
+// older posts still waiting for a reply, shuffled. Surfaces both fresh
+// activity and unmet need so the homepage feels alive across visits.
 async function loadCommonsFeed() {
+  var feed = document.getElementById('commons-feed');
+  if (!feed) return;
   try {
-    var res = await fetch(SUPABASE_URL + '/rest/v1/coaching_commons_posts?select=description,poster_type,specialty_preference,created_at&order=created_at.desc&limit=3', {
-      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
-    });
-    var posts = await res.json();
-    if (!posts || !posts.length) return;
-    var feed = document.getElementById('commons-feed');
-    feed.innerHTML = posts.map(function(p, i) {
-      var type = p.poster_type === 'business' ? 'Business request' : 'Looking for a coach';
-      var spec = p.specialty_preference ? ' in ' + p.specialty_preference : '';
+    var reqRes = await fetch(
+      SUPABASE_URL + '/rest/v1/explorer_requests?select=id,struggle_type,struggle_detail,support_type,posted_from_site,target_audiences,created_at,status&status=eq.active&order=created_at.desc&limit=15',
+      { headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY } }
+    );
+    if (!reqRes.ok) return;
+    var allRequests = await reqRes.json();
+    if (!Array.isArray(allRequests) || allRequests.length === 0) {
+      feed.innerHTML = '<div class="commons-post"><div class="commons-post-text">No open requests yet &mdash; be the first to post.</div></div>';
+      return;
+    }
+
+    // Pool A: 3 newest (always candidates regardless of replies)
+    var poolA = allRequests.slice(0, 3);
+
+    // Pool B: positions 3-14 filtered to zero responses. Best-effort lookup.
+    // If the responses fetch fails (RLS, network, etc.), degrade silently to Pool A only.
+    var poolB = [];
+    var older = allRequests.slice(3);
+    if (older.length > 0) {
+      try {
+        var idList = older.map(function(r) { return r.id; }).join(',');
+        var respRes = await fetch(
+          SUPABASE_URL + '/rest/v1/explorer_responses?select=request_id&request_id=in.(' + idList + ')',
+          { headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY } }
+        );
+        if (respRes.ok) {
+          var respRows = await respRes.json();
+          if (Array.isArray(respRows)) {
+            var hasReplies = {};
+            respRows.forEach(function(row) { if (row && row.request_id) hasReplies[row.request_id] = true; });
+            poolB = older.filter(function(r) { return !hasReplies[r.id]; });
+          }
+        }
+      } catch (e) { /* degrade to Pool A only */ }
+    }
+
+    // Combined pool, Fisher-Yates shuffle, take first 3
+    var pool = poolA.concat(poolB);
+    for (var i = pool.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+    }
+    var chosen = pool.slice(0, 3);
+
+    feed.innerHTML = chosen.map(function(p) {
+      var st = (p.support_type || '').toLowerCase();
+      var typeLabel;
+      if (st === 'coaching') typeLabel = 'Looking for a coach';
+      else if (st === 'therapy') typeLabel = 'Looking for a therapist';
+      else if (st === 'recovery') typeLabel = 'Looking for recovery support';
+      else typeLabel = 'Looking for support';
+
+      var struggleSuffix = '';
+      var generic = { coaching: true, therapy: true, recovery: true };
+      if (p.struggle_type) {
+        var stt = String(p.struggle_type).trim();
+        if (stt && !generic[stt.toLowerCase()]) struggleSuffix = ' in ' + escapeCommons(stt);
+      }
+
+      var detail = (p.struggle_detail && String(p.struggle_detail).trim())
+        ? String(p.struggle_detail).slice(0, 120)
+        : 'Posted recently &mdash; full details on Commons';
+      var detailHtml = p.struggle_detail ? escapeCommons(detail) : detail;
+
       var ago = timeAgo(p.created_at);
-      return '<div class="commons-post' + (i === 0 ? '' : '') + '">'
-        + '<div class="commons-post-type">' + type + spec + '</div>'
-        + '<div class="commons-post-text">' + (p.description || '').slice(0, 120) + '</div>'
+      return '<div class="commons-post">'
+        + '<div class="commons-post-type">' + escapeCommons(typeLabel) + struggleSuffix + '</div>'
+        + '<div class="commons-post-text">' + detailHtml + '</div>'
         + '<div class="commons-post-time">' + ago + '</div></div>';
     }).join('');
-  } catch(e) { /* keep placeholder */ }
+  } catch (e) { /* keep placeholder */ }
+}
+
+function escapeCommons(s) {
+  if (s == null) return '';
+  var d = document.createElement('div');
+  d.textContent = String(s);
+  return d.innerHTML;
 }
 
 function timeAgo(dateStr) {
