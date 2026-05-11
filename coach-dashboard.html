@@ -2832,7 +2832,7 @@ async function init() {
   if ($('nav-coach-name')) $('nav-coach-name').textContent = coachProfile.display_name || coachProfile.full_name || '';
 
   // Admin console link — visible only to admin emails
-  var ADMIN_EMAILS = ['drkmcleod@gmail.com', 'creativeenergytx@gmail.com'];
+  var ADMIN_EMAILS = ['drkmcleod@gmail.com', 'creativeenergytx@gmail.com', 'major.mcleod@icloud.com'];
   var adminLink = $('admin-console-link');
   if (adminLink && ADMIN_EMAILS.indexOf((email || '').toLowerCase()) !== -1) {
     adminLink.style.display = 'block';

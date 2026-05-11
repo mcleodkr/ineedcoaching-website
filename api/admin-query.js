@@ -3,7 +3,7 @@
 // POST { sessionAccessToken, query: { kind, ...args } }
 // Verifies caller via Supabase auth, checks admin allowlist, then runs typed queries.
 
-const ADMIN_EMAILS = ['drkmcleod@gmail.com', 'creativeenergytx@gmail.com'];
+const ADMIN_EMAILS = ['drkmcleod@gmail.com', 'creativeenergytx@gmail.com', 'major.mcleod@icloud.com'];
 const MAX_ROWS = 500;
 const MRR_PER_COACH = 47;
 
