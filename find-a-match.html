@@ -66,9 +66,12 @@ body { font-family: 'DM Sans', sans-serif; font-size: 16px; background: var(--pa
 .card-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
 .tag { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; padding: 4px 12px; border-radius: 50px; white-space: nowrap; }
 .tag-coaching { background: var(--gold); color: var(--white); }
+.tag-therapy { background: var(--navy); color: var(--white); }
+.tag-recovery { background: #4a7c59; color: var(--white); }
 .tag-format { background: var(--cream); color: var(--navy); border: 1px solid var(--border); }
 .tag-availability { background: #f0eee8; color: var(--muted); }
 .tag-payment { background: #f0eee8; color: var(--muted); }
+.open-to-line { font-size: 0.78rem; color: var(--muted); font-style: italic; margin-top: 4px; margin-bottom: 14px; }
 .card-bottom { display: flex; justify-content: flex-end; align-items: center; gap: 12px; }
 .help-btn { display: inline-flex; align-items: center; gap: 6px; background: var(--gold); color: var(--white); padding: 10px 22px; border-radius: 50px; border: none; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
 .help-btn:hover { background: #b5862f; transform: translateY(-1px); }
@@ -325,6 +328,16 @@ function buildTag(text, cls) {
   return '<span class="tag ' + cls + '">' + escapeHtml(text) + '</span>';
 }
 
+function renderOpenToLine(targetAudiences, primarySupport) {
+  if (!targetAudiences || !Array.isArray(targetAudiences) || targetAudiences.length <= 1) return '';
+  const primary = (primarySupport || '').toLowerCase();
+  const labels = { coaching: 'coaches', therapy: 'therapists', recovery: 'recovery specialists' };
+  const filtered = targetAudiences.filter(function(a) { return String(a).toLowerCase() !== primary; });
+  if (filtered.length === 0) return '';
+  const text = filtered.map(function(a) { return labels[String(a).toLowerCase()] || a; }).join(', ');
+  return '<div class="open-to-line">Also open to: ' + escapeHtml(text) + '</div>';
+}
+
 function escapeHtml(str) {
   if (str == null) return '';
   const d = document.createElement('div');
@@ -405,11 +418,18 @@ function renderCards() {
       + (inWords ? '<div class="card-words"><span class="label">In their words:</span> ' + escapeHtml(inWords) + '</div>' : '')
       + ((r.budget_range || r.budget) ? '<div class="card-budget">What they can manage: ' + escapeHtml(r.budget_range || r.budget) + '</div>' : '')
       + '<div class="card-tags">'
-      + buildTag('Coaching', 'tag-coaching')
+      + (function() {
+          const st = (r.support_type || '').toLowerCase();
+          if (st === 'coaching') return buildTag('Coaching', 'tag-coaching');
+          if (st === 'therapy') return buildTag('Therapy', 'tag-therapy');
+          if (st === 'recovery') return buildTag('Recovery', 'tag-recovery');
+          return buildTag('Open to any', 'tag-coaching');
+        })()
       + buildTag(r.format_preference || r.format, 'tag-format')
       + buildTag(r.availability, 'tag-availability')
       + buildTag(r.payment_type, 'tag-payment')
       + '</div>'
+      + renderOpenToLine(r.target_audiences, r.support_type)
       + '<div class="card-bottom">' + helpBtn + '</div>'
       + '</div>';
   }).join('');
