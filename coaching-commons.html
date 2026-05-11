@@ -685,13 +685,24 @@ async function submitIndividual(e) {
   else if (country === 'Canada') region = document.getElementById('ind-ca-province').value;
   else region = document.getElementById('ind-region-text').value.trim();
 
+  // Auto-derive support_type from audience checkboxes.
+  // Single audience → use that as the primary frame.
+  // Multiple audiences → 'open to any provider' (legacy value mom's data used).
+  // Fallback (shouldn't happen given audiences defaults to ['coaching']) → 'coaching'.
+  var supportType = 'coaching';
+  if (audiences.length === 1) {
+    supportType = audiences[0];
+  } else if (audiences.length >= 2) {
+    supportType = 'open to any provider';
+  }
+
   var payload = {
     user_email: document.getElementById('ind-email').value.trim().toLowerCase(),
     display_name: document.getElementById('ind-name').value.trim(),
     struggle_type: specialty || 'Coaching',
     struggle_detail: document.getElementById('ind-description').value.trim(),
     category: specialty || null,
-    support_type: 'coaching',
+    support_type: supportType,
     format_preference: document.getElementById('ind-format').value,
     country: country,
     state: region,
