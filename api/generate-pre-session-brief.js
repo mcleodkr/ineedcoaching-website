@@ -22,15 +22,64 @@ export default async function handler(req, res) {
 
     const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
+    // Stage 1: resolve the current session's scheduled_at so we can filter
+    // historical data to "prior sessions only". Without this, the brief would
+    // describe the session it is supposed to predict — a coach prepping for
+    // session N would see patterns extracted from session N itself.
+    let currentScheduledAt = null;
+    if (bookingId) {
+      const currentBookingRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/coach_bookings?id=eq.${encodeURIComponent(bookingId)}&select=scheduled_at&limit=1`,
+        { headers }
+      );
+      const currentBookingData = currentBookingRes.ok ? await currentBookingRes.json() : [];
+      if (!Array.isArray(currentBookingData) || !currentBookingData.length) {
+        return res.status(404).json({ error: 'Booking not found' });
+      }
+      currentScheduledAt = currentBookingData[0].scheduled_at;
+    }
+
+    // Stage 2: fetch supporting data in parallel. When we have a current
+    // scheduled_at, scope notes + bookings to strictly-before; otherwise fall
+    // back to recent-N (older callers without a bookingId).
+    const notesUrl = currentScheduledAt
+      ? `${SUPABASE_URL}/rest/v1/coach_session_notes?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&coach_bookings.scheduled_at=lt.${encodeURIComponent(currentScheduledAt)}&order=created_at.desc&limit=10&select=notes,format,structured_notes,post_session_analysis,created_at,coach_bookings!inner(scheduled_at)`
+      : `${SUPABASE_URL}/rest/v1/coach_session_notes?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&order=created_at.desc&limit=3&select=notes,format,structured_notes,post_session_analysis,created_at`;
+
+    const bookingsUrl = currentScheduledAt
+      ? `${SUPABASE_URL}/rest/v1/coach_bookings?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&status=eq.confirmed&scheduled_at=lt.${encodeURIComponent(currentScheduledAt)}&order=scheduled_at.desc&limit=10&select=id,scheduled_at,notes`
+      : `${SUPABASE_URL}/rest/v1/coach_bookings?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&status=eq.confirmed&order=scheduled_at.desc&limit=5&select=id,scheduled_at,notes`;
+
     const [notesRes, goalsRes, bookingsRes, checkinRes, intakeRes] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/coach_session_notes?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&order=created_at.desc&limit=3&select=notes,format,structured_notes,post_session_analysis,created_at`, { headers }),
+      fetch(notesUrl, { headers }),
       fetch(`${SUPABASE_URL}/rest/v1/coach_goals?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&order=created_at.desc&select=title,status,target_date`, { headers }),
-      fetch(`${SUPABASE_URL}/rest/v1/coach_bookings?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&status=eq.confirmed&order=scheduled_at.desc&limit=5&select=id,scheduled_at,notes`, { headers }),
+      fetch(bookingsUrl, { headers }),
       bookingId ? fetch(`${SUPABASE_URL}/rest/v1/coach_checkin_responses?booking_id=eq.${bookingId}&submitted_at=not.is.null&select=responses&limit=1`, { headers }) : Promise.resolve({ json: () => [] }),
       fetch(`${SUPABASE_URL}/rest/v1/coach_intake_responses?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&order=created_at.desc&limit=1&select=responses`, { headers })
     ]);
 
     const [notes, goals, bookings, checkins, intakeData] = await Promise.all([notesRes.json(), goalsRes.json(), bookingsRes.json(), checkinRes.json ? checkinRes.json() : [], intakeRes.json()]);
+
+    // Backstop: PostgREST embedded filters are easy to break with a typo or a
+    // schema change. Confirm nothing scheduled at or after the current session
+    // slipped through before we feed the data to the model.
+    if (currentScheduledAt) {
+      const currentTs = new Date(currentScheduledAt).getTime();
+      const futureNotes = (notes || []).filter(n => {
+        const sa = n && n.coach_bookings && n.coach_bookings.scheduled_at;
+        return sa && new Date(sa).getTime() >= currentTs;
+      });
+      const futureBookings = (bookings || []).filter(b => b && b.scheduled_at && new Date(b.scheduled_at).getTime() >= currentTs);
+      if (futureNotes.length > 0 || futureBookings.length > 0) {
+        console.error('[pre-session-brief] Data integrity: prior-session filter leaked current/future data', {
+          bookingId,
+          currentScheduledAt,
+          futureNotes: futureNotes.length,
+          futureBookings: futureBookings.length,
+        });
+        return res.status(500).json({ error: 'Data integrity error: prior-session filter did not exclude current/future sessions' });
+      }
+    }
 
     const clientName = (() => {
       for (const b of (bookings || [])) {
@@ -78,7 +127,7 @@ export default async function handler(req, res) {
         // (3-5 moves per pattern) landed. Pattern Map and Coaching Strategy
         // both run at 7500; matching that ceiling here to leave headroom.
         max_tokens: 7500,
-        system: [{ type: 'text', cache_control: { type: 'ephemeral', ttl: '1h' }, text: `You are a coaching intelligence assistant preparing a pre-session brief for a professional coach. Your tone is that of a thoughtful senior colleague offering perspective — not a system giving commands. Write in strength-based, forward-focused language. Use tentative language: "appears to," "may suggest," "you might explore." Never use "you should" or "you must" or "tell the coach to do X." Suggest the coach may want to consider approaches rather than directing them. No em dashes. Keep last_session_summary.recap to 2 sentences maximum. opening_questions must be specific, slightly uncomfortable, and movement-oriented. Not "What are you noticing..." but "What did you actually do differently in that moment vs what you usually do?" Create productive tension that opens the session with direction. For every entry in patterns_noticed you MUST include a pattern_explanation object teaching the coach how to work with the pattern. Write the explanation for a coach who may not have formal psychology training — define the term in plain language without clinical jargon. The "how_to_work_with_it" moves must be concrete, in-session actions the coach can use today, not abstract principles. Return ONLY valid JSON with these exact keys:
+        system: [{ type: 'text', cache_control: { type: 'ephemeral', ttl: '1h' }, text: `You are a coaching intelligence assistant preparing a pre-session brief for a professional coach. The session you are preparing for has NOT happened yet — you are PREDICTING what may come up based on PRIOR sessions only. Every observation, pattern, and recommendation must be sourced from sessions that occurred before the upcoming one. Never describe what "happened in this session" or what the client "said today" — those events are still in the future. If the input data is empty or thin, say so plainly rather than inventing material. Your tone is that of a thoughtful senior colleague offering perspective — not a system giving commands. Write in strength-based, forward-focused language. Use tentative language: "appears to," "may suggest," "you might explore." Never use "you should" or "you must" or "tell the coach to do X." Suggest the coach may want to consider approaches rather than directing them. No em dashes. Keep last_session_summary.recap to 2 sentences maximum. opening_questions must be specific, slightly uncomfortable, and movement-oriented. Not "What are you noticing..." but "What did you actually do differently in that moment vs what you usually do?" Create productive tension that opens the session with direction. For every entry in patterns_noticed you MUST include a pattern_explanation object teaching the coach how to work with the pattern. Write the explanation for a coach who may not have formal psychology training — define the term in plain language without clinical jargon. The "how_to_work_with_it" moves must be concrete, in-session actions the coach can use today, not abstract principles. Return ONLY valid JSON with these exact keys:
 {
   "session_header": { "client_name": string, "session_number": number, "date": string },
   "orientation_snapshot": { "readiness_level": string, "primary_focus": string, "open_commitments": [{"title": string, "is_complete": boolean}] },
@@ -94,7 +143,7 @@ export default async function handler(req, res) {
   "this_session_is": [string, string, string],
   "this_session_is_not": [string, string, string]
 }` }],
-        messages: [{ role: 'user', content: `Prepare a pre-session brief for session #${sessionCount + 1} with ${clientName}.\n\nPrevious session context:\n${lastNotes || 'No previous notes'}\n\nActive goals: ${goalsSummary || 'None set'}\n\nPre-session check-in: ${checkinText}${intakeBaseline ? '\n\nIntake baseline:\n' + intakeBaseline : ''}\n\nToday's date: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}` }]
+        messages: [{ role: 'user', content: `Prepare a pre-session brief for session #${sessionCount + 1} with ${clientName}.\n\nThis session has NOT happened yet. All context below is drawn exclusively from PRIOR sessions (${priorAnalyses.length} prior session analyses available${currentScheduledAt ? `, all scheduled before ${currentScheduledAt}` : ''}). Predict patterns and risks; do not narrate the upcoming session as if it has already occurred.\n\nPrior session context:\n${lastNotes || 'No previous notes'}\n\nActive goals: ${goalsSummary || 'None set'}\n\nPre-session check-in (submitted by the client before this session): ${checkinText}${intakeBaseline ? '\n\nIntake baseline:\n' + intakeBaseline : ''}\n\nToday's date: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}` }]
       })
     });
 
