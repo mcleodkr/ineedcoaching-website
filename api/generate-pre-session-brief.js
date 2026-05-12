@@ -74,7 +74,10 @@ export default async function handler(req, res) {
       headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({
         model,
-        max_tokens: 3500,
+        // 3500 truncated the JSON mid-output once pattern_explanation
+        // (3-5 moves per pattern) landed. Pattern Map and Coaching Strategy
+        // both run at 7500; matching that ceiling here to leave headroom.
+        max_tokens: 7500,
         system: [{ type: 'text', cache_control: { type: 'ephemeral', ttl: '1h' }, text: `You are a coaching intelligence assistant preparing a pre-session brief for a professional coach. Your tone is that of a thoughtful senior colleague offering perspective — not a system giving commands. Write in strength-based, forward-focused language. Use tentative language: "appears to," "may suggest," "you might explore." Never use "you should" or "you must" or "tell the coach to do X." Suggest the coach may want to consider approaches rather than directing them. No em dashes. Keep last_session_summary.recap to 2 sentences maximum. opening_questions must be specific, slightly uncomfortable, and movement-oriented. Not "What are you noticing..." but "What did you actually do differently in that moment vs what you usually do?" Create productive tension that opens the session with direction. For every entry in patterns_noticed you MUST include a pattern_explanation object teaching the coach how to work with the pattern. Write the explanation for a coach who may not have formal psychology training — define the term in plain language without clinical jargon. The "how_to_work_with_it" moves must be concrete, in-session actions the coach can use today, not abstract principles. Return ONLY valid JSON with these exact keys:
 {
   "session_header": { "client_name": string, "session_number": number, "date": string },
@@ -114,7 +117,20 @@ export default async function handler(req, res) {
       const match = text.match(/\{[\s\S]*\}/);
       brief = match ? JSON.parse(match[0]) : JSON.parse(text);
     } catch (e) {
-      return res.status(500).json({ error: 'Failed to parse brief' });
+      // Surface enough context to diagnose silent truncation / refusal
+      // without dumping the whole transcript into logs. stop_reason tells us
+      // if Claude hit max_tokens; the head + tail of the text reveals
+      // whether output is valid-looking JSON cut off mid-string vs. a
+      // refusal vs. wrapped in markdown.
+      const stopReason = claudeData && (claudeData.stop_reason || (claudeData.content && claudeData.content[0] && claudeData.content[0].stop_reason));
+      console.error('[pre-session-brief] Parse failed', {
+        parseError: e.message,
+        stopReason,
+        textLen: text.length,
+        head: text.slice(0, 200),
+        tail: text.slice(-200),
+      });
+      return res.status(500).json({ error: 'Failed to parse brief', stop_reason: stopReason });
     }
 
     // Persist the brief to coach_session_notes.pre_session_intelligence so
