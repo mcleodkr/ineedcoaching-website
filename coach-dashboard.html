@@ -7866,7 +7866,11 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
         + '</div>'
         + '<div style="display:flex;gap:8px;align-items:center;">' + statusIcons
         + (s.zoom_link ? ' <a href="' + escapeHtml(s.zoom_link) + '" target="_blank" rel="noopener noreferrer" style="font-size:0.78rem;color:var(--gold);text-decoration:none;font-weight:600;">&#127909;</a>' : '')
-        + (isNextUpcoming ? ' <button class="gen-brief-inline-btn" data-client-email="' + escapeHtml(client.email) + '" data-booking-id="' + s.id + '" style="font-size:0.78rem;color:#1a3a52;background:transparent;border:1px solid #1a3a52;padding:5px 14px;border-radius:6px;cursor:pointer;font-weight:500;transition:all 0.15s ease" title="Generate Pre-Session Brief">Prepare for this session \u2192</button>' : '')
+        // Brief: removed the inline "Prepare for this session \u2192" button. Pre-
+        // session intelligence now generates from inside the Pre-Session Prep
+        // tab (first tab in the session row) and persists to
+        // coach_session_notes.pre_session_intelligence so it survives reloads.
+        + ''
         + ' <button class="session-expand-btn" data-sid="' + s.id + '" style="font-size:0.78rem;color:#1a3a52;background:transparent;border:1px solid #1a3a52;padding:5px 14px;border-radius:6px;cursor:pointer;font-weight:500;transition:all 0.15s ease">Open</button>'
         + '</div></div>';
 
@@ -7882,17 +7886,27 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
         + '<span style="color:var(--border);font-size:0.7rem;">\u2192</span>'
         + '<span style="font-size:0.75rem;font-weight:700;color:' + (hasAnalysis ? 'var(--gold)' : 'var(--muted)') + ';">\u2463 Coaching Mirror ' + (hasAnalysis ? '\u2713' : '') + '</span>'
         + '</div>';
-      // Tab bar (pill style)
+      // Tab bar (pill style). Pre-Session Prep is the default-active tab so
+      // coaches see their preparation brief immediately when expanding a
+      // session row.
+      var hasPreSessionIntel = !!(note && note.pre_session_intelligence);
       html += '<div style="display:flex;background:#f5f3ef;border-radius:8px;padding:4px;margin:0 16px 0;overflow-x:auto;gap:2px;">'
-        + '<button class="stab active" data-sid="' + s.id + '" data-stab="transcript" style="flex:1;padding:8px 14px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;color:var(--navy);background:var(--white);border:none;border-radius:6px;cursor:pointer;white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,0.04);transition:all 0.15s ease;">Transcript</button>'
+        + '<button class="stab active" data-sid="' + s.id + '" data-stab="pre-session-prep" style="flex:1;padding:8px 14px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;color:var(--navy);background:var(--white);border:none;border-radius:6px;cursor:pointer;white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,0.04);transition:all 0.15s ease;">Pre-Session Prep</button>'
+        + '<button class="stab" data-sid="' + s.id + '" data-stab="transcript" style="flex:1;padding:8px 14px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;color:var(--muted);background:none;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all 0.15s ease;">Transcript</button>'
         + '<button class="stab" data-sid="' + s.id + '" data-stab="notes" style="flex:1;padding:8px 14px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;color:var(--muted);background:none;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all 0.15s ease;">Session Notes</button>'
         + '<button class="stab" data-sid="' + s.id + '" data-stab="coach-clarity" style="flex:1;padding:8px 14px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;color:var(--muted);background:none;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all 0.15s ease;">Coach Clarity</button>'
         + '<button class="stab" data-sid="' + s.id + '" data-stab="coaching-mirror" style="flex:1;padding:8px 14px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;color:var(--muted);background:none;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all 0.15s ease;">Coaching Mirror</button>'
         + '<button class="stab" data-sid="' + s.id + '" data-stab="approach-lab" style="flex:1;padding:8px 14px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;color:var(--muted);background:none;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all 0.15s ease;">Approach Lab</button>'
         + '</div>';
 
+      // Tab 0: Pre-Session Prep — first tab, default active. Persists across
+      // page reloads via coach_session_notes.pre_session_intelligence.
+      html += '<div id="stab-pre-session-prep-' + s.id + '" class="stab-panel" data-sid="' + s.id + '" style="padding:20px;">'
+        + '<div id="pre-session-prep-' + s.id + '" data-tab-type="pre-session-prep" data-client-email="' + escapeHtml(client.email) + '"></div>'
+        + '</div>';
+
       // Tab 1: Transcript
-      html += '<div id="stab-transcript-' + s.id + '" class="stab-panel" data-sid="' + s.id + '" style="padding:20px;">';
+      html += '<div id="stab-transcript-' + s.id + '" class="stab-panel" data-sid="' + s.id + '" style="padding:20px;display:none;">';
       if (hasTranscript) {
         html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><span style="color:#2d6a4f;font-size:0.78rem;font-weight:600;">\u2713 Transcript saved</span>'
           + '<button class="transcript-edit-btn" data-sid="' + s.id + '" style="font-size:0.72rem;color:var(--gold);background:none;border:none;cursor:pointer;font-weight:600;">Edit</button></div>'
@@ -8193,6 +8207,11 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
       var isOpen = panel.style.display !== 'none';
       panel.style.display = isOpen ? 'none' : '';
       this.textContent = isOpen ? 'Open' : 'Close';
+      // Pre-Session Prep is the default-active tab; populate it on open so
+      // the panel isn't empty when the row expands.
+      if (!isOpen) {
+        try { populatePreSessionPrep(sid, (client && client.email) || ''); } catch (_) {}
+      }
     });
   });
 
@@ -8218,6 +8237,10 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
       document.querySelectorAll('.stab-panel[data-sid="' + sid + '"]').forEach(function(p) { p.style.display = 'none'; });
       var target = $('stab-' + tab + '-' + sid);
       if (target) target.style.display = '';
+      // Dynamically populate Pre-Session Prep tab on open
+      if (tab === 'pre-session-prep') {
+        try { populatePreSessionPrep(sid, (typeof client !== 'undefined' && client && client.email) || ''); } catch (_) {}
+      }
       // Dynamically populate Coach Clarity tab on open
       if (tab === 'coach-clarity') {
         var analysisContainer = $('post-analysis-' + sid);
@@ -8739,14 +8762,23 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
     openClientDetail(client.email);
   });
 
-  // Wire Pre-Session Brief (inline button on next upcoming session)
-  document.querySelectorAll('.gen-brief-inline-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      generatePreSessionBrief(this.dataset.clientEmail, this.dataset.bookingId, $('pre-session-brief-container'));
-      this.textContent = 'Coach Clarity is working...';
-      this.disabled = true;
+  // Pre-Session Prep Generate button — fires from inside the new tab. Delegated
+  // on document so it survives stab-panel innerHTML rewrites. Replaces the
+  // legacy global "Prepare for this session →" inline button.
+  if (!document.body.dataset.genPreSessionTabDelegated) {
+    document.body.dataset.genPreSessionTabDelegated = '1';
+    document.addEventListener('click', function(e) {
+      var btn = e.target && e.target.closest ? e.target.closest('.gen-pre-session-tab-btn') : null;
+      if (!btn || btn.disabled) return;
+      var sid = btn.dataset.sid;
+      var clientEmail = btn.dataset.clientEmail || '';
+      var container = document.getElementById('pre-session-prep-' + sid);
+      if (!sid || !container) return;
+      btn.disabled = true;
+      btn.textContent = 'Generating…';
+      generatePreSessionBrief(clientEmail, sid, container);
     });
-  });
+  }
 
   // Pattern explanation expand/collapse. Delegated on document so it survives
   // the brief container being re-rendered when a new brief is generated.
@@ -9515,9 +9547,42 @@ async function generatePreSessionBrief(clientEmail, bookingId, container) {
     });
     var brief = await res.json();
     if (!res.ok) throw new Error(brief.error || 'Failed');
+    // Mirror the persisted brief into local state so the tab re-renders from
+    // memory if the coach navigates away and back without a page reload.
+    // The API persists to coach_session_notes.pre_session_intelligence; this
+    // keeps the in-memory cache in sync.
+    if (bookingId && typeof notesByBooking !== 'undefined' && notesByBooking) {
+      if (!notesByBooking[bookingId]) notesByBooking[bookingId] = {};
+      notesByBooking[bookingId].pre_session_intelligence = brief;
+    }
     renderPreSessionBrief(brief, container);
   } catch(e) {
     container.innerHTML = '<div style="color:#c44;font-size:0.88rem;">Error generating brief: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+// Pre-Session Prep tab populate. Renders the persisted brief if present,
+// otherwise an empty-state with a Generate button. Called from both the
+// session-expand handler (initial open) and the stab click handler (tab
+// re-click). Idempotent — guards on container.innerHTML to avoid blowing
+// away the rendered brief on subsequent stab clicks.
+function populatePreSessionPrep(sid, clientEmail) {
+  var container = document.getElementById('pre-session-prep-' + sid);
+  if (!container) return;
+  var note = (typeof notesByBooking !== 'undefined' && notesByBooking) ? notesByBooking[sid] : null;
+  var intel = note && note.pre_session_intelligence;
+  if (intel) {
+    if (!container.innerHTML.trim() || !container.dataset.rendered) {
+      renderPreSessionBrief(intel, container);
+      container.dataset.rendered = '1';
+    }
+    return;
+  }
+  if (!container.innerHTML.trim()) {
+    container.innerHTML = '<div style="text-align:center;padding:36px 16px;">'
+      + '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:var(--muted);line-height:1.55;margin:0 auto 18px;max-width:420px;">Run Coach Clarity on this session’s context to surface patterns, strategy, and the opening question to walk in with.</p>'
+      + '<button class="btn-primary gen-pre-session-tab-btn" data-sid="' + sid + '" data-client-email="' + escapeHtml(clientEmail || '') + '">Generate Pre-Session Intelligence</button>'
+      + '</div>';
   }
 }
 

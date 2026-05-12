@@ -117,7 +117,60 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to parse brief' });
     }
 
-    return res.status(200).json(brief);
+    // Persist the brief to coach_session_notes.pre_session_intelligence so
+    // coaches can reopen it later without regenerating. Only runs when a
+    // bookingId was supplied (older callers without one still get the
+    // ephemeral brief back). Follows the same select-then-update-or-insert
+    // pattern used elsewhere in this codebase (save-session-notes.js,
+    // post-session-analysis.js) because coach_session_notes has no unique
+    // constraint on booking_id — postgrest UPSERT would fail. Persistence
+    // failure is non-fatal; the coach still gets the brief in the response.
+    let persisted = false;
+    if (bookingId) {
+      try {
+        const nowIso = new Date().toISOString();
+        const lookupRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/coach_session_notes?booking_id=eq.${encodeURIComponent(bookingId)}&select=id&limit=1`,
+          { headers }
+        );
+        const existing = lookupRes.ok ? await lookupRes.json() : [];
+        const writeHeaders = { ...headers, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+        let writeRes;
+        if (Array.isArray(existing) && existing.length && existing[0].id) {
+          writeRes = await fetch(
+            `${SUPABASE_URL}/rest/v1/coach_session_notes?id=eq.${encodeURIComponent(existing[0].id)}`,
+            {
+              method: 'PATCH',
+              headers: writeHeaders,
+              body: JSON.stringify({ pre_session_intelligence: brief, updated_at: nowIso }),
+            }
+          );
+        } else {
+          writeRes = await fetch(
+            `${SUPABASE_URL}/rest/v1/coach_session_notes`,
+            {
+              method: 'POST',
+              headers: writeHeaders,
+              body: JSON.stringify({
+                booking_id: bookingId,
+                coach_id: coachId,
+                client_email: clientEmail,
+                pre_session_intelligence: brief,
+              }),
+            }
+          );
+        }
+        persisted = !!(writeRes && writeRes.ok);
+        if (!persisted) {
+          const errText = writeRes ? await writeRes.text().catch(function() { return ''; }) : '';
+          console.warn('[pre-session-brief] persist failed (non-fatal):', writeRes && writeRes.status, errText.substring(0, 200));
+        }
+      } catch (persistErr) {
+        console.warn('[pre-session-brief] persist threw (non-fatal):', persistErr.message);
+      }
+    }
+
+    return res.status(200).json(Object.assign({}, brief, { _persisted: persisted }));
   } catch (e) {
     console.error('[pre-session-brief] Error:', e);
     return res.status(500).json({ error: e.message });
