@@ -263,6 +263,25 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 #clients-list-view .clients-table button[data-view-client] { width: auto !important; background: var(--gold) !important; color: #fff !important; font-family: 'DM Sans', sans-serif !important; font-size: 0.72rem !important; font-weight: 600 !important; padding: 3px 13px !important; border: none !important; border-radius: 50px !important; cursor: pointer !important; margin-top: 0 !important; letter-spacing: 0 !important; line-height: 1.5 !important; transition: opacity 0.15s ease !important; }
 #clients-list-view .clients-table button[data-view-client]:hover { background: var(--gold) !important; opacity: 0.88 !important; }
 
+/* PATTERN EXPLANATION — Learn More toggle on Pre-Session Intelligence patterns.
+   Collapsed by default; expands to surface a plain-language definition, a
+   client-specific manifestation, and 3-5 concrete coaching moves. */
+.pattern-learn-more-btn { display: inline-flex; align-items: center; gap: 6px; margin: 12px 0 0; padding: 6px 12px; background: transparent; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 500; cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease; }
+.pattern-learn-more-btn:hover { background: rgba(196,154,60,0.06); border-color: var(--gold); color: var(--ink); }
+.pattern-learn-more-btn .expand-icon { transition: transform 0.2s ease; flex-shrink: 0; }
+.pattern-learn-more-btn.is-open .expand-icon { transform: rotate(180deg); }
+.pattern-learn-more-btn.is-open { background: rgba(196,154,60,0.08); border-color: var(--gold); color: var(--ink); }
+.pattern-explanation { margin: 10px 0 0; padding: 16px 18px; background: var(--white); border-left: 3px solid var(--gold); border-radius: 6px; }
+.pattern-explanation[hidden] { display: none; }
+.pattern-explanation-content h4 { font-family: 'DM Sans', sans-serif; font-size: 0.72rem; font-weight: 700; color: var(--gold); margin: 0 0 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+.pattern-explanation-content h4 + p,
+.pattern-explanation-content h4 + ol { margin-top: 0; }
+.pattern-explanation-content p { margin: 0 0 14px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; line-height: 1.6; color: var(--ink); }
+.pattern-explanation-content ol { margin: 0; padding-left: 22px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; line-height: 1.65; color: var(--ink); }
+.pattern-explanation-content li { margin-bottom: 7px; }
+.pattern-explanation-content li:last-child { margin-bottom: 0; }
+.pattern-explanation-content > *:last-child { margin-bottom: 0; }
+
 /* PREVIEW MODAL */
 .preview-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 500; align-items: center; justify-content: center; }
 .preview-overlay.open { display: flex; }
@@ -8725,6 +8744,25 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
     });
   });
 
+  // Pattern explanation expand/collapse. Delegated on document so it survives
+  // the brief container being re-rendered when a new brief is generated.
+  if (!document.body.dataset.patternLearnMoreDelegated) {
+    document.body.dataset.patternLearnMoreDelegated = '1';
+    document.addEventListener('click', function(e) {
+      var btn = e.target && e.target.closest ? e.target.closest('.pattern-learn-more-btn') : null;
+      if (!btn) return;
+      var pid = btn.getAttribute('data-pattern-id');
+      var panel = document.getElementById('pattern-explanation-' + pid);
+      if (!panel) return;
+      var wasHidden = panel.hasAttribute('hidden');
+      if (wasHidden) panel.removeAttribute('hidden'); else panel.setAttribute('hidden', '');
+      btn.setAttribute('aria-expanded', wasHidden ? 'true' : 'false');
+      btn.classList.toggle('is-open', wasHidden);
+      var label = btn.querySelector('span');
+      if (label) label.textContent = wasHidden ? 'Hide pattern guide' : 'Learn more about this pattern';
+    });
+  }
+
   // Cost-leak fix: post-analysis-btn is no longer rendered. The
   // runPostSessionAnalysis function still exists and is called from the
   // transcript-ingestion path (auto-fire); coaches refresh by re-uploading
@@ -9521,16 +9559,44 @@ function renderPreSessionBrief(b, container) {
 
   // Patterns
   if (b.patterns_noticed && b.patterns_noticed.length) {
+    // Unique-per-render prefix so multiple briefs on screen don't collide on
+    // expand/collapse state.
+    var briefId = 'psb-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     h += '<div style="margin-bottom:24px;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:10px;">Patterns Noticed</div>';
-    b.patterns_noticed.forEach(function(p) {
+    b.patterns_noticed.forEach(function(p, idx) {
       var title = p.title || p.pattern || '';
+      var pid = briefId + '-' + idx;
+      var pe = p.pattern_explanation;
+      var hasExplanation = pe && (pe.what_it_is || pe.in_this_client || (Array.isArray(pe.how_to_work_with_it) && pe.how_to_work_with_it.length));
       h += '<div style="background:var(--cream);border-radius:8px;padding:16px;margin-bottom:10px;">'
         + '<div style="font-size:0.9rem;font-weight:700;color:var(--ink);margin-bottom:4px;">' + escapeHtml(title) + '</div>'
         + '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;margin-bottom:10px;">' + escapeHtml(p.evidence || '') + '</div>'
         + (p.what_it_enables ? '<div style="margin-bottom:4px;"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);">Enables \u2192</span> <span style="font-size:0.82rem;color:var(--ink);">' + escapeHtml(p.what_it_enables) + '</span></div>' : '')
         + (p.risk_if_ignored ? '<div style="margin-bottom:4px;"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#b8860b;">Risk \u2192</span> <span style="font-size:0.82rem;color:var(--muted);">' + escapeHtml(p.risk_if_ignored) + '</span></div>' : '')
-        + (p.possibility_flag ? '<div><span style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);">Possibility \u2192</span> <span style="font-size:0.8rem;color:var(--muted);font-style:italic;">' + escapeHtml(p.possibility_flag) + '</span></div>' : '')
-        + '</div>';
+        + (p.possibility_flag ? '<div><span style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);">Possibility \u2192</span> <span style="font-size:0.8rem;color:var(--muted);font-style:italic;">' + escapeHtml(p.possibility_flag) + '</span></div>' : '');
+      if (hasExplanation) {
+        h += '<button type="button" class="pattern-learn-more-btn" data-pattern-id="' + pid + '" aria-expanded="false" aria-controls="pattern-explanation-' + pid + '">'
+          + '<svg class="expand-icon" width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+          + '<span>Learn more about this pattern</span>'
+          + '</button>';
+        h += '<div class="pattern-explanation" id="pattern-explanation-' + pid + '" data-pattern-id="' + pid + '" hidden>';
+        h += '<div class="pattern-explanation-content">';
+        if (pe.what_it_is) {
+          h += '<h4>What this pattern is</h4><p>' + escapeHtml(pe.what_it_is) + '</p>';
+        }
+        if (pe.in_this_client) {
+          h += '<h4>In this client</h4><p>' + escapeHtml(pe.in_this_client) + '</p>';
+        }
+        if (Array.isArray(pe.how_to_work_with_it) && pe.how_to_work_with_it.length) {
+          h += '<h4>How to work with it</h4><ol>';
+          pe.how_to_work_with_it.forEach(function(move) {
+            if (move) h += '<li>' + escapeHtml(move) + '</li>';
+          });
+          h += '</ol>';
+        }
+        h += '</div></div>';
+      }
+      h += '</div>';
     });
     h += '</div>';
   }
