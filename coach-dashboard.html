@@ -2980,9 +2980,17 @@ function setupTabs() {
         btn._loaded = true;
         loadBookings();
       }
-      if (btn.dataset.tab === 'clients' && !btn._loaded) {
-        btn._loaded = true;
-        loadClientsTab();
+      if (btn.dataset.tab === 'clients') {
+        // Always return to the clients list view when the sidebar Clients
+        // entry is clicked, even if a client detail panel was open.
+        var clientsListView = document.getElementById('clients-list-view');
+        var clientsDetailView = document.getElementById('clients-detail-view');
+        if (clientsListView) clientsListView.classList.remove('hidden');
+        if (clientsDetailView) clientsDetailView.classList.add('hidden');
+        if (!btn._loaded) {
+          btn._loaded = true;
+          loadClientsTab();
+        }
       }
       if (btn.dataset.tab === 'testimonials' && !btn._loaded) {
         btn._loaded = true;
@@ -6868,21 +6876,27 @@ var clientsData = [];
 async function loadClientsTab() {
   try {
     var bookings = await supabaseGet(
-      'coach_bookings?coach_id=eq.' + coachProfile.id + '&status=in.(confirmed,manual)&order=scheduled_at.desc&select=id,client_email,client_phone,scheduled_at,notes,zoom_link,service_id,status'
+      'coach_bookings?coach_id=eq.' + coachProfile.id + '&status=in.(confirmed,manual)&order=scheduled_at.desc&select=id,client_email,client_name,client_phone,scheduled_at,notes,zoom_link,service_id,status'
     );
     if (!Array.isArray(bookings)) bookings = [];
 
-    // Build unique clients
+    // Build unique clients. Prefer the client_name column when present so the
+    // edit-info flow persists across reloads; fall back to the legacy
+    // "Name: ..." notes prefix for rows that predate the column.
     var clientMap = {};
     var clientOrder = [];
+    function deriveName(b) {
+      if (b.client_name && b.client_name.trim()) return b.client_name.trim();
+      var m = (b.notes || '').match(/^Name:\s*(.+)/m);
+      return m ? m[1].trim() : '';
+    }
     bookings.forEach(function(b) {
       var email = b.client_email;
       if (!email) return;
       if (!clientMap[email]) {
-        var nameMatch = (b.notes || '').match(/^Name:\s*(.+)/m);
         clientMap[email] = {
           email: email,
-          name: nameMatch ? nameMatch[1].trim() : '',
+          name: deriveName(b),
           phone: b.client_phone || '',
           sessions: [],
           firstSession: null,
@@ -6892,8 +6906,7 @@ async function loadClientsTab() {
       }
       clientMap[email].sessions.push(b);
       if (!clientMap[email].phone && b.client_phone) clientMap[email].phone = b.client_phone;
-      var nameMatch2 = (b.notes || '').match(/^Name:\s*(.+)/m);
-      if (!clientMap[email].name && nameMatch2) clientMap[email].name = nameMatch2[1].trim();
+      if (!clientMap[email].name) clientMap[email].name = deriveName(b);
     });
 
     // Compute first/last session dates
@@ -6917,6 +6930,18 @@ async function loadClientsTab() {
   }
 }
 
+// View mode for the clients list — 'cards' (default, visual) or 'list'
+// (compact rows, better for large rosters). Persisted per-browser.
+function getClientsViewMode() {
+  try {
+    var v = localStorage.getItem('coachClientsViewMode');
+    return v === 'list' ? 'list' : 'cards';
+  } catch (e) { return 'cards'; }
+}
+function setClientsViewMode(mode) {
+  try { localStorage.setItem('coachClientsViewMode', mode); } catch (e) {}
+}
+
 function renderClientsList(filter) {
   filter = (filter || '').toLowerCase();
   var filtered = clientsData;
@@ -6925,12 +6950,28 @@ function renderClientsList(filter) {
       return (c.name + ' ' + c.email).toLowerCase().indexOf(filter) !== -1;
     });
   }
+  var viewMode = getClientsViewMode();
+  var cardsActive = viewMode === 'cards';
+  var sixtyDaysAgo = new Date(); sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+  function viewBtnStyle(active) {
+    return 'padding:6px 12px;border:none;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all 0.15s ease;'
+      + (active
+          ? 'background:var(--white);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,0.06);'
+          : 'background:transparent;color:var(--muted);');
+  }
+  var cardsIcon = '<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="1" width="6" height="6" rx="1" fill="currentColor"/><rect x="9" y="1" width="6" height="6" rx="1" fill="currentColor"/><rect x="1" y="9" width="6" height="6" rx="1" fill="currentColor"/><rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor"/></svg>';
+  var listIcon = '<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="2" width="14" height="2" rx="1" fill="currentColor"/><rect x="1" y="7" width="14" height="2" rx="1" fill="currentColor"/><rect x="1" y="12" width="14" height="2" rx="1" fill="currentColor"/></svg>';
 
   var html = '<div class="form-section">'
     + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">'
     + '<div><h2 class="form-section-title" style="margin-bottom:4px;font-family:\'Cormorant Garamond\',serif;">My Clients</h2>'
     + '<span style="font-size:0.82rem;color:var(--muted);">' + clientsData.length + ' client' + (clientsData.length !== 1 ? 's' : '') + '</span></div>'
     + '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">'
+    + '<div id="clients-view-toggle" style="display:inline-flex;gap:2px;padding:3px;background:#f5f3ef;border-radius:8px;">'
+    +   '<button class="clients-view-btn" data-view="cards" aria-pressed="' + (cardsActive ? 'true' : 'false') + '" title="Card view" style="' + viewBtnStyle(cardsActive) + '">' + cardsIcon + 'Cards</button>'
+    +   '<button class="clients-view-btn" data-view="list" aria-pressed="' + (!cardsActive ? 'true' : 'false') + '" title="Compact list" style="' + viewBtnStyle(!cardsActive) + '">' + listIcon + 'List</button>'
+    + '</div>'
     + '<input type="text" id="clients-search" placeholder="Search by name or email..." value="' + escapeHtml(filter) + '" style="padding:10px 16px;border:1px solid var(--border);border-radius:50px;font-family:\'DM Sans\',\'Cabinet Grotesk\',sans-serif;font-size:0.85rem;color:var(--ink);background:var(--cream);min-width:240px;transition:border-color 0.2s;" onfocus="this.style.borderColor=\'var(--gold)\'" onblur="this.style.borderColor=\'var(--border)\'">'
     + '<button id="add-client-btn" style="padding:10px 18px;background:var(--gold);color:#fff;border:none;border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:600;cursor:pointer;transition:all 0.15s ease;white-space:nowrap;" onmouseenter="this.style.opacity=\'0.9\'" onmouseleave="this.style.opacity=\'1\'">+ Add client</button>'
     + '</div>'
@@ -6938,23 +6979,25 @@ function renderClientsList(filter) {
 
   if (filtered.length === 0) {
     html += '<div class="empty-state" style="padding:40px;"><p>' + (filter ? 'No clients matching "' + escapeHtml(filter) + '"' : 'No clients yet. Add one manually with the “+ Add client” button above, or wait for their first confirmed booking.') + '</p></div>';
-  } else {
+  } else if (cardsActive) {
     html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;">';
     filtered.forEach(function(c) {
       var lastStr = c.lastSession ? new Date(c.lastSession).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-      var sixtyDaysAgo = new Date(); sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
       var isActive = c.lastSession && new Date(c.lastSession) > sixtyDaysAgo;
       var initialSource = (c.name || c.email || '?').trim();
       var initial = initialSource.charAt(0).toUpperCase() || '?';
 
       html += '<div style="background:var(--white);border:1px solid var(--border);border-left:4px solid var(--gold);border-radius:var(--r);padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.04);transition:transform 0.2s,box-shadow 0.2s;cursor:default;" onmouseenter="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 6px 20px rgba(0,0,0,0.08)\'" onmouseleave="this.style.transform=\'\';this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.04)\'">'
         + '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;">'
-        + '<div>'
+        + '<div style="min-width:0;">'
         + '<div style="font-family:\'Cormorant Garamond\',serif;font-weight:700;font-size:1.1rem;color:var(--ink);margin-bottom:2px;">' + escapeHtml(c.name || displayClientEmail(c.email) || 'Unnamed client') + '</div>'
-        + (displayClientEmail(c.email) ? '<div style="font-size:0.78rem;color:var(--muted);">' + escapeHtml(displayClientEmail(c.email)) + '</div>' : '')
+        + (displayClientEmail(c.email) ? '<div style="font-size:0.78rem;color:var(--muted);word-break:break-all;">' + escapeHtml(displayClientEmail(c.email)) + '</div>' : '')
         + (c.phone ? '<div style="font-size:0.75rem;color:var(--muted);">' + escapeHtml(c.phone) + '</div>' : '')
         + '</div>'
-        + '<div class="client-avatar" data-initial="' + escapeHtml(initial) + '" data-active="' + (isActive ? '1' : '0') + '" title="' + (isActive ? 'Active' : 'Inactive') + '"></div>'
+        + '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">'
+        +   '<button class="client-edit-btn" data-edit-client="' + escapeHtml(c.email) + '" title="Edit client info" aria-label="Edit client info" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:5px 9px;cursor:pointer;color:var(--muted);font-family:\'DM Sans\',sans-serif;font-size:0.72rem;font-weight:600;transition:all 0.15s ease;" onmouseenter="this.style.borderColor=\'var(--gold)\';this.style.color=\'var(--gold)\'" onmouseleave="this.style.borderColor=\'var(--border)\';this.style.color=\'var(--muted)\'">Edit</button>'
+        +   '<div class="client-avatar" data-initial="' + escapeHtml(initial) + '" data-active="' + (isActive ? '1' : '0') + '" title="' + (isActive ? 'Active' : 'Inactive') + '"></div>'
+        + '</div>'
         + '</div>'
         + '<div style="display:flex;gap:16px;align-items:center;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border);">'
         + '<div style="font-size:0.78rem;color:var(--muted);"><span style="font-weight:700;color:var(--ink);">' + c.sessions.length + '</span> session' + (c.sessions.length !== 1 ? 's' : '') + '</div>'
@@ -6964,10 +7007,51 @@ function renderClientsList(filter) {
         + '</div>';
     });
     html += '</div>';
+  } else {
+    // Compact list view — denser rows, optimized for rosters with 100+ clients.
+    html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;">';
+    html += '<div style="display:grid;grid-template-columns:minmax(0,2fr) minmax(0,2fr) 110px 130px 170px;gap:12px;padding:12px 18px;background:#f7f5f1;border-bottom:1px solid var(--border);font-family:\'DM Sans\',sans-serif;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);">'
+      + '<div>Client</div><div>Contact</div><div style="text-align:center;">Sessions</div><div>Last session</div><div style="text-align:right;">Actions</div>'
+      + '</div>';
+    filtered.forEach(function(c) {
+      var lastStr = c.lastSession ? new Date(c.lastSession).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+      var isActive = c.lastSession && new Date(c.lastSession) > sixtyDaysAgo;
+      var initialSource = (c.name || c.email || '?').trim();
+      var initial = initialSource.charAt(0).toUpperCase() || '?';
+      var emailShown = displayClientEmail(c.email) || '';
+      html += '<div style="display:grid;grid-template-columns:minmax(0,2fr) minmax(0,2fr) 110px 130px 170px;gap:12px;padding:12px 18px;align-items:center;border-bottom:1px solid var(--border);transition:background 0.15s ease;" onmouseenter="this.style.background=\'rgba(196,154,60,0.04)\'" onmouseleave="this.style.background=\'\'">'
+        + '<div style="display:flex;align-items:center;gap:10px;min-width:0;">'
+        +   '<div class="client-avatar" data-initial="' + escapeHtml(initial) + '" data-active="' + (isActive ? '1' : '0') + '" title="' + (isActive ? 'Active' : 'Inactive') + '"></div>'
+        +   '<div style="min-width:0;overflow:hidden;"><div style="font-family:\'Cormorant Garamond\',serif;font-weight:700;font-size:0.95rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(c.name || emailShown || 'Unnamed client') + '</div></div>'
+        + '</div>'
+        + '<div style="min-width:0;font-size:0.8rem;color:var(--muted);">'
+        +   (emailShown ? '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(emailShown) + '</div>' : '')
+        +   (c.phone ? '<div style="font-size:0.74rem;">' + escapeHtml(c.phone) + '</div>' : '')
+        + '</div>'
+        + '<div style="text-align:center;font-size:0.85rem;color:var(--ink);font-weight:600;">' + c.sessions.length + '</div>'
+        + '<div style="font-size:0.8rem;color:var(--muted);">' + escapeHtml(lastStr) + '</div>'
+        + '<div style="display:flex;gap:6px;justify-content:flex-end;">'
+        +   '<button class="client-edit-btn" data-edit-client="' + escapeHtml(c.email) + '" title="Edit client info" aria-label="Edit client info" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:5px 10px;cursor:pointer;color:var(--muted);font-family:\'DM Sans\',sans-serif;font-size:0.72rem;font-weight:600;transition:all 0.15s ease;" onmouseenter="this.style.borderColor=\'var(--gold)\';this.style.color=\'var(--gold)\'" onmouseleave="this.style.borderColor=\'var(--border)\';this.style.color=\'var(--muted)\'">Edit</button>'
+        +   '<button class="save-btn" data-view-client="' + escapeHtml(c.email) + '" style="background:var(--ink);font-size:0.72rem;padding:6px 12px;">View</button>'
+        + '</div>'
+        + '</div>';
+    });
+    html += '</div>';
   }
   html += '</div>';
 
   $('clients-list-view').innerHTML = html;
+
+  // Wire view toggle
+  document.querySelectorAll('.clients-view-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var next = this.dataset.view;
+      if (next === getClientsViewMode()) return;
+      setClientsViewMode(next);
+      var currentFilter = ($('clients-search') && $('clients-search').value) || '';
+      renderClientsList(currentFilter);
+    });
+  });
 
   // Wire search
   var searchInput = $('clients-search');
@@ -6987,6 +7071,14 @@ function renderClientsList(filter) {
   document.querySelectorAll('[data-view-client]').forEach(function(btn) {
     btn.addEventListener('click', function() {
       openClientDetail(this.dataset.viewClient);
+    });
+  });
+
+  // Wire edit client
+  document.querySelectorAll('[data-edit-client]').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      openEditClientModal(this.dataset.editClient);
     });
   });
 }
@@ -7380,6 +7472,102 @@ function openDeleteBookingConfirm(booking, onDeleted) {
   modal.style.display = 'flex';
 }
 
+function openEditClientModal(clientEmail) {
+  var client = clientsData.find(function(c) { return c.email === clientEmail; });
+  if (!client) return;
+  var modal = $('edit-client-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'edit-client-modal';
+    modal.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;';
+    modal.innerHTML = '<div style="background:var(--white);border-radius:var(--r);max-width:480px;width:90%;max-height:85vh;overflow-y:auto;padding:32px;position:relative;box-shadow:0 12px 40px rgba(0,0,0,0.15);">'
+      + '<button id="edit-client-modal-close" style="position:absolute;top:14px;right:18px;background:none;border:none;font-size:1.4rem;color:var(--muted);cursor:pointer;">&times;</button>'
+      + '<h2 style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:700;color:var(--ink);margin:0 0 6px 0;">Edit client info</h2>'
+      + '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:var(--muted);margin:0 0 22px 0;">Updates apply to every session this client has on your roster. Email is the stable identifier and can’t be changed here.</p>'
+      + '<div style="margin-bottom:14px;"><label style="display:block;font-family:\'DM Sans\',sans-serif;font-size:0.8rem;font-weight:600;color:var(--ink);margin-bottom:6px;">Client name</label>'
+      + '<input type="text" id="edit-client-name" placeholder="First Last" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--cream);"></div>'
+      + '<div style="margin-bottom:14px;"><label style="display:block;font-family:\'DM Sans\',sans-serif;font-size:0.8rem;font-weight:600;color:var(--ink);margin-bottom:6px;">Email</label>'
+      + '<input type="email" id="edit-client-email-display" disabled style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--muted);background:#f3efe7;cursor:not-allowed;"></div>'
+      + '<div style="margin-bottom:18px;"><label style="display:block;font-family:\'DM Sans\',sans-serif;font-size:0.8rem;font-weight:600;color:var(--ink);margin-bottom:6px;">Phone <span style="color:var(--muted);font-weight:400;">(optional)</span></label>'
+      + '<input type="tel" id="edit-client-phone" placeholder="(555) 555-5555" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--cream);"></div>'
+      + '<div id="edit-client-error" style="display:none;color:#b93a3a;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;margin-bottom:12px;"></div>'
+      + '<div style="display:flex;gap:10px;justify-content:flex-end;">'
+      + '<button id="edit-client-cancel" style="padding:10px 18px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;cursor:pointer;">Cancel</button>'
+      + '<button id="edit-client-save" style="padding:10px 20px;background:var(--gold);color:#fff;border:none;border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:600;cursor:pointer;">Save changes</button>'
+      + '</div>'
+      + '</div>';
+    document.body.appendChild(modal);
+    $('edit-client-modal-close').addEventListener('click', function() { modal.style.display = 'none'; });
+    $('edit-client-cancel').addEventListener('click', function() { modal.style.display = 'none'; });
+    modal.addEventListener('click', function(e) { if (e.target === modal) modal.style.display = 'none'; });
+    $('edit-client-save').addEventListener('click', submitEditClient);
+  }
+  $('edit-client-name').value = client.name || '';
+  $('edit-client-email-display').value = client.email || '';
+  $('edit-client-phone').value = client.phone || '';
+  $('edit-client-error').style.display = 'none';
+  $('edit-client-error').textContent = '';
+  var saveBtn = $('edit-client-save');
+  saveBtn.disabled = false;
+  saveBtn.textContent = 'Save changes';
+  saveBtn.dataset.email = client.email;
+  modal.style.display = 'flex';
+  setTimeout(function() { $('edit-client-name').focus(); $('edit-client-name').select(); }, 50);
+}
+
+async function submitEditClient() {
+  var saveBtn = $('edit-client-save');
+  var email = saveBtn && saveBtn.dataset ? saveBtn.dataset.email : '';
+  var client = email ? clientsData.find(function(c) { return c.email === email; }) : null;
+  if (!client) return;
+  var name = $('edit-client-name').value.trim();
+  var phone = $('edit-client-phone').value.trim();
+  var errorEl = $('edit-client-error');
+  errorEl.style.display = 'none';
+  errorEl.textContent = '';
+
+  if (name && name.length > 200) {
+    errorEl.textContent = 'Name is too long.';
+    errorEl.style.display = 'block';
+    return;
+  }
+  if (phone && phone.length > 60) {
+    errorEl.textContent = 'Phone is too long.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Saving...';
+  try {
+    var patch = { client_name: name || null, client_phone: phone || null };
+    var match = { client_email: 'eq.' + email, coach_id: 'eq.' + coachProfile.id };
+    var result = await supabasePatch('coach_bookings', match, patch);
+    if (result && result.code && result.message) {
+      throw new Error(result.message);
+    }
+    // Mirror changes into local state so the list re-renders without a refetch.
+    client.name = name;
+    client.phone = phone;
+    var currentFilter = ($('clients-search') && $('clients-search').value) || '';
+    renderClientsList(currentFilter);
+    // If the detail view is currently the visible surface, refresh it so its
+    // dark header reflects the new name/phone without a page reload.
+    var detailView = $('clients-detail-view');
+    if (detailView && !detailView.classList.contains('hidden')) {
+      openClientDetail(email);
+    }
+    var modal = $('edit-client-modal');
+    if (modal) modal.style.display = 'none';
+  } catch (e) {
+    console.error('[edit-client] failed:', e);
+    errorEl.textContent = 'Could not save: ' + (e.message || 'unknown error').slice(0, 200);
+    errorEl.style.display = 'block';
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save changes';
+  }
+}
+
 async function openClientDetail(email) {
   var client = clientsData.find(function(c) { return c.email === email; });
   if (!client) return;
@@ -7465,8 +7653,9 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
   // Back button + Header
   html += '<div style="margin-bottom:24px;">'
     + '<button id="back-to-clients" style="background:none;border:none;cursor:pointer;font-size:0.85rem;font-weight:700;color:var(--gold);margin-bottom:16px;display:flex;align-items:center;gap:6px;">&larr; Back to Clients</button>'
-    + '<div style="background:linear-gradient(135deg,#1a3a52 0%,#0f2535 100%);border-left:4px solid #c49a3c;border-radius:var(--r);padding:28px 32px;">'
-    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:600;color:#fff;margin-bottom:4px;">' + escapeHtml(client.name || displayClientEmail(client.email) || 'Unnamed client') + '</div>'
+    + '<div style="background:linear-gradient(135deg,#1a3a52 0%,#0f2535 100%);border-left:4px solid #c49a3c;border-radius:var(--r);padding:28px 32px;position:relative;">'
+    + '<button class="client-edit-btn" data-edit-client="' + escapeHtml(client.email) + '" title="Edit client info" aria-label="Edit client info" style="position:absolute;top:18px;right:18px;background:rgba(247,244,238,0.08);color:#f7f4ee;border:1px solid rgba(247,244,238,0.25);border-radius:6px;padding:6px 14px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:600;cursor:pointer;transition:all 0.15s ease;" onmouseenter="this.style.background=\'rgba(196,154,60,0.18)\';this.style.borderColor=\'#c49a3c\';this.style.color=\'#c49a3c\'" onmouseleave="this.style.background=\'rgba(247,244,238,0.08)\';this.style.borderColor=\'rgba(247,244,238,0.25)\';this.style.color=\'#f7f4ee\'">Edit info</button>'
+    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:600;color:#fff;margin-bottom:4px;padding-right:80px;">' + escapeHtml(client.name || displayClientEmail(client.email) || 'Unnamed client') + '</div>'
     + (function() {
         var em = displayClientEmail(client.email);
         var ph = client.phone || '';
@@ -7826,6 +8015,14 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
   $('back-to-clients').addEventListener('click', function() {
     $('clients-detail-view').classList.add('hidden');
     $('clients-list-view').classList.remove('hidden');
+  });
+
+  // Wire edit-info button(s) inside the detail view
+  $('clients-detail-view').querySelectorAll('[data-edit-client]').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      openEditClientModal(this.dataset.editClient);
+    });
   });
 
   // Wire session expand/collapse
