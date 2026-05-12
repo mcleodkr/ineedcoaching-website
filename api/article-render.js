@@ -24,6 +24,12 @@ const SITE_BASE = 'https://www.ineedcoaching.org';
 // therapy_consumer, future values) 404s — keeps content scoped to ineedcoaching.
 const ALLOWED_AUDIENCES = new Set(['consumer', 'coach']);
 
+// Sites whose articles this deploy may render. The articles table is shared
+// across ineedtherapy and ineedcoaching; the site column gates which surface
+// each article belongs to. Articles tagged for ineedtherapy (or any unknown
+// future site) 404 here.
+const ALLOWED_SITES = new Set(['ineedcoaching']);
+
 // Category slugs for landing pages under /category/<slug>.html.
 // Keep in sync with /scripts/build-category-pages.cjs and the inline copy in /api/article-render.js (this file).
 const CATEGORY_SLUGS = {
@@ -55,6 +61,21 @@ function jsonLdSafe(obj) {
     .replace(/\u2029/g, '\\u2029');
 }
 
+// Wrap bare http(s) URLs in <a> tags. Stops at whitespace or `<` so it can't
+// run into an HTML tag boundary; trailing punctuation is stripped so a URL at
+// the end of a sentence doesn't capture the period. Only run on text segments
+// that haven't been wrapped in HTML yet (i.e. in the markdown-build branch
+// below) — skipping the already-HTML branch avoids double-wrapping content
+// the author hand-anchored.
+function autoLinkify(text) {
+  if (!text) return '';
+  return String(text).replace(/(https?:\/\/[^\s<]+)/g, function(url) {
+    const cleaned = url.replace(/[.,;:!?)]+$/, '');
+    const trailing = url.slice(cleaned.length);
+    return '<a href="' + cleaned + '" target="_blank" rel="noopener noreferrer">' + cleaned + '</a>' + trailing;
+  });
+}
+
 // Same content-formatting logic the browser used to run, lifted to Node so
 // the article body can be inlined into the response.
 function formatContent(content) {
@@ -68,7 +89,7 @@ function formatContent(content) {
     if (para.startsWith('> ')) return '<blockquote>' + para.slice(2) + '</blockquote>';
     if (para.trim()) {
       pCount++;
-      let html = '<p>' + para.replace(/\n/g, '<br>') + '</p>';
+      let html = '<p>' + autoLinkify(para.replace(/\n/g, '<br>')) + '</p>';
       if (pCount > 1 && pCount % 3 === 0) {
         const sentence = para.split(/[.!?]/)[0].trim();
         if (sentence.length > 20 && sentence.length < 200) {
@@ -805,8 +826,15 @@ export default async function handler(req, res) {
     // Audience guard: this site only renders consumer + coach articles.
     // recovery → ineedrecovery.org, therapy_consumer → future ineedtherapy.org
     // consumer surface. Anything else (current or future) safely 404s here.
+    // Site guard: the articles table is shared with ineedtherapy. An article
+    // tagged for another site (or missing the column on a fresh row) 404s so
+    // direct-slug navigation can't pull content across deploys.
     const article = rows[0];
     if (!ALLOWED_AUDIENCES.has(article.audience)) {
+      res.status(404).setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.send(notFoundHtml());
+    }
+    if (article.site && !ALLOWED_SITES.has(article.site)) {
       res.status(404).setHeader('Content-Type', 'text/html; charset=utf-8');
       return res.send(notFoundHtml());
     }

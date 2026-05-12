@@ -330,7 +330,7 @@ function esc(s) { var d = document.createElement('div'); d.textContent = s || ''
 async function loadCategoryArticles() {
   var grid = document.getElementById('articles-grid');
   try {
-    var url = SUPABASE_URL + '/rest/v1/articles?audience=eq.consumer&category=eq.' + encodeURIComponent(CATEGORY_NAME) + '&order=created_at.desc&limit=100&select=title,slug,meta_description,category,read_time_minutes';
+    var url = SUPABASE_URL + '/rest/v1/articles?audience=eq.consumer&site=eq.ineedcoaching&is_published=eq.true&category=eq.' + encodeURIComponent(CATEGORY_NAME) + '&order=created_at.desc&limit=100&select=title,slug,meta_description,category,read_time_minutes';
     var res = await fetch(url, {
       headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
     });

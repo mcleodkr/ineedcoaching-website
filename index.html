@@ -865,7 +865,7 @@ var allArticles = [];
 async function loadArticles() {
   var grid = document.getElementById('articles-grid');
   try {
-    var res = await fetch(SUPABASE_URL + '/rest/v1/articles?audience=eq.consumer&order=created_at.desc&limit=50&select=title,slug,meta_description,category', {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/articles?audience=eq.consumer&site=eq.ineedcoaching&is_published=eq.true&order=created_at.desc&limit=50&select=title,slug,meta_description,category', {
       headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
     });
     allArticles = await res.json();
