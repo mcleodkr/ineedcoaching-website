@@ -15,6 +15,9 @@
     "api/aggregate-client-pattern-map.js": {
       "maxDuration": 120
     },
+    "api/generate-coaching-strategy.js": {
+      "maxDuration": 120
+    },
     "api/generate-intervention-plan.js": {
       "maxDuration": 300
     },
@@ -47,6 +50,7 @@
     { "source": "/intervention-plan", "destination": "/intervention-plan-panel" },
     { "source": "/coach-mirror", "destination": "/coach-mirror-panel" },
     { "source": "/pattern-map", "destination": "/pattern-map-panel" },
+    { "source": "/coaching-strategy", "destination": "/coaching-strategy-panel" },
     { "source": "/article", "destination": "/api/article-render" },
     { "source": "/sitemap.xml", "destination": "/api/sitemap" }
   ]

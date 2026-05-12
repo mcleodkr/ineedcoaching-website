@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coaching Strategy · Coach Clarity</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Sibling surface to pattern-map-panel.html. Strategy is COACH-FACING
+       (prescriptive moves) while Pattern Map is CLIENT-FACING (description).
+       Same chrome to feel like part of the Coach Intelligence family. */
+    :root {
+      --navy: #1a3a52;
+      --gold: #c49a3c;
+      --cream: #f7f4ee;
+      --bg: #f7f5f1;
+      --white: #ffffff;
+      --border: #e8e4dc;
+      --ink: #1a1a1a;
+      --muted: #6b6b60;
+      --good: #2d6a4f;
+      --warn: #b8860b;
+      --bad: #b93a3a;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'DM Sans', sans-serif; font-size: 18px; background: var(--bg); color: var(--ink); line-height: 1.5; }
+    h1, h2, h3 { font-family: 'Cormorant Garamond', serif; color: var(--navy); font-weight: 600; margin: 0 0 8px; }
+    h1 { font-size: 1.85rem; }
+    h2 { font-size: 1.35rem; }
+    h3 { font-size: 1.05rem; }
+    .panel { max-width: 980px; margin: 0 auto; padding: 28px 22px 80px; }
+    .top-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .top-bar a { font-size: 0.85rem; color: var(--muted); text-decoration: none; }
+    .top-bar a:hover { color: var(--ink); }
+    .meta { font-size: 0.78rem; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+    .btn { cursor: pointer; transition: all 0.15s ease; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; padding: 9px 18px; border-radius: 6px; border: none; }
+    .btn-secondary { background: transparent; color: var(--navy); border: 1px solid var(--navy); }
+    .btn-secondary:hover { background: rgba(26,58,82,0.05); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .card { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 20px 22px; margin-bottom: 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+    .card h3 { border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 12px; font-family: 'Cormorant Garamond', serif; font-size: 1.15rem; font-weight: 600; color: var(--navy); display: flex; align-items: center; gap: 10px; }
+    .card-sub { font-size: 0.78rem; color: var(--muted); margin-top: -6px; margin-bottom: 12px; line-height: 1.5; }
+    .item { padding: 14px 16px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; background: #fdfcfa; }
+    .item:last-child { margin-bottom: 0; }
+    .item-title { font-weight: 600; color: var(--ink); margin-bottom: 6px; font-size: 0.96rem; }
+    .item-body { font-size: 0.88rem; line-height: 1.55; color: var(--ink); margin-bottom: 6px; }
+    .item-meta { font-size: 0.74rem; color: var(--muted); margin-top: 6px; }
+    .field-row { margin-top: 8px; }
+    .field-label { font-family: 'DM Sans', sans-serif; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+    .field-val { font-size: 0.86rem; color: var(--ink); line-height: 1.55; }
+    .quote { font-style: italic; color: var(--muted); border-left: 2px solid var(--gold); padding-left: 10px; margin-top: 6px; font-size: 0.85rem; }
+    .source-chip { display: inline-block; font-size: 0.66rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); background: rgba(107,107,96,0.10); border-radius: 50px; padding: 2px 8px; margin: 2px 4px 2px 0; }
+    .source-chip-row { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+    .source-chip-label { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-right: 4px; }
+    .empty-section { font-style: italic; color: var(--muted); font-size: 0.86rem; padding: 6px 0; }
+    .empty-card { background: var(--white); border: 1px dashed var(--border); border-radius: 10px; padding: 36px 24px; text-align: center; color: var(--muted); font-size: 0.95rem; line-height: 1.55; }
+    .empty-card strong { color: var(--navy); font-family: 'Cormorant Garamond', serif; font-size: 1.15rem; display: block; margin-bottom: 8px; }
+    .loader { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .spinner { display: inline-block; width: 28px; height: 28px; border: 3px solid rgba(196,154,60,0.2); border-top-color: var(--gold); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 12px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-box { background: #fff5f5; border: 1px solid #c44; color: #8a2222; padding: 14px 18px; border-radius: 6px; margin-bottom: 18px; font-size: 0.88rem; }
+    .info-box { background: rgba(196,154,60,0.08); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 18px; font-size: 0.86rem; color: var(--muted); line-height: 1.55; }
+    .info-box strong { color: var(--ink); }
+    .section-icon { display: inline-block; width: 22px; height: 22px; border-radius: 50%; line-height: 22px; text-align: center; font-size: 0.78rem; font-weight: 700; color: #fff; flex-shrink: 0; }
+    .sec-good { background: var(--good); }
+    .sec-warn { background: var(--warn); }
+    .sec-direction { background: var(--gold); }
+    .sec-explore { background: var(--navy); }
+    .sec-refer { background: var(--bad); }
+    .sec-avoid { background: #555; }
+    .pivot-list, .anti-list { list-style: none; padding: 0; margin: 0; }
+    .pivot-list li, .anti-list li { padding: 10px 14px; border-left: 3px solid var(--gold); background: #fdfcfa; border-radius: 0 6px 6px 0; margin-bottom: 8px; font-size: 0.88rem; line-height: 1.55; }
+    .anti-list li { border-left-color: var(--bad); }
+    .strategic-summary { background: rgba(196,154,60,0.06); border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; }
+    .strategic-summary p { margin: 0 0 8px; font-size: 0.92rem; line-height: 1.6; color: var(--ink); }
+    .strategic-summary p:last-child { margin-bottom: 0; }
+    @media (max-width: 600px) {
+      .panel { padding: 20px 14px 60px; }
+      .top-bar { flex-direction: column; align-items: flex-start; }
+      .card { padding: 18px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <div class="top-bar">
+      <div>
+        <div class="meta" style="margin-bottom:6px;">Coaching Strategy</div>
+        <h1 id="client-heading">Loading…</h1>
+        <div class="meta" id="header-meta" style="text-transform:none;letter-spacing:0;font-size:0.82rem;color:var(--muted);">&nbsp;</div>
+      </div>
+      <a href="/coach-dashboard.html" id="back-link" onclick="if(document.referrer && document.referrer.indexOf('/coach-dashboard.html') !== -1){history.back();return false;}">← Back to dashboard</a>
+    </div>
+
+    <div class="toolbar" id="toolbar" style="display:none;">
+      <button class="btn btn-secondary" id="regenerate-btn">Refresh from new sessions</button>
+    </div>
+
+    <div id="content">
+      <div class="loader">
+        <div class="spinner"></div>
+        <div>Loading Coaching Strategy…</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  const SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+  const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+  const TOKEN_KEY = 'sb_access_token';
+  const MIN_SESSIONS = 3;
+
+  const params = new URLSearchParams(location.search);
+  const clientEmail = params.get('client_email') || '';
+  let coachId = null;
+  let sessionLabels = {};
+
+  function $(id) { return document.getElementById(id); }
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+    });
+  }
+  function apiHeaders() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    return {
+      apikey: ANON_KEY,
+      Authorization: token ? ('Bearer ' + token) : ('Bearer ' + ANON_KEY),
+      'Content-Type': 'application/json',
+    };
+  }
+  function showError(msg) { $('content').innerHTML = '<div class="error-box">' + escapeHtml(msg) + '</div>'; }
+
+  async function loadCoachProfile() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) { window.location.href = '/coach-dashboard.html'; return null; }
+    const userRes = await fetch(SUPABASE_URL + '/auth/v1/user', { headers: { apikey: ANON_KEY, Authorization: 'Bearer ' + token } });
+    if (!userRes.ok) { window.location.href = '/coach-dashboard.html'; return null; }
+    const user = await userRes.json();
+    const profRes = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles?user_email=eq.' + encodeURIComponent(user.email.toLowerCase()) + '&select=id,display_name', { headers: apiHeaders() });
+    const profRows = await profRes.json();
+    if (!Array.isArray(profRows) || profRows.length === 0) {
+      showError('No coach profile found for ' + user.email);
+      return null;
+    }
+    return profRows[0];
+  }
+
+  async function loadStrategy() {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/coach_client_strategies?coach_id=eq.' + coachId + '&client_email=eq.' + encodeURIComponent(clientEmail) + '&select=strategy,session_count,last_analyzed&limit=1', { headers: apiHeaders() });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return Array.isArray(rows) && rows.length ? rows[0] : null;
+  }
+
+  async function loadClientNameFallback(email) {
+    if (!email) return null;
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/coach_bookings?coach_id=eq.' + coachId + '&client_email=eq.' + encodeURIComponent(email) + '&select=notes', { headers: apiHeaders() });
+      if (!res.ok) return null;
+      const rows = await res.json();
+      if (!Array.isArray(rows)) return null;
+      for (const r of rows) {
+        const n = (r && r.notes) || '';
+        const m = n.match(/^Name:\s*(.+)/m);
+        if (m) return m[1].trim();
+      }
+      return null;
+    } catch (_) { return null; }
+  }
+
+  async function hasNewSessionsSince(lastAnalyzedIso) {
+    if (!lastAnalyzedIso) return true;
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/coach_session_notes?coach_id=eq.' + coachId + '&client_email=eq.' + encodeURIComponent(clientEmail) + '&post_session_analysis=not.is.null&created_at=gt.' + encodeURIComponent(lastAnalyzedIso) + '&select=id&limit=1', { headers: apiHeaders() });
+      if (!res.ok) return true;
+      const rows = await res.json();
+      return Array.isArray(rows) && rows.length > 0;
+    } catch (_) { return true; }
+  }
+
+  function setRefreshButtonState(hasNew) {
+    const btn = $('regenerate-btn');
+    if (!btn) return;
+    if (hasNew) {
+      btn.disabled = false;
+      btn.title = '';
+    } else {
+      btn.disabled = true;
+      btn.title = 'No new sessions to incorporate.';
+    }
+  }
+
+  async function applyHeader(strategy, sessionCount) {
+    let name = (strategy && strategy.display_name) || null;
+    if (!name) name = await loadClientNameFallback(clientEmail);
+    if (!name) name = clientEmail;
+    $('client-heading').textContent = name;
+    const sc = sessionCount || (strategy && strategy.session_count) || 0;
+    const range = (strategy && strategy.date_range) || '';
+    const lastIso = strategy && strategy.last_analyzed;
+    const lastStr = lastIso ? new Date(lastIso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    const parts = [];
+    if (clientEmail && name !== clientEmail) parts.push(clientEmail);
+    parts.push(sc + ' session' + (sc === 1 ? '' : 's') + ' synthesized');
+    if (range) parts.push(range);
+    if (lastStr) parts.push('updated ' + lastStr);
+    $('header-meta').textContent = parts.join(' · ');
+    if (strategy && strategy.session_labels) sessionLabels = strategy.session_labels;
+  }
+
+  function renderEmpty() {
+    $('toolbar').style.display = 'flex';
+    $('content').innerHTML =
+      '<div class="empty-card"><strong>No coaching strategy yet</strong>' +
+      'Coaching Strategy synthesizes what has worked across this client’s sessions to produce a longitudinal game plan. ' +
+      'It needs at least ' + MIN_SESSIONS + ' analyzed sessions before the synthesis is meaningful. Click "Refresh from new sessions" to generate.' +
+      '</div>';
+  }
+
+  function renderLocked(sessionCount) {
+    $('toolbar').style.display = 'none';
+    $('content').innerHTML =
+      '<div class="empty-card"><strong>Need more sessions</strong>' +
+      'Coaching Strategy synthesizes across multiple sessions to surface what has worked, what hasn’t, and where to pivot. ' +
+      'You have ' + sessionCount + ' analyzed session' + (sessionCount === 1 ? '' : 's') + ' so far. The synthesis unlocks at ' + MIN_SESSIONS + '.' +
+      '</div>';
+  }
+
+  function renderFailureState() {
+    $('toolbar').style.display = 'flex';
+    $('content').innerHTML =
+      '<div class="error-box"><strong>Synthesis failed.</strong> The model didn’t return a valid strategy on this attempt. ' +
+      'Your previous strategy (if any) is preserved. Try the Refresh button again, or wait a moment and retry.</div>';
+  }
+
+  function chipsForSessions(ids) {
+    if (!Array.isArray(ids) || ids.length === 0) return '';
+    let html = '<div class="source-chip-row"><span class="source-chip-label">Source:</span>';
+    ids.forEach(function(sid) {
+      const label = sessionLabels[sid] || (sid ? sid.slice(0, 8) : 'session');
+      html += '<span class="source-chip">' + escapeHtml(label) + '</span>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function renderEffectiveItem(a) {
+    if (!a) return '';
+    let html = '<div class="item">';
+    html += '<div class="item-title">' + escapeHtml(a.approach || '—') + '</div>';
+    if (a.evidence) html += '<div class="item-body">' + escapeHtml(a.evidence) + '</div>';
+    if (a.example_intervention) html += '<div class="quote">' + escapeHtml(a.example_intervention) + '</div>';
+    if (a.why_it_works) {
+      html += '<div class="field-row"><div class="field-label">Why it works</div><div class="field-val">' + escapeHtml(a.why_it_works) + '</div></div>';
+    }
+    html += chipsForSessions(a.source_sessions);
+    html += '</div>';
+    return html;
+  }
+
+  function renderIneffectiveItem(a) {
+    if (!a) return '';
+    let html = '<div class="item">';
+    html += '<div class="item-title">' + escapeHtml(a.approach || '—') + '</div>';
+    if (a.evidence) html += '<div class="item-body">' + escapeHtml(a.evidence) + '</div>';
+    if (a.why_it_failed) {
+      html += '<div class="field-row"><div class="field-label">Why it failed</div><div class="field-val">' + escapeHtml(a.why_it_failed) + '</div></div>';
+    }
+    if (a.what_to_try_instead) {
+      html += '<div class="field-row"><div class="field-label">Try instead</div><div class="field-val">' + escapeHtml(a.what_to_try_instead) + '</div></div>';
+    }
+    html += chipsForSessions(a.source_sessions);
+    html += '</div>';
+    return html;
+  }
+
+  function renderExploreItem(a) {
+    if (!a) return '';
+    let html = '<div class="item">';
+    html += '<div class="item-title">' + escapeHtml(a.approach || '—') + '</div>';
+    if (a.why_it_fits) {
+      html += '<div class="field-row"><div class="field-label">Why it fits</div><div class="field-val">' + escapeHtml(a.why_it_fits) + '</div></div>';
+    }
+    if (a.how_to_introduce) {
+      html += '<div class="field-row"><div class="field-label">How to introduce</div><div class="field-val">' + escapeHtml(a.how_to_introduce) + '</div></div>';
+    }
+    if (a.risk) {
+      html += '<div class="field-row"><div class="field-label">Risk</div><div class="field-val">' + escapeHtml(a.risk) + '</div></div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function renderReferItem(r) {
+    if (!r) return '';
+    let html = '<div class="item">';
+    html += '<div class="item-title">' + escapeHtml(r.condition || '—') + '</div>';
+    if (r.referral) {
+      html += '<div class="field-row"><div class="field-label">Referral</div><div class="field-val">' + escapeHtml(r.referral) + '</div></div>';
+    }
+    if (r.why) {
+      html += '<div class="field-row"><div class="field-label">Why</div><div class="field-val">' + escapeHtml(r.why) + '</div></div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function renderStrategy(strategy, lastAnalyzedIso, opts) {
+    opts = opts || {};
+    $('toolbar').style.display = 'flex';
+    const s = strategy || {};
+    const effective = Array.isArray(s.effective_approaches) ? s.effective_approaches : [];
+    const ineffective = Array.isArray(s.ineffective_approaches) ? s.ineffective_approaches : [];
+    const explore = Array.isArray(s.approaches_to_explore) ? s.approaches_to_explore : [];
+    const refer = Array.isArray(s.when_to_refer) ? s.when_to_refer : [];
+    const avoid = Array.isArray(s.what_not_to_do) ? s.what_not_to_do : [];
+    const direction = s.strategic_direction || {};
+
+    let html = '';
+
+    if (opts.failureBanner) {
+      html += '<div class="error-box">The latest refresh attempt failed. Showing your previous strategy below. Try Refresh again to retry.</div>';
+    }
+
+    // Strategic direction first — it's the answer to "what is my game plan?"
+    html += '<div class="card">'
+      + '<h3><span class="section-icon sec-direction">→</span>Strategic Direction</h3>'
+      + '<div class="card-sub">Where this work is heading and what to watch for in the next few sessions.</div>'
+      + '<div class="strategic-summary">';
+    if (direction.current_focus) {
+      html += '<p><strong>Current focus.</strong> ' + escapeHtml(direction.current_focus) + '</p>';
+    }
+    if (direction.next_3_sessions) {
+      html += '<p><strong>Next 3 sessions.</strong> ' + escapeHtml(direction.next_3_sessions) + '</p>';
+    }
+    if (!direction.current_focus && !direction.next_3_sessions) {
+      html += '<p class="empty-section">No strategic direction generated.</p>';
+    }
+    html += '</div>';
+    if (Array.isArray(direction.pivot_signals) && direction.pivot_signals.length) {
+      html += '<div class="field-label" style="margin-top:14px;">Pivot signals</div>';
+      html += '<ul class="pivot-list">';
+      direction.pivot_signals.forEach(function(p) {
+        if (p) html += '<li>' + escapeHtml(p) + '</li>';
+      });
+      html += '</ul>';
+    }
+    html += '</div>';
+
+    // What's working
+    html += '<div class="card">'
+      + '<h3><span class="section-icon sec-good">✓</span>What’s Working</h3>'
+      + '<div class="card-sub">Coaching moves you’ve made that landed for this client. Keep using these — they fit how they actually change.</div>';
+    if (effective.length) {
+      effective.forEach(function(a) { html += renderEffectiveItem(a); });
+    } else {
+      html += '<div class="empty-section">Not enough evidence yet to identify what’s working. More sessions needed.</div>';
+    }
+    html += '</div>';
+
+    // What's not working
+    html += '<div class="card">'
+      + '<h3><span class="section-icon sec-warn">!</span>What’s Not Working</h3>'
+      + '<div class="card-sub">Moves that misfired and the alternative move worth trying instead.</div>';
+    if (ineffective.length) {
+      ineffective.forEach(function(a) { html += renderIneffectiveItem(a); });
+    } else {
+      html += '<div class="empty-section">No clearly ineffective approaches identified in the record so far.</div>';
+    }
+    html += '</div>';
+
+    // Approaches to explore
+    html += '<div class="card">'
+      + '<h3><span class="section-icon sec-explore">?</span>Approaches to Explore</h3>'
+      + '<div class="card-sub">Theoretical frames that fit this client’s pattern — and how to introduce them without backfiring.</div>';
+    if (explore.length) {
+      explore.forEach(function(a) { html += renderExploreItem(a); });
+    } else {
+      html += '<div class="empty-section">No new approaches surfaced this round.</div>';
+    }
+    html += '</div>';
+
+    // When to refer
+    html += '<div class="card">'
+      + '<h3><span class="section-icon sec-refer">!</span>When to Refer</h3>'
+      + '<div class="card-sub">Conditions in this client’s record that, if they hold or escalate, may warrant a referral beyond coaching.</div>';
+    if (refer.length) {
+      refer.forEach(function(r) { html += renderReferItem(r); });
+    } else {
+      html += '<div class="empty-section">No referral conditions warranted by the current evidence.</div>';
+    }
+    html += '</div>';
+
+    // What not to do
+    html += '<div class="card">'
+      + '<h3><span class="section-icon sec-avoid">✕</span>What Not to Do</h3>'
+      + '<div class="card-sub">Anti-patterns specific to this client.</div>';
+    if (avoid.length) {
+      html += '<ul class="anti-list">';
+      avoid.forEach(function(a) { if (a) html += '<li>' + escapeHtml(a) + '</li>'; });
+      html += '</ul>';
+    } else {
+      html += '<div class="empty-section">No anti-patterns surfaced.</div>';
+    }
+    html += '</div>';
+
+    $('content').innerHTML = html;
+  }
+
+  async function regenerate() {
+    $('toolbar').style.display = 'none';
+    $('content').innerHTML = '<div class="loader"><div class="spinner"></div><div>Synthesizing Coaching Strategy from session record…</div></div>';
+    try {
+      const res = await fetch('/api/generate-coaching-strategy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coach_id: coachId, client_email: clientEmail }),
+      });
+      if (!res.ok) {
+        let detail = '';
+        try { const j = await res.json(); detail = (typeof j.error === 'string' ? j.error : '') || ''; } catch (_) {}
+        throw new Error('Regeneration failed' + (detail ? ': ' + detail : '') + ' (status ' + res.status + ')');
+      }
+      const data = await res.json();
+      if (data && data.locked) {
+        renderLocked(data.session_count || 0);
+        return;
+      }
+      if (data && data.status === 'no_changes' && data.strategy) {
+        await applyHeader(data.strategy, data.session_count || data.strategy.session_count);
+        renderStrategy(data.strategy, data.last_analyzed || data.strategy.last_analyzed);
+        setRefreshButtonState(false);
+        return;
+      }
+      if (data && data.status === 'failed') {
+        const priorRow = await loadStrategy();
+        if (priorRow && priorRow.strategy) {
+          await applyHeader(priorRow.strategy, priorRow.session_count);
+          renderStrategy(priorRow.strategy, priorRow.last_analyzed || (priorRow.strategy && priorRow.strategy.last_analyzed), { failureBanner: true });
+        } else {
+          renderFailureState();
+        }
+        return;
+      }
+      // Fresh synthesis success path
+      await applyHeader(data, data && data.session_count);
+      renderStrategy(data, new Date().toISOString());
+      setRefreshButtonState(false);
+    } catch (e) {
+      showError(e.message || 'Regeneration failed.');
+    }
+  }
+
+  async function init() {
+    if (!clientEmail) { showError('Missing client_email parameter.'); return; }
+    const profile = await loadCoachProfile();
+    if (!profile) return;
+    coachId = profile.id;
+
+    const row = await loadStrategy();
+    if (!row || !row.strategy) {
+      const fallbackName = await loadClientNameFallback(clientEmail);
+      $('client-heading').textContent = fallbackName || clientEmail;
+      $('header-meta').textContent =
+        (fallbackName && clientEmail !== fallbackName ? clientEmail + ' · ' : '')
+        + 'Not yet generated';
+      renderEmpty();
+      setRefreshButtonState(true);
+    } else {
+      const s = row.strategy;
+      await applyHeader(s, row.session_count || s.session_count);
+      renderStrategy(s, row.last_analyzed || s.last_analyzed);
+      const hasNew = await hasNewSessionsSince(row.last_analyzed || (s && s.last_analyzed));
+      setRefreshButtonState(hasNew);
+    }
+
+    $('regenerate-btn').addEventListener('click', regenerate);
+  }
+
+  init();
+  </script>
+</body>
+</html>
