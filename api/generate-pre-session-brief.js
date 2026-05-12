@@ -15,10 +15,14 @@ export default async function handler(req, res) {
   const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
   if (!SUPABASE_KEY || !ANTHROPIC_API_KEY) return res.status(500).json({ error: 'Server not configured' });
 
+  const invokeId = Math.random().toString(36).slice(2, 10);
+  const invokeStart = Date.now();
+  console.log('[pre-session-brief] invoked', { invokeId });
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const { coachId, clientEmail, bookingId } = body;
     if (!coachId || !clientEmail) return res.status(400).json({ error: 'Missing coachId or clientEmail' });
+    console.log('[pre-session-brief] inputs', { invokeId, bookingId, coachId, clientEmail });
 
     const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
@@ -38,6 +42,7 @@ export default async function handler(req, res) {
       }
       currentScheduledAt = currentBookingData[0].scheduled_at;
     }
+    console.log('[pre-session-brief] stage 1 done', { invokeId, currentScheduledAt, ms: Date.now() - invokeStart });
 
     // Stage 2: fetch supporting data in parallel. When we have a current
     // scheduled_at, scope notes + bookings to strictly-before; otherwise fall
@@ -54,6 +59,7 @@ export default async function handler(req, res) {
       ? `${SUPABASE_URL}/rest/v1/coach_goals?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&created_at=lt.${encodeURIComponent(currentScheduledAt)}&order=created_at.desc&select=title,status,target_date`
       : `${SUPABASE_URL}/rest/v1/coach_goals?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&order=created_at.desc&select=title,status,target_date`;
 
+    console.log('[pre-session-brief] stage 2 fetching', { invokeId, ms: Date.now() - invokeStart });
     const [notesRes, goalsRes, bookingsRes, checkinRes, intakeRes] = await Promise.all([
       fetch(notesUrl, { headers }),
       fetch(goalsUrl, { headers }),
@@ -63,6 +69,15 @@ export default async function handler(req, res) {
     ]);
 
     const [notes, goals, bookings, checkins, intakeData] = await Promise.all([notesRes.json(), goalsRes.json(), bookingsRes.json(), checkinRes.json ? checkinRes.json() : [], intakeRes.json()]);
+    console.log('[pre-session-brief] stage 3 fetched', {
+      invokeId,
+      notesCount: Array.isArray(notes) ? notes.length : null,
+      goalsCount: Array.isArray(goals) ? goals.length : null,
+      bookingsCount: Array.isArray(bookings) ? bookings.length : null,
+      checkinsCount: Array.isArray(checkins) ? checkins.length : null,
+      intakeCount: Array.isArray(intakeData) ? intakeData.length : null,
+      ms: Date.now() - invokeStart,
+    });
 
     // Backstop: PostgREST embedded filters are easy to break with a typo or a
     // schema change. Confirm nothing scheduled at or after the current session
@@ -122,16 +137,7 @@ export default async function handler(req, res) {
 
     const model = 'claude-sonnet-4-6';
     const startTime = Date.now();
-    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        // 3500 truncated the JSON mid-output once pattern_explanation
-        // (3-5 moves per pattern) landed. Pattern Map and Coaching Strategy
-        // both run at 7500; matching that ceiling here to leave headroom.
-        max_tokens: 7500,
-        system: [{ type: 'text', cache_control: { type: 'ephemeral', ttl: '1h' }, text: `You are a coaching intelligence assistant preparing a pre-session brief for a professional coach. The session you are preparing for has NOT happened yet — you are PREDICTING what may come up based on PRIOR sessions only. Every observation, pattern, and recommendation must be sourced from sessions that occurred before the upcoming one. Never describe what "happened in this session" or what the client "said today" — those events are still in the future. If the input data is empty or thin, say so plainly rather than inventing material. Your tone is that of a thoughtful senior colleague offering perspective — not a system giving commands. Write in strength-based, forward-focused language. Use tentative language: "appears to," "may suggest," "you might explore." Never use "you should" or "you must" or "tell the coach to do X." Suggest the coach may want to consider approaches rather than directing them. No em dashes. Keep last_session_summary.recap to 2 sentences maximum. opening_questions must be specific, slightly uncomfortable, and movement-oriented. Not "What are you noticing..." but "What did you actually do differently in that moment vs what you usually do?" Create productive tension that opens the session with direction. For every entry in patterns_noticed you MUST include a pattern_explanation object teaching the coach how to work with the pattern. Write the explanation for a coach who may not have formal psychology training — define the term in plain language without clinical jargon. The "how_to_work_with_it" moves must be concrete, in-session actions the coach can use today, not abstract principles. Return ONLY valid JSON with these exact keys:
+    const systemText = `You are a coaching intelligence assistant preparing a pre-session brief for a professional coach. The session you are preparing for has NOT happened yet — you are PREDICTING what may come up based on PRIOR sessions only. Every observation, pattern, and recommendation must be sourced from sessions that occurred before the upcoming one. Never describe what "happened in this session" or what the client "said today" — those events are still in the future. If the input data is empty or thin, say so plainly rather than inventing material. Your tone is that of a thoughtful senior colleague offering perspective — not a system giving commands. Write in strength-based, forward-focused language. Use tentative language: "appears to," "may suggest," "you might explore." Never use "you should" or "you must" or "tell the coach to do X." Suggest the coach may want to consider approaches rather than directing them. No em dashes. Keep last_session_summary.recap to 2 sentences maximum. opening_questions must be specific, slightly uncomfortable, and movement-oriented. Not "What are you noticing..." but "What did you actually do differently in that moment vs what you usually do?" Create productive tension that opens the session with direction. For every entry in patterns_noticed you MUST include a pattern_explanation object teaching the coach how to work with the pattern. Write the explanation for a coach who may not have formal psychology training — define the term in plain language without clinical jargon. The "how_to_work_with_it" moves must be concrete, in-session actions the coach can use today, not abstract principles. Return ONLY valid JSON with these exact keys:
 {
   "session_header": { "client_name": string, "session_number": number, "date": string },
   "orientation_snapshot": { "readiness_level": string, "primary_focus": string, "open_commitments": [{"title": string, "is_complete": boolean}] },
@@ -146,12 +152,68 @@ export default async function handler(req, res) {
   "focus_this_session": "one sentence starting with an action verb: If nothing else this session, [action]",
   "this_session_is": [string, string, string],
   "this_session_is_not": [string, string, string]
-}` }],
-        messages: [{ role: 'user', content: `Prepare a pre-session brief for session #${sessionCount + 1} with ${clientName}.\n\nThis session has NOT happened yet. All context below is drawn exclusively from PRIOR sessions (${priorAnalyses.length} prior session analyses available${currentScheduledAt ? `, all scheduled before ${currentScheduledAt}` : ''}). Predict patterns and risks; do not narrate the upcoming session as if it has already occurred.\n\nPrior session context:\n${lastNotes || 'No previous notes'}\n\nActive goals: ${goalsSummary || 'None set'}\n\nPre-session check-in (submitted by the client before this session): ${checkinText}${intakeBaseline ? '\n\nIntake baseline:\n' + intakeBaseline : ''}\n\nToday's date: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}` }]
-      })
+}`;
+    const userText = `Prepare a pre-session brief for session #${sessionCount + 1} with ${clientName}.\n\nThis session has NOT happened yet. All context below is drawn exclusively from PRIOR sessions (${priorAnalyses.length} prior session analyses available${currentScheduledAt ? `, all scheduled before ${currentScheduledAt}` : ''}). Predict patterns and risks; do not narrate the upcoming session as if it has already occurred.\n\nPrior session context:\n${lastNotes || 'No previous notes'}\n\nActive goals: ${goalsSummary || 'None set'}\n\nPre-session check-in (submitted by the client before this session): ${checkinText}${intakeBaseline ? '\n\nIntake baseline:\n' + intakeBaseline : ''}\n\nToday's date: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+
+    console.log('[pre-session-brief] stage 4 calling claude', {
+      invokeId,
+      systemPromptLength: systemText.length,
+      userMessageLength: userText.length,
+      priorSessionsCount: priorAnalyses.length,
+      model,
+      ms: Date.now() - invokeStart,
     });
 
+    // 110s race wrapper sits inside the 120s Vercel function timeout, leaving
+    // ~10s of headroom to log the timeout, persist failure to ai-usage, and
+    // return a 500. Without it a hung upstream just produces a silent 502.
+    const CLAUDE_TIMEOUT_MS = 110000;
+    let claudeRes;
+    try {
+      claudeRes = await Promise.race([
+        fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+          body: JSON.stringify({
+            model,
+            // 3500 truncated the JSON mid-output once pattern_explanation
+            // (3-5 moves per pattern) landed. Pattern Map and Coaching Strategy
+            // both run at 7500; matching that ceiling here to leave headroom.
+            max_tokens: 7500,
+            system: [{ type: 'text', cache_control: { type: 'ephemeral', ttl: '1h' }, text: systemText }],
+            messages: [{ role: 'user', content: userText }],
+          }),
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Claude API timeout after 110s')), CLAUDE_TIMEOUT_MS)),
+      ]);
+    } catch (fetchErr) {
+      console.error('[pre-session-brief] claude fetch failed', {
+        invokeId,
+        message: fetchErr.message,
+        stack: fetchErr.stack ? fetchErr.stack.substring(0, 500) : null,
+        durationMs: Date.now() - startTime,
+      });
+      await logAIUsage({
+        feature: 'pre_session_brief',
+        coachId,
+        model,
+        status: 'error',
+        errorMessage: fetchErr.message,
+        durationMs: Date.now() - startTime,
+      });
+      return res.status(500).json({ error: 'AI processing failed', details: fetchErr.message });
+    }
+
     const claudeData = await claudeRes.json().catch(function() { return null; });
+    console.log('[pre-session-brief] claude returned', {
+      invokeId,
+      status: claudeRes.status,
+      ok: claudeRes.ok,
+      stopReason: claudeData && claudeData.stop_reason,
+      usage: claudeData && claudeData.usage,
+      contentLength: claudeData && claudeData.content && claudeData.content[0] && claudeData.content[0].text ? claudeData.content[0].text.length : 0,
+      durationMs: Date.now() - startTime,
+    });
     await logAIUsage({
       feature: 'pre_session_brief',
       coachId,
@@ -162,7 +224,14 @@ export default async function handler(req, res) {
       errorMessage: claudeRes.ok ? null : (claudeData && claudeData.error && claudeData.error.message),
       durationMs: Date.now() - startTime,
     });
-    if (!claudeRes.ok) return res.status(502).json({ error: 'AI processing failed' });
+    if (!claudeRes.ok) {
+      console.error('[pre-session-brief] claude not ok', {
+        invokeId,
+        status: claudeRes.status,
+        error: claudeData && claudeData.error,
+      });
+      return res.status(502).json({ error: 'AI processing failed' });
+    }
 
     const text = (claudeData && claudeData.content?.[0]?.text) || '';
     let brief;
@@ -194,6 +263,12 @@ export default async function handler(req, res) {
     // post-session-analysis.js) because coach_session_notes has no unique
     // constraint on booking_id — postgrest UPSERT would fail. Persistence
     // failure is non-fatal; the coach still gets the brief in the response.
+    console.log('[pre-session-brief] stage 5 persisting', {
+      invokeId,
+      briefBytes: JSON.stringify(brief).length,
+      hasBookingId: !!bookingId,
+      ms: Date.now() - invokeStart,
+    });
     let persisted = false;
     if (bookingId) {
       try {
@@ -239,9 +314,15 @@ export default async function handler(req, res) {
       }
     }
 
+    console.log('[pre-session-brief] complete', { invokeId, persisted, totalMs: Date.now() - invokeStart });
     return res.status(200).json(Object.assign({}, brief, { _persisted: persisted }));
   } catch (e) {
-    console.error('[pre-session-brief] Error:', e);
-    return res.status(500).json({ error: e.message });
+    console.error('[pre-session-brief] FATAL', {
+      invokeId,
+      message: e && e.message,
+      stack: e && e.stack ? e.stack.substring(0, 1000) : null,
+      totalMs: Date.now() - invokeStart,
+    });
+    return res.status(500).json({ error: e && e.message ? e.message : 'Internal server error' });
   }
 }
