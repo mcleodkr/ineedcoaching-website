@@ -6891,22 +6891,28 @@ async function loadClientsTab() {
       return m ? m[1].trim() : '';
     }
     bookings.forEach(function(b) {
-      var email = b.client_email;
-      if (!email) return;
-      if (!clientMap[email]) {
-        clientMap[email] = {
-          email: email,
+      if (!b.client_email) return;
+      // Case/whitespace differences across booking rows for the same person
+      // (e.g. "Foo@Example.com" vs "foo@example.com") were splitting them
+      // into multiple roster entries. Normalize the dedup key but keep the
+      // first-seen original-cased email on the client object so downstream
+      // queries (PATCH coach_bookings) hit the existing rows.
+      var key = b.client_email.trim().toLowerCase();
+      if (!key) return;
+      if (!clientMap[key]) {
+        clientMap[key] = {
+          email: b.client_email.trim(),
           name: deriveName(b),
           phone: b.client_phone || '',
           sessions: [],
           firstSession: null,
           lastSession: null
         };
-        clientOrder.push(email);
+        clientOrder.push(key);
       }
-      clientMap[email].sessions.push(b);
-      if (!clientMap[email].phone && b.client_phone) clientMap[email].phone = b.client_phone;
-      if (!clientMap[email].name) clientMap[email].name = deriveName(b);
+      clientMap[key].sessions.push(b);
+      if (!clientMap[key].phone && b.client_phone) clientMap[key].phone = b.client_phone;
+      if (!clientMap[key].name) clientMap[key].name = deriveName(b);
     });
 
     // Compute first/last session dates
@@ -6942,6 +6948,47 @@ function setClientsViewMode(mode) {
   try { localStorage.setItem('coachClientsViewMode', mode); } catch (e) {}
 }
 
+// Sort mode for the roster — applies to both card and list views.
+//   recent  : most recent session first (default)
+//   active  : highest session count first
+//   alpha   : alphabetical by name (then email)
+//   since   : newest "client since" date first
+var CLIENTS_SORT_MODES = ['recent', 'active', 'alpha', 'since'];
+function getClientsSortMode() {
+  try {
+    var v = localStorage.getItem('coachClientsSortMode');
+    return CLIENTS_SORT_MODES.indexOf(v) !== -1 ? v : 'recent';
+  } catch (e) { return 'recent'; }
+}
+function setClientsSortMode(mode) {
+  try { localStorage.setItem('coachClientsSortMode', mode); } catch (e) {}
+}
+function sortClients(arr, mode) {
+  var copy = arr.slice();
+  function toTime(d) { return d ? new Date(d).getTime() : 0; }
+  function nameKey(c) { return (c.name || c.email || '').trim().toLowerCase(); }
+  if (mode === 'active') {
+    copy.sort(function(a, b) { return b.sessions.length - a.sessions.length; });
+  } else if (mode === 'alpha') {
+    copy.sort(function(a, b) { return nameKey(a).localeCompare(nameKey(b)); });
+  } else if (mode === 'since') {
+    // Newest first session date first; clients with no first session go last.
+    copy.sort(function(a, b) {
+      var diff = toTime(b.firstSession) - toTime(a.firstSession);
+      if (diff !== 0) return diff;
+      return nameKey(a).localeCompare(nameKey(b));
+    });
+  } else {
+    // 'recent' (default) — most recent lastSession first; nulls last.
+    copy.sort(function(a, b) {
+      var diff = toTime(b.lastSession) - toTime(a.lastSession);
+      if (diff !== 0) return diff;
+      return nameKey(a).localeCompare(nameKey(b));
+    });
+  }
+  return copy;
+}
+
 function renderClientsList(filter) {
   filter = (filter || '').toLowerCase();
   var filtered = clientsData;
@@ -6950,6 +6997,8 @@ function renderClientsList(filter) {
       return (c.name + ' ' + c.email).toLowerCase().indexOf(filter) !== -1;
     });
   }
+  var sortMode = getClientsSortMode();
+  filtered = sortClients(filtered, sortMode);
   var viewMode = getClientsViewMode();
   var cardsActive = viewMode === 'cards';
   var sixtyDaysAgo = new Date(); sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
@@ -6972,6 +7021,15 @@ function renderClientsList(filter) {
     +   '<button class="clients-view-btn" data-view="cards" aria-pressed="' + (cardsActive ? 'true' : 'false') + '" title="Card view" style="' + viewBtnStyle(cardsActive) + '">' + cardsIcon + 'Cards</button>'
     +   '<button class="clients-view-btn" data-view="list" aria-pressed="' + (!cardsActive ? 'true' : 'false') + '" title="Compact list" style="' + viewBtnStyle(!cardsActive) + '">' + listIcon + 'List</button>'
     + '</div>'
+    + '<label style="display:inline-flex;align-items:center;gap:8px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:var(--muted);">'
+    +   '<span>Sort by</span>'
+    +   '<select id="clients-sort" aria-label="Sort clients" style="padding:8px 32px 8px 14px;border:1px solid var(--border);border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:500;color:var(--ink);background:var(--cream) url(\'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 10 6%22><path fill=%22none%22 stroke=%22%23736b5d%22 stroke-width=%221.4%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 d=%22M1 1l4 4 4-4%22/></svg>\') no-repeat right 12px center;background-size:10px 6px;-webkit-appearance:none;appearance:none;cursor:pointer;transition:border-color 0.15s ease;" onfocus="this.style.borderColor=\'var(--gold)\'" onblur="this.style.borderColor=\'var(--border)\'">'
+    +     '<option value="recent"' + (sortMode === 'recent' ? ' selected' : '') + '>Most recent session</option>'
+    +     '<option value="active"' + (sortMode === 'active' ? ' selected' : '') + '>Most active</option>'
+    +     '<option value="alpha"'  + (sortMode === 'alpha'  ? ' selected' : '') + '>Alphabetical (A–Z)</option>'
+    +     '<option value="since"'  + (sortMode === 'since'  ? ' selected' : '') + '>Client since (newest first)</option>'
+    +   '</select>'
+    + '</label>'
     + '<input type="text" id="clients-search" placeholder="Search by name or email..." value="' + escapeHtml(filter) + '" style="padding:10px 16px;border:1px solid var(--border);border-radius:50px;font-family:\'DM Sans\',\'Cabinet Grotesk\',sans-serif;font-size:0.85rem;color:var(--ink);background:var(--cream);min-width:240px;transition:border-color 0.2s;" onfocus="this.style.borderColor=\'var(--gold)\'" onblur="this.style.borderColor=\'var(--border)\'">'
     + '<button id="add-client-btn" style="padding:10px 18px;background:var(--gold);color:#fff;border:none;border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:600;cursor:pointer;transition:all 0.15s ease;white-space:nowrap;" onmouseenter="this.style.opacity=\'0.9\'" onmouseleave="this.style.opacity=\'1\'">+ Add client</button>'
     + '</div>'
@@ -7009,30 +7067,45 @@ function renderClientsList(filter) {
     html += '</div>';
   } else {
     // Compact list view — denser rows, optimized for rosters with 100+ clients.
-    html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;">';
-    html += '<div style="display:grid;grid-template-columns:minmax(0,2fr) minmax(0,2fr) 110px 130px 170px;gap:12px;padding:12px 18px;background:#f7f5f1;border-bottom:1px solid var(--border);font-family:\'DM Sans\',sans-serif;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);">'
-      + '<div>Client</div><div>Contact</div><div style="text-align:center;">Sessions</div><div>Last session</div><div style="text-align:right;">Actions</div>'
+    // Grid: Client | Contact | Sessions | Last session | Actions.
+    var gridCols = 'minmax(0,2.4fr) minmax(0,2.2fr) 96px 150px 178px';
+    html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.04);">';
+    html += '<div style="display:grid;grid-template-columns:' + gridCols + ';gap:14px;padding:13px 22px;background:#f3efe7;border-bottom:1px solid var(--border);font-family:\'DM Sans\',sans-serif;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);">'
+      + '<div>Client</div>'
+      + '<div>Contact</div>'
+      + '<div style="text-align:center;">Sessions</div>'
+      + '<div>Last session</div>'
+      + '<div style="text-align:right;">Actions</div>'
       + '</div>';
-    filtered.forEach(function(c) {
-      var lastStr = c.lastSession ? new Date(c.lastSession).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+    filtered.forEach(function(c, idx) {
+      var lastStr = c.lastSession ? new Date(c.lastSession).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
       var isActive = c.lastSession && new Date(c.lastSession) > sixtyDaysAgo;
       var initialSource = (c.name || c.email || '?').trim();
       var initial = initialSource.charAt(0).toUpperCase() || '?';
       var emailShown = displayClientEmail(c.email) || '';
-      html += '<div style="display:grid;grid-template-columns:minmax(0,2fr) minmax(0,2fr) 110px 130px 170px;gap:12px;padding:12px 18px;align-items:center;border-bottom:1px solid var(--border);transition:background 0.15s ease;" onmouseenter="this.style.background=\'rgba(196,154,60,0.04)\'" onmouseleave="this.style.background=\'\'">'
-        + '<div style="display:flex;align-items:center;gap:10px;min-width:0;">'
+      var isLast = idx === filtered.length - 1;
+      var zebraBg = idx % 2 === 1 ? '#fbf9f4' : 'var(--white)';
+
+      html += '<div style="display:grid;grid-template-columns:' + gridCols + ';gap:14px;padding:14px 22px;align-items:center;background:' + zebraBg + ';' + (isLast ? '' : 'border-bottom:1px solid var(--border);') + 'transition:background 0.15s ease,box-shadow 0.15s ease;" '
+        + 'onmouseenter="this.dataset.prevBg=this.style.background;this.style.background=\'rgba(196,154,60,0.07)\';this.style.boxShadow=\'inset 3px 0 0 var(--gold)\'" '
+        + 'onmouseleave="this.style.background=this.dataset.prevBg||\'\';this.style.boxShadow=\'none\'">'
+        + '<div style="display:flex;align-items:center;gap:12px;min-width:0;">'
         +   '<div class="client-avatar" data-initial="' + escapeHtml(initial) + '" data-active="' + (isActive ? '1' : '0') + '" title="' + (isActive ? 'Active' : 'Inactive') + '"></div>'
-        +   '<div style="min-width:0;overflow:hidden;"><div style="font-family:\'Cormorant Garamond\',serif;font-weight:700;font-size:0.95rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(c.name || emailShown || 'Unnamed client') + '</div></div>'
+        +   '<div style="min-width:0;overflow:hidden;">'
+        +     '<div style="font-family:\'Cormorant Garamond\',serif;font-weight:700;font-size:1rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;">' + escapeHtml(c.name || emailShown || 'Unnamed client') + '</div>'
+        +   '</div>'
         + '</div>'
-        + '<div style="min-width:0;font-size:0.8rem;color:var(--muted);">'
-        +   (emailShown ? '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(emailShown) + '</div>' : '')
-        +   (c.phone ? '<div style="font-size:0.74rem;">' + escapeHtml(c.phone) + '</div>' : '')
+        + '<div style="min-width:0;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:var(--muted);line-height:1.45;">'
+        +   (emailShown ? '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);">' + escapeHtml(emailShown) + '</div>' : '<div style="color:var(--muted);font-style:italic;">No email</div>')
+        +   (c.phone ? '<div style="font-size:0.75rem;color:var(--muted);">' + escapeHtml(c.phone) + '</div>' : '')
         + '</div>'
-        + '<div style="text-align:center;font-size:0.85rem;color:var(--ink);font-weight:600;">' + c.sessions.length + '</div>'
-        + '<div style="font-size:0.8rem;color:var(--muted);">' + escapeHtml(lastStr) + '</div>'
-        + '<div style="display:flex;gap:6px;justify-content:flex-end;">'
-        +   '<button class="client-edit-btn" data-edit-client="' + escapeHtml(c.email) + '" title="Edit client info" aria-label="Edit client info" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:5px 10px;cursor:pointer;color:var(--muted);font-family:\'DM Sans\',sans-serif;font-size:0.72rem;font-weight:600;transition:all 0.15s ease;" onmouseenter="this.style.borderColor=\'var(--gold)\';this.style.color=\'var(--gold)\'" onmouseleave="this.style.borderColor=\'var(--border)\';this.style.color=\'var(--muted)\'">Edit</button>'
-        +   '<button class="save-btn" data-view-client="' + escapeHtml(c.email) + '" style="background:var(--ink);font-size:0.72rem;padding:6px 12px;">View</button>'
+        + '<div style="text-align:center;">'
+        +   '<span style="display:inline-block;background:rgba(196,154,60,0.14);color:#8a6a25;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:700;padding:4px 12px;border-radius:50px;min-width:32px;">' + c.sessions.length + '</span>'
+        + '</div>'
+        + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:' + (lastStr ? 'var(--ink)' : 'var(--muted)') + ';font-weight:' + (lastStr ? '500' : '400') + ';">' + (lastStr ? escapeHtml(lastStr) : '<span style="font-style:italic;">No sessions</span>') + '</div>'
+        + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+        +   '<button class="client-edit-btn" data-edit-client="' + escapeHtml(c.email) + '" title="Edit client info" aria-label="Edit client info" style="background:transparent;border:1px solid var(--border);border-radius:50px;padding:6px 14px;cursor:pointer;color:var(--muted);font-family:\'DM Sans\',sans-serif;font-size:0.75rem;font-weight:600;transition:all 0.15s ease;" onmouseenter="this.style.borderColor=\'var(--gold)\';this.style.color=\'var(--gold)\'" onmouseleave="this.style.borderColor=\'var(--border)\';this.style.color=\'var(--muted)\'">Edit</button>'
+        +   '<button class="save-btn" data-view-client="' + escapeHtml(c.email) + '" style="background:var(--gold);color:#fff;font-family:\'DM Sans\',sans-serif;font-size:0.75rem;font-weight:600;padding:6px 16px;border:none;border-radius:50px;cursor:pointer;transition:all 0.15s ease;" onmouseenter="this.style.opacity=\'0.88\'" onmouseleave="this.style.opacity=\'1\'">View</button>'
         + '</div>'
         + '</div>';
     });
@@ -7052,6 +7125,19 @@ function renderClientsList(filter) {
       renderClientsList(currentFilter);
     });
   });
+
+  // Wire sort dropdown
+  var sortSel = $('clients-sort');
+  if (sortSel) {
+    sortSel.addEventListener('change', function() {
+      var next = this.value;
+      if (CLIENTS_SORT_MODES.indexOf(next) === -1) return;
+      if (next === getClientsSortMode()) return;
+      setClientsSortMode(next);
+      var currentFilter = ($('clients-search') && $('clients-search').value) || '';
+      renderClientsList(currentFilter);
+    });
+  }
 
   // Wire search
   var searchInput = $('clients-search');
