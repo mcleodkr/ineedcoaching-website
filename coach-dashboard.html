@@ -230,38 +230,37 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
    higher specificity + !important. */
 .clients-table-wrap { overflow-x: auto; background: var(--white); border: 1px solid var(--border); border-radius: var(--r); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
 .clients-table { width: 100%; border-collapse: collapse; background: var(--white); table-layout: fixed; }
-.clients-table thead th { padding: 11px 16px; font-family: 'DM Sans', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); text-align: left; background: #f3efe7; border-bottom: 1px solid var(--border); }
-.clients-table tbody td { padding: 14px 16px; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; color: var(--ink); border-bottom: 1px solid var(--border); vertical-align: middle; line-height: 1.4; }
+.clients-table thead th { padding: 8px 14px; font-family: 'DM Sans', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); text-align: left; background: #f3efe7; border-bottom: 1px solid var(--border); }
+.clients-table tbody td { padding: 6px 14px; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; color: var(--ink); border-bottom: 1px solid #ece8e0; vertical-align: middle; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.clients-table tbody tr { height: 40px; transition: background 0.15s ease, box-shadow 0.15s ease; }
 .clients-table tbody tr:last-child td { border-bottom: none; }
 .clients-table tbody tr:nth-child(even) { background: #fbf9f4; }
-.clients-table tbody tr { transition: background 0.15s ease, box-shadow 0.15s ease; }
-.clients-table tbody tr:hover { background: rgba(196,154,60,0.07); box-shadow: inset 3px 0 0 var(--gold); }
+.clients-table tbody tr:hover { background: rgba(196,154,60,0.08); box-shadow: inset 3px 0 0 var(--gold); }
 .clients-table th:nth-child(1), .clients-table td:nth-child(1) { width: 26%; }
-.clients-table th:nth-child(2), .clients-table td:nth-child(2) { width: 28%; }
-.clients-table th:nth-child(3), .clients-table td:nth-child(3) { width: 11%; text-align: center; white-space: nowrap; }
-.clients-table th:nth-child(4), .clients-table td:nth-child(4) { width: 15%; white-space: nowrap; }
-.clients-table th:nth-child(5), .clients-table td:nth-child(5) { width: 20%; text-align: right; white-space: nowrap; }
-.clients-table .client-name-cell { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.clients-table .client-name-cell .client-name { font-family: 'Cormorant Garamond', serif; font-weight: 700; font-size: 1rem; color: var(--ink); line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.clients-table .client-contact { font-size: 0.82rem; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.clients-table .client-contact-sub { font-size: 0.75rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+.clients-table th:nth-child(2), .clients-table td:nth-child(2) { width: 30%; }
+.clients-table th:nth-child(3), .clients-table td:nth-child(3) { width: 10%; text-align: center; }
+.clients-table th:nth-child(4), .clients-table td:nth-child(4) { width: 14%; }
+.clients-table th:nth-child(5), .clients-table td:nth-child(5) { width: 20%; text-align: right; }
+.clients-table .client-name-cell { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.clients-table .client-name-cell .client-name { font-family: 'Cormorant Garamond', serif; font-weight: 700; font-size: 0.95rem; color: var(--ink); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
+.clients-table .client-contact { font-size: 0.8rem; color: var(--ink); }
 .clients-table .client-contact-empty { font-size: 0.78rem; color: var(--muted); font-style: italic; }
-.clients-table .last-session-cell { font-size: 0.82rem; color: var(--ink); font-weight: 500; }
-.clients-table .last-session-cell.empty { color: var(--muted); font-weight: 400; font-style: italic; }
-.clients-table .sessions-pill { display: inline-block; background: rgba(196,154,60,0.14); color: #8a6a25; font-size: 0.78rem; font-weight: 700; padding: 4px 12px; border-radius: 50px; min-width: 32px; text-align: center; }
-.clients-table .clients-table-avatar { width: 32px; height: 32px; border-radius: 50%; background: #f0ece6; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; font-family: 'Cormorant Garamond', serif; font-size: 0.92rem; font-weight: 600; color: #1a3a52; line-height: 1; position: relative; }
+.clients-table .last-session-cell { font-size: 0.8rem; color: var(--ink); }
+.clients-table .last-session-cell.empty { color: var(--muted); font-style: italic; }
+.clients-table .sessions-pill { display: inline-block; background: rgba(196,154,60,0.14); color: #8a6a25; font-size: 0.74rem; font-weight: 700; padding: 2px 10px; border-radius: 50px; min-width: 28px; text-align: center; line-height: 1.4; }
+.clients-table .clients-table-avatar { width: 24px; height: 24px; border-radius: 50%; background: #f0ece6; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; font-family: 'Cormorant Garamond', serif; font-size: 0.76rem; font-weight: 600; color: #1a3a52; line-height: 1; position: relative; }
 .clients-table .clients-table-avatar[data-active="1"] { box-shadow: 0 0 0 1.5px #c49a3c; }
-.clients-table .clients-table-actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+.clients-table .clients-table-actions { display: flex; gap: 6px; justify-content: flex-end; align-items: center; }
 /* The legacy `#clients-list-view div:has(> button[data-view-client])` rule
    would otherwise paint the actions cell as a 24px-padded card with a
    border, because it's a div whose direct child is the View button. */
 #clients-list-view .clients-table .clients-table-actions,
 #clients-list-view .clients-table .clients-table-actions:hover { background: transparent !important; border: none !important; border-left: none !important; border-radius: 0 !important; padding: 0 !important; box-shadow: none !important; transform: none !important; }
-.clients-table .clients-edit-btn { background: transparent; border: 1px solid var(--border); border-radius: 50px; padding: 6px 14px; cursor: pointer; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 0.75rem; font-weight: 600; transition: all 0.15s ease; }
+.clients-table .clients-edit-btn { background: transparent; border: 1px solid var(--border); border-radius: 50px; padding: 3px 11px; cursor: pointer; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 0.72rem; font-weight: 600; transition: all 0.15s ease; line-height: 1.5; }
 .clients-table .clients-edit-btn:hover { border-color: var(--gold); color: var(--gold); }
 /* Beat the legacy navy-fullwidth "View Client" button override (specificity
    0,1,2 + !important) — same selector with one extra class is 0,2,2. */
-#clients-list-view .clients-table button[data-view-client] { width: auto !important; background: var(--gold) !important; color: #fff !important; font-family: 'DM Sans', sans-serif !important; font-size: 0.75rem !important; font-weight: 600 !important; padding: 6px 16px !important; border: none !important; border-radius: 50px !important; cursor: pointer !important; margin-top: 0 !important; letter-spacing: 0 !important; transition: opacity 0.15s ease !important; }
+#clients-list-view .clients-table button[data-view-client] { width: auto !important; background: var(--gold) !important; color: #fff !important; font-family: 'DM Sans', sans-serif !important; font-size: 0.72rem !important; font-weight: 600 !important; padding: 3px 13px !important; border: none !important; border-radius: 50px !important; cursor: pointer !important; margin-top: 0 !important; letter-spacing: 0 !important; line-height: 1.5 !important; transition: opacity 0.15s ease !important; }
 #clients-list-view .clients-table button[data-view-client]:hover { background: var(--gold) !important; opacity: 0.88 !important; }
 
 /* PREVIEW MODAL */
@@ -7130,24 +7129,28 @@ function renderClientsList(filter) {
       var emailShown = displayClientEmail(c.email) || '';
       var nameText = c.name || emailShown || 'Unnamed client';
 
+      var contactTitle = emailShown
+        ? (emailShown + (c.phone ? ' • ' + c.phone : ''))
+        : (c.phone || 'No contact info');
       html += '<tr>'
-        + '<td>'
+        + '<td title="' + escapeHtml(nameText) + '">'
         +   '<div class="client-name-cell">'
         +     '<span class="clients-table-avatar" data-active="' + (isActive ? '1' : '0') + '" title="' + (isActive ? 'Active' : 'Inactive') + '" aria-hidden="true">' + escapeHtml(initial) + '</span>'
         +     '<span class="client-name">' + escapeHtml(nameText) + '</span>'
         +   '</div>'
         + '</td>'
-        + '<td>'
+        + '<td title="' + escapeHtml(contactTitle) + '">'
         +   (emailShown
-              ? '<div class="client-contact">' + escapeHtml(emailShown) + '</div>'
-              : '<div class="client-contact-empty">No email</div>')
-        +   (c.phone ? '<div class="client-contact-sub">' + escapeHtml(c.phone) + '</div>' : '')
+              ? '<span class="client-contact">' + escapeHtml(emailShown) + '</span>'
+              : (c.phone
+                  ? '<span class="client-contact">' + escapeHtml(c.phone) + '</span>'
+                  : '<span class="client-contact-empty">No email</span>'))
         + '</td>'
         + '<td><span class="sessions-pill">' + c.sessions.length + '</span></td>'
         + '<td>'
         +   (lastStr
-              ? '<div class="last-session-cell">' + escapeHtml(lastStr) + '</div>'
-              : '<div class="last-session-cell empty">No sessions</div>')
+              ? '<span class="last-session-cell">' + escapeHtml(lastStr) + '</span>'
+              : '<span class="last-session-cell empty">—</span>')
         + '</td>'
         + '<td>'
         +   '<div class="clients-table-actions">'
