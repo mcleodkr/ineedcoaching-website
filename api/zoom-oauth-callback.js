@@ -1,13 +1,35 @@
 // GET /api/zoom-oauth-callback?code=...&state=...
 //
-// OAuth redirect target. Verifies HMAC state, exchanges code for tokens,
-// fetches the Zoom user id, persists, redirects to the dashboard.
+// OAuth redirect target. Two entry paths:
+//
+//   1. User-initiated (the common case): coach clicks "Connect Zoom Account"
+//      on the dashboard. /api/zoom-oauth-auth-url mints an HMAC-signed state
+//      tied to coach.id. Zoom redirects back with code + state. We verify
+//      state, exchange the code, persist tokens, redirect to dashboard.
+//
+//   2. Marketplace-initiated: a Zoom user clicks "Add" on the marketplace
+//      listing (or a reviewer is evaluating us). Zoom redirects here with
+//      code only. No state, because there was no signed flow start. We
+//      can't safely auto-link the Zoom account to a coach profile (no
+//      session, email-match would silently merge accounts), so we land
+//      the user on the coach-signup page with a "please sign in and click
+//      Connect Zoom" message. The Zoom-side install still completed; we
+//      just defer the token persist to a second user-initiated round-trip.
+//
+// Either way the page never dead-ends: every branch redirects somewhere
+// with a clear status message in the query string.
 
 import { verifyState, saveCoachTokens } from '../lib/zoom-helpers.js';
 
 function redirectToDashboard(res, params) {
   const qs = new URLSearchParams(params).toString();
   res.setHeader('Location', `/coach-dashboard.html?tab=scheduling&${qs}`);
+  return res.status(302).end();
+}
+
+function redirectToSignIn(res, params) {
+  const qs = new URLSearchParams(params).toString();
+  res.setHeader('Location', `/coach-signup.html?${qs}`);
   return res.status(302).end();
 }
 
@@ -19,7 +41,23 @@ export default async function handler(req, res) {
     console.warn('[zoom-oauth-callback] OAuth error from Zoom:', oauthError);
     return redirectToDashboard(res, { zoom_connected: 'false', reason: 'denied' });
   }
-  if (!code || !state) return res.status(400).send('Missing code or state');
+  if (!code) {
+    console.warn('[zoom-oauth-callback] missing code in callback');
+    return res.status(400).send('Missing code');
+  }
+
+  // Marketplace-initiated install: Zoom sends a code with no state.
+  // The OAuth handshake on Zoom's side succeeded, but we have no coach to
+  // attach the tokens to. Land the user on the signup page so they can
+  // create or sign in to their ineedcoaching coach account, then run the
+  // user-initiated flow.
+  if (!state) {
+    console.log('[zoom-oauth-callback] marketplace-initiated install (no state), redirecting to signup');
+    return redirectToSignIn(res, {
+      zoom_pending: 'true',
+      source: 'marketplace',
+    });
+  }
 
   const verified = verifyState(state);
   if (!verified) {
