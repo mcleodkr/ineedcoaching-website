@@ -59,6 +59,13 @@ import { jsonrepair } from 'jsonrepair';
 async function callClaudeRaw(apiKey, model, maxTokens, system, userMessage, passName, meta) {
   const startTime = Date.now();
   let res, data;
+  // Wrap string system prompts in the cached-content-block form so the
+  // Pattern Map system prompt (large, deterministic across calls) hits the
+  // 1h ephemeral cache. Already-array system arguments are passed through
+  // unchanged — they're presumed to carry their own cache_control.
+  const systemPayload = typeof system === 'string'
+    ? [{ type: 'text', text: system, cache_control: { type: 'ephemeral', ttl: '1h' } }]
+    : system;
   try {
     res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -70,7 +77,7 @@ async function callClaudeRaw(apiKey, model, maxTokens, system, userMessage, pass
       body: JSON.stringify({
         model,
         max_tokens: maxTokens,
-        system,
+        system: systemPayload,
         messages: [{ role: 'user', content: userMessage }],
       }),
     });
