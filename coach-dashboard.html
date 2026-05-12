@@ -7612,12 +7612,15 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
       if (hasAnalysis) {
         html += '<div id="post-analysis-' + s.id + '" data-tab-type="coach-clarity"></div>';
       } else if (canAnalyze) {
-        html += '<p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;font-style:italic;">Coach Clarity analysis runs automatically when a transcript is added. To refresh, re-upload the transcript.</p>';
+        html += '<div id="post-analysis-' + s.id + '" data-tab-type="coach-clarity">'
+          + '<div style="text-align:center;padding:32px 16px;">'
+          + '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:var(--muted);line-height:1.55;margin:0 auto 18px;max-width:380px;">Run Coach Clarity to surface what happened in this session — patterns, moves, and missed openings — from the transcript and notes.</p>'
+          + '<button class="btn-primary gen-coach-clarity-btn" data-sid="' + s.id + '" data-client-email="' + escapeHtml(client.email) + '">Analyze This Session with Coach Clarity</button>'
+          + '</div>'
+          + '</div>';
       } else {
-        html += '<p style="font-size:0.85rem;color:var(--muted);font-style:italic;">Add a transcript or session notes first to unlock Coach Clarity analysis.</p>';
-      }
-      if (!hasAnalysis) {
-        html += '<div id="post-analysis-' + s.id + '" data-tab-type="coach-clarity" style="margin-top:16px;"></div>';
+        html += '<p style="font-size:0.85rem;color:var(--muted);font-style:italic;">Add a transcript or session notes first to unlock Coach Clarity analysis.</p>'
+          + '<div id="post-analysis-' + s.id + '" data-tab-type="coach-clarity" style="margin-top:16px;"></div>';
       }
       html += '</div>';
 
@@ -7875,12 +7878,16 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
               renderCoachingMirror(noteData.post_session_analysis, mirrorContainer);
             }
           }
-          // Cost-leak fix: no manual regenerate button. Analysis fires
-          // automatically on transcript ingestion. To refresh, re-upload.
+          // First-generation button: shown only when post_session_analysis is NULL.
+          // No regenerate path — once analysis exists, the original reflection is preserved.
           if (!hasData && !hasExisting) {
             analysisContainer.innerHTML = '<p style="font-size:0.85rem;color:var(--muted);font-style:italic;">Save a transcript or session notes first to unlock analysis.</p>';
           } else if (hasData && !hasExisting) {
-            analysisContainer.innerHTML = '<p style="font-size:0.85rem;color:var(--muted);font-style:italic;">Coach Clarity analysis runs automatically when a transcript is added. To refresh, re-upload the transcript.</p>';
+            var clientEmailForBtn = (noteData && noteData.client_email) || (typeof client !== 'undefined' && client && client.email) || '';
+            analysisContainer.innerHTML = '<div style="text-align:center;padding:32px 16px;">'
+              + '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:var(--muted);line-height:1.55;margin:0 auto 18px;max-width:380px;">Run Coach Clarity to surface what happened in this session — patterns, moves, and missed openings — from the transcript and notes.</p>'
+              + '<button class="btn-primary gen-coach-clarity-btn" data-sid="' + sid + '" data-client-email="' + escapeHtml(clientEmailForBtn) + '">Analyze This Session with Coach Clarity</button>'
+              + '</div>';
           }
         }
       }
@@ -8388,6 +8395,25 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
   // runPostSessionAnalysis function still exists and is called from the
   // transcript-ingestion path (auto-fire); coaches refresh by re-uploading
   // the transcript, not by clicking a regenerate button.
+
+  // Manual generate trigger — fires only when post_session_analysis is NULL.
+  // Delegated on document so it survives innerHTML rewrites in the panel.
+  if (!document.body.dataset.genClarityDelegated) {
+    document.body.dataset.genClarityDelegated = '1';
+    document.addEventListener('click', function(e) {
+      var btn = e.target && e.target.closest ? e.target.closest('.gen-coach-clarity-btn') : null;
+      if (!btn || btn.disabled) return;
+      var sid = btn.dataset.sid;
+      var clientEmail = btn.dataset.clientEmail || '';
+      var container = document.getElementById('post-analysis-' + sid);
+      if (!sid || !container) return;
+      btn.disabled = true;
+      btn.textContent = 'Starting analysis...';
+      var note = (typeof notesByBooking !== 'undefined' && notesByBooking) ? notesByBooking[sid] : null;
+      var existingGoals = (note && Array.isArray(note.goals)) ? note.goals : [];
+      runPostSessionAnalysis(sid, clientEmail, note && note.notes, note && note.format, container, existingGoals);
+    });
+  }
 
   // Wire request testimonial
   var testBtn = $('client-request-testimonial-btn');
