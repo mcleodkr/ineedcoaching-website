@@ -9611,6 +9611,93 @@ function renderPreSessionBrief(b, container) {
       + '</div>';
   }
 
+  // Phase 2 — Pattern Map Insights (indigo accent). Silent fallthrough when
+  // null. Longitudinal client pattern view sourced exclusively from the
+  // coach_client_patterns rollup; see source-binding rules in the API
+  // prompt. rollup_as_of + sessions_since_rollup surface rollup staleness
+  // inline with the section title.
+  if (b.pattern_map_insights) {
+    var pmi = b.pattern_map_insights;
+    h += '<div style="background:#eef2ff;border-left:4px solid #6366f1;border-radius:0 8px 8px 0;padding:18px 22px;margin-bottom:24px;">';
+    h += '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:700;color:var(--ink);">Pattern Map Insights</div>'
+      + (pmi.rollup_as_of ? '<div style="font-size:0.7rem;color:var(--muted);">Rollup as of ' + escapeHtml(String(pmi.rollup_as_of)) + (pmi.sessions_since_rollup > 0 ? ' · ' + pmi.sessions_since_rollup + ' session(s) since' : '') + '</div>' : '')
+      + '</div>';
+    if (Array.isArray(pmi.core_patterns) && pmi.core_patterns.length) {
+      pmi.core_patterns.forEach(function(p) {
+        h += '<div style="background:var(--white);border:1px solid #e0e7ff;border-radius:6px;padding:12px 14px;margin-bottom:8px;">'
+          + (p.pattern_name ? '<div style="font-size:0.88rem;font-weight:700;color:var(--ink);margin-bottom:6px;">' + escapeHtml(p.pattern_name) + '</div>' : '')
+          + (p.why_it_matters_today ? '<div style="font-size:0.8rem;line-height:1.55;color:var(--ink);margin-bottom:4px;"><span style="color:#4f46e5;font-weight:700;">Why today: </span>' + escapeHtml(p.why_it_matters_today) + '</div>' : '')
+          + (p.watch_for ? '<div style="font-size:0.8rem;line-height:1.55;color:var(--ink);margin-bottom:4px;"><span style="color:#4f46e5;font-weight:700;">Watch for: </span>' + escapeHtml(p.watch_for) + '</div>' : '')
+          + (p.intervention_point ? '<div style="font-size:0.8rem;line-height:1.55;color:var(--ink);"><span style="color:#4f46e5;font-weight:700;">Intervention point: </span>' + escapeHtml(p.intervention_point) + '</div>' : '')
+          + '</div>';
+      });
+    }
+    if (pmi.pattern_frequency && (pmi.pattern_frequency.most_active || pmi.pattern_frequency.emerging)) {
+      h += '<div style="font-size:0.78rem;color:var(--ink);line-height:1.65;padding-top:4px;">'
+        + (pmi.pattern_frequency.most_active ? '<div><span style="color:#4f46e5;font-weight:700;">Most active: </span>' + escapeHtml(pmi.pattern_frequency.most_active) + '</div>' : '')
+        + (pmi.pattern_frequency.emerging ? '<div><span style="color:#4f46e5;font-weight:700;">Emerging: </span>' + escapeHtml(pmi.pattern_frequency.emerging) + '</div>' : '')
+        + '</div>';
+    }
+    h += '</div>';
+  }
+
+  // Phase 2 — Strategic Context (green accent). Silent fallthrough when null.
+  // Sourced exclusively from the coach_client_strategies rollup. Two-column
+  // working/not-working pairing for visual contrast; strategic_direction
+  // pulled into a highlighted card above the columns as the section anchor.
+  if (b.strategic_context) {
+    var sc2 = b.strategic_context;
+    h += '<div style="background:#ecfdf5;border-left:4px solid #10b981;border-radius:0 8px 8px 0;padding:18px 22px;margin-bottom:24px;">';
+    h += '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:700;color:var(--ink);">Strategic Context</div>'
+      + (sc2.rollup_as_of ? '<div style="font-size:0.7rem;color:var(--muted);">Rollup as of ' + escapeHtml(String(sc2.rollup_as_of)) + '</div>' : '')
+      + '</div>';
+    if (sc2.strategic_direction) {
+      h += '<div style="font-family:\'Cormorant Garamond\',serif;font-size:0.95rem;font-weight:700;color:var(--ink);line-height:1.5;margin-bottom:12px;padding:10px 14px;background:var(--white);border:1px solid #d1fae5;border-radius:6px;">' + escapeHtml(sc2.strategic_direction) + '</div>';
+    }
+    if (sc2.what_is_working || sc2.what_is_not_working) {
+      h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:' + ((Array.isArray(sc2.approaches_to_explore) && sc2.approaches_to_explore.length) || sc2.when_to_refer ? '12px' : '0') + ';">';
+      if (sc2.what_is_working) {
+        h += '<div><div style="font-size:0.66rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#047857;margin-bottom:4px;">Working</div>'
+          + '<div style="font-size:0.82rem;line-height:1.55;color:var(--ink);">' + escapeHtml(sc2.what_is_working) + '</div></div>';
+      }
+      if (sc2.what_is_not_working) {
+        h += '<div><div style="font-size:0.66rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#b45309;margin-bottom:4px;">Not working</div>'
+          + '<div style="font-size:0.82rem;line-height:1.55;color:var(--ink);">' + escapeHtml(sc2.what_is_not_working) + '</div></div>';
+      }
+      h += '</div>';
+    }
+    if (Array.isArray(sc2.approaches_to_explore) && sc2.approaches_to_explore.length) {
+      h += '<div style="margin-bottom:' + (sc2.when_to_refer ? '12px' : '0') + ';">'
+        + '<div style="font-size:0.66rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#047857;margin-bottom:6px;">Approaches to explore</div>'
+        + '<ul style="margin:0;padding-left:18px;font-size:0.82rem;line-height:1.6;color:var(--ink);">';
+      sc2.approaches_to_explore.forEach(function(a) {
+        if (a) h += '<li>' + escapeHtml(String(a)) + '</li>';
+      });
+      h += '</ul></div>';
+    }
+    if (sc2.when_to_refer) {
+      h += '<div style="font-size:0.8rem;color:var(--ink);padding:10px 12px;background:#fef2f2;border-left:3px solid #ef4444;border-radius:0 4px 4px 0;"><span style="font-weight:700;color:#991b1b;">When to refer: </span>' + escapeHtml(sc2.when_to_refer) + '</div>';
+    }
+    h += '</div>';
+  }
+
+  // Phase 2 — Coach DNA Alert (amber accent). Silent fallthrough when null.
+  // Sourced exclusively from coach_session_notes.post_session_analysis.
+  // coach_dna_timeline. Amber chosen instead of the dashboard's gold so
+  // this panel reads as distinct from About This Brief above; the visual
+  // signal "this is about YOU as the coach, not the client" matters.
+  if (b.coach_dna_alert) {
+    var cda = b.coach_dna_alert;
+    h += '<div style="background:#fef3c7;border-left:4px solid #f59e0b;border-radius:0 8px 8px 0;padding:18px 22px;margin-bottom:24px;">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:700;color:#92400e;margin-bottom:10px;">Coach DNA Alert</div>'
+      + (cda.your_pattern_to_watch ? '<div style="font-size:0.88rem;font-weight:700;color:#78350f;margin-bottom:8px;">' + escapeHtml(cda.your_pattern_to_watch) + '</div>' : '')
+      + (cda.why_it_matters_with_this_client ? '<div style="font-size:0.82rem;line-height:1.6;color:#78350f;margin-bottom:10px;"><span style="color:#b45309;font-weight:700;">Why with this client: </span>' + escapeHtml(cda.why_it_matters_with_this_client) + '</div>' : '')
+      + (cda.physical_interrupt ? '<div style="font-size:0.82rem;line-height:1.6;color:#78350f;padding:10px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;"><span style="color:#b45309;font-weight:700;">Physical interrupt: </span>' + escapeHtml(cda.physical_interrupt) + '</div>' : '')
+      + '</div>';
+  }
+
   // Orientation snapshot
   if (b.orientation_snapshot) {
     var os = b.orientation_snapshot;
