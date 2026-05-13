@@ -60,8 +60,8 @@ export default async function handler(req, res) {
     // scheduled_at, scope notes + bookings to strictly-before; otherwise fall
     // back to recent-N (older callers without a bookingId).
     const notesUrl = currentScheduledAt
-      ? `${SUPABASE_URL}/rest/v1/coach_session_notes?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&coach_bookings.scheduled_at=lt.${encodeURIComponent(currentScheduledAt)}&order=created_at.desc&limit=10&select=notes,format,structured_notes,post_session_analysis,created_at,coach_bookings!inner(scheduled_at)`
-      : `${SUPABASE_URL}/rest/v1/coach_session_notes?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&order=created_at.desc&limit=3&select=notes,format,structured_notes,post_session_analysis,created_at`;
+      ? `${SUPABASE_URL}/rest/v1/coach_session_notes?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&coach_bookings.scheduled_at=lt.${encodeURIComponent(currentScheduledAt)}&order=created_at.desc&limit=10&select=notes,format,structured_notes,post_session_analysis,dna_manifestations,created_at,coach_bookings!inner(scheduled_at)`
+      : `${SUPABASE_URL}/rest/v1/coach_session_notes?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&order=created_at.desc&limit=3&select=notes,format,structured_notes,post_session_analysis,dna_manifestations,created_at`;
 
     const bookingsUrl = currentScheduledAt
       ? `${SUPABASE_URL}/rest/v1/coach_bookings?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&status=eq.confirmed&scheduled_at=lt.${encodeURIComponent(currentScheduledAt)}&order=scheduled_at.desc&limit=10&select=id,scheduled_at,notes`
@@ -79,25 +79,44 @@ export default async function handler(req, res) {
     const patternMapUrl = `${SUPABASE_URL}/rest/v1/coach_client_patterns?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&order=last_analyzed.desc&limit=1&select=pattern,last_analyzed`;
     const strategyUrl = `${SUPABASE_URL}/rest/v1/coach_client_strategies?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&order=last_analyzed.desc&limit=1&select=strategy,last_analyzed`;
 
+    // Phase 2.6 Coach DNA — TWO real sources, replacing the dead lookup at
+    // post_session_analysis.coach_dna_timeline that 2.1 assumed (no
+    // populated rows anywhere in prod). coach_dna_profiles is the coach-
+    // level rollup (one row per coach: declared orientation, framework mix,
+    // growth edges, signal patterns). coach_session_notes.dna_manifestations
+    // is the per-session evidence of how those patterns showed up — pulled
+    // coach-wide here so a sparse this-client manifestation set can fall
+    // back to evidence from this coach's other sessions. Client emails on
+    // the coach-wide path are redacted in-process before they reach the
+    // model (cross-client privacy).
+    const coachDnaProfileUrl = `${SUPABASE_URL}/rest/v1/coach_dna_profiles?coach_id=eq.${coachId}&order=last_analyzed.desc&limit=1&select=declared_orientation,framework_distribution,growth_edges,signal_patterns,session_count,last_analyzed`;
+    const coachWideManifestationsUrl = currentScheduledAt
+      ? `${SUPABASE_URL}/rest/v1/coach_session_notes?coach_id=eq.${coachId}&dna_manifestations=not.is.null&coach_bookings.scheduled_at=lt.${encodeURIComponent(currentScheduledAt)}&order=created_at.desc&limit=10&select=created_at,client_email,dna_manifestations,coach_bookings!inner(scheduled_at)`
+      : `${SUPABASE_URL}/rest/v1/coach_session_notes?coach_id=eq.${coachId}&dna_manifestations=not.is.null&order=created_at.desc&limit=10&select=created_at,client_email,dna_manifestations`;
+
     console.log('[pre-session-brief] stage 2 fetching', { invokeId, ms: Date.now() - invokeStart });
-    const [notesRes, goalsRes, bookingsRes, checkinRes, intakeRes, patternMapRes, strategyRes] = await Promise.all([
+    const [notesRes, goalsRes, bookingsRes, checkinRes, intakeRes, patternMapRes, strategyRes, dnaProfileRes, coachWideManifestationsRes] = await Promise.all([
       fetch(notesUrl, { headers }),
       fetch(goalsUrl, { headers }),
       fetch(bookingsUrl, { headers }),
       bookingId ? fetch(`${SUPABASE_URL}/rest/v1/coach_checkin_responses?booking_id=eq.${bookingId}&submitted_at=not.is.null&select=responses&limit=1`, { headers }) : Promise.resolve({ json: () => [] }),
       fetch(`${SUPABASE_URL}/rest/v1/coach_intake_responses?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&order=created_at.desc&limit=1&select=responses`, { headers }),
       fetch(patternMapUrl, { headers }),
-      fetch(strategyUrl, { headers })
+      fetch(strategyUrl, { headers }),
+      fetch(coachDnaProfileUrl, { headers }),
+      fetch(coachWideManifestationsUrl, { headers })
     ]);
 
-    const [notes, goals, bookings, checkins, intakeData, patternMapRows, strategyRows] = await Promise.all([
+    const [notes, goals, bookings, checkins, intakeData, patternMapRows, strategyRows, dnaProfileRows, coachWideManifestationsRaw] = await Promise.all([
       notesRes.json(),
       goalsRes.json(),
       bookingsRes.json(),
       checkinRes.json ? checkinRes.json() : [],
       intakeRes.json(),
       patternMapRes.json().catch(function() { return null; }),
-      strategyRes.json().catch(function() { return null; })
+      strategyRes.json().catch(function() { return null; }),
+      dnaProfileRes.json().catch(function() { return null; }),
+      coachWideManifestationsRes.json().catch(function() { return null; })
     ]);
     console.log('[pre-session-brief] stage 3 fetched', {
       invokeId,
@@ -108,6 +127,9 @@ export default async function handler(req, res) {
       intakeCount: Array.isArray(intakeData) ? intakeData.length : null,
       patternMapStatus: patternMapRes && patternMapRes.status,
       strategyStatus: strategyRes && strategyRes.status,
+      dnaProfileStatus: dnaProfileRes && dnaProfileRes.status,
+      coachWideManifestationsStatus: coachWideManifestationsRes && coachWideManifestationsRes.status,
+      coachWideManifestationsCount: Array.isArray(coachWideManifestationsRaw) ? coachWideManifestationsRaw.length : null,
       ms: Date.now() - invokeStart,
     });
 
@@ -178,12 +200,58 @@ export default async function handler(req, res) {
     const coachingStrategy = Array.isArray(strategyRows) && strategyRows.length && strategyRows[0] && strategyRows[0].strategy
       ? strategyRows[0].strategy
       : null;
-    // Coach DNA timeline lives inside post_session_analysis on the most
-    // recent prior session that wrote one. notes is already prior-only and
-    // ordered created_at desc, so .find returns the latest available.
-    const coachDnaTimeline = (notes || [])
-      .map(function(n) { return n && n.post_session_analysis && n.post_session_analysis.coach_dna_timeline; })
-      .find(function(t) { return !!t; }) || null;
+    // Phase 2.6 Coach DNA — two-source extraction. Profile is the
+    // coach-level rollup (single row); manifestations are per-session
+    // evidence. Client-specific manifestations come from the existing
+    // notes fetch (already prior-only + client-scoped); coach-wide
+    // manifestations are the separate dnaWide fetch above. Merge with a
+    // sparsity-fallback: if we have >=2 client-specific manifestations
+    // that's enough specificity, use them alone; otherwise supplement
+    // with up to 5 coach-wide entries from this coach's OTHER clients
+    // (with client_email stripped — the model never sees other clients'
+    // identities). The "substantive" gate at the bottom decides whether
+    // the COACH DNA blocks reach the prompt at all — if either source is
+    // empty/sparse the field stays null per c94b486's hard rule.
+    const coachDnaProfile = Array.isArray(dnaProfileRows) && dnaProfileRows.length && dnaProfileRows[0] ? dnaProfileRows[0] : null;
+    function profileIsSubstantive(p) {
+      if (!p) return false;
+      function hasContent(v) {
+        if (!v) return false;
+        if (Array.isArray(v)) return v.length > 0;
+        if (typeof v === 'object') return Object.keys(v).length > 0;
+        if (typeof v === 'string') return v.trim().length > 0;
+        return false;
+      }
+      return hasContent(p.signal_patterns) || hasContent(p.growth_edges);
+    }
+    const coachDnaProfileSubstantive = profileIsSubstantive(coachDnaProfile);
+
+    const clientSpecificManifestations = (notes || [])
+      .filter(function(n) { return n && n.dna_manifestations; })
+      .map(function(n) {
+        return {
+          session_date: (n.coach_bookings && n.coach_bookings.scheduled_at) || n.created_at,
+          scope: 'this_client',
+          manifestation: n.dna_manifestations,
+        };
+      });
+    const clientSessionTimestamps = new Set(clientSpecificManifestations.map(function(m) { return String(m.session_date); }));
+    const coachWideManifestations = (Array.isArray(coachWideManifestationsRaw) ? coachWideManifestationsRaw : [])
+      .filter(function(n) {
+        const ts = (n && n.coach_bookings && n.coach_bookings.scheduled_at) || (n && n.created_at);
+        return n && n.dna_manifestations && ts && !clientSessionTimestamps.has(String(ts));
+      })
+      .map(function(n) {
+        return {
+          session_date: (n.coach_bookings && n.coach_bookings.scheduled_at) || n.created_at,
+          scope: 'other_client',
+          manifestation: n.dna_manifestations,
+        };
+      });
+    const mergedManifestations = clientSpecificManifestations.length >= 2
+      ? clientSpecificManifestations
+      : clientSpecificManifestations.concat(coachWideManifestations.slice(0, 5));
+    const emitCoachDnaBlocks = coachDnaProfileSubstantive && mergedManifestations.length > 0;
 
     // Rollup staleness math. patternMap and coachingStrategy reflect their
     // rollup as-of last_analyzed; any priorAnalyses session that postdates
@@ -214,8 +282,14 @@ export default async function handler(req, res) {
       strategyBytes: coachingStrategy ? JSON.stringify(coachingStrategy).length : 0,
       strategyLastAnalyzed,
       sessionsSinceStrategy,
-      hasCoachDnaTimeline: !!coachDnaTimeline,
-      coachDnaTimelineBytes: coachDnaTimeline ? JSON.stringify(coachDnaTimeline).length : 0,
+      hasCoachDnaProfile: !!coachDnaProfile,
+      coachDnaProfileSubstantive,
+      coachDnaProfileLastAnalyzed: coachDnaProfile ? coachDnaProfile.last_analyzed : null,
+      coachDnaProfileSessionCount: coachDnaProfile ? coachDnaProfile.session_count : null,
+      clientSpecificManifestationsCount: clientSpecificManifestations.length,
+      coachWideManifestationsCount: coachWideManifestations.length,
+      mergedManifestationsCount: mergedManifestations.length,
+      emitCoachDnaBlocks,
     });
 
     // SPRIXLE PORT NOTE — rollup_as_of cross-talk observed on c94b486
@@ -239,8 +313,15 @@ export default async function handler(req, res) {
     if (coachingStrategy) {
       phase2Sections.push('\n\n## COACHING STRATEGY (last_analyzed: ' + (strategyLastAnalyzed || 'unknown') + ' — ' + sessionsSinceStrategy + ' prior session(s) have occurred since this rollup)\n' + JSON.stringify(coachingStrategy, null, 2));
     }
-    if (coachDnaTimeline) {
-      phase2Sections.push('\n\n## COACH DNA TIMELINE\n' + JSON.stringify(coachDnaTimeline, null, 2));
+    if (emitCoachDnaBlocks) {
+      const profilePayload = {
+        declared_orientation: coachDnaProfile.declared_orientation || null,
+        framework_distribution: coachDnaProfile.framework_distribution || null,
+        growth_edges: coachDnaProfile.growth_edges || null,
+        signal_patterns: coachDnaProfile.signal_patterns || null,
+      };
+      phase2Sections.push('\n\n## COACH DNA PROFILE (last_analyzed: ' + (coachDnaProfile.last_analyzed || 'unknown') + ', built from ' + (coachDnaProfile.session_count || 'unknown') + ' sessions)\n' + JSON.stringify(profilePayload, null, 2));
+      phase2Sections.push('\n\n## COACH DNA MANIFESTATIONS (' + mergedManifestations.length + ' entries: ' + clientSpecificManifestations.length + ' from this client, ' + (mergedManifestations.length - clientSpecificManifestations.length) + ' from this coach\'s other clients with identifying info redacted)\n' + JSON.stringify(mergedManifestations, null, 2));
     }
     const phase2Block = phase2Sections.join('');
 
@@ -258,7 +339,7 @@ pattern_map_insights — populate from the "## PATTERN MAP" block when the block
 
 strategic_context — populate from the "## COACHING STRATEGY" block when the block is present. If the block is absent, strategic_context MUST be null. Inferring content from priorAnalyses or any source other than the COACHING STRATEGY block is a violation. When populating: what_is_working (1 sentence), what_is_not_working (1 sentence), strategic_direction (one-sentence north star), approaches_to_explore (2-3 concrete next moves as strings), when_to_refer (string or null — null unless the rollup explicitly flags referral need). Copy rollup_as_of from the block header.
 
-coach_dna_alert — populate ONLY when (a) the "## COACH DNA TIMELINE" block is present in the user message AND (b) the block contains at least one substantive coach-pattern observation. If either condition fails — block absent, block present-but-empty, block present-but-sparse, or block contains only generic placeholders without concrete coach-pattern content — coach_dna_alert MUST be null. Inferring a coach pattern from priorAnalyses, session content, frequency observations, or any source other than the COACH DNA TIMELINE block is a violation. The model has no permitted path to construct a coach_dna_alert when the timeline data is missing or sparse — null is the only correct output in that case. When populating: identify the coach's pattern MOST LIKELY to interfere with THIS client's work today: your_pattern_to_watch (pattern name from the timeline), why_it_matters_with_this_client (one sentence connecting the coach's pattern to a pattern observed in priorAnalyses), physical_interrupt (a body-based cue the coach can use to catch themselves in the moment).
+coach_dna_alert — populate ONLY when BOTH source blocks are present and substantive: the "## COACH DNA PROFILE" block (coach-level rollup: declared_orientation, framework_distribution, growth_edges, signal_patterns) AND the "## COACH DNA MANIFESTATIONS" block (per-session evidence of how those patterns showed up; each entry has a scope of "this_client" or "other_client"). If either block is absent, empty, or contains only generic placeholders without concrete coach-pattern content, coach_dna_alert MUST be null. Inferring a coach pattern from priorAnalyses, session content, frequency observations, or any source other than these two COACH DNA blocks is a violation. The model has no permitted path to construct a coach_dna_alert when either source is missing or sparse — null is the only correct output in that case. When populating: identify the coach's pattern MOST LIKELY to interfere with THIS client's work today. Draw the pattern itself from the PROFILE (signal_patterns or growth_edges), refined by what MANIFESTATIONS show actually surfacing in recent sessions. Prefer this_client manifestations over other_client manifestations when both are available — they are direct evidence for the coach-client pair you are prepping. your_pattern_to_watch (pattern name from the profile, sharpened by manifestation evidence), why_it_matters_with_this_client (one sentence connecting the coach's pattern to a pattern observed in priorAnalyses for THIS client), physical_interrupt (a body-based cue the coach can use to catch themselves; ground it in a specific manifestation when one is concrete).
 
 Source binding (HARD RULE — violations break the contract):
 
@@ -267,9 +348,9 @@ Source binding (HARD RULE — violations break the contract):
 | patterns_noticed      | priorAnalyses               | omit that pattern        |
 | pattern_map_insights  | "## PATTERN MAP"            | null                     |
 | strategic_context     | "## COACHING STRATEGY"      | null                     |
-| coach_dna_alert       | "## COACH DNA TIMELINE"     | null                     |
+| coach_dna_alert       | "## COACH DNA PROFILE" + "## COACH DNA MANIFESTATIONS" (BOTH required) | null |
 
-DO NOT infer a field's content from any source other than the row's listed block. DO NOT borrow rollup phrasing into patterns_noticed — language like "Flagged as a missed window in every one of the seven prior sessions" or "flagged in the coaching strategy as a pattern consistent enough to anticipate" is rollup-voice and belongs in pattern_map_insights / strategic_context, NEVER in patterns_noticed. patterns_noticed must read like the prior-session record itself: per-session evidence, verbatim quotes, no aggregate frequency framing. DO NOT populate coach_dna_alert by inferring a coach pattern from priorAnalyses, session content, or any source other than "## COACH DNA TIMELINE"; if that block is absent or sparse, coach_dna_alert MUST be null. When in doubt, prefer omission over duplication.
+DO NOT infer a field's content from any source other than the row's listed block(s). DO NOT borrow rollup phrasing into patterns_noticed — language like "Flagged as a missed window in every one of the seven prior sessions" or "flagged in the coaching strategy as a pattern consistent enough to anticipate" is rollup-voice and belongs in pattern_map_insights / strategic_context, NEVER in patterns_noticed. patterns_noticed must read like the prior-session record itself: per-session evidence, verbatim quotes, no aggregate frequency framing. DO NOT populate coach_dna_alert by inferring a coach pattern from priorAnalyses, session content, or any source other than the two COACH DNA blocks; if either "## COACH DNA PROFILE" or "## COACH DNA MANIFESTATIONS" is absent or sparse, coach_dna_alert MUST be null. When in doubt, prefer omission over duplication.
 
 Rollup staleness (HARD RULE). PATTERN MAP and COACHING STRATEGY reflect their rollup as-of the last_analyzed timestamp shown in each block's header. For sessions in priorAnalyses that POSTDATE the rollup's last_analyzed timestamp, priorAnalyses is authoritative and the rollup is treated as historical. pattern_map_insights and strategic_context MUST render the rollup's view as-of its timestamp; do not silently retrofit fresher session data into the rollup output. If sessions_since_rollup > 0, name the staleness plainly in the output (for example, append "(per rollup as of <timestamp>; <N> session(s) since)" to pattern_frequency.most_active, or note it in strategic_direction) rather than producing a hybrid view that conflates rollup data with fresher priorAnalyses content.
 
@@ -287,7 +368,7 @@ Pre-flight check before returning JSON (perform mentally on every field):
      - "The pattern map shows this is critical to address" (references the pattern map rollup — belongs in pattern_map_insights)
      - Any phrasing that begins with "Across the prior sessions..." or "Consistently across sessions..." (aggregate framing — patterns_noticed entries must cite specific sessions verbatim)
 
-2. For coach_dna_alert: if the user message does not contain a "## COACH DNA TIMELINE" block, OR the block is present but contains no substantive coach-pattern observations, coach_dna_alert MUST be null. There is no permitted inference path from priorAnalyses, the PATTERN MAP, the COACHING STRATEGY, or session content to coach_dna_alert. Null is the only correct answer when the timeline data is absent or sparse.
+2. For coach_dna_alert: if the user message does not contain BOTH a "## COACH DNA PROFILE" block AND a "## COACH DNA MANIFESTATIONS" block, OR if either is present-but-empty / present-but-sparse, coach_dna_alert MUST be null. There is no permitted inference path from priorAnalyses, the PATTERN MAP, the COACHING STRATEGY, or session content to coach_dna_alert. Null is the only correct answer when either source is absent or sparse.
 
 3. For pattern_map_insights and strategic_context: if the respective source block is absent, the field MUST be null. Do not paraphrase priorAnalyses content into either field as a substitute.
 
