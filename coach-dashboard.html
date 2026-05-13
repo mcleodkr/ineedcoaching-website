@@ -9597,6 +9597,20 @@ function renderPreSessionBrief(b, container) {
   // Body
   h += '<div style="padding:28px 32px;background:var(--white);">';
 
+  // About This Brief — server-injected disclaimer surfaced above every
+  // generated section. Reads b.about_this_brief; older persisted briefs that
+  // pre-date the field fall through silently.
+  if (b.about_this_brief) {
+    var ab = b.about_this_brief;
+    h += '<div style="background:var(--cream);border-left:4px solid var(--gold);border-radius:0 8px 8px 0;padding:18px 22px;margin-bottom:24px;">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:0.95rem;font-weight:700;color:var(--ink);margin-bottom:10px;">About This Brief</div>'
+      + (ab.purpose ? '<div style="font-size:0.82rem;line-height:1.55;color:var(--ink);margin-bottom:6px;"><span style="color:var(--gold);font-weight:700;">Purpose: </span>' + escapeHtml(ab.purpose) + '</div>' : '')
+      + (ab.accuracy ? '<div style="font-size:0.82rem;line-height:1.55;color:var(--ink);margin-bottom:6px;"><span style="color:var(--gold);font-weight:700;">Accuracy: </span>' + escapeHtml(ab.accuracy) + '</div>' : '')
+      + (ab.your_role ? '<div style="font-size:0.82rem;line-height:1.55;color:var(--ink);margin-bottom:6px;"><span style="color:var(--gold);font-weight:700;">Your role: </span>' + escapeHtml(ab.your_role) + '</div>' : '')
+      + (ab.improves_with_scale ? '<div style="font-size:0.82rem;line-height:1.55;color:var(--ink);"><span style="color:var(--gold);font-weight:700;">Improves with scale: </span>' + escapeHtml(ab.improves_with_scale) + '</div>' : '')
+      + '</div>';
+  }
+
   // Orientation snapshot
   if (b.orientation_snapshot) {
     var os = b.orientation_snapshot;
@@ -9631,16 +9645,48 @@ function renderPreSessionBrief(b, container) {
     // Unique-per-render prefix so multiple briefs on screen don't collide on
     // expand/collapse state.
     var briefId = 'psb-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    // Qualitative confidence tier styling. Hex literals match the spec
+    // rather than dashboard tokens because the colors encode severity
+    // ordering (red > orange > yellow > blue) the design tokens do not.
+    var confColors = {
+      CRITICAL: { bg: '#fee2e2', text: '#991b1b', border: '#ef4444' },
+      HIGH:     { bg: '#fed7aa', text: '#9a3412', border: '#f97316' },
+      MODERATE: { bg: '#fef3c7', text: '#92400e', border: '#f59e0b' },
+      LOW:      { bg: '#dbeafe', text: '#1e40af', border: '#3b82f6' }
+    };
     h += '<div style="margin-bottom:24px;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:10px;">Patterns Noticed</div>';
     b.patterns_noticed.forEach(function(p, idx) {
       var title = p.title || p.pattern || '';
       var pid = briefId + '-' + idx;
       var pe = p.pattern_explanation;
       var hasExplanation = pe && (pe.what_it_is || pe.in_this_client || (Array.isArray(pe.how_to_work_with_it) && pe.how_to_work_with_it.length));
-      h += '<div style="background:var(--cream);border-radius:8px;padding:16px;margin-bottom:10px;">'
-        + '<div style="font-size:0.9rem;font-weight:700;color:var(--ink);margin-bottom:4px;">' + escapeHtml(title) + '</div>'
-        + '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;margin-bottom:10px;">' + escapeHtml(p.evidence || '') + '</div>'
-        + (p.what_it_enables ? '<div style="margin-bottom:4px;"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);">Enables \u2192</span> <span style="font-size:0.82rem;color:var(--ink);">' + escapeHtml(p.what_it_enables) + '</span></div>' : '')
+      var confKey = p.confidence ? String(p.confidence).toUpperCase() : '';
+      var cf = confColors[confKey];
+      h += '<div style="background:var(--cream);border-radius:8px;padding:16px;margin-bottom:10px;">';
+      // Title + confidence badge in a flex row so the badge sits inline at
+      // any breakpoint and wraps cleanly on narrow widths.
+      h += '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px;">'
+        + '<div style="font-size:0.9rem;font-weight:700;color:var(--ink);">' + escapeHtml(title) + '</div>'
+        + (cf ? '<span style="background:' + cf.bg + ';color:' + cf.text + ';border:1px solid ' + cf.border + ';padding:2px 10px;border-radius:12px;font-size:0.68rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;">' + escapeHtml(confKey) + '</span>' : '')
+        + '</div>';
+      if (p.confidence_note) {
+        h += '<div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px;">' + escapeHtml(p.confidence_note) + '</div>';
+      }
+      // Evidence \u2014 new schema is an array of quoted-with-context strings.
+      // Older persisted briefs may still hold a single string; render both
+      // shapes rather than losing data on legacy rows.
+      if (typeof p.evidence === 'string' && p.evidence.trim()) {
+        h += '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;margin-bottom:10px;padding:10px 12px;background:var(--white);border-left:3px solid var(--border);border-radius:0 4px 4px 0;">' + escapeHtml(p.evidence) + '</div>';
+      } else if (Array.isArray(p.evidence) && p.evidence.length) {
+        h += '<div style="margin-bottom:10px;">';
+        p.evidence.forEach(function(ev) {
+          if (typeof ev === 'string' && ev.trim()) {
+            h += '<div style="font-size:0.82rem;color:var(--ink);line-height:1.55;margin-bottom:6px;padding:10px 12px;background:var(--white);border-left:3px solid var(--gold);border-radius:0 4px 4px 0;">' + escapeHtml(ev) + '</div>';
+          }
+        });
+        h += '</div>';
+      }
+      h += (p.what_it_enables ? '<div style="margin-bottom:4px;"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);">Enables \u2192</span> <span style="font-size:0.82rem;color:var(--ink);">' + escapeHtml(p.what_it_enables) + '</span></div>' : '')
         + (p.risk_if_ignored ? '<div style="margin-bottom:4px;"><span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#b8860b;">Risk \u2192</span> <span style="font-size:0.82rem;color:var(--muted);">' + escapeHtml(p.risk_if_ignored) + '</span></div>' : '')
         + (p.possibility_flag ? '<div><span style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);">Possibility \u2192</span> <span style="font-size:0.8rem;color:var(--muted);font-style:italic;">' + escapeHtml(p.possibility_flag) + '</span></div>' : '');
       if (hasExplanation) {
