@@ -283,11 +283,23 @@ Keep last_session_summary.recap to 2 sentences maximum. opening_questions must b
     // 165s race wrapper sits inside the 180s Vercel function timeout
     // (vercel.json), leaving ~15s of headroom to log the timeout, persist
     // failure to ai-usage, and return a 500. Without it a hung upstream
-    // just produces a silent 502. Was 110s under the previous 120s
-    // maxDuration; bumped alongside Phase 2.2+2.3 because the larger schema
-    // + bigger user message (Pattern Map / Strategy / Coach DNA) extends
-    // generation time and we want a single client whose rollups are
-    // unusually rich to still fit inside the wrapper budget.
+    // produces a silent 502.
+    //
+    // Was 110s under the previous 120s maxDuration. The first Phase 2.2+2.3
+    // attempt (e64b076) failed with the wrapper firing at exactly the
+    // 110000ms bound — confirmed by coach_ai_usage_log showing duration_ms
+    // = 110002 and 110031 on the two failed runs, zero output tokens (no
+    // Anthropic charge). Bumping to 165s/180s pair gave the first verified
+    // success (2e05fff: 146s actual generation, ran 19s under the wrapper).
+    //
+    // SIZING NOTE — these constants are minimums-with-headroom, not
+    // arbitrary. Candy Apple's verified-good run carried a 7374-byte
+    // Pattern Map. Clients (and downstream Sprixle clinical briefs) with
+    // richer rollups will push generation time up and may require another
+    // bump pair. Always change CLAUDE_TIMEOUT_MS and vercel.json's
+    // maxDuration together; keep the ~15s headroom between them so a
+    // wrapper-side reject still has time to log, write usage, and return
+    // a structured 500 before the platform hard-cuts.
     const CLAUDE_TIMEOUT_MS = 165000;
     let claudeRes;
     try {
@@ -301,8 +313,17 @@ Keep last_session_summary.recap to 2 sentences maximum. opening_questions must b
             // landed. 7500 worked for Phase 1. Phase 2.2+2.3 added three new
             // top-level sections (pattern_map_insights, strategic_context,
             // coach_dna_alert) — bumped to 12000 to leave room for the larger
-            // expected output without mid-stream truncation. Watch stop_reason
-            // in the stage-4 success log to confirm we never hit max_tokens.
+            // expected output without mid-stream truncation. 2e05fff's
+            // verified-good run used 6310 output tokens, so 12000 holds ~2x
+            // headroom against today's payload.
+            //
+            // SIZING NOTE — like CLAUDE_TIMEOUT_MS above, this is a minimum-
+            // with-headroom, not an arbitrary number. Sprixle clinical briefs
+            // will carry richer rollups (denser Pattern Maps, longer Coaching
+            // Strategies, multi-page Coach DNA timelines) and may push output
+            // past today's 12k ceiling. Watch claudeData.stop_reason in the
+            // "claude returned" log; "max_tokens" means a real client just
+            // tripped the ceiling and the cap needs to go up.
             max_tokens: 12000,
             system: [{ type: 'text', cache_control: { type: 'ephemeral', ttl: '1h' }, text: systemText }],
             messages: [{ role: 'user', content: userText }],
