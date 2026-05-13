@@ -9741,7 +9741,8 @@ function renderPreSessionBrief(b, container) {
       MODERATE: { bg: '#fef3c7', text: '#92400e', border: '#f59e0b' },
       LOW:      { bg: '#dbeafe', text: '#1e40af', border: '#3b82f6' }
     };
-    h += '<div style="margin-bottom:24px;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:10px;">Patterns Noticed</div>';
+    h += '<div style="margin-bottom:24px;"><div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:6px;">Patterns Noticed</div>'
+      + '<div style="font-size:0.78rem;color:var(--muted);font-style:italic;line-height:1.6;margin-bottom:14px;">Confidence reflects how consistently each pattern appears across this client\'s prior sessions — not severity or urgency. CRITICAL means the pattern is documented in nearly every session; LOW means it has appeared once. All four levels are worth your attention; the tier signals reliability of the observation, not how concerning the pattern is.</div>';
     b.patterns_noticed.forEach(function(p, idx) {
       var title = p.title || p.pattern || '';
       var pid = briefId + '-' + idx;
