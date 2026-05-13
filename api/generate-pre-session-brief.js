@@ -218,6 +218,20 @@ export default async function handler(req, res) {
       coachDnaTimelineBytes: coachDnaTimeline ? JSON.stringify(coachDnaTimeline).length : 0,
     });
 
+    // SPRIXLE PORT NOTE — rollup_as_of cross-talk observed on c94b486
+    // verification: both pattern_map_insights.rollup_as_of and
+    // strategic_context.rollup_as_of came back with the strategy
+    // timestamp. The two rollups were generated equally fresh today so
+    // their last_analyzed values happened to be identical, masking the
+    // ambiguity. In clinical port where rollups regenerate on
+    // independent cadences (Pattern Map weekly, Strategy after every
+    // session, Coach DNA monthly, etc.), the model may copy from the
+    // wrong block header and the values will visibly diverge. Open
+    // decision: (a) tighten the prompt to force each section's
+    // rollup_as_of to copy from its own block header verbatim, or
+    // (b) precompute and inject the timestamps server-side as named
+    // fields instead of asking the model to extract them. (b) is
+    // strictly more reliable. Revisit when rollup cadences diverge.
     const phase2Sections = [];
     if (patternMap) {
       phase2Sections.push('\n\n## PATTERN MAP (last_analyzed: ' + (patternMapLastAnalyzed || 'unknown') + ' — ' + sessionsSincePatternMap + ' prior session(s) have occurred since this rollup)\n' + JSON.stringify(patternMap, null, 2));
