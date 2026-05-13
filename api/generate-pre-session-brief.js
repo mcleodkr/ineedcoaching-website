@@ -167,11 +167,11 @@ export default async function handler(req, res) {
     const checkinText = (checkins || []).length ? JSON.stringify(checkins[0].responses) : 'No pre-session check-in submitted';
     const intakeBaseline = (intakeData || []).length ? JSON.stringify(intakeData[0].responses) : '';
 
-    // Phase 2.1 — pull the three new sources into shape for the model. Each
+    // Phase 2 — pull the three new sources into shape for the model. Each
     // is optional; missing data is treated as "not yet aggregated for this
     // client" rather than an error. Empty array, PostgREST error object, or
     // missing nested field all collapse to null and the corresponding
-    // section is omitted from the user message.
+    // top-level field is set to null in the output.
     const patternMap = Array.isArray(patternMapRows) && patternMapRows.length && patternMapRows[0] && patternMapRows[0].pattern
       ? patternMapRows[0].pattern
       : null;
@@ -185,22 +185,49 @@ export default async function handler(req, res) {
       .map(function(n) { return n && n.post_session_analysis && n.post_session_analysis.coach_dna_timeline; })
       .find(function(t) { return !!t; }) || null;
 
+    // Rollup staleness math. patternMap and coachingStrategy reflect their
+    // rollup as-of last_analyzed; any priorAnalyses session that postdates
+    // that timestamp is authoritative over the rollup. Compute how many
+    // sessions have occurred since each rollup so the model can label the
+    // rollup view as historical when sessions_since > 0 instead of silently
+    // retrofitting fresh session data into the rollup output.
+    const patternMapLastAnalyzed = (Array.isArray(patternMapRows) && patternMapRows[0] && patternMapRows[0].last_analyzed) || null;
+    const strategyLastAnalyzed = (Array.isArray(strategyRows) && strategyRows[0] && strategyRows[0].last_analyzed) || null;
+    function countSessionsAfter(rollupTs) {
+      if (!rollupTs) return 0;
+      const rollupMs = new Date(rollupTs).getTime();
+      return (notes || []).filter(function(n) {
+        const sa = (n && n.coach_bookings && n.coach_bookings.scheduled_at) || (n && n.created_at);
+        return sa && new Date(sa).getTime() > rollupMs;
+      }).length;
+    }
+    const sessionsSincePatternMap = countSessionsAfter(patternMapLastAnalyzed);
+    const sessionsSinceStrategy = countSessionsAfter(strategyLastAnalyzed);
+
     console.log('[pre-session-brief] stage 3.5 phase2 sources', {
       invokeId,
       hasPatternMap: !!patternMap,
       patternMapBytes: patternMap ? JSON.stringify(patternMap).length : 0,
-      patternMapLastAnalyzed: (Array.isArray(patternMapRows) && patternMapRows[0] && patternMapRows[0].last_analyzed) || null,
+      patternMapLastAnalyzed,
+      sessionsSincePatternMap,
       hasCoachingStrategy: !!coachingStrategy,
       strategyBytes: coachingStrategy ? JSON.stringify(coachingStrategy).length : 0,
-      strategyLastAnalyzed: (Array.isArray(strategyRows) && strategyRows[0] && strategyRows[0].last_analyzed) || null,
+      strategyLastAnalyzed,
+      sessionsSinceStrategy,
       hasCoachDnaTimeline: !!coachDnaTimeline,
       coachDnaTimelineBytes: coachDnaTimeline ? JSON.stringify(coachDnaTimeline).length : 0,
     });
 
     const phase2Sections = [];
-    if (patternMap) phase2Sections.push('\n\n## PATTERN MAP\n' + JSON.stringify(patternMap, null, 2));
-    if (coachingStrategy) phase2Sections.push('\n\n## COACHING STRATEGY\n' + JSON.stringify(coachingStrategy, null, 2));
-    if (coachDnaTimeline) phase2Sections.push('\n\n## COACH DNA TIMELINE\n' + JSON.stringify(coachDnaTimeline, null, 2));
+    if (patternMap) {
+      phase2Sections.push('\n\n## PATTERN MAP (last_analyzed: ' + (patternMapLastAnalyzed || 'unknown') + ' — ' + sessionsSincePatternMap + ' prior session(s) have occurred since this rollup)\n' + JSON.stringify(patternMap, null, 2));
+    }
+    if (coachingStrategy) {
+      phase2Sections.push('\n\n## COACHING STRATEGY (last_analyzed: ' + (strategyLastAnalyzed || 'unknown') + ' — ' + sessionsSinceStrategy + ' prior session(s) have occurred since this rollup)\n' + JSON.stringify(coachingStrategy, null, 2));
+    }
+    if (coachDnaTimeline) {
+      phase2Sections.push('\n\n## COACH DNA TIMELINE\n' + JSON.stringify(coachDnaTimeline, null, 2));
+    }
     const phase2Block = phase2Sections.join('');
 
     const model = 'claude-sonnet-4-6';
@@ -209,7 +236,21 @@ export default async function handler(req, res) {
 
 Evidence rules: each entry in patterns_noticed.evidence must be an ACTUAL CLIENT QUOTE drawn from the prior session data, paired with the session it came from and what happened next. Format each string as: \`Session N (date if known): client said "<verbatim quote>" → <what the coach or client did next>\`. If no real quote is available in the source data for a pattern, output fewer evidence entries (or an empty array) rather than inventing one. Honest sparsity beats fabricated specificity. Do not paraphrase quotes into clinical summaries — show the actual phrase the client used.
 
-Confidence rules: assign a qualitative tier per pattern based on how consistently it appears across priorAnalyses. CRITICAL = appears in almost every recent session, will almost certainly come up today. HIGH = appears frequently, watch for it. MODERATE = appears occasionally, stay aware. LOW = appears once, note but do not overweight. Do not compute percentages — there is no pattern-occurrence table, so qualitative judgment is the honest answer. The confidence field MUST contain EXACTLY one of the four bare tier names — "CRITICAL", "HIGH", "MODERATE", or "LOW" — with NO surrounding characters: no em dash, no parenthetical, no explanation, no count. Put every explanation, frequency note, or basis in confidence_note. Examples of INVALID confidence values: "CRITICAL — qualitative tier per rules above", "HIGH (5 of 7 sessions)", "MODERATE - emerging pattern". Examples of VALID: "CRITICAL", "HIGH", "MODERATE", "LOW". The downstream renderer keys off the bare word, so any extra text breaks the badge. confidence_note is one short sentence explaining the basis for the tier. Keep last_session_summary.recap to 2 sentences maximum. opening_questions must be specific, slightly uncomfortable, and movement-oriented. Not "What are you noticing..." but "What did you actually do differently in that moment vs what you usually do?" Create productive tension that opens the session with direction. For every entry in patterns_noticed you MUST include a pattern_explanation object teaching the coach how to work with the pattern. Write the explanation for a coach who may not have formal psychology training — define the term in plain language without clinical jargon. The "how_to_work_with_it" moves must be concrete, in-session actions the coach can use today, not abstract principles. Return ONLY valid JSON with these exact keys:
+Confidence rules: assign a qualitative tier per pattern based on how consistently it appears across priorAnalyses. CRITICAL = appears in almost every recent session, will almost certainly come up today. HIGH = appears frequently, watch for it. MODERATE = appears occasionally, stay aware. LOW = appears once, note but do not overweight. Do not compute percentages — there is no pattern-occurrence table, so qualitative judgment is the honest answer. The confidence field MUST contain EXACTLY one of the four bare tier names — "CRITICAL", "HIGH", "MODERATE", or "LOW" — with NO surrounding characters: no em dash, no parenthetical, no explanation, no count. Put every explanation, frequency note, or basis in confidence_note. Examples of INVALID confidence values: "CRITICAL — qualitative tier per rules above", "HIGH (5 of 7 sessions)", "MODERATE - emerging pattern". Examples of VALID: "CRITICAL", "HIGH", "MODERATE", "LOW". The downstream renderer keys off the bare word, so any extra text breaks the badge. confidence_note is one short sentence explaining the basis for the tier.
+
+Phase 2 fields — sourced exclusively from explicit blocks in the user message.
+
+pattern_map_insights — populate from the "## PATTERN MAP" block if present, otherwise output null. Identify 2-3 core_patterns most relevant to the upcoming session: pattern_name (verbatim from the rollup), why_it_matters_today (one sentence on why this pattern is likely to surface today, grounded in what the rollup says), watch_for (concrete language or behavioral cue named in the rollup), intervention_point (when in the pattern cycle the rollup suggests is the best moment to intervene). Also produce pattern_frequency.most_active and pattern_frequency.emerging as short strings from the rollup; emerging may be null if the rollup does not flag an emerging pattern. Copy the rollup_as_of timestamp and sessions_since_rollup count from the block header verbatim into the output object.
+
+strategic_context — populate from the "## COACHING STRATEGY" block if present, otherwise output null. what_is_working (1 sentence), what_is_not_working (1 sentence), strategic_direction (one-sentence north star), approaches_to_explore (2-3 concrete next moves as strings), when_to_refer (string or null — null unless the rollup explicitly flags referral need). Copy rollup_as_of from the block header.
+
+coach_dna_alert — populate from the "## COACH DNA TIMELINE" block if present, otherwise output null. Identify the coach's pattern MOST LIKELY to interfere with THIS client's work today: your_pattern_to_watch (pattern name from the timeline), why_it_matters_with_this_client (one sentence connecting the coach's pattern to a pattern observed in priorAnalyses), physical_interrupt (a body-based cue the coach can use to catch themselves in the moment).
+
+Source exclusivity (HARD RULE). patterns_noticed draws EXCLUSIVELY from priorAnalyses (the prior session context above). pattern_map_insights draws EXCLUSIVELY from the PATTERN MAP block. strategic_context draws EXCLUSIVELY from the COACHING STRATEGY block. coach_dna_alert draws EXCLUSIVELY from the COACH DNA TIMELINE block. If a concept appears in multiple sources, place it in the section that matches its origin, not both. patterns_noticed must never reproduce items from PATTERN MAP; pattern_map_insights must never paraphrase quotes from priorAnalyses. When in doubt, prefer omission over duplication.
+
+Rollup staleness (HARD RULE). PATTERN MAP and COACHING STRATEGY reflect their rollup as-of the last_analyzed timestamp shown in each block's header. For sessions in priorAnalyses that POSTDATE the rollup's last_analyzed timestamp, priorAnalyses is authoritative and the rollup is treated as historical. pattern_map_insights and strategic_context MUST render the rollup's view as-of its timestamp; do not silently retrofit fresher session data into the rollup output. If sessions_since_rollup > 0, name the staleness plainly in the output (for example, append "(per rollup as of <timestamp>; <N> session(s) since)" to pattern_frequency.most_active, or note it in strategic_direction) rather than producing a hybrid view that conflates rollup data with fresher priorAnalyses content.
+
+Keep last_session_summary.recap to 2 sentences maximum. opening_questions must be specific, slightly uncomfortable, and movement-oriented. Not "What are you noticing..." but "What did you actually do differently in that moment vs what you usually do?" Create productive tension that opens the session with direction. For every entry in patterns_noticed you MUST include a pattern_explanation object teaching the coach how to work with the pattern. Write the explanation for a coach who may not have formal psychology training — define the term in plain language without clinical jargon. The "how_to_work_with_it" moves must be concrete, in-session actions the coach can use today, not abstract principles. Return ONLY valid JSON with these exact keys:
 {
   "session_header": { "client_name": string, "session_number": number, "date": string },
   "orientation_snapshot": { "readiness_level": string, "primary_focus": string, "open_commitments": [{"title": string, "is_complete": boolean}] },
@@ -220,19 +261,15 @@ Confidence rules: assign a qualitative tier per pattern based on how consistentl
   "session_strategy": { "primary_move": "one direction worth considering as the primary approach, 1 sentence — this is the anchor", "notice_in_session": "something specific to observe in real-time, 1 sentence", "leverage": "a specific strength or recent win to build on, 1 sentence", "avoid": "what the coach may want to be cautious of, 1 sentence", "decision_point": { "if_reflective": "one approach worth considering if client moves into reflection, 1 sentence", "if_analytical": "one approach worth considering if client stays analytical, 1 sentence" } },
   "realtime_signals": [{ "signal": "an observable in-session cue to watch for", "micro_intervention": "a specific gentle response the coach may want to consider in the moment, 1 sentence" }],
   "confidence_misread_risk": "string or null — generate ONLY when evidence suggests client may intellectually understand a concept without embodying it yet. Tentative language. null if no evidence.",
+  "pattern_map_insights": { "core_patterns": [{ "pattern_name": string, "why_it_matters_today": "1 sentence on why this pattern is likely to surface today, grounded in the rollup", "watch_for": "1 sentence — concrete language or behavioral cue from the rollup", "intervention_point": "1 sentence — when in the pattern cycle the rollup suggests is the best moment to intervene" }], "pattern_frequency": { "most_active": "short string from the rollup, with the rollup_as_of staleness note appended when sessions_since_rollup > 0", "emerging": "short string from the rollup, or null if no emerging pattern is flagged" }, "rollup_as_of": "ISO timestamp string, copied verbatim from the PATTERN MAP block header", "sessions_since_rollup": number },
+  "strategic_context": { "what_is_working": "1 sentence from the rollup", "what_is_not_working": "1 sentence from the rollup", "strategic_direction": "one-sentence north star from the rollup", "approaches_to_explore": ["2-3 concrete next moves, one per string"], "when_to_refer": "string or null — null unless the rollup explicitly flags a referral need", "rollup_as_of": "ISO timestamp string, copied verbatim from the COACHING STRATEGY block header" },
+  "coach_dna_alert": { "your_pattern_to_watch": "pattern name from the coach DNA timeline", "why_it_matters_with_this_client": "1 sentence connecting this coach pattern to a pattern observed in priorAnalyses", "physical_interrupt": "1 sentence — body-based cue the coach can use to catch themselves in the moment" },
   "opening_questions": ["specific, slightly uncomfortable, movement-oriented. At least one must address the gap between intellectual understanding and embodied change — body awareness, actual behavior vs. thought about behavior", "another", "another"],
   "focus_this_session": "one sentence starting with an action verb: If nothing else this session, [action]",
   "this_session_is": [string, string, string],
   "this_session_is_not": [string, string, string]
 }`;
-    // phase2Block is BUILT above and OBSERVED in the stage-3.5 log, but NOT
-    // interpolated into userText yet — Phase 2.2/2.3 ships the schema fields
-    // and prompt instructions that the new sections need, and the concat
-    // returns at that point. Without prompt support, the model will silently
-    // repurpose the extra context into existing fields and we lose the
-    // pre-Phase-2 verification baseline.
-    void phase2Block;
-    const userText = `Prepare a pre-session brief for session #${sessionCount + 1} with ${clientName}.\n\nThis session has NOT happened yet. All context below is drawn exclusively from PRIOR sessions (${priorAnalyses.length} prior session analyses available${currentScheduledAt ? `, all scheduled before ${currentScheduledAt}` : ''}). Predict patterns and risks; do not narrate the upcoming session as if it has already occurred.\n\nPrior session context:\n${lastNotes || 'No previous notes'}\n\nActive goals: ${goalsSummary || 'None set'}\n\nPre-session check-in (submitted by the client before this session): ${checkinText}${intakeBaseline ? '\n\nIntake baseline:\n' + intakeBaseline : ''}\n\nToday's date: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+    const userText = `Prepare a pre-session brief for session #${sessionCount + 1} with ${clientName}.\n\nThis session has NOT happened yet. All context below is drawn exclusively from PRIOR sessions (${priorAnalyses.length} prior session analyses available${currentScheduledAt ? `, all scheduled before ${currentScheduledAt}` : ''}). Predict patterns and risks; do not narrate the upcoming session as if it has already occurred.\n\nPrior session context:\n${lastNotes || 'No previous notes'}\n\nActive goals: ${goalsSummary || 'None set'}\n\nPre-session check-in (submitted by the client before this session): ${checkinText}${intakeBaseline ? '\n\nIntake baseline:\n' + intakeBaseline : ''}\n\nToday's date: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}${phase2Block}`;
 
     console.log('[pre-session-brief] stage 4 calling claude', {
       invokeId,
@@ -243,10 +280,15 @@ Confidence rules: assign a qualitative tier per pattern based on how consistentl
       ms: Date.now() - invokeStart,
     });
 
-    // 110s race wrapper sits inside the 120s Vercel function timeout, leaving
-    // ~10s of headroom to log the timeout, persist failure to ai-usage, and
-    // return a 500. Without it a hung upstream just produces a silent 502.
-    const CLAUDE_TIMEOUT_MS = 110000;
+    // 165s race wrapper sits inside the 180s Vercel function timeout
+    // (vercel.json), leaving ~15s of headroom to log the timeout, persist
+    // failure to ai-usage, and return a 500. Without it a hung upstream
+    // just produces a silent 502. Was 110s under the previous 120s
+    // maxDuration; bumped alongside Phase 2.2+2.3 because the larger schema
+    // + bigger user message (Pattern Map / Strategy / Coach DNA) extends
+    // generation time and we want a single client whose rollups are
+    // unusually rich to still fit inside the wrapper budget.
+    const CLAUDE_TIMEOUT_MS = 165000;
     let claudeRes;
     try {
       claudeRes = await Promise.race([
@@ -255,15 +297,18 @@ Confidence rules: assign a qualitative tier per pattern based on how consistentl
           headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
           body: JSON.stringify({
             model,
-            // 3500 truncated the JSON mid-output once pattern_explanation
-            // (3-5 moves per pattern) landed. Pattern Map and Coaching Strategy
-            // both run at 7500; matching that ceiling here to leave headroom.
-            max_tokens: 7500,
+            // 3500 truncated once pattern_explanation (3-5 moves per pattern)
+            // landed. 7500 worked for Phase 1. Phase 2.2+2.3 added three new
+            // top-level sections (pattern_map_insights, strategic_context,
+            // coach_dna_alert) — bumped to 12000 to leave room for the larger
+            // expected output without mid-stream truncation. Watch stop_reason
+            // in the stage-4 success log to confirm we never hit max_tokens.
+            max_tokens: 12000,
             system: [{ type: 'text', cache_control: { type: 'ephemeral', ttl: '1h' }, text: systemText }],
             messages: [{ role: 'user', content: userText }],
           }),
         }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Claude API timeout after 110s')), CLAUDE_TIMEOUT_MS)),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Claude API timeout after 165s')), CLAUDE_TIMEOUT_MS)),
       ]);
     } catch (fetchErr) {
       console.error('[pre-session-brief] claude fetch failed', {
