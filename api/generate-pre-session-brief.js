@@ -71,16 +71,34 @@ export default async function handler(req, res) {
       ? `${SUPABASE_URL}/rest/v1/coach_goals?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&created_at=lt.${encodeURIComponent(currentScheduledAt)}&order=created_at.desc&select=title,status,target_date`
       : `${SUPABASE_URL}/rest/v1/coach_goals?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&order=created_at.desc&select=title,status,target_date`;
 
+    // Phase 2 aggregates. coach_client_patterns and coach_client_strategies
+    // are derived rollups built from prior post_session_analysis blobs — by
+    // construction they can only describe sessions that have already
+    // happened, so no scheduled_at filter is needed here (the upcoming
+    // session has not contributed any data yet). Single most-recent row.
+    const patternMapUrl = `${SUPABASE_URL}/rest/v1/coach_client_patterns?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&order=last_analyzed.desc&limit=1&select=pattern,last_analyzed`;
+    const strategyUrl = `${SUPABASE_URL}/rest/v1/coach_client_strategies?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&order=last_analyzed.desc&limit=1&select=strategy,last_analyzed`;
+
     console.log('[pre-session-brief] stage 2 fetching', { invokeId, ms: Date.now() - invokeStart });
-    const [notesRes, goalsRes, bookingsRes, checkinRes, intakeRes] = await Promise.all([
+    const [notesRes, goalsRes, bookingsRes, checkinRes, intakeRes, patternMapRes, strategyRes] = await Promise.all([
       fetch(notesUrl, { headers }),
       fetch(goalsUrl, { headers }),
       fetch(bookingsUrl, { headers }),
       bookingId ? fetch(`${SUPABASE_URL}/rest/v1/coach_checkin_responses?booking_id=eq.${bookingId}&submitted_at=not.is.null&select=responses&limit=1`, { headers }) : Promise.resolve({ json: () => [] }),
-      fetch(`${SUPABASE_URL}/rest/v1/coach_intake_responses?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&order=created_at.desc&limit=1&select=responses`, { headers })
+      fetch(`${SUPABASE_URL}/rest/v1/coach_intake_responses?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&order=created_at.desc&limit=1&select=responses`, { headers }),
+      fetch(patternMapUrl, { headers }),
+      fetch(strategyUrl, { headers })
     ]);
 
-    const [notes, goals, bookings, checkins, intakeData] = await Promise.all([notesRes.json(), goalsRes.json(), bookingsRes.json(), checkinRes.json ? checkinRes.json() : [], intakeRes.json()]);
+    const [notes, goals, bookings, checkins, intakeData, patternMapRows, strategyRows] = await Promise.all([
+      notesRes.json(),
+      goalsRes.json(),
+      bookingsRes.json(),
+      checkinRes.json ? checkinRes.json() : [],
+      intakeRes.json(),
+      patternMapRes.json().catch(function() { return null; }),
+      strategyRes.json().catch(function() { return null; })
+    ]);
     console.log('[pre-session-brief] stage 3 fetched', {
       invokeId,
       notesCount: Array.isArray(notes) ? notes.length : null,
@@ -88,6 +106,8 @@ export default async function handler(req, res) {
       bookingsCount: Array.isArray(bookings) ? bookings.length : null,
       checkinsCount: Array.isArray(checkins) ? checkins.length : null,
       intakeCount: Array.isArray(intakeData) ? intakeData.length : null,
+      patternMapStatus: patternMapRes && patternMapRes.status,
+      strategyStatus: strategyRes && strategyRes.status,
       ms: Date.now() - invokeStart,
     });
 
@@ -147,6 +167,42 @@ export default async function handler(req, res) {
     const checkinText = (checkins || []).length ? JSON.stringify(checkins[0].responses) : 'No pre-session check-in submitted';
     const intakeBaseline = (intakeData || []).length ? JSON.stringify(intakeData[0].responses) : '';
 
+    // Phase 2.1 — pull the three new sources into shape for the model. Each
+    // is optional; missing data is treated as "not yet aggregated for this
+    // client" rather than an error. Empty array, PostgREST error object, or
+    // missing nested field all collapse to null and the corresponding
+    // section is omitted from the user message.
+    const patternMap = Array.isArray(patternMapRows) && patternMapRows.length && patternMapRows[0] && patternMapRows[0].pattern
+      ? patternMapRows[0].pattern
+      : null;
+    const coachingStrategy = Array.isArray(strategyRows) && strategyRows.length && strategyRows[0] && strategyRows[0].strategy
+      ? strategyRows[0].strategy
+      : null;
+    // Coach DNA timeline lives inside post_session_analysis on the most
+    // recent prior session that wrote one. notes is already prior-only and
+    // ordered created_at desc, so .find returns the latest available.
+    const coachDnaTimeline = (notes || [])
+      .map(function(n) { return n && n.post_session_analysis && n.post_session_analysis.coach_dna_timeline; })
+      .find(function(t) { return !!t; }) || null;
+
+    console.log('[pre-session-brief] stage 3.5 phase2 sources', {
+      invokeId,
+      hasPatternMap: !!patternMap,
+      patternMapBytes: patternMap ? JSON.stringify(patternMap).length : 0,
+      patternMapLastAnalyzed: (Array.isArray(patternMapRows) && patternMapRows[0] && patternMapRows[0].last_analyzed) || null,
+      hasCoachingStrategy: !!coachingStrategy,
+      strategyBytes: coachingStrategy ? JSON.stringify(coachingStrategy).length : 0,
+      strategyLastAnalyzed: (Array.isArray(strategyRows) && strategyRows[0] && strategyRows[0].last_analyzed) || null,
+      hasCoachDnaTimeline: !!coachDnaTimeline,
+      coachDnaTimelineBytes: coachDnaTimeline ? JSON.stringify(coachDnaTimeline).length : 0,
+    });
+
+    const phase2Sections = [];
+    if (patternMap) phase2Sections.push('\n\n## PATTERN MAP\n' + JSON.stringify(patternMap, null, 2));
+    if (coachingStrategy) phase2Sections.push('\n\n## COACHING STRATEGY\n' + JSON.stringify(coachingStrategy, null, 2));
+    if (coachDnaTimeline) phase2Sections.push('\n\n## COACH DNA TIMELINE\n' + JSON.stringify(coachDnaTimeline, null, 2));
+    const phase2Block = phase2Sections.join('');
+
     const model = 'claude-sonnet-4-6';
     const startTime = Date.now();
     const systemText = `You are a coaching intelligence assistant preparing a pre-session brief for a professional coach. The session you are preparing for has NOT happened yet — you are PREDICTING what may come up based on PRIOR sessions only. Every observation, pattern, and recommendation must be sourced from sessions that occurred before the upcoming one. Never describe what "happened in this session" or what the client "said today" — those events are still in the future. If the input data is empty or thin, say so plainly rather than inventing material. Your tone is that of a thoughtful senior colleague offering perspective — not a system giving commands. Write in strength-based, forward-focused language. ALWAYS frame guidance as options the coach may consider, not as directives. Preferred phrasings: "consider," "one option," "you might," "your choice," "if this fits," "one approach worth considering," "appears to," "may suggest." Banned phrasings: "you must," "you should," "do this," "always," "never," "the only way," "tell the coach to." The coach is the driver; Coach Clarity is a passenger offering suggestions the coach is free to ignore. No em dashes.
@@ -169,7 +225,7 @@ Confidence rules: assign a qualitative tier per pattern based on how consistentl
   "this_session_is": [string, string, string],
   "this_session_is_not": [string, string, string]
 }`;
-    const userText = `Prepare a pre-session brief for session #${sessionCount + 1} with ${clientName}.\n\nThis session has NOT happened yet. All context below is drawn exclusively from PRIOR sessions (${priorAnalyses.length} prior session analyses available${currentScheduledAt ? `, all scheduled before ${currentScheduledAt}` : ''}). Predict patterns and risks; do not narrate the upcoming session as if it has already occurred.\n\nPrior session context:\n${lastNotes || 'No previous notes'}\n\nActive goals: ${goalsSummary || 'None set'}\n\nPre-session check-in (submitted by the client before this session): ${checkinText}${intakeBaseline ? '\n\nIntake baseline:\n' + intakeBaseline : ''}\n\nToday's date: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+    const userText = `Prepare a pre-session brief for session #${sessionCount + 1} with ${clientName}.\n\nThis session has NOT happened yet. All context below is drawn exclusively from PRIOR sessions (${priorAnalyses.length} prior session analyses available${currentScheduledAt ? `, all scheduled before ${currentScheduledAt}` : ''}). Predict patterns and risks; do not narrate the upcoming session as if it has already occurred.\n\nPrior session context:\n${lastNotes || 'No previous notes'}\n\nActive goals: ${goalsSummary || 'None set'}\n\nPre-session check-in (submitted by the client before this session): ${checkinText}${intakeBaseline ? '\n\nIntake baseline:\n' + intakeBaseline : ''}\n\nToday's date: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}${phase2Block}`;
 
     console.log('[pre-session-brief] stage 4 calling claude', {
       invokeId,
