@@ -225,7 +225,14 @@ Confidence rules: assign a qualitative tier per pattern based on how consistentl
   "this_session_is": [string, string, string],
   "this_session_is_not": [string, string, string]
 }`;
-    const userText = `Prepare a pre-session brief for session #${sessionCount + 1} with ${clientName}.\n\nThis session has NOT happened yet. All context below is drawn exclusively from PRIOR sessions (${priorAnalyses.length} prior session analyses available${currentScheduledAt ? `, all scheduled before ${currentScheduledAt}` : ''}). Predict patterns and risks; do not narrate the upcoming session as if it has already occurred.\n\nPrior session context:\n${lastNotes || 'No previous notes'}\n\nActive goals: ${goalsSummary || 'None set'}\n\nPre-session check-in (submitted by the client before this session): ${checkinText}${intakeBaseline ? '\n\nIntake baseline:\n' + intakeBaseline : ''}\n\nToday's date: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}${phase2Block}`;
+    // phase2Block is BUILT above and OBSERVED in the stage-3.5 log, but NOT
+    // interpolated into userText yet — Phase 2.2/2.3 ships the schema fields
+    // and prompt instructions that the new sections need, and the concat
+    // returns at that point. Without prompt support, the model will silently
+    // repurpose the extra context into existing fields and we lose the
+    // pre-Phase-2 verification baseline.
+    void phase2Block;
+    const userText = `Prepare a pre-session brief for session #${sessionCount + 1} with ${clientName}.\n\nThis session has NOT happened yet. All context below is drawn exclusively from PRIOR sessions (${priorAnalyses.length} prior session analyses available${currentScheduledAt ? `, all scheduled before ${currentScheduledAt}` : ''}). Predict patterns and risks; do not narrate the upcoming session as if it has already occurred.\n\nPrior session context:\n${lastNotes || 'No previous notes'}\n\nActive goals: ${goalsSummary || 'None set'}\n\nPre-session check-in (submitted by the client before this session): ${checkinText}${intakeBaseline ? '\n\nIntake baseline:\n' + intakeBaseline : ''}\n\nToday's date: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
 
     console.log('[pre-session-brief] stage 4 calling claude', {
       invokeId,
