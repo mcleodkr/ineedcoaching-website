@@ -444,7 +444,7 @@ async function fetchRequests() {
     const url = SUPABASE_URL + '/rest/v1/explorer_requests'
       + '?target_audiences=cs.{coaching}'
       + '&status=eq.active'
-      + '&select=*'
+      + '&select=id,status,created_at,struggle_type,struggle_detail,support_type,format_preference,availability,budget_range,payment_type,additional_notes,country,state,region,target_audiences,posted_from_site,category,is_anonymous,display_name'
       + '&order=created_at.desc';
     const res = await fetch(url, {
       headers: {
