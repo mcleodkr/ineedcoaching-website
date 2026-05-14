@@ -720,7 +720,7 @@ async function submitIndividual(e) {
   try {
     var res = await fetch(SUPABASE_URL + '/rest/v1/explorer_requests', {
       method: 'POST',
-      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify(payload)
     });
     if (res.ok) {
