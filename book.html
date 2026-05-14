@@ -1148,12 +1148,19 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
           discount_amount_cents: Math.round(Number(selectedService.price || 0) * 100),
         });
         try {
-          await fetch(REST + '/gift_certificates?id=eq.' + encodeURIComponent(appliedGift.gift_certificate_id), {
-            method: 'PATCH',
-            headers: { ...HEADERS_WRITE, Prefer: 'return=minimal' },
-            body: JSON.stringify({ redeemed_by: email, redeemed_at: new Date().toISOString() }),
+          // Stamp gift_certificates.redeemed_at via server endpoint (uses service
+          // role key — the table is RLS-protected and anon PATCH is no longer
+          // permitted). Failure here is non-fatal: the booking itself is already
+          // inserted; we just don't mark the gift redeemed.
+          await fetch('/api/mark-gift-redeemed', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              gift_certificate_id: appliedGift.gift_certificate_id,
+              redeemed_by_email: email,
+            }),
           });
-        } catch (giftErr) { console.warn('[book] gift redeem patch failed', giftErr); }
+        } catch (giftErr) { console.warn('[book] gift redeem mark failed', giftErr); }
         try {
           await fetch('/api/booking-confirmation', {
             method: 'POST',

@@ -481,8 +481,8 @@ async function loadProfile() {
     // Fetch related data in parallel
     const [servicesRes, testimonialsRes, recsRes, coursesRes, articlesRes] = await Promise.all([
       fetch(`${API}/coach_services?coach_id=eq.${coachId}&is_active=eq.true&select=*`, { headers: GET_HEADERS }),
-      fetch(`${API}/coach_testimonials?coach_id=eq.${coachId}&is_approved=eq.true&select=*`, { headers: GET_HEADERS }),
-      fetch(`${API}/coach_recommendations?coach_id=eq.${coachId}&is_approved=eq.true&select=*`, { headers: GET_HEADERS }),
+      fetch(`${API}/coach_testimonials?coach_id=eq.${coachId}&is_approved=eq.true&select=id,coach_id,client_name,client_title,content,rating,what_changed,recommendation,coach_description,allow_name,is_approved,created_at`, { headers: GET_HEADERS }),
+      fetch(`${API}/coach_recommendations?coach_id=eq.${coachId}&is_approved=eq.true&select=id,coach_id,recommender_name,recommender_title,recommender_company,content,allow_name,is_approved,created_at`, { headers: GET_HEADERS }),
       fetch(`${API}/coach_courses?coach_id=eq.${coachId}&status=neq.draft&select=*&order=is_featured.desc,created_at.desc`, { headers: GET_HEADERS }),
       fetch(`${API}/articles?author_coach_id=eq.${coachId}&is_published=eq.true&site=eq.ineedcoaching&select=title,slug,meta_description,published_at&order=published_at.desc&limit=6`, { headers: GET_HEADERS })
     ]);
