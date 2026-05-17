@@ -30,13 +30,47 @@ export default async function handler(req, res) {
   const invokeId = Math.random().toString(36).slice(2, 10);
   const invokeStart = Date.now();
   console.log('[pre-session-brief] invoked', { invokeId });
+  // Phase 2.9.3 SSE: stream progress updates so the dashboard can render a
+  // real-time checklist instead of a generic spinner. wantsSSE, sendProgress,
+  // respondError, and heartbeatInterval are hoisted above the try so the
+  // outer catch can branch on wantsSSE and clear the heartbeat on unexpected
+  // throws. respondError defaults to JSON; the SSE branch reassigns it after
+  // headers are flushed. Once flushHeaders() commits a 2xx, all subsequent
+  // errors MUST flow through SSE 'error' events (an HTTP error response is
+  // no longer possible).
+  let wantsSSE = false;
+  let sendProgress = function() {};
+  let respondError = function(status, body) { res.status(status).json(body); };
+  let heartbeatInterval = null;
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const { coachId, clientEmail, bookingId } = body;
     if (!coachId || !clientEmail) return res.status(400).json({ error: 'Missing coachId or clientEmail' });
     console.log('[pre-session-brief] inputs', { invokeId, bookingId, coachId, clientEmail });
 
+    // SSE setup AFTER body validation so a 400 on bad input can still be
+    // returned as JSON. After flushHeaders() the response is committed to
+    // text/event-stream; subsequent errors must be SSE error events.
+    wantsSSE = (req.headers.accept || '').includes('text/event-stream');
+    if (wantsSSE) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.flushHeaders();
+      sendProgress = function(step, status) {
+        try { res.write('data: ' + JSON.stringify({ type: 'progress', step: step, status: status }) + '\n\n'); } catch (_) {}
+      };
+      respondError = function(status, errBody) {
+        try {
+          res.write('data: ' + JSON.stringify({ type: 'error', message: (errBody && errBody.error) || 'Generation failed', details: errBody && errBody.details }) + '\n\n');
+          res.end();
+        } catch (_) {}
+      };
+    }
+
     const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
+    sendProgress('loading_history', 'in_progress');
 
     // Stage 1: resolve the current session's scheduled_at so we can filter
     // historical data to "prior sessions only". Without this, the brief would
@@ -50,7 +84,7 @@ export default async function handler(req, res) {
       );
       const currentBookingData = currentBookingRes.ok ? await currentBookingRes.json() : [];
       if (!Array.isArray(currentBookingData) || !currentBookingData.length) {
-        return res.status(404).json({ error: 'Booking not found' });
+        return respondError(404, { error: 'Booking not found' });
       }
       currentScheduledAt = currentBookingData[0].scheduled_at;
     }
@@ -150,9 +184,12 @@ export default async function handler(req, res) {
           futureNotes: futureNotes.length,
           futureBookings: futureBookings.length,
         });
-        return res.status(500).json({ error: 'Data integrity error: prior-session filter did not exclude current/future sessions' });
+        return respondError(500, { error: 'Data integrity error: prior-session filter did not exclude current/future sessions' });
       }
     }
+
+    sendProgress('loading_history', 'complete');
+    sendProgress('pattern_analysis', 'in_progress');
 
     const clientName = (() => {
       for (const b of (bookings || [])) {
@@ -188,6 +225,9 @@ export default async function handler(req, res) {
     const goalsSummary = (goals || []).map(g => `${g.title} (${g.status})`).join(', ');
     const checkinText = (checkins || []).length ? JSON.stringify(checkins[0].responses) : 'No pre-session check-in submitted';
     const intakeBaseline = (intakeData || []).length ? JSON.stringify(intakeData[0].responses) : '';
+
+    sendProgress('pattern_analysis', 'complete');
+    sendProgress('strategic_context', 'in_progress');
 
     // Phase 2 — pull the three new sources into shape for the model. Each
     // is optional; missing data is treated as "not yet aggregated for this
@@ -325,6 +365,9 @@ export default async function handler(req, res) {
     }
     const phase2Block = phase2Sections.join('');
 
+    sendProgress('strategic_context', 'complete');
+    sendProgress('session_prep', 'in_progress');
+
     const model = 'claude-sonnet-4-6';
     const startTime = Date.now();
     const systemText = `You are a coaching intelligence assistant preparing a pre-session brief for a professional coach. The session you are preparing for has NOT happened yet — you are PREDICTING what may come up based on PRIOR sessions only. Every observation, pattern, and recommendation must be sourced from sessions that occurred before the upcoming one. Never describe what "happened in this session" or what the client "said today" — those events are still in the future. If the input data is empty or thin, say so plainly rather than inventing material. Your tone is that of a thoughtful senior colleague offering perspective — not a system giving commands. Write in strength-based, forward-focused language. ALWAYS frame guidance as options the coach may consider, not as directives. Preferred phrasings: "consider," "one option," "you might," "your choice," "if this fits," "one approach worth considering," "appears to," "may suggest." Banned phrasings: "you must," "you should," "do this," "always," "never," "the only way," "tell the coach to." The coach is the driver; Coach Clarity is a passenger offering suggestions the coach is free to ignore. No em dashes.
@@ -426,6 +469,17 @@ Return ONLY valid JSON with these exact keys:
     // wrapper-side reject still has time to log, write usage, and return
     // a structured 500 before the platform hard-cuts.
     const CLAUDE_TIMEOUT_MS = 165000;
+    // SSE keep-alive during the long Claude wait. Without periodic comment
+    // lines, intermediate proxies (Vercel edge, browsers, corporate) can
+    // close idle streams between 30-120s, leaving the checklist visually
+    // stalled even though generation is still progressing. 15s is well
+    // under the typical 30s timeout. Comment lines (':\n\n') are valid SSE
+    // and the EventSource/fetch-stream parser on the client ignores them.
+    if (wantsSSE) {
+      heartbeatInterval = setInterval(function() {
+        try { res.write(':\n\n'); } catch (_) {}
+      }, 15000);
+    }
     let claudeRes;
     try {
       claudeRes = await Promise.race([
@@ -457,6 +511,7 @@ Return ONLY valid JSON with these exact keys:
         new Promise((_, reject) => setTimeout(() => reject(new Error('Claude API timeout after 165s')), CLAUDE_TIMEOUT_MS)),
       ]);
     } catch (fetchErr) {
+      if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
       console.error('[pre-session-brief] claude fetch failed', {
         invokeId,
         message: fetchErr.message,
@@ -471,8 +526,9 @@ Return ONLY valid JSON with these exact keys:
         errorMessage: fetchErr.message,
         durationMs: Date.now() - startTime,
       });
-      return res.status(500).json({ error: 'AI processing failed', details: fetchErr.message });
+      return respondError(500, { error: 'AI processing failed', details: fetchErr.message });
     }
+    if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
 
     const claudeData = await claudeRes.json().catch(function() { return null; });
     console.log('[pre-session-brief] claude returned', {
@@ -500,7 +556,7 @@ Return ONLY valid JSON with these exact keys:
         status: claudeRes.status,
         error: claudeData && claudeData.error,
       });
-      return res.status(502).json({ error: 'AI processing failed' });
+      return respondError(502, { error: 'AI processing failed' });
     }
 
     const text = (claudeData && claudeData.content?.[0]?.text) || '';
@@ -522,7 +578,7 @@ Return ONLY valid JSON with these exact keys:
         head: text.slice(0, 200),
         tail: text.slice(-200),
       });
-      return res.status(500).json({ error: 'Failed to parse brief', stop_reason: stopReason });
+      return respondError(500, { error: 'Failed to parse brief', stop_reason: stopReason });
     }
 
     // Inject the static disclaimer at the top of the brief. Done server-side
@@ -532,6 +588,9 @@ Return ONLY valid JSON with these exact keys:
     // with about_this_brief first puts the disclaimer at the top of the
     // JSON output for the frontend renderer.
     brief = Object.assign({ about_this_brief: ABOUT_THIS_BRIEF }, brief);
+
+    sendProgress('session_prep', 'complete');
+    sendProgress('finalizing', 'in_progress');
 
     // Persist the brief to coach_session_notes.pre_session_intelligence so
     // coaches can reopen it later without regenerating. Only runs when a
@@ -592,15 +651,33 @@ Return ONLY valid JSON with these exact keys:
       }
     }
 
+    sendProgress('finalizing', 'complete');
+
     console.log('[pre-session-brief] complete', { invokeId, persisted, totalMs: Date.now() - invokeStart });
-    return res.status(200).json(Object.assign({}, brief, { _persisted: persisted }));
+    const finalBrief = Object.assign({}, brief, { _persisted: persisted });
+    if (wantsSSE) {
+      try {
+        res.write('data: ' + JSON.stringify({ type: 'complete', result: finalBrief }) + '\n\n');
+        res.end();
+      } catch (_) {}
+      return;
+    }
+    return res.status(200).json(finalBrief);
   } catch (e) {
+    if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
     console.error('[pre-session-brief] FATAL', {
       invokeId,
       message: e && e.message,
       stack: e && e.stack ? e.stack.substring(0, 1000) : null,
       totalMs: Date.now() - invokeStart,
     });
+    if (wantsSSE) {
+      try {
+        res.write('data: ' + JSON.stringify({ type: 'error', message: (e && e.message) || 'Internal server error' }) + '\n\n');
+        res.end();
+      } catch (_) {}
+      return;
+    }
     return res.status(500).json({ error: e && e.message ? e.message : 'Internal server error' });
   }
 }

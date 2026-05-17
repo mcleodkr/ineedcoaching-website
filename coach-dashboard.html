@@ -9538,15 +9538,113 @@ function frameworkBadge(level) {
 }
 
 // --- Pre-Session Brief ---
+// Phase 2.9.3 — progress checklist UI driven by Server-Sent Events. The
+// backend streams {type:'progress', step, status} events at five stages,
+// 15s ':\n\n' heartbeats during the long Claude wait, and a final
+// {type:'complete', result: brief} (success) or {type:'error', message}
+// (failure) event. Falls back to JSON parsing if the server returned a
+// non-SSE response (older deploy without SSE handling).
+function renderProgressChecklistHTML(steps) {
+  // Inlined keyframes scoped to .generation-progress so the spin animation
+  // does not collide with other animations on the page. Checkmark SVG uses
+  // a white stroke so it stays visible after the icon fills green on
+  // completion; the brief's spec used green-on-green which would render
+  // invisible.
+  var html = '<div class="generation-progress" style="padding:40px 24px;max-width:520px;margin:0 auto;">';
+  html += '<h3 style="margin:0 0 24px 0;font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:700;text-align:center;color:var(--ink);">Preparing Your Pre-Session Brief</h3>';
+  html += '<div class="progress-steps">';
+  steps.forEach(function(step) {
+    html += '<div class="progress-step" data-step-id="' + escapeHtml(step.id) + '" style="display:flex;align-items:center;margin-bottom:12px;padding:12px 14px;background:#f9fafb;border-radius:8px;opacity:0.5;transition:opacity 0.3s ease;">';
+    html += '<div class="step-icon" style="width:24px;height:24px;margin-right:12px;border-radius:50%;border:2px solid #d1d5db;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.3s ease;">';
+    html += '<svg class="checkmark" width="14" height="14" viewBox="0 0 14 14" style="display:none;"><path d="M3 7l3 3 6-6" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    html += '<div class="spinner" style="width:12px;height:12px;border:2px solid #d1d5db;border-top-color:#3b82f6;border-radius:50%;display:none;"></div>';
+    html += '</div>';
+    html += '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:var(--muted);">' + escapeHtml(step.label) + '</span>';
+    html += '</div>';
+  });
+  html += '</div>';
+  html += '<style>@keyframes ciProgressSpin{to{transform:rotate(360deg);}} .generation-progress .progress-step .spinner{animation:ciProgressSpin 0.8s linear infinite;}</style>';
+  html += '</div>';
+  return html;
+}
+
+function updateProgressStepStatus(container, stepId, status) {
+  var stepEl = container.querySelector('[data-step-id="' + stepId + '"]');
+  if (!stepEl) return;
+  var icon = stepEl.querySelector('.step-icon');
+  var spinner = stepEl.querySelector('.spinner');
+  var checkmark = stepEl.querySelector('.checkmark');
+  if (status === 'in_progress') {
+    stepEl.style.opacity = '1';
+    if (spinner) spinner.style.display = 'block';
+    if (checkmark) checkmark.style.display = 'none';
+  } else if (status === 'complete') {
+    stepEl.style.opacity = '1';
+    if (spinner) spinner.style.display = 'none';
+    if (icon) {
+      icon.style.borderColor = '#10b981';
+      icon.style.backgroundColor = '#10b981';
+    }
+    if (checkmark) checkmark.style.display = 'block';
+  }
+}
+
 async function generatePreSessionBrief(clientEmail, bookingId, container) {
-  container.innerHTML = ciSpinner('Preparing your brief...');
+  var steps = [
+    { id: 'loading_history', label: 'Loading prior session history' },
+    { id: 'pattern_analysis', label: 'Analyzing client patterns' },
+    { id: 'strategic_context', label: 'Building strategic context from Pattern Map' },
+    { id: 'session_prep', label: 'Preparing session strategy' },
+    { id: 'finalizing', label: 'Finalizing brief' }
+  ];
+  container.innerHTML = renderProgressChecklistHTML(steps);
   try {
     var res = await fetch('/api/generate-pre-session-brief', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
       body: JSON.stringify({ coachId: coachProfile.id, clientEmail: clientEmail, bookingId: bookingId })
     });
-    var brief = await res.json();
-    if (!res.ok) throw new Error(brief.error || 'Failed');
+    if (!res.ok) {
+      // Pre-SSE errors (env/validation) return JSON with a non-2xx status.
+      var errBody = await res.json().catch(function() { return null; });
+      throw new Error((errBody && errBody.error) || ('HTTP ' + res.status));
+    }
+    var contentType = res.headers.get('content-type') || '';
+    var brief = null;
+    if (contentType.indexOf('text/event-stream') === -1) {
+      // Backward-compat: server didn't honor Accept header (older deploy).
+      // Body is a single JSON brief — same shape as the SSE 'complete'
+      // event's result field.
+      brief = await res.json();
+    } else {
+      var reader = res.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+      while (true) {
+        var chunk = await reader.read();
+        if (chunk.done) break;
+        buffer += decoder.decode(chunk.value, { stream: true });
+        var lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i];
+          if (!line) continue;                            // empty line between events
+          if (line.charAt(0) === ':') continue;           // SSE comment (heartbeat)
+          if (line.indexOf('data: ') !== 0) continue;     // ignore event:/id:/retry:
+          var payload;
+          try { payload = JSON.parse(line.slice(6)); }
+          catch (_) { continue; }
+          if (payload.type === 'progress') {
+            updateProgressStepStatus(container, payload.step, payload.status);
+          } else if (payload.type === 'complete') {
+            brief = payload.result;
+          } else if (payload.type === 'error') {
+            throw new Error(payload.message || 'Generation failed');
+          }
+        }
+      }
+      if (!brief) throw new Error('Generation completed without result');
+    }
     // Mirror the persisted brief into local state so the tab re-renders from
     // memory if the coach navigates away and back without a page reload.
     // The API persists to coach_session_notes.pre_session_intelligence; this
