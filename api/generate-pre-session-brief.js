@@ -432,7 +432,7 @@ Return ONLY valid JSON with these exact keys:
       ms: Date.now() - invokeStart,
     });
 
-    // 165s race wrapper sits inside the 180s Vercel function timeout
+    // 270s race wrapper sits inside the 285s Vercel function timeout
     // (vercel.json), leaving ~15s of headroom to log the timeout, persist
     // failure to ai-usage, and return a 500. Without it a hung upstream
     // produces a silent 502.
@@ -444,6 +444,11 @@ Return ONLY valid JSON with these exact keys:
     // Anthropic charge). Bumping to 165s/180s pair gave the first verified
     // success (2e05fff: 146s actual generation, ran 19s under the wrapper).
     //
+    // Bumped again to 270s/285s after Phase 2.9.1 (5eec35a) added 5 new
+    // per-pattern fields plus expanded pre-flight checks (3 → 8 items);
+    // the 165s wrapper fired at exactly 165034ms with 0/0 tokens on the
+    // first regen, confirming the heavier schema exceeds 165s reliably.
+    //
     // SIZING NOTE — these constants are minimums-with-headroom, not
     // arbitrary. Candy Apple's verified-good run carried a 7374-byte
     // Pattern Map. Clients (and downstream Sprixle clinical briefs) with
@@ -452,7 +457,7 @@ Return ONLY valid JSON with these exact keys:
     // maxDuration together; keep the ~15s headroom between them so a
     // wrapper-side reject still has time to log, write usage, and return
     // a structured 500 before the platform hard-cuts.
-    const CLAUDE_TIMEOUT_MS = 165000;
+    const CLAUDE_TIMEOUT_MS = 270000;
     let claudeRes;
     try {
       claudeRes = await Promise.race([
@@ -481,7 +486,7 @@ Return ONLY valid JSON with these exact keys:
             messages: [{ role: 'user', content: userText }],
           }),
         }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Claude API timeout after 165s')), CLAUDE_TIMEOUT_MS)),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Claude API timeout after 270s')), CLAUDE_TIMEOUT_MS)),
       ]);
     } catch (fetchErr) {
       console.error('[pre-session-brief] claude fetch failed', {
