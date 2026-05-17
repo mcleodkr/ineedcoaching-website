@@ -108,7 +108,7 @@ export default async function handler(req, res) {
     // post_session_analysis too so we can detect a re-run (vs a first
     // analysis) for the usage-counter increment below.
     const fetchRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/coach_session_notes?booking_id=eq.${bookingId}&select=raw_transcript,notes,post_session_analysis`,
+      `${SUPABASE_URL}/rest/v1/coach_session_notes?booking_id=eq.${bookingId}&select=id,raw_transcript,notes,post_session_analysis`,
       { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
     );
     const fetchData = await fetchRes.json();
@@ -659,6 +659,60 @@ Limits: max 3 goal_proposals, max 3 goal_status_updates. Return empty arrays if 
 
     formattedOutput.goal_proposals = pass3eOutput.goal_proposals;
     formattedOutput.goal_status_updates = pass3eOutput.goal_status_updates;
+
+    // ── Brief 2a: canonicalize dna_tag arrays before persistence ────────
+    // Resolves each raw tag to its pattern_taxonomy canonical entry. On
+    // service failure (or any thrown error) we keep the raw tags as-is —
+    // the canonicalize endpoint returns taxonomy_id:null fallback rows in
+    // its own degraded mode, and the catch block here covers everything
+    // outside that. Either way, a canonicalization outage degrades to
+    // pre-Brief-2a behavior rather than breaking the pipeline.
+    try {
+      const allTags = [];
+      if (Array.isArray(formattedOutput.coaching_interventions)) {
+        for (const intervention of formattedOutput.coaching_interventions) {
+          if (Array.isArray(intervention.dna_tag)) {
+            for (const tag of intervention.dna_tag) {
+              if (typeof tag === 'string' && tag.trim().length > 0) allTags.push(tag);
+            }
+          }
+        }
+      }
+      if (allTags.length > 0) {
+        const selfUrl = req.headers.host ? `https://${req.headers.host}` : 'https://www.ineedcoaching.org';
+        const sessionNoteId = (fetchData && fetchData[0] && fetchData[0].id) || null;
+        const canonResponse = await fetch(`${selfUrl}/api/canonicalize-dna-tags`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tags: allTags,
+            source_session_id: sessionNoteId,
+            source_endpoint: 'generate-post-session-intelligence',
+          }),
+        });
+        if (canonResponse.ok) {
+          const canonBody = await canonResponse.json().catch(function() { return null; });
+          const resolutions = canonBody && Array.isArray(canonBody.resolutions) ? canonBody.resolutions : [];
+          const resolutionMap = {};
+          for (const r of resolutions) {
+            if (r && r.canonical_name && typeof r.raw_tag === 'string') {
+              resolutionMap[r.raw_tag] = r.canonical_name;
+            }
+          }
+          for (const intervention of formattedOutput.coaching_interventions) {
+            if (Array.isArray(intervention.dna_tag)) {
+              intervention.dna_tag = intervention.dna_tag.map(function(t) {
+                return resolutionMap[t] || t;
+              });
+            }
+          }
+        } else {
+          console.warn('[generate-post-session-intelligence] canonicalization returned non-ok, storing raw tags', { status: canonResponse.status });
+        }
+      }
+    } catch (canonErr) {
+      console.error('[generate-post-session-intelligence] canonicalization failed (non-fatal)', { message: canonErr && canonErr.message });
+    }
 
     // ── Save results to Supabase ────────────────────────────────────────
     if (bookingId) {
