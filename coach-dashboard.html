@@ -9698,6 +9698,21 @@ function renderPreSessionBrief(b, container) {
       + '</div>';
   }
 
+  // Phase 2.9.2 — Questions to Explore. Gold-gradient amber panel placed
+  // between Coach DNA Alert and Orientation Snapshot. 5-8 open-ended
+  // strategic questions sourced from patterns_noticed + priorAnalyses
+  // (plus pattern_map_insights / strategic_context when available). Silent
+  // fallthrough when null or missing so older briefs render unchanged.
+  if (Array.isArray(b.questions_to_explore) && b.questions_to_explore.length) {
+    h += '<div style="background:linear-gradient(to right,#fef3c7,#fde68a);border-left:4px solid #f59e0b;border-radius:0 8px 8px 0;padding:18px 22px;margin-bottom:24px;">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:700;color:#92400e;margin-bottom:12px;">⚡ Questions to Explore</div>'
+      + '<div style="font-size:0.82rem;line-height:1.7;color:#78350f;">';
+    b.questions_to_explore.forEach(function(q) {
+      if (q) h += '<div style="margin-bottom:8px;">' + escapeHtml(String(q)) + '</div>';
+    });
+    h += '</div></div>';
+  }
+
   // Orientation snapshot
   if (b.orientation_snapshot) {
     var os = b.orientation_snapshot;
