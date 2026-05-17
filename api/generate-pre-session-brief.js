@@ -76,7 +76,7 @@ export default async function handler(req, res) {
     // construction they can only describe sessions that have already
     // happened, so no scheduled_at filter is needed here (the upcoming
     // session has not contributed any data yet). Single most-recent row.
-    const patternMapUrl = `${SUPABASE_URL}/rest/v1/coach_client_patterns?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&order=last_analyzed.desc&limit=1&select=pattern,last_analyzed`;
+    const patternMapUrl = `${SUPABASE_URL}/rest/v1/coach_client_patterns?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&order=last_analyzed.desc&limit=1&select=pattern_map,last_analyzed`;
     const strategyUrl = `${SUPABASE_URL}/rest/v1/coach_client_strategies?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&order=last_analyzed.desc&limit=1&select=strategy,last_analyzed`;
 
     // Phase 2.6 Coach DNA — TWO real sources, replacing the dead lookup at
@@ -194,8 +194,8 @@ export default async function handler(req, res) {
     // client" rather than an error. Empty array, PostgREST error object, or
     // missing nested field all collapse to null and the corresponding
     // top-level field is set to null in the output.
-    const patternMap = Array.isArray(patternMapRows) && patternMapRows.length && patternMapRows[0] && patternMapRows[0].pattern
-      ? patternMapRows[0].pattern
+    const patternMap = Array.isArray(patternMapRows) && patternMapRows.length && patternMapRows[0] && patternMapRows[0].pattern_map
+      ? patternMapRows[0].pattern_map
       : null;
     const coachingStrategy = Array.isArray(strategyRows) && strategyRows.length && strategyRows[0] && strategyRows[0].strategy
       ? strategyRows[0].strategy
