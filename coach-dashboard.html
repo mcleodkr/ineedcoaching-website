@@ -16231,11 +16231,20 @@ function renderWhatItMeansBlock(candidate, rawTagInfo) {
 function renderTaxonomyReview() {
   var el = document.getElementById('taxonomy-review-content');
   if (!el) return;
+  // Brief 2b.2: "About this review" orientation panel — defines what a
+  // canonical pattern is so the rest of the screen is self-explaining.
+  // Renders once at the top in both empty and active states.
+  var ORIENTATION_PANEL_HTML = ''
+    + '<div class="taxonomy-orientation" style="background:#f7f4ee;border:1px solid #e4ddc8;border-radius:8px;padding:16px 20px;margin-bottom:20px;font-family:\'DM Sans\',sans-serif;font-size:0.86rem;line-height:1.6;color:#3a3540;">'
+    +   '<div style="font-weight:600;color:#1a3a52;margin-bottom:8px;letter-spacing:0.02em;">About this review</div>'
+    +   '<div>A <strong>canonical pattern</strong> is the one official name a coaching pattern takes across your entire platform. Right now, a single client behavior can get tagged in different ways across different sessions (for example: &ldquo;conscious choice&rdquo;, &ldquo;deliberate decision&rdquo;, &ldquo;intentional action&rdquo; &mdash; three different strings, same underlying pattern). On this screen, you\'re deciding what the official name should be for each group of similar tags. Once you approve a canonical, every future session that uses any variation of it will be stored under that one name &mdash; so Pattern Maps, Pre-Session Briefs, and rollups all use consistent language.</div>'
+    + '</div>';
   var clusters = taxonomyReview.clusters;
   if (!clusters.length) {
     var lastRun = taxonomyReview.lastRunMeta;
     el.innerHTML =
-      '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:10px;padding:28px;box-shadow:0 1px 2px rgba(0,0,0,0.02);">'
+      ORIENTATION_PANEL_HTML
+      + '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:10px;padding:28px;box-shadow:0 1px 2px rgba(0,0,0,0.02);">'
       +   '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;margin-bottom:6px;">All proposed clusters reviewed.</div>'
       +   '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:#3a3540;line-height:1.6;margin-bottom:18px;">When you are ready, run a new cluster generation pass to gather any new candidates from recent sessions.</div>'
       +   '<button id="taxonomy-review-generate-btn" style="background:#c49a3c;color:#fff;border:none;padding:10px 18px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:500;cursor:pointer;transition:all 0.15s ease;">Generate cluster proposals</button>'
@@ -16271,7 +16280,7 @@ function renderTaxonomyReview() {
       + '<ul style="list-style:none;padding:0 0 0 6px;margin:0 0 12px 0;">'
       +   '<li style="margin-bottom:4px;font-family:\'DM Sans\',sans-serif;font-size:0.95rem;color:#1a3a52;font-weight:500;">&ldquo;' + escapeHtml(singletonTag) + '&rdquo;</li>'
       + '</ul>'
-      + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.84rem;color:#5a5a5a;line-height:1.55;font-style:italic;">Claude believes this single tag is meaningful enough to become its own canonical pattern, rather than merging it into an existing one.</div>';
+      + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.84rem;color:#5a5a5a;line-height:1.55;font-style:italic;">Claude believes this single tag describes a distinct pattern that should have its own official name in your taxonomy, rather than being treated as a variation of another pattern that already exists.</div>';
   } else {
     var memberLines = rawTagInfo.tags.map(function(t) {
       return '<li style="margin-bottom:4px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:#1a3a52;">'
@@ -16306,8 +16315,10 @@ function renderTaxonomyReview() {
   var definitionText = c.proposed_definition || c.definition || '';
 
   el.innerHTML =
+    // Brief 2b.2: orientation panel above the cluster card (active state)
+    ORIENTATION_PANEL_HTML
     // Section 1: cluster header
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#7a7570;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#7a7570;">'
     +   '<div>Cluster ' + (taxonomyReview.index + 1) + ' of ' + clusters.length + '</div>'
     +   '<div>' + dots + '</div>'
     + '</div>'
