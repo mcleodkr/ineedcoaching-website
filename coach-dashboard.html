@@ -1319,6 +1319,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
     <button class="tab-btn" data-tab="testimonials">Testimonials</button>
     <button class="tab-btn" data-tab="recommendations">Recommendations</button>
     <a id="admin-console-link" href="/admin-dashboard.html" style="display:none;margin-top:12px;padding:10px 18px;border-top:1px solid #edeae4;font-family:'DM Sans',sans-serif;font-size:0.72rem;font-weight:400;color:#9a9490;text-decoration:none;">Admin Console</a>
+    <button class="tab-btn" data-tab="taxonomy-review" id="taxonomy-review-nav" style="display:none;">Taxonomy Review</button>
   </nav>
   <div style="flex:1;min-width:0;">
 
@@ -2450,6 +2451,19 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       <div id="outreach-content" class="hidden"></div>
     </div>
 
+    <!-- TAXONOMY REVIEW (Brief 2b) — admin-only -->
+    <div id="tab-taxonomy-review" class="tab-panel">
+      <div style="padding:24px;max-width:780px;margin:0 auto;">
+        <div style="margin-bottom:20px;border-bottom:1px solid #e8e4dc;padding-bottom:14px;">
+          <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:600;color:#1a3a52;margin:0 0 4px 0;">Pattern Taxonomy Review</h2>
+          <div style="font-family:'DM Sans',sans-serif;font-size:0.82rem;color:#7a7570;">Review proposed canonical groupings before they unify across coach-facing surfaces.</div>
+        </div>
+        <div id="taxonomy-review-content">
+          <div style="padding:40px;text-align:center;color:#7a7570;font-family:'DM Sans',sans-serif;font-size:0.9rem;">Loading review state…</div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div><!-- /dash-layout -->
 </div>
@@ -2899,6 +2913,18 @@ async function init() {
   if (adminLink && ADMIN_EMAILS.indexOf((email || '').toLowerCase()) !== -1) {
     adminLink.style.display = 'block';
   }
+  // Taxonomy Review nav — only Kim (Brief 2b)
+  var taxonomyNav = $('taxonomy-review-nav');
+  if (taxonomyNav && (email || '').toLowerCase() === 'drkmcleod@gmail.com') {
+    taxonomyNav.style.display = '';
+  }
+
+  // Brief 2b: warm the pattern-name → taxonomy_id cache so dna_tag pills
+  // can carry data-pattern-id and surface the canonical Gestalt definition
+  // on hover. Best-effort; failure falls back to the local glossary.
+  if (typeof loadPatternNameToIdCache === 'function') {
+    loadPatternNameToIdCache().catch(function() { /* non-fatal */ });
+  }
   // Hide the View Profile link entirely if this coach has no slug yet, rather
   // than producing a broken /coach/ link that 404s on Vercel. Slug is set by
   // the signup webhook for new coaches; older slugless rows are repaired by
@@ -3156,6 +3182,10 @@ function setupTabs() {
       if (btn.dataset.tab === 'billing') {
         if (!btn._loaded) btn._loaded = true;
         if (typeof loadBillingTab === 'function') loadBillingTab();
+      }
+      if (btn.dataset.tab === 'taxonomy-review') {
+        if (!btn._loaded) btn._loaded = true;
+        if (typeof loadTaxonomyReview === 'function') loadTaxonomyReview();
       }
     });
   });
@@ -11438,7 +11468,12 @@ function renderCoachingMirror(a, container) {
             // Mirror pills retain the "Tracked in your Coach DNA" footer. If no
             // definition exists for this tag, fall back to a coach-facing generic.
             var def = lookupDnaTagDef(t) || 'Client behavioral pattern detected in this session \u2014 tracked across sessions to build your Coach DNA.';
-            return '<span class="dna-tag-pill" style="padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:600;background:var(--gold);color:#fff;cursor:help;">'
+            // Brief 2b: if this tag resolves to a canonical taxonomy row, expose
+            // its uuid so attachPatternHovers can upgrade the tooltip to the
+            // Gestalt-voice canonical definition.
+            var patternId = (typeof patternIdForTag === 'function') ? patternIdForTag(t) : null;
+            var pidAttr = patternId ? ' data-pattern-id="' + escapeHtml(patternId) + '"' : '';
+            return '<span class="dna-tag-pill pattern-name"' + pidAttr + ' style="padding:2px 8px;border-radius:50px;font-size:0.6rem;font-weight:600;background:var(--gold);color:#fff;cursor:help;">'
               + escapeHtml(t)
               + '<span class="dna-tag-tooltip" style="position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#fdf9f1;border:1px solid #edeae4;border-radius:4px;padding:10px 12px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:400;color:#1a3a52;max-width:240px;min-width:200px;white-space:normal;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.08);line-height:1.5;pointer-events:none;text-transform:none;letter-spacing:normal;">'
               + '<div>' + escapeHtml(def) + '</div>'
@@ -11660,6 +11695,10 @@ function renderCoachingMirror(a, container) {
   h = h.replace(/\bCoach (?=[a-z])/g, 'You ');
 
   container.innerHTML = h;
+
+  // Brief 2b: upgrade any dna_tag pill that has a data-pattern-id to the
+  // canonical hover tooltip backed by pattern_taxonomy. No-op if cache empty.
+  if (typeof attachPatternHovers === 'function') attachPatternHovers(container);
 
   // Wire sidebar IntersectionObserver
   var navLinks = container.querySelectorAll('.pm-nav-link');
@@ -15969,6 +16008,358 @@ function journalIntelRefField(label, val) {
     +   '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8a8580;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">' + escapeHtml(label) + '</div>'
     +   '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:#3a3540;line-height:1.6;white-space:pre-wrap;">' + escapeHtml(val) + '</div>'
     + '</div>';
+}
+
+/* ================================================
+   BRIEF 2b — TAXONOMY REVIEW + HOVER-TO-DEFINE
+   ================================================ */
+
+// Hover-to-define infrastructure. Used everywhere canonical pattern names
+// render. The element opts in via class="pattern-name" data-pattern-id=<uuid>.
+var patternDefinitionCache = new Map();
+var patternNameToIdCache = null; // normalized canonical_name -> taxonomy uuid
+
+async function loadPatternDefinitionsForIds(patternIds) {
+  if (!patternIds || patternIds.length === 0) return;
+  var uncached = patternIds.filter(function(id) { return id && !patternDefinitionCache.has(id); });
+  if (uncached.length === 0) return;
+  try {
+    var resp = await fetch('/api/pattern-definitions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: uncached })
+    });
+    if (!resp.ok) return;
+    var data = await resp.json();
+    var defs = (data && data.definitions) || [];
+    for (var i = 0; i < defs.length; i++) patternDefinitionCache.set(defs[i].id, defs[i]);
+  } catch (e) { /* hover is best-effort */ }
+}
+
+function attachPatternHovers(container) {
+  if (!container) return;
+  var elements = container.querySelectorAll('.pattern-name[data-pattern-id]');
+  var ids = [];
+  for (var i = 0; i < elements.length; i++) {
+    var id = elements[i].getAttribute('data-pattern-id');
+    if (id) ids.push(id);
+  }
+  if (ids.length > 0) loadPatternDefinitionsForIds(ids);
+
+  elements.forEach(function(el) {
+    if (el.dataset.hoverAttached === '1') return;
+    el.dataset.hoverAttached = '1';
+    var tooltip = null;
+    var positionTooltip = function() {
+      if (!tooltip) return;
+      var rect = el.getBoundingClientRect();
+      tooltip.style.left = (rect.left + window.scrollX) + 'px';
+      tooltip.style.top = (rect.bottom + window.scrollY + 8) + 'px';
+    };
+    el.addEventListener('mouseenter', function() {
+      var def = patternDefinitionCache.get(el.getAttribute('data-pattern-id'));
+      if (!def) return;
+      tooltip = document.createElement('div');
+      tooltip.className = 'pattern-tooltip';
+      tooltip.style.cssText = 'position:absolute;background:#1a3a52;color:#f7f4ee;padding:12px 14px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;line-height:1.55;max-width:360px;z-index:9999;box-shadow:0 6px 18px rgba(0,0,0,0.18);pointer-events:none;';
+      tooltip.innerHTML =
+        '<div style="font-weight:600;margin-bottom:6px;color:#c49a3c;letter-spacing:0.02em;">' + escapeHtml(def.canonical_name || '') + '</div>'
+        + '<div>' + escapeHtml(def.definition || '') + '</div>';
+      document.body.appendChild(tooltip);
+      positionTooltip();
+    });
+    el.addEventListener('mouseleave', function() {
+      if (tooltip) { tooltip.remove(); tooltip = null; }
+    });
+  });
+}
+
+// Build a client-side map: normalized canonical_name -> taxonomy uuid. Used
+// by render sites that have a tag string but no uuid handy, so they can
+// upgrade their hover to use the canonical taxonomy definition.
+async function loadPatternNameToIdCache() {
+  if (patternNameToIdCache) return patternNameToIdCache;
+  patternNameToIdCache = new Map();
+  try {
+    var taxRes = await supabaseGet('pattern_taxonomy?status=in.(canonical,candidate)&select=id,canonical_name,aliases,definition');
+    if (Array.isArray(taxRes)) {
+      taxRes.forEach(function(row) {
+        var name = (row.canonical_name || '').toLowerCase().trim();
+        if (name) patternNameToIdCache.set(name, row.id);
+        if (Array.isArray(row.aliases)) {
+          row.aliases.forEach(function(a) {
+            var n = (a || '').toLowerCase().trim();
+            if (n) patternNameToIdCache.set(n, row.id);
+          });
+        }
+        if (row.id && row.canonical_name) {
+          patternDefinitionCache.set(row.id, { id: row.id, canonical_name: row.canonical_name, definition: row.definition || '' });
+        }
+      });
+    }
+    var resRes = await supabaseGet('dna_tag_resolutions?select=normalized_tag,taxonomy_id');
+    if (Array.isArray(resRes)) {
+      resRes.forEach(function(row) {
+        var n = (row.normalized_tag || '').toLowerCase().trim();
+        if (n && row.taxonomy_id && !patternNameToIdCache.has(n)) {
+          patternNameToIdCache.set(n, row.taxonomy_id);
+        }
+      });
+    }
+  } catch (e) { /* non-fatal — hover falls back to local glossary */ }
+  return patternNameToIdCache;
+}
+
+function patternIdForTag(rawTag) {
+  if (!patternNameToIdCache || !rawTag) return null;
+  var norm = String(rawTag).toLowerCase().trim().replace(/_/g, ' ').replace(/\s+/g, ' ');
+  return patternNameToIdCache.get(norm) || null;
+}
+
+// ── Taxonomy Review UI state ────────────────────────────────────────────
+var taxonomyReview = {
+  clusters: [],          // candidate rows from the active cluster run
+  members: {},           // candidate_id -> [{normalized_tag, raw_tag, occurrence_count}]
+  index: 0,              // current cluster being reviewed
+  lastRunMeta: null,     // last generation run metadata for empty-state copy
+  loading: false,
+};
+
+function taxonomyReviewStorageKey() { return 'taxonomyReviewIndex_' + (coachProfile && coachProfile.id || 'anon'); }
+
+async function loadTaxonomyReview() {
+  if (taxonomyReview.loading) return;
+  taxonomyReview.loading = true;
+  var el = document.getElementById('taxonomy-review-content');
+  if (!el) { taxonomyReview.loading = false; return; }
+  el.innerHTML = '<div style="padding:32px;text-align:center;color:#7a7570;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;">Loading clusters…</div>';
+  try {
+    // Pending candidates that still need review. We include candidates with
+    // status='candidate' AND a cluster_proposal_id set (from a generation run).
+    // We also include un-clustered Brief 2a candidates so Kim can act on them.
+    var rows = await supabaseGet('pattern_taxonomy?status=eq.candidate&select=*&order=created_at.asc');
+    rows = Array.isArray(rows) ? rows : [];
+    taxonomyReview.clusters = rows;
+
+    // Fetch memberships for each candidate
+    taxonomyReview.members = {};
+    if (rows.length > 0) {
+      var ids = rows.map(function(r) { return '"' + r.id + '"'; }).join(',');
+      var memRows = await supabaseGet('cluster_membership?candidate_taxonomy_id=in.(' + ids + ')&select=candidate_taxonomy_id,raw_tag,normalized_tag,occurrence_count,is_from_history');
+      if (Array.isArray(memRows)) {
+        memRows.forEach(function(m) {
+          if (!taxonomyReview.members[m.candidate_taxonomy_id]) taxonomyReview.members[m.candidate_taxonomy_id] = [];
+          taxonomyReview.members[m.candidate_taxonomy_id].push(m);
+        });
+      }
+    }
+
+    // Last generation run summary (best-effort, from ai-usage log)
+    try {
+      var logRows = await supabaseGet("coach_ai_usage_log?feature=eq.cluster_proposal_generation&order=created_at.desc&limit=1&select=created_at,status,estimated_cost_cents");
+      if (Array.isArray(logRows) && logRows.length) taxonomyReview.lastRunMeta = logRows[0];
+    } catch (e) { /* non-fatal */ }
+
+    // Restore saved index if valid
+    var saved = parseInt(window.localStorage.getItem(taxonomyReviewStorageKey()) || '0', 10);
+    if (Number.isFinite(saved) && saved >= 0 && saved < rows.length) {
+      taxonomyReview.index = saved;
+    } else {
+      taxonomyReview.index = 0;
+    }
+
+    renderTaxonomyReview();
+  } catch (e) {
+    console.error('[taxonomy-review] load failed', e);
+    el.innerHTML = '<div style="padding:32px;color:#c44;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;">Could not load review state: ' + escapeHtml(e && e.message || String(e)) + '</div>';
+  } finally {
+    taxonomyReview.loading = false;
+  }
+}
+
+function renderTaxonomyReview() {
+  var el = document.getElementById('taxonomy-review-content');
+  if (!el) return;
+  var clusters = taxonomyReview.clusters;
+  if (!clusters.length) {
+    var lastRun = taxonomyReview.lastRunMeta;
+    el.innerHTML =
+      '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:10px;padding:28px;box-shadow:0 1px 2px rgba(0,0,0,0.02);">'
+      +   '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;margin-bottom:6px;">All proposed clusters reviewed.</div>'
+      +   '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:#3a3540;line-height:1.6;margin-bottom:18px;">When you are ready, run a new cluster generation pass to gather any new candidates from recent sessions.</div>'
+      +   '<button id="taxonomy-review-generate-btn" style="background:#c49a3c;color:#fff;border:none;padding:10px 18px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:500;cursor:pointer;transition:all 0.15s ease;">Generate cluster proposals</button>'
+      +   (lastRun ? '<div style="margin-top:18px;padding-top:14px;border-top:1px solid #edeae4;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:#7a7570;">Last cluster run: ' + escapeHtml(new Date(lastRun.created_at).toLocaleString()) + ' (' + escapeHtml(lastRun.status || 'unknown') + ')</div>' : '')
+      + '</div>';
+    var genBtn = document.getElementById('taxonomy-review-generate-btn');
+    if (genBtn) genBtn.addEventListener('click', triggerClusterGeneration);
+    return;
+  }
+
+  if (taxonomyReview.index >= clusters.length) taxonomyReview.index = clusters.length - 1;
+  if (taxonomyReview.index < 0) taxonomyReview.index = 0;
+  var c = clusters[taxonomyReview.index];
+  var members = taxonomyReview.members[c.id] || [];
+  var proposedName = c.proposed_canonical_name || c.canonical_name || '';
+  var reasoning = c.proposal_reasoning || '';
+  var memberRows = members.slice().sort(function(a, b) { return (b.occurrence_count || 0) - (a.occurrence_count || 0); });
+
+  // Progress dots
+  var dots = '';
+  for (var i = 0; i < clusters.length; i++) {
+    var filled = i <= taxonomyReview.index;
+    dots += '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + (filled ? '#c49a3c' : '#e8e4dc') + ';margin-right:5px;"></span>';
+  }
+
+  var membersHtml = memberRows.length
+    ? memberRows.map(function(m) {
+        return '<li style="margin-bottom:4px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:#1a3a52;"><span style="font-weight:500;">&ldquo;' + escapeHtml(m.normalized_tag) + '&rdquo;</span> <span style="color:#7a7570;font-size:0.82rem;">(appears in ' + (m.occurrence_count || 0) + ' session' + ((m.occurrence_count || 0) === 1 ? '' : 's') + ')</span></li>';
+      }).join('')
+    : '<li style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:#7a7570;">Singleton candidate &mdash; no other raw tags grouped with this one.</li>';
+
+  var modalities = Array.isArray(c.proposed_modalities) ? c.proposed_modalities : (c.modalities || []);
+
+  el.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#7a7570;">'
+    +   '<div>Cluster ' + (taxonomyReview.index + 1) + ' of ' + clusters.length + '</div>'
+    +   '<div>' + dots + '</div>'
+    + '</div>'
+    + '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:10px;padding:26px;box-shadow:0 1px 2px rgba(0,0,0,0.02);">'
+    +   '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.92rem;color:#3a3540;margin-bottom:10px;">Coaches keep using these words to describe a pattern:</div>'
+    +   '<ul style="list-style:none;padding:0 0 0 6px;margin:0 0 18px 0;">' + membersHtml + '</ul>'
+    +   '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.92rem;color:#3a3540;margin-bottom:6px;">Claude thinks they\'re the same coaching pattern, and proposes calling it:</div>'
+    +   '<div style="margin:10px 0 18px 0;padding:14px 18px;background:#fdf9f1;border:1px solid #e8d9b0;border-radius:6px;text-align:center;">'
+    +     '<span class="pattern-name" data-pattern-id="' + escapeHtml(c.id) + '" style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:600;color:#1a3a52;cursor:help;">' + escapeHtml(proposedName) + '</span>'
+    +   '</div>'
+    +   (reasoning ? '<div style="margin-bottom:18px;"><div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:600;color:#7a7570;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">Why these belong together</div><div style="font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:#3a3540;line-height:1.6;font-style:italic;">' + escapeHtml(reasoning) + '</div></div>' : '')
+    +   '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">'
+    +     '<button id="taxonomy-action-approve" style="background:#c49a3c;color:#fff;border:none;padding:10px 18px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:500;cursor:pointer;transition:all 0.15s ease;">Yes, approve</button>'
+    +     '<button id="taxonomy-action-rename" style="background:#fff;color:#1a3a52;border:1px solid #1a3a52;padding:10px 18px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:500;cursor:pointer;transition:all 0.15s ease;">Change the name</button>'
+    +     '<button id="taxonomy-action-split" style="background:#fff;color:#1a3a52;border:1px solid #1a3a52;padding:10px 18px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:500;cursor:pointer;transition:all 0.15s ease;">Split into multiple</button>'
+    +     '<button id="taxonomy-action-reject" style="background:transparent;color:#7a7570;border:1px solid #cfc9c2;padding:10px 18px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:400;cursor:pointer;transition:all 0.15s ease;">Reject</button>'
+    +   '</div>'
+    +   '<details id="taxonomy-advanced" style="margin-top:16px;border-top:1px solid #edeae4;padding-top:14px;">'
+    +     '<summary style="cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#7a7570;font-weight:500;">Show advanced (domain, modalities, full definition)</summary>'
+    +     '<div style="margin-top:12px;font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:#3a3540;">'
+    +       '<div style="margin-bottom:10px;"><span style="color:#7a7570;font-weight:500;text-transform:uppercase;font-size:0.74rem;letter-spacing:0.04em;">Domain</span><br>' + escapeHtml(c.proposed_domain || c.domain || '') + '</div>'
+    +       '<div style="margin-bottom:10px;"><span style="color:#7a7570;font-weight:500;text-transform:uppercase;font-size:0.74rem;letter-spacing:0.04em;">Modalities</span><br>' + (modalities.length ? modalities.map(escapeHtml).join(', ') : '<span style="color:#9a9490;">none</span>') + '</div>'
+    +       '<div style="margin-bottom:10px;"><span style="color:#7a7570;font-weight:500;text-transform:uppercase;font-size:0.74rem;letter-spacing:0.04em;">Full definition</span><br>'
+    +         '<div style="background:#fdf9f1;border:1px solid #edeae4;padding:10px 12px;border-radius:6px;line-height:1.6;margin-top:4px;">' + escapeHtml(c.proposed_definition || c.definition || '') + '</div>'
+    +       '</div>'
+    +     '</div>'
+    +   '</details>'
+    + '</div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:18px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;">'
+    +   '<button id="taxonomy-prev" ' + (taxonomyReview.index === 0 ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : 'style="cursor:pointer;"') + ' style="background:transparent;color:#1a3a52;border:none;padding:8px 12px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;">&larr; Previous</button>'
+    +   '<button id="taxonomy-save-later" style="background:transparent;color:#7a7570;border:none;padding:8px 12px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;">Save and continue later</button>'
+    + '</div>';
+
+  attachPatternHovers(el);
+  document.getElementById('taxonomy-action-approve').addEventListener('click', function() { handleTaxonomyAction('approve', c); });
+  document.getElementById('taxonomy-action-rename').addEventListener('click', function() { handleTaxonomyAction('approve_with_rename', c); });
+  document.getElementById('taxonomy-action-split').addEventListener('click', function() { handleTaxonomyAction('split', c); });
+  document.getElementById('taxonomy-action-reject').addEventListener('click', function() { handleTaxonomyAction('reject', c); });
+  document.getElementById('taxonomy-prev').addEventListener('click', function() {
+    if (taxonomyReview.index > 0) {
+      taxonomyReview.index -= 1;
+      window.localStorage.setItem(taxonomyReviewStorageKey(), String(taxonomyReview.index));
+      renderTaxonomyReview();
+    }
+  });
+  document.getElementById('taxonomy-save-later').addEventListener('click', function() {
+    window.localStorage.setItem(taxonomyReviewStorageKey(), String(taxonomyReview.index));
+    var btn = document.querySelector('.tab-btn[data-tab="clients"]');
+    if (btn) btn.click();
+  });
+}
+
+async function triggerClusterGeneration() {
+  var btn = document.getElementById('taxonomy-review-generate-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating clusters…'; btn.style.opacity = '0.7'; btn.style.cursor = 'wait'; }
+  try {
+    var resp = await fetch('/api/generate-cluster-proposals', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionAccessToken: currentToken, trigger_source: 'admin_dashboard', include_historical: true, include_existing_candidates: true }),
+    });
+    var data = await resp.json().catch(function() { return {}; });
+    if (!resp.ok) {
+      alert('Cluster generation failed: ' + (data && data.error || resp.status));
+      if (btn) { btn.disabled = false; btn.textContent = 'Generate cluster proposals'; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
+      return;
+    }
+    // Refresh
+    await loadTaxonomyReview();
+  } catch (e) {
+    alert('Cluster generation failed: ' + (e && e.message || e));
+    if (btn) { btn.disabled = false; btn.textContent = 'Generate cluster proposals'; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
+  }
+}
+
+async function handleTaxonomyAction(action, candidate) {
+  var payload = { sessionAccessToken: currentToken, candidate_id: candidate.id, action: action };
+
+  if (action === 'approve_with_rename') {
+    var newName = window.prompt('Rename canonical (lowercase, spaces, 1-60 chars). Will a coach understand this name cold? Avoid jargon.', candidate.proposed_canonical_name || candidate.canonical_name || '');
+    if (!newName) return;
+    payload.new_canonical_name = newName.toLowerCase().trim();
+  } else if (action === 'split') {
+    var members = taxonomyReview.members[candidate.id] || [];
+    if (members.length < 2) {
+      alert('Cannot split a cluster with fewer than 2 members.');
+      return;
+    }
+    var summary = members.map(function(m, i) { return (i + 1) + '. ' + m.normalized_tag; }).join('\\n');
+    var raw = window.prompt(
+      'SPLIT — Assign each member to a new canonical.\\n' +
+      'Format: one line per canonical. First word = new canonical_name; remaining words = comma-separated member indices.\\n' +
+      'Example:\\n  shame work, 1, 2\\n  self-trust, 3\\n\\nMembers:\\n' + summary,
+      ''
+    );
+    if (!raw) return;
+    var splits = [];
+    var lines = raw.split('\\n').map(function(s) { return s.trim(); }).filter(Boolean);
+    for (var i = 0; i < lines.length; i++) {
+      var parts = lines[i].split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+      if (parts.length < 2) { alert('Split line ' + (i + 1) + ' needs a name and at least one member index.'); return; }
+      var name = parts[0].toLowerCase();
+      var idxs = parts.slice(1).map(function(s) { return parseInt(s, 10) - 1; }).filter(function(n) { return Number.isFinite(n) && n >= 0 && n < members.length; });
+      if (idxs.length === 0) { alert('Split line ' + (i + 1) + ': no valid member indices.'); return; }
+      splits.push({
+        canonical_name: name,
+        domain: candidate.proposed_domain || candidate.domain,
+        modalities: candidate.proposed_modalities || candidate.modalities || [],
+        definition: candidate.proposed_definition || candidate.definition || '',
+        member_normalized_tags: idxs.map(function(n) { return members[n].normalized_tag; }),
+      });
+    }
+    if (splits.length < 2) { alert('Split needs at least 2 result canonicals.'); return; }
+    payload.splits = splits;
+  } else if (action === 'reject') {
+    var note = window.prompt('Reject this cluster. Raw tags will stay free-form in production. Optional reviewer note:', '');
+    if (note === null) return;
+    if (note) payload.reviewer_notes = note;
+  }
+
+  try {
+    var resp = await fetch('/api/promote-cluster-candidate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    var data = await resp.json().catch(function() { return {}; });
+    if (!resp.ok) {
+      alert('Action failed: ' + (data && data.error || resp.status));
+      return;
+    }
+    // Drop the candidate from local state, advance index
+    taxonomyReview.clusters = taxonomyReview.clusters.filter(function(r) { return r.id !== candidate.id; });
+    if (taxonomyReview.index >= taxonomyReview.clusters.length) taxonomyReview.index = Math.max(0, taxonomyReview.clusters.length - 1);
+    window.localStorage.setItem(taxonomyReviewStorageKey(), String(taxonomyReview.index));
+    patternNameToIdCache = null; // invalidate; new canonical exists
+    renderTaxonomyReview();
+  } catch (e) {
+    alert('Action failed: ' + (e && e.message || e));
+  }
 }
 </script>
 <script data-MOBILE_NAV_HAMBURGER_v1>
