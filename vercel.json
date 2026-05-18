@@ -6,6 +6,9 @@
     "api/generate-pre-session-brief.js": {
       "maxDuration": 180
     },
+    "api/generate-cluster-proposals.js": {
+      "maxDuration": 300
+    },
     "api/generate-coach-dna.js": {
       "maxDuration": 120
     },
