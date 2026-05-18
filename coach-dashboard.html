@@ -16450,8 +16450,137 @@ async function triggerClusterGeneration() {
   }
 }
 
+// Brief 2b.3: pending toast survives renderTaxonomyReview() so success
+// messages stay visible after the next cluster card mounts. Picked up
+// inside renderTaxonomyReview via _flushPendingToast (queued at the
+// bottom of this script and consumed at top of next render tick).
+var pendingTaxonomyToast = null;
+
+function showTaxonomyReviewToast(message, variant) {
+  var el = document.getElementById('taxonomy-review-content');
+  if (!el) return;
+  var bg = variant === 'success' ? '#1a3a52' : '#7a1a1a';
+  var icon = variant === 'success' ? '✓' : '⚠';
+  var toast = document.createElement('div');
+  toast.className = 'taxonomy-toast';
+  toast.style.cssText = ''
+    + 'background:' + bg + ';'
+    + 'color:#f7f4ee;'
+    + 'padding:14px 20px;'
+    + 'border-radius:8px;'
+    + 'margin-bottom:16px;'
+    + 'font-family:\'DM Sans\',sans-serif;'
+    + 'font-size:0.92rem;'
+    + 'font-weight:500;'
+    + 'line-height:1.5;'
+    + 'box-shadow:0 4px 12px rgba(0,0,0,0.12);';
+  toast.innerHTML =
+    '<div style="display:flex;align-items:center;gap:10px;">'
+    +   '<span style="font-size:1.1rem;">' + icon + '</span>'
+    +   '<span>' + escapeHtml(message) + '</span>'
+    + '</div>';
+  el.insertBefore(toast, el.firstChild);
+  setTimeout(function() {
+    if (toast && toast.parentNode) {
+      toast.style.opacity = '0';
+      toast.style.transition = 'opacity 0.3s ease';
+      setTimeout(function() {
+        if (toast && toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 300);
+    }
+  }, 4000);
+}
+
+// Brief 2b.3: per-action confirmation copy. Returns a plain-text string
+// for window.confirm(). All raw-tag interpolation reuses the same source
+// the review card uses (getRawTagsForCandidate).
+function buildConfirmMessage(action, candidate, payload, members) {
+  var rawInfo = getRawTagsForCandidate(candidate, members);
+  var rawList = rawInfo.tags.map(function(t) { return '"' + t.tag + '"'; });
+  var rawText;
+  if (rawList.length === 0) rawText = 'the tags above';
+  else if (rawList.length === 1) rawText = rawList[0];
+  else if (rawList.length === 2) rawText = rawList[0] + ' and ' + rawList[1];
+  else rawText = rawList.slice(0, -1).join(', ') + ', and ' + rawList[rawList.length - 1];
+  var proposedName = candidate.proposed_canonical_name || candidate.canonical_name || '';
+
+  if (action === 'approve') {
+    return ''
+      + 'Approve "' + proposedName + '" as a canonical pattern?\n\n'
+      + 'What happens when you click OK:\n\n'
+      + '• This name becomes the official canonical for this pattern\n'
+      + '• The raw tag(s) currently in your sessions (' + rawText + ') will be rewritten to "' + proposedName + '" in the database\n'
+      + '• Coaches will see "' + proposedName + '" in every Pattern Map, Pre-Session Brief, and rollup that surfaces this pattern\n'
+      + '• This is hard to undo — changing it later means updating historical data and may cause inconsistency in past briefs\n\n'
+      + 'Click OK to approve, or Cancel to go back without saving.';
+  }
+  if (action === 'approve_with_rename') {
+    var newName = payload.new_canonical_name || '';
+    return ''
+      + 'Rename canonical to "' + newName + '"?\n\n'
+      + 'What happens when you click OK:\n\n'
+      + '• "' + newName + '" becomes the official canonical name (NOT "' + proposedName + '" as Claude proposed)\n'
+      + '• The raw tag(s) currently in your sessions (' + rawText + ') will resolve to this canonical\n'
+      + '• Coaches will see "' + newName + '" in every Pattern Map, Pre-Session Brief, and rollup that surfaces this pattern\n'
+      + '• Claude\'s original proposed name "' + proposedName + '" is preserved in the database for audit\n'
+      + '• This is hard to undo — changing it later means updating historical data\n\n'
+      + 'Click OK to rename and save, or Cancel to go back without saving.';
+  }
+  if (action === 'split') {
+    var splits = Array.isArray(payload.splits) ? payload.splits : [];
+    var splitLines = splits.map(function(s, i) {
+      var tags = (s.member_normalized_tags || []).map(function(t) { return '"' + t + '"'; }).join(', ');
+      return '  ' + (i + 1) + '. ' + s.canonical_name + ' → tags: ' + tags;
+    }).join('\n');
+    return ''
+      + 'Split this cluster into ' + splits.length + ' canonicals?\n\n'
+      + 'What happens when you click OK:\n\n'
+      + '• ' + splits.length + ' separate canonical patterns will be created from this one cluster\n'
+      + '• Each raw tag will be assigned to its new canonical per your assignments\n'
+      + '• Coaches will see these ' + splits.length + ' distinct names instead of one unified pattern\n'
+      + '• This is hard to undo — splitting and re-merging is messy\n\n'
+      + 'Your splits:\n' + splitLines + '\n\n'
+      + 'Click OK to split and save, or Cancel to go back.';
+  }
+  if (action === 'reject') {
+    var noteLine = payload.reviewer_notes ? ('Reviewer note: ' + payload.reviewer_notes) : 'Reviewer note: (no note)';
+    return ''
+      + 'Reject this proposal?\n\n'
+      + 'What happens when you click OK:\n\n'
+      + '• No canonical will be created from this cluster\n'
+      + '• The raw tag(s) (' + rawText + ') will stay in your session data as free-form text\n'
+      + '• These tags will NOT appear in Pattern Maps, Pre-Session Briefs, or rollups as a canonical pattern\n'
+      + '• They will sit unmapped in your database until you decide what to do with them later\n'
+      + '• You can still cluster them in a future review run if you change your mind\n\n'
+      + noteLine + '\n\n'
+      + 'Click OK to reject, or Cancel to go back.';
+  }
+  return 'Confirm action?';
+}
+
+// Brief 2b.3: success-toast copy per action.
+function buildSuccessMessage(action, candidate, payload) {
+  var proposedName = candidate.proposed_canonical_name || candidate.canonical_name || '';
+  if (action === 'approve') {
+    return 'Saved — "' + proposedName + '" is now a canonical pattern in your taxonomy.';
+  }
+  if (action === 'approve_with_rename') {
+    return 'Saved — canonical is now "' + (payload.new_canonical_name || '') + '" (was "' + proposedName + '" in Claude\'s proposal).';
+  }
+  if (action === 'split') {
+    var splits = Array.isArray(payload.splits) ? payload.splits : [];
+    var names = splits.map(function(s) { return '"' + s.canonical_name + '"'; }).join(', ');
+    return 'Saved — cluster split into ' + splits.length + ' canonicals: ' + names + '.';
+  }
+  if (action === 'reject') {
+    return 'Saved — proposal rejected. Raw tags will stay free-form in your session data.';
+  }
+  return 'Saved.';
+}
+
 async function handleTaxonomyAction(action, candidate) {
   var payload = { sessionAccessToken: currentToken, candidate_id: candidate.id, action: action };
+  var members = taxonomyReview.members[candidate.id] || [];
 
   if (action === 'approve_with_rename') {
     var renamePrompt =
@@ -16462,9 +16591,8 @@ async function handleTaxonomyAction(action, candidate) {
     if (!newName) return;
     payload.new_canonical_name = newName.toLowerCase().trim();
   } else if (action === 'split') {
-    var members = taxonomyReview.members[candidate.id] || [];
     if (members.length < 2) {
-      alert('Split requires 2+ tags.');
+      showTaxonomyReviewToast('Split requires 2+ tags.', 'error');
       return;
     }
     var summary = members.map(function(m, i) { return '  ' + (i + 1) + '. ' + m.normalized_tag; }).join('\n');
@@ -16481,10 +16609,10 @@ async function handleTaxonomyAction(action, candidate) {
     var lines = raw.split('\n').map(function(s) { return s.trim(); }).filter(Boolean);
     for (var i = 0; i < lines.length; i++) {
       var parts = lines[i].split(',').map(function(s) { return s.trim(); }).filter(Boolean);
-      if (parts.length < 2) { alert('Split line ' + (i + 1) + ' needs a name and at least one member index.'); return; }
+      if (parts.length < 2) { showTaxonomyReviewToast('Split line ' + (i + 1) + ' needs a name and at least one member index.', 'error'); return; }
       var name = parts[0].toLowerCase();
       var idxs = parts.slice(1).map(function(s) { return parseInt(s, 10) - 1; }).filter(function(n) { return Number.isFinite(n) && n >= 0 && n < members.length; });
-      if (idxs.length === 0) { alert('Split line ' + (i + 1) + ': no valid member indices.'); return; }
+      if (idxs.length === 0) { showTaxonomyReviewToast('Split line ' + (i + 1) + ': no valid member indices.', 'error'); return; }
       splits.push({
         canonical_name: name,
         domain: candidate.proposed_domain || candidate.domain,
@@ -16493,7 +16621,7 @@ async function handleTaxonomyAction(action, candidate) {
         member_normalized_tags: idxs.map(function(n) { return members[n].normalized_tag; }),
       });
     }
-    if (splits.length < 2) { alert('Split needs at least 2 result canonicals.'); return; }
+    if (splits.length < 2) { showTaxonomyReviewToast('Split needs at least 2 result canonicals.', 'error'); return; }
     payload.splits = splits;
   } else if (action === 'reject') {
     var rejectPrompt =
@@ -16505,6 +16633,10 @@ async function handleTaxonomyAction(action, candidate) {
     if (note) payload.reviewer_notes = note;
   }
 
+  // Brief 2b.3: confirmation gate. Runs AFTER input collection, BEFORE fetch.
+  var confirmMessage = buildConfirmMessage(action, candidate, payload, members);
+  if (!window.confirm(confirmMessage)) return;
+
   try {
     var resp = await fetch('/api/promote-cluster-candidate', {
       method: 'POST',
@@ -16513,17 +16645,29 @@ async function handleTaxonomyAction(action, candidate) {
     });
     var data = await resp.json().catch(function() { return {}; });
     if (!resp.ok) {
-      alert('Action failed: ' + (data && data.error || resp.status));
+      showTaxonomyReviewToast('Action failed: ' + (data && data.error || resp.status), 'error');
       return;
     }
+    // Brief 2b.3: success toast BEFORE local-state mutation/rerender.
+    var successMessage = buildSuccessMessage(action, candidate, payload);
+    showTaxonomyReviewToast(successMessage, 'success');
+    // Queue same toast to re-mount inside the next renderTaxonomyReview()
+    // so it stays visible across the rerender for its full 4s window.
+    pendingTaxonomyToast = { message: successMessage, variant: 'success' };
+
     // Drop the candidate from local state, advance index
     taxonomyReview.clusters = taxonomyReview.clusters.filter(function(r) { return r.id !== candidate.id; });
     if (taxonomyReview.index >= taxonomyReview.clusters.length) taxonomyReview.index = Math.max(0, taxonomyReview.clusters.length - 1);
     window.localStorage.setItem(taxonomyReviewStorageKey(), String(taxonomyReview.index));
     patternNameToIdCache = null; // invalidate; new canonical exists
     renderTaxonomyReview();
+    if (pendingTaxonomyToast) {
+      var t = pendingTaxonomyToast;
+      pendingTaxonomyToast = null;
+      showTaxonomyReviewToast(t.message, t.variant);
+    }
   } catch (e) {
-    alert('Action failed: ' + (e && e.message || e));
+    showTaxonomyReviewToast('Action failed: ' + (e && e.message || e), 'error');
   }
 }
 </script>
