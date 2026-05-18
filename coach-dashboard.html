@@ -16177,6 +16177,57 @@ async function loadTaxonomyReview() {
   }
 }
 
+// Brief 2b.1: classify candidate as multi-member vs singleton.
+// Multi: 2+ cluster_membership rows. Singleton: 0 or 1 rows. In singleton
+// mode, prefer the (lone) membership tag, then proposed_aliases[0], then
+// the proposed canonical_name itself.
+function getRawTagsForCandidate(candidate, members) {
+  var sorted = (members || []).slice().sort(function(a, b) { return (b.occurrence_count || 0) - (a.occurrence_count || 0); });
+  if (sorted.length >= 2) {
+    return {
+      mode: 'multi',
+      tags: sorted.map(function(m) { return { tag: m.normalized_tag, count: m.occurrence_count || 1 }; })
+    };
+  }
+  var singletonTag =
+    (sorted.length === 1 ? sorted[0].normalized_tag : null) ||
+    (Array.isArray(candidate.proposed_aliases) && candidate.proposed_aliases[0]) ||
+    candidate.proposed_canonical_name ||
+    candidate.canonical_name;
+  return {
+    mode: 'singleton',
+    tags: singletonTag ? [{ tag: singletonTag, count: null }] : []
+  };
+}
+
+// Brief 2b.1: strip Claude's bracket-reference markup at render time.
+// "cautious[decision_making]" -> "cautious". Database value is untouched.
+function sanitizeReasoning(text) {
+  if (!text || typeof text !== 'string') return '';
+  return text.replace(/\b(\w+)\[\w+\]/g, '$1');
+}
+
+// Brief 2b.1: "What it means" block. Interpolates the proposed canonical
+// name and the actual raw tags so the reviewer never has to remember
+// architectural decisions from prior conversations.
+function renderWhatItMeansBlock(candidate, rawTagInfo) {
+  var name = candidate.proposed_canonical_name || candidate.canonical_name || '';
+  var rawTagList = rawTagInfo.tags.map(function(t) { return '&ldquo;' + escapeHtml(t.tag) + '&rdquo;'; });
+  var rawTagText;
+  if (rawTagList.length === 0) rawTagText = 'the tags above';
+  else if (rawTagList.length === 1) rawTagText = rawTagList[0];
+  else if (rawTagList.length === 2) rawTagText = rawTagList[0] + ' and ' + rawTagList[1];
+  else rawTagText = rawTagList.slice(0, -1).join(', ') + ', and ' + rawTagList[rawTagList.length - 1];
+  var rawTagsPlural = rawTagInfo.tags.length === 1 ? 'raw tag' : 'raw tags';
+  return ''
+    + '<div style="background:#fdf9f1;border-left:4px solid #c49a3c;border-radius:6px;padding:16px 20px;margin:0;font-family:\'DM Sans\',sans-serif;font-size:0.88rem;line-height:1.6;color:#3a3540;">'
+    +   '<div style="font-size:0.74rem;font-weight:600;letter-spacing:0.06em;color:#5a5a5a;margin-bottom:8px;text-transform:uppercase;">What it means</div>'
+    +   '<p style="margin:0 0 10px 0;">This name will appear in every Pattern Map, Pre-Session Brief, and Coaching Mirror that surfaces this pattern. Coaches who hover over the name will see the definition below.</p>'
+    +   '<p style="margin:0 0 10px 0;">The ' + rawTagsPlural + ' above (' + rawTagText + ') will be rewritten to &ldquo;' + escapeHtml(name) + '&rdquo; in the database so the canonical name shows up everywhere consistently &mdash; your existing session data is updated, and your future sessions will write the canonical directly.</p>'
+    +   '<p style="margin:0;">You can either approve this name, change it, or reject it entirely if the proposal doesn\'t fit your clinical voice.</p>'
+    + '</div>';
+}
+
 function renderTaxonomyReview() {
   var el = document.getElementById('taxonomy-review-content');
   if (!el) return;
@@ -16200,54 +16251,141 @@ function renderTaxonomyReview() {
   var c = clusters[taxonomyReview.index];
   var members = taxonomyReview.members[c.id] || [];
   var proposedName = c.proposed_canonical_name || c.canonical_name || '';
-  var reasoning = c.proposal_reasoning || '';
-  var memberRows = members.slice().sort(function(a, b) { return (b.occurrence_count || 0) - (a.occurrence_count || 0); });
+  var reasoning = sanitizeReasoning(c.proposal_reasoning || '');
+  var rawTagInfo = getRawTagsForCandidate(c, members);
+  var isSingleton = rawTagInfo.mode === 'singleton';
 
-  // Progress dots
+  // Section 1: cluster header — progress dots + counter
   var dots = '';
   for (var i = 0; i < clusters.length; i++) {
     var filled = i <= taxonomyReview.index;
     dots += '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + (filled ? '#c49a3c' : '#e8e4dc') + ';margin-right:5px;"></span>';
   }
 
-  var membersHtml = memberRows.length
-    ? memberRows.map(function(m) {
-        return '<li style="margin-bottom:4px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:#1a3a52;"><span style="font-weight:500;">&ldquo;' + escapeHtml(m.normalized_tag) + '&rdquo;</span> <span style="color:#7a7570;font-size:0.82rem;">(appears in ' + (m.occurrence_count || 0) + ' session' + ((m.occurrence_count || 0) === 1 ? '' : 's') + ')</span></li>';
-      }).join('')
-    : '<li style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:#7a7570;">Singleton candidate &mdash; no other raw tags grouped with this one.</li>';
+  // Section 2: raw tags from sessions — alternate text for singleton vs multi
+  var tagsHtml;
+  if (isSingleton) {
+    var singletonTag = rawTagInfo.tags[0] ? rawTagInfo.tags[0].tag : '(unnamed)';
+    tagsHtml = ''
+      + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.92rem;color:#3a3540;margin-bottom:10px;">This pattern showed up in your sessions as:</div>'
+      + '<ul style="list-style:none;padding:0 0 0 6px;margin:0 0 12px 0;">'
+      +   '<li style="margin-bottom:4px;font-family:\'DM Sans\',sans-serif;font-size:0.95rem;color:#1a3a52;font-weight:500;">&ldquo;' + escapeHtml(singletonTag) + '&rdquo;</li>'
+      + '</ul>'
+      + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.84rem;color:#5a5a5a;line-height:1.55;font-style:italic;">Claude believes this single tag is meaningful enough to become its own canonical pattern, rather than merging it into an existing one.</div>';
+  } else {
+    var memberLines = rawTagInfo.tags.map(function(t) {
+      return '<li style="margin-bottom:4px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:#1a3a52;">'
+        +    '<span style="font-weight:500;">&ldquo;' + escapeHtml(t.tag) + '&rdquo;</span> '
+        +    '<span style="color:#7a7570;font-size:0.82rem;">(' + (t.count || 0) + ' session' + ((t.count || 0) === 1 ? '' : 's') + ')</span>'
+        +    '</li>';
+    }).join('');
+    tagsHtml = ''
+      + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.92rem;color:#3a3540;margin-bottom:10px;">These tags came from your coaching sessions:</div>'
+      + '<ul style="list-style:none;padding:0 0 0 6px;margin:0;">' + memberLines + '</ul>';
+  }
 
+  // Section 6: button subtext (Approve interpolates name; Split varies by singleton)
+  var approveSubtext = 'Lock &ldquo;' + escapeHtml(proposedName) + '&rdquo; as the canonical name';
+  var renameSubtext = 'Keep grouping but rename to something else';
+  var splitSubtext = isSingleton
+    ? 'Not available &mdash; only one tag in this cluster'
+    : 'These don\'t all belong together &mdash; break into 2+ canonicals';
+  var rejectSubtext = 'Don\'t make this a canonical; raw tags stay free-form';
+
+  function buttonCardStyle(opts) {
+    opts = opts || {};
+    var bg = opts.bg || '#fff';
+    var color = opts.color || '#1a3a52';
+    var border = opts.border || '1px solid #1a3a52';
+    var disabled = opts.disabled ? 'opacity:0.5;cursor:not-allowed;' : 'cursor:pointer;';
+    return 'background:' + bg + ';color:' + color + ';border:' + border + ';padding:14px 16px;border-radius:8px;font-family:\'DM Sans\',sans-serif;text-align:center;transition:all 0.15s ease;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:78px;' + disabled;
+  }
+
+  // Section 7: advanced details — renamed toggle + per-field explanations + hover preview
   var modalities = Array.isArray(c.proposed_modalities) ? c.proposed_modalities : (c.modalities || []);
+  var definitionText = c.proposed_definition || c.definition || '';
 
   el.innerHTML =
+    // Section 1: cluster header
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#7a7570;">'
     +   '<div>Cluster ' + (taxonomyReview.index + 1) + ' of ' + clusters.length + '</div>'
     +   '<div>' + dots + '</div>'
     + '</div>'
-    + '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:10px;padding:26px;box-shadow:0 1px 2px rgba(0,0,0,0.02);">'
-    +   '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.92rem;color:#3a3540;margin-bottom:10px;">Coaches keep using these words to describe a pattern:</div>'
-    +   '<ul style="list-style:none;padding:0 0 0 6px;margin:0 0 18px 0;">' + membersHtml + '</ul>'
-    +   '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.92rem;color:#3a3540;margin-bottom:6px;">Claude thinks they\'re the same coaching pattern, and proposes calling it:</div>'
-    +   '<div style="margin:10px 0 18px 0;padding:14px 18px;background:#fdf9f1;border:1px solid #e8d9b0;border-radius:6px;text-align:center;">'
-    +     '<span class="pattern-name" data-pattern-id="' + escapeHtml(c.id) + '" style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:600;color:#1a3a52;cursor:help;">' + escapeHtml(proposedName) + '</span>'
+    + '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:10px;padding:28px;box-shadow:0 1px 2px rgba(0,0,0,0.02);">'
+
+    // Section 2: raw tags
+    +   tagsHtml
+
+    // Section 3: proposed name (32px gap above)
+    +   '<div style="margin-top:32px;">'
+    +     '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.92rem;color:#3a3540;margin-bottom:10px;">Claude proposes naming this pattern:</div>'
+    +     '<div style="padding:16px 18px;background:#fdf9f1;border:1px solid #e8d9b0;border-radius:6px;text-align:center;">'
+    +       '<span class="pattern-name" data-pattern-id="' + escapeHtml(c.id) + '" style="font-family:\'Cormorant Garamond\',serif;font-size:1.6rem;font-weight:600;color:#1a3a52;cursor:help;">' + escapeHtml(proposedName) + '</span>'
+    +     '</div>'
     +   '</div>'
-    +   (reasoning ? '<div style="margin-bottom:18px;"><div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:600;color:#7a7570;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">Why these belong together</div><div style="font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:#3a3540;line-height:1.6;font-style:italic;">' + escapeHtml(reasoning) + '</div></div>' : '')
-    +   '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">'
-    +     '<button id="taxonomy-action-approve" style="background:#c49a3c;color:#fff;border:none;padding:10px 18px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:500;cursor:pointer;transition:all 0.15s ease;">Yes, approve</button>'
-    +     '<button id="taxonomy-action-rename" style="background:#fff;color:#1a3a52;border:1px solid #1a3a52;padding:10px 18px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:500;cursor:pointer;transition:all 0.15s ease;">Change the name</button>'
-    +     '<button id="taxonomy-action-split" style="background:#fff;color:#1a3a52;border:1px solid #1a3a52;padding:10px 18px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:500;cursor:pointer;transition:all 0.15s ease;">Split into multiple</button>'
-    +     '<button id="taxonomy-action-reject" style="background:transparent;color:#7a7570;border:1px solid #cfc9c2;padding:10px 18px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:400;cursor:pointer;transition:all 0.15s ease;">Reject</button>'
+
+    // Section 4: "What it means" block (24px gap above)
+    +   '<div style="margin-top:24px;">' + renderWhatItMeansBlock(c, rawTagInfo) + '</div>'
+
+    // Section 5: Claude's reasoning, sanitized (32px gap above)
+    +   (reasoning
+        ? '<div style="margin-top:32px;">'
+          + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:600;color:#5a5a5a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Why Claude proposed this name</div>'
+          + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:#3a3540;line-height:1.6;font-style:italic;">' + escapeHtml(reasoning) + '</div>'
+          + '</div>'
+        : '')
+
+    // Section 6: action buttons with subtext (32px gap above; 2-col grid 12px gap)
+    +   '<div style="margin-top:32px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;">'
+    +     '<button id="taxonomy-action-approve" style="' + buttonCardStyle({ bg: '#c49a3c', color: '#fff', border: 'none' }) + '">'
+    +       '<span style="font-size:0.92rem;font-weight:600;line-height:1.2;">Yes, approve</span>'
+    +       '<span style="font-size:0.78rem;font-weight:400;color:rgba(255,255,255,0.92);line-height:1.4;margin-top:6px;">' + approveSubtext + '</span>'
+    +     '</button>'
+    +     '<button id="taxonomy-action-rename" style="' + buttonCardStyle() + '">'
+    +       '<span style="font-size:0.92rem;font-weight:600;line-height:1.2;">Change the name</span>'
+    +       '<span style="font-size:0.78rem;font-weight:400;color:#5a5a5a;line-height:1.4;margin-top:6px;">' + renameSubtext + '</span>'
+    +     '</button>'
+    +     '<button id="taxonomy-action-split"' + (isSingleton ? ' disabled title="Split requires 2+ tags."' : '') + ' style="' + buttonCardStyle({ disabled: isSingleton }) + '">'
+    +       '<span style="font-size:0.92rem;font-weight:600;line-height:1.2;">Split into multiple</span>'
+    +       '<span style="font-size:0.78rem;font-weight:400;color:#5a5a5a;line-height:1.4;margin-top:6px;">' + splitSubtext + '</span>'
+    +     '</button>'
+    +     '<button id="taxonomy-action-reject" style="' + buttonCardStyle({ color: '#7a7570', border: '1px solid #cfc9c2' }) + '">'
+    +       '<span style="font-size:0.92rem;font-weight:600;line-height:1.2;">Reject</span>'
+    +       '<span style="font-size:0.78rem;font-weight:400;color:#5a5a5a;line-height:1.4;margin-top:6px;">' + rejectSubtext + '</span>'
+    +     '</button>'
     +   '</div>'
-    +   '<details id="taxonomy-advanced" style="margin-top:16px;border-top:1px solid #edeae4;padding-top:14px;">'
-    +     '<summary style="cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#7a7570;font-weight:500;">Show advanced (domain, modalities, full definition)</summary>'
-    +     '<div style="margin-top:12px;font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:#3a3540;">'
-    +       '<div style="margin-bottom:10px;"><span style="color:#7a7570;font-weight:500;text-transform:uppercase;font-size:0.74rem;letter-spacing:0.04em;">Domain</span><br>' + escapeHtml(c.proposed_domain || c.domain || '') + '</div>'
-    +       '<div style="margin-bottom:10px;"><span style="color:#7a7570;font-weight:500;text-transform:uppercase;font-size:0.74rem;letter-spacing:0.04em;">Modalities</span><br>' + (modalities.length ? modalities.map(escapeHtml).join(', ') : '<span style="color:#9a9490;">none</span>') + '</div>'
-    +       '<div style="margin-bottom:10px;"><span style="color:#7a7570;font-weight:500;text-transform:uppercase;font-size:0.74rem;letter-spacing:0.04em;">Full definition</span><br>'
-    +         '<div style="background:#fdf9f1;border:1px solid #edeae4;padding:10px 12px;border-radius:6px;line-height:1.6;margin-top:4px;">' + escapeHtml(c.proposed_definition || c.definition || '') + '</div>'
+
+    // Section 7: advanced details (24px gap above)
+    +   '<details id="taxonomy-advanced" style="margin-top:24px;border-top:1px solid #edeae4;padding-top:14px;">'
+    +     '<summary style="cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#7a7570;font-weight:500;">See the technical details (you can ignore these if Claude\'s proposal looks right)</summary>'
+    +     '<div style="margin-top:14px;font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:#3a3540;">'
+    +       '<div style="margin-bottom:14px;">'
+    +         '<div style="color:#5a5a5a;font-weight:600;text-transform:uppercase;font-size:0.72rem;letter-spacing:0.06em;margin-bottom:2px;">Domain</div>'
+    +         '<div style="color:#7a7570;font-size:0.78rem;margin-bottom:4px;font-style:italic;">Which kind of coaching work this pattern is about</div>'
+    +         '<div>' + escapeHtml(c.proposed_domain || c.domain || '') + '</div>'
+    +       '</div>'
+    +       '<div style="margin-bottom:14px;">'
+    +         '<div style="color:#5a5a5a;font-weight:600;text-transform:uppercase;font-size:0.72rem;letter-spacing:0.06em;margin-bottom:2px;">Modalities</div>'
+    +         '<div style="color:#7a7570;font-size:0.78rem;margin-bottom:4px;font-style:italic;">Which coaching contexts this pattern shows up in</div>'
+    +         '<div>' + (modalities.length ? modalities.map(escapeHtml).join(', ') : '<span style="color:#9a9490;">none</span>') + '</div>'
+    +       '</div>'
+    +       '<div style="margin-bottom:14px;">'
+    +         '<div style="color:#5a5a5a;font-weight:600;text-transform:uppercase;font-size:0.72rem;letter-spacing:0.06em;margin-bottom:2px;">Full definition</div>'
+    +         '<div style="color:#7a7570;font-size:0.78rem;margin-bottom:4px;font-style:italic;">What coaches will see when they hover this name</div>'
+    +         '<div style="background:#fdf9f1;border:1px solid #edeae4;padding:10px 12px;border-radius:6px;line-height:1.6;">' + escapeHtml(definitionText) + '</div>'
+    +       '</div>'
+    +       '<div style="margin-top:18px;padding-top:14px;border-top:1px dashed #edeae4;">'
+    +         '<div style="color:#5a5a5a;font-weight:600;text-transform:uppercase;font-size:0.72rem;letter-spacing:0.06em;margin-bottom:8px;">Preview how this looks to a coach</div>'
+    +         '<div style="display:inline-block;background:#1a3a52;color:#f7f4ee;padding:12px 14px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;line-height:1.55;max-width:360px;box-shadow:0 6px 18px rgba(0,0,0,0.18);">'
+    +           '<div style="font-weight:600;margin-bottom:6px;color:#c49a3c;letter-spacing:0.02em;">' + escapeHtml(proposedName) + '</div>'
+    +           '<div>' + escapeHtml(definitionText) + '</div>'
+    +         '</div>'
     +       '</div>'
     +     '</div>'
     +   '</details>'
     + '</div>'
+
+    // Section 8: bottom navigation (unchanged)
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:18px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;">'
     +   '<button id="taxonomy-prev" ' + (taxonomyReview.index === 0 ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : 'style="cursor:pointer;"') + ' style="background:transparent;color:#1a3a52;border:none;padding:8px 12px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;">&larr; Previous</button>'
     +   '<button id="taxonomy-save-later" style="background:transparent;color:#7a7570;border:none;padding:8px 12px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;">Save and continue later</button>'
@@ -16256,7 +16394,13 @@ function renderTaxonomyReview() {
   attachPatternHovers(el);
   document.getElementById('taxonomy-action-approve').addEventListener('click', function() { handleTaxonomyAction('approve', c); });
   document.getElementById('taxonomy-action-rename').addEventListener('click', function() { handleTaxonomyAction('approve_with_rename', c); });
-  document.getElementById('taxonomy-action-split').addEventListener('click', function() { handleTaxonomyAction('split', c); });
+  var splitBtn = document.getElementById('taxonomy-action-split');
+  if (splitBtn) {
+    splitBtn.addEventListener('click', function() {
+      if (isSingleton) { alert('Split requires 2+ tags.'); return; }
+      handleTaxonomyAction('split', c);
+    });
+  }
   document.getElementById('taxonomy-action-reject').addEventListener('click', function() { handleTaxonomyAction('reject', c); });
   document.getElementById('taxonomy-prev').addEventListener('click', function() {
     if (taxonomyReview.index > 0) {
@@ -16299,25 +16443,31 @@ async function handleTaxonomyAction(action, candidate) {
   var payload = { sessionAccessToken: currentToken, candidate_id: candidate.id, action: action };
 
   if (action === 'approve_with_rename') {
-    var newName = window.prompt('Rename canonical (lowercase, spaces, 1-60 chars). Will a coach understand this name cold? Avoid jargon.', candidate.proposed_canonical_name || candidate.canonical_name || '');
+    var renamePrompt =
+      'What should this pattern be called? Type the new name below.\n\n' +
+      'This is the name coaches will see in their briefs. Aim for something self-explanatory — a coach who has never seen it before should understand what it means without having to read the definition.\n\n' +
+      'Use lowercase, spaces (not underscores), 1-60 characters.';
+    var newName = window.prompt(renamePrompt, candidate.proposed_canonical_name || candidate.canonical_name || '');
     if (!newName) return;
     payload.new_canonical_name = newName.toLowerCase().trim();
   } else if (action === 'split') {
     var members = taxonomyReview.members[candidate.id] || [];
     if (members.length < 2) {
-      alert('Cannot split a cluster with fewer than 2 members.');
+      alert('Split requires 2+ tags.');
       return;
     }
-    var summary = members.map(function(m, i) { return (i + 1) + '. ' + m.normalized_tag; }).join('\\n');
-    var raw = window.prompt(
-      'SPLIT — Assign each member to a new canonical.\\n' +
-      'Format: one line per canonical. First word = new canonical_name; remaining words = comma-separated member indices.\\n' +
-      'Example:\\n  shame work, 1, 2\\n  self-trust, 3\\n\\nMembers:\\n' + summary,
-      ''
-    );
+    var summary = members.map(function(m, i) { return '  ' + (i + 1) + '. ' + m.normalized_tag; }).join('\n');
+    var splitPrompt =
+      'Split this cluster into multiple canonicals.\n\n' +
+      'You’ll assign each tag in the cluster to a new canonical name. Format: one canonical per line. Each line is the new canonical name, followed by a comma, followed by the numbers of the tags that should belong to it.\n\n' +
+      'Example:\n' +
+      '  shame work, 1, 2\n' +
+      '  self-trust, 3\n\n' +
+      'Tags in this cluster:\n' + summary;
+    var raw = window.prompt(splitPrompt, '');
     if (!raw) return;
     var splits = [];
-    var lines = raw.split('\\n').map(function(s) { return s.trim(); }).filter(Boolean);
+    var lines = raw.split('\n').map(function(s) { return s.trim(); }).filter(Boolean);
     for (var i = 0; i < lines.length; i++) {
       var parts = lines[i].split(',').map(function(s) { return s.trim(); }).filter(Boolean);
       if (parts.length < 2) { alert('Split line ' + (i + 1) + ' needs a name and at least one member index.'); return; }
@@ -16335,7 +16485,11 @@ async function handleTaxonomyAction(action, candidate) {
     if (splits.length < 2) { alert('Split needs at least 2 result canonicals.'); return; }
     payload.splits = splits;
   } else if (action === 'reject') {
-    var note = window.prompt('Reject this cluster. Raw tags will stay free-form in production. Optional reviewer note:', '');
+    var rejectPrompt =
+      'Reject this proposal?\n\n' +
+      'The raw tag(s) from this cluster will stay in your session data as free-form text — they won’t appear as a canonical pattern in any Pattern Map, Pre-Session Brief, or rollup.\n\n' +
+      'Optional: leave a note explaining why you rejected this (helps future review).';
+    var note = window.prompt(rejectPrompt, '');
     if (note === null) return;
     if (note) payload.reviewer_notes = note;
   }
