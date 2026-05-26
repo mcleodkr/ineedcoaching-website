@@ -11,17 +11,34 @@
  */
 import { logAIUsage } from '../lib/ai-usage.js';
 
+/**
+ * Build a 2-block system payload: a shared, cacheable prefix that is byte-
+ * identical across every callClaude in this Mirror generation, plus a per-
+ * pass instruction block that varies per call. The shared block carries the
+ * ephemeral cache_control; only the first call writes the cache and every
+ * subsequent call within the 5-minute TTL reads from it.
+ *
+ * Cache hits require the shared prefix to be identical byte-for-byte across
+ * every call. Construct sharedPrefix ONCE in the handler and pass the same
+ * string here for every callClaude invocation.
+ */
+function buildSystem(sharedPrefix, passSpecific) {
+  return [
+    { type: 'text', text: sharedPrefix, cache_control: { type: 'ephemeral' } },
+    { type: 'text', text: passSpecific },
+  ];
+}
+
 async function callClaude(apiKey, model, maxTokens, system, userMessage, passName, meta) {
   console.log(`[${passName}] Using model: ${model}`);
   const startTime = Date.now();
   let res, data;
-  // Wrap string system prompts in the cached-content-block form so the
-  // per-pass system prefixes hit the 1h ephemeral cache. Each of the 12+
-  // call sites in this file passes its own deterministic system prompt,
-  // so each gets its own cache entry. Already-array system arguments pass
-  // through unchanged.
+  // Callers should pass a pre-built array system (see buildSystem above) so
+  // the shared prefix is properly cache-tagged. The string-system fallback
+  // below stays for any caller that hasn't been migrated — it still caches,
+  // but without the cross-pass cache reuse the array form delivers.
   const systemPayload = typeof system === 'string'
-    ? [{ type: 'text', text: system, cache_control: { type: 'ephemeral', ttl: '1h' } }]
+    ? [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }]
     : system;
   try {
     res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -197,12 +214,38 @@ When you observe evidence in this session, connect it to these goals if a connec
     const CLARITY = 'CLARITY RULES: No sentence fragments. Replace "slow into" with "explore directly". Replace "under visibility pressure" with "when they are required to speak up or be publicly accountable". Replace "legitimacy fear" with "fear of not being taken seriously or seen as wrong". Replace "may hold" with "likely reflects". Replace "embody"/"embodied" with plain behavioral language. Every sentence must make sense read alone. No abstract psychological phrasing without immediate plain-language explanation. If a coach has to interpret meaning, rewrite the sentence.';
     const IDENTITY = 'You are Coach Clarity, a reflective thinking partner for coaches. Your role is to surface patterns and possibilities, not to instruct. Think WITH the coach, not FOR them. All language must be suggestive, not prescriptive.';
 
+    // ── Shared, cacheable prefix used on every callClaude below ─────────
+    // This block is identical byte-for-byte across all 10 callClaude
+    // invocations in this pipeline. The first call writes it to the
+    // ephemeral prompt cache; the remaining 9 calls read it back at ~10%
+    // of the input cost. The transcript + context push this comfortably
+    // past Sonnet's 1024-token cache minimum even on first-session,
+    // no-pattern-map cases.
+    //
+    // DO NOT interpolate any per-pass-varying value into this prefix.
+    // Any drift = no cache reuse.
+    const sharedPrefix = `TONE: ${TONE}
+
+PRONOUNS: ${PRONOUNS}
+
+CLARITY: ${CLARITY}
+
+CONCISE: ${CONCISE}
+
+JSON_ONLY: ${JSON_ONLY}
+
+SESSION TRANSCRIPT:
+${sessionContent}${priorPatternContext}${activeGoalsContext}`;
+
     // ── Pass 1: Extraction ──────────────────────────────────────────────
     const extractionOutput = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
       1500,
-      `You are an evidence extraction engine. Extract only what is explicitly present. Do not interpret. ${CONCISE} ${JSON_ONLY}${priorPatternContext}`,
+      buildSystem(
+        sharedPrefix,
+        `You are an evidence extraction engine. Extract only what is explicitly present. Do not interpret. ${CONCISE} ${JSON_ONLY}${priorPatternContext}`
+      ),
       `Extract from this session: client_quotes (max 5 verbatim), commitments, emotional_shifts [{before,after}], themes, coach_interventions, tension_points, mentioned_goals. All arrays of short strings.
 
 ${sessionContent}`,
@@ -217,7 +260,7 @@ ${sessionContent}`,
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
       2000,
-      synthesisSystem,
+      buildSystem(sharedPrefix, synthesisSystem),
       `Generate CORE intelligence from this evidence. ${CONCISE}
 
 For these fields, add an optional transition_context string — one sentence max, under 20 words, connecting this section to what came before. Return null if no natural connection exists. Use these starters: strategic_direction: "Because this pattern showed up..." or "Given what emerged..."; early_cues: "If this pattern is still active..."; next_session: "Given what shifted and what remains fragile..."; friction_points: "The most likely place this progress could stall..."; if_stuck: "If that stalling happens...".
@@ -244,7 +287,7 @@ Return ONLY this JSON:
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
       3500,
-      MIRROR_RULES,
+      buildSystem(sharedPrefix, MIRROR_RULES),
       `CRITICAL: You must complete valid JSON. If you are running low on tokens, reduce the depth of later items rather than truncating mid-structure. Never leave an array or object unclosed. Prioritize completing the JSON structure over maximizing depth.
 
 Generate max 2 interventions, max 2 what_stood_out items, and reflection.
@@ -291,7 +334,10 @@ Return ONLY:
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
       1500,
-      `${MIRROR_RULES} Feedback style: ${fbStyle}. If reflective: lead with "There was an opening to...", "You might notice...". If direct: lead with "You stayed at the surface.", "You moved past a deeper opening.". Both: never shame, never say "you should have" or "you missed". Anchor in observable behavior. PLAIN LANGUAGE REQUIRED: Never use coaching jargon. Replace "slow into" with "stay with" or "explore more closely". Replace "under visibility pressure" with "in moments where they are being watched". Replace "legitimacy fear" with "fear of not being taken seriously". Every sentence must be complete and standalone. No fragments. No implied subjects. Each field value must make sense when read alone.`,
+      buildSystem(
+        sharedPrefix,
+        `${MIRROR_RULES} Feedback style: ${fbStyle}. If reflective: lead with "There was an opening to...", "You might notice...". If direct: lead with "You stayed at the surface.", "You moved past a deeper opening.". Both: never shame, never say "you should have" or "you missed". Anchor in observable behavior. PLAIN LANGUAGE REQUIRED: Never use coaching jargon. Replace "slow into" with "stay with" or "explore more closely". Replace "under visibility pressure" with "in moments where they are being watched". Replace "legitimacy fear" with "fear of not being taken seriously". Every sentence must be complete and standalone. No fragments. No implied subjects. Each field value must make sense when read alone.`
+      ),
       `Generate max 2 curiosity edges and max 2 missed windows. If no meaningful missed window exists return empty array. Every field must be a complete sentence with a clear subject.
 
 Curiosity edges: each is a live question worth holding, not a correction. Max 12 words per field.
@@ -342,7 +388,10 @@ Return ONLY:
         ANTHROPIC_API_KEY,
         'claude-sonnet-4-6',
         900,
-        `${MIRROR_RULES} Return ONLY 2 patterns maximum. Every field must be under 12 words. Start with { end with }. No markdown.`,
+        buildSystem(
+          sharedPrefix,
+          `${MIRROR_RULES} Return ONLY 2 patterns maximum. Every field must be under 12 words. Start with { end with }. No markdown.`
+        ),
         `Generate max 2 patterns and goals. Every field under 12 words.
 ${goalsContext}
 
@@ -388,7 +437,10 @@ Return ONLY:
         ANTHROPIC_API_KEY,
         'claude-haiku-4-5-20251001',
         2000,
-        `You are a UX writer for Coach Clarity. Scan every string value. Any directive language — commands, instructions, statements that remove the coach's choice — must be rewritten as a suggestive alternative. Fix: should→you might explore, must→it may be worth, do not→one possible approach. Verify all why_it_matters fields are non-empty. ${JSON_ONLY}`,
+        buildSystem(
+          sharedPrefix,
+          `You are a UX writer for Coach Clarity. Scan every string value. Any directive language — commands, instructions, statements that remove the coach's choice — must be rewritten as a suggestive alternative. Fix: should→you might explore, must→it may be worth, do not→one possible approach. Verify all why_it_matters fields are non-empty. ${JSON_ONLY}`
+        ),
         `Fix directive language in this JSON. Return corrected JSON with identical structure: ${preCleaned}`,
         'Pass 3: Formatting'
       , { feature: 'coaching_mirror', coachId }
@@ -407,7 +459,10 @@ Return ONLY:
           ANTHROPIC_API_KEY,
           'claude-sonnet-4-6',
           800,
-          `You are a coaching reflection system. ${TONE} ${PRONOUNS} ${CONCISE} ${JSON_ONLY}${priorPatternContext}${activeGoalsContext}`,
+          buildSystem(
+            sharedPrefix,
+            `You are a coaching reflection system. ${TONE} ${PRONOUNS} ${CONCISE} ${JSON_ONLY}${priorPatternContext}${activeGoalsContext}`
+          ),
           `Based on this session evidence, generate a coaching reflection. ${CONCISE}
 
 EVIDENCE: ${JSON.stringify(extractionOutput)}
@@ -451,7 +506,10 @@ If crisis_adjacent: return null.`,
           ANTHROPIC_API_KEY,
           'claude-sonnet-4-6',
           1000,
-          `You are Coach Clarity. Your role is to connect this session's evidence to the coach's established DNA patterns. Do not invent new patterns. Only surface patterns where clear evidence exists in this session. Return ONLY valid JSON.${priorPatternContext}`,
+          buildSystem(
+            sharedPrefix,
+            `You are Coach Clarity. Your role is to connect this session's evidence to the coach's established DNA patterns. Do not invent new patterns. Only surface patterns where clear evidence exists in this session. Return ONLY valid JSON.${priorPatternContext}`
+          ),
           `Here are this coach's established DNA patterns:
 BIAS PROFILE: ${JSON.stringify(existingDNA.bias_profile?.slice(0, 3))}
 PATTERN ACTIVATION MAP: ${JSON.stringify(existingDNA.pattern_activation_map?.slice(0, 3))}
@@ -533,7 +591,10 @@ Return ONLY this JSON:
           ANTHROPIC_API_KEY,
           'claude-sonnet-4-6',
           800,
-          `You are Coach Clarity. Suggest 1-2 coaching approach lenses that fit this session and this client. These are not corrections. They are fit-based expansions of the coach's range. Use coaching language only. No clinical labels. Return ONLY valid JSON.`,
+          buildSystem(
+            sharedPrefix,
+            `You are Coach Clarity. Suggest 1-2 coaching approach lenses that fit this session and this client. These are not corrections. They are fit-based expansions of the coach's range. Use coaching language only. No clinical labels. Return ONLY valid JSON.`
+          ),
           `Based on this session's missed windows and client patterns, suggest 1-2 approaches to explore.
 
 Missed windows: ${JSON.stringify(pass2cOutput.missed_windows)}
@@ -580,11 +641,14 @@ Limit to 2 suggestions max. If no strong fit exists return empty array.`,
           ANTHROPIC_API_KEY,
           'claude-sonnet-4-6',
           1200,
-          `You are Coach Clarity. Propose pending-review goal items for the coach. Two channels:
+          buildSystem(
+            sharedPrefix,
+            `You are Coach Clarity. Propose pending-review goal items for the coach. Two channels:
 1. goal_proposals — net-new goal candidates surfaced by THIS session's evidence (commitments, breakthroughs, behavioral intentions). Only propose goals with clear session-grounded justification.
 2. goal_status_updates — suggested status flips on existing active goals based on this session's evidence. Only suggest a flip when evidence is concrete.
 Allowed status values: proposed, active, progressing, stalled, blocked, revised, completed, archived.
-Coaching tone — never directive. Use "you might". No clinical labels. Return ONLY raw JSON.`,
+Coaching tone — never directive. Use "you might". No clinical labels. Return ONLY raw JSON.`
+          ),
           `Active goals (status updates can only target these): ${JSON.stringify(activeGoals.map(g => ({ id: g.id, title: g.title, status: g.status, target_date: g.target_date })))}
 ${activeGoals.length === 0 ? 'IMPORTANT: There are zero active goals for this client. goal_status_updates MUST be []. Do not invent goal_ids. Only goal_proposals may be populated.' : 'A goal_status_update is valid ONLY when its goal_id exactly matches one of the ids above. Never invent or guess a goal_id. If no listed goal warrants a flip based on this session, return [].'}
 
