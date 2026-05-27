@@ -81,7 +81,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         type: 'magiclink',
         email: REVIEWER_EMAIL,
-        options: { redirect_to: REDIRECT_TO },
+        redirect_to: REDIRECT_TO,
       }),
     });
 
