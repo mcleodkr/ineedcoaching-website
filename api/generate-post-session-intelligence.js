@@ -86,7 +86,31 @@ async function callClaude(apiKey, model, maxTokens, system, userMessage, passNam
     return match ? JSON.parse(match[0]) : JSON.parse(rawText);
   } catch (e) {
     console.error(`[${passName}] JSON parse failed. Raw response:`, rawText.substring(0, 2000));
-    throw new Error(`${passName} JSON parse error: ${e.message}`);
+    // Attach the raw response to the error so callers can attempt
+    // recovery (re-parse with different heuristics, fire a repair call).
+    // Other failure paths (network/API errors above) don't carry rawText.
+    const err = new Error(`${passName} JSON parse error: ${e.message}`);
+    err.rawText = rawText;
+    err.parseError = e.message;
+    err.passName = passName;
+    throw err;
+  }
+}
+
+/**
+ * Best-effort JSON parse with the same heuristics callClaude uses internally:
+ * strip markdown fences, slice between first { and last }, parse. Returns
+ * null on any failure — does not throw. Used by callers that want to attempt
+ * recovery on a callClaude parse failure without re-implementing the cleanup.
+ */
+function tryParseJson(rawText) {
+  if (!rawText || typeof rawText !== 'string') return null;
+  try {
+    const stripped = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+    const match = stripped.match(/\{[\s\S]*\}/);
+    return match ? JSON.parse(match[0]) : JSON.parse(stripped);
+  } catch (_) {
+    return null;
   }
 }
 
@@ -283,7 +307,17 @@ Return ONLY this JSON:
     const MIRROR_RULES = `You are Coach Clarity, a reflective partner for professional coaches. Your job is to eliminate ambiguity and show the coach exactly what happened, what they did, why it mattered, and why it worked. CRITICAL RULE: Never describe the client in sections designated for the coach. If a section is about the coach's approach, every sentence must have "you" as the subject. HARD LIMIT: Maximum 2 items per array. Maximum 15 words per string value. Return ONLY raw JSON starting with { and ending with }. ${TONE} ${PRONOUNS} ${CLARITY}${priorPatternContext}`;
 
     // ── Pass 2b: Interventions + What Stood Out + Reflection ─────────────
-    const pass2bOutput = await callClaude(
+    // Two-layer JSON resilience.
+    //   Layer 1: defensive re-parse on raw output, then one Claude repair call.
+    //   Layer 2: if Layer 1 exhausts, the pipeline continues with an empty-
+    //   but-schema-valid stub so subsequent passes + the DB write still
+    //   succeed. Pass 2b's prompt is the largest in the pipeline and the
+    //   most prone to embedding unescaped quotes/apostrophes inside coach
+    //   example utterances; this is where we spend the recovery budget.
+    let pass2bOutput;
+    try {
+      try {
+        pass2bOutput = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
       6000,
@@ -328,6 +362,78 @@ Return ONLY:
       'Pass 2b: Interventions'
     , { feature: 'coaching_mirror', coachId }
       );
+      } catch (parseErr) {
+        // Layer 1 (a): re-attempt parse on raw response with fence-strip
+        // + slice heuristics. callClaude already ran this exact cleanup
+        // before throwing — so in practice this attempt typically fails
+        // the same way the original did. Kept per brief spec; cheap and
+        // future-proofs against callClaude changing its parsing path.
+        console.warn('[Pass 2b] Initial parse failed:', parseErr.message);
+        const rawText = parseErr.rawText || '';
+        let recovered = tryParseJson(rawText);
+
+        // Layer 1 (b): one repair call to Sonnet with a generic JSON-
+        // repair system prompt. Only fires if Layer 1 (a) returned null
+        // AND we have raw output to repair. The repair call uses its own
+        // small system prompt (not the shared pipeline prefix) — it is a
+        // one-off and does not need cache locality.
+        if (!recovered && rawText) {
+          console.warn('[Pass 2b] Layer 1a re-parse failed, firing repair call...');
+          try {
+            recovered = await callClaude(
+              ANTHROPIC_API_KEY,
+              'claude-sonnet-4-6',
+              4000,
+              'You are a JSON repair tool. Return only valid JSON, no commentary, no markdown.',
+              `Fix syntax errors in this JSON: ${rawText}`,
+              'Pass 2b: JSON Repair',
+              { feature: 'coaching_mirror', coachId }
+            );
+            console.log('[Pass 2b] Layer 1b repair succeeded');
+          } catch (repairErr) {
+            console.error('[Pass 2b] Layer 1b repair also failed:', repairErr.message);
+            recovered = null;
+          }
+        }
+
+        if (recovered) {
+          pass2bOutput = recovered;
+        } else {
+          // Layer 1 (c): typed throw → caught by Layer 2 below.
+          const err = new Error(`Pass 2b unrecoverable: ${parseErr.parseError || parseErr.message}`);
+          err.code = 'PASS_2B_RECOVERY_EXHAUSTED';
+          err.originalParseError = parseErr.parseError || parseErr.message;
+          throw err;
+        }
+      }
+    } catch (recoveryErr) {
+      // Layer 2: graceful degradation. Log the failure so we can monitor
+      // how often it fires, then continue the pipeline with a schema-
+      // valid stub. Subsequent passes that consume pass2bOutput.coaching_
+      // interventions / commitments / friction_points / if_stuck see
+      // empty-but-valid arrays/objects and produce reduced-but-valid
+      // output. The DB write at the end then succeeds with partial
+      // analysis rather than throwing a 500 to the page.
+      console.error('[Pass 2b] All recovery attempts exhausted, using empty stub:', recoveryErr.message);
+      try {
+        await logAIUsage({
+          feature: 'coaching_mirror',
+          coachId,
+          model: 'claude-sonnet-4-6',
+          status: 'error',
+          errorMessage: `Pass 2b unrecoverable: ${recoveryErr.originalParseError || recoveryErr.message}`,
+          durationMs: 0,
+        });
+      } catch (_) { /* logging failure must not break degradation */ }
+      pass2bOutput = {
+        coaching_interventions: [],
+        what_stood_out: [],
+        reflection_and_growth: null,
+        friction_points: { points: [], why_it_matters: '', transition_context: null },
+        if_stuck: { scenario: '', explore: '', one_possible_direction: '', transition_context: null },
+        commitments: [],
+      };
+    }
 
     // ── Pass 2c: Curiosity + Missed Windows ───────────────────────────
     const pass2cOutput = await callClaude(
