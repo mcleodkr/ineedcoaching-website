@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Founding Coach Cohort — Lock in $99/mo for life | ineedcoaching.org</title>
+<meta name="description" content="50 spots, closes June 30. $49/mo for 3 months, then $99/mo locked for life — even when prices go up. Full coach platform access.">
+<meta property="og:title" content="Founding Coach Cohort — Lock in $99/mo for life">
+<meta property="og:description" content="50 spots, closes June 30. $49/mo for 3 months, then $99/mo locked in for life.">
+<meta property="og:url" content="https://www.ineedcoaching.org/founding-coaches">
+<meta property="og:type" content="website">
+<link rel="canonical" href="https://www.ineedcoaching.org/founding-coaches">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    font-size: 18px;
+    line-height: 1.6;
+    color: #1a3a52;
+    background: #f7f5f1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1, h2, h3 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-weight: 600;
+    color: #1a3a52;
+    margin: 0 0 0.4em;
+    line-height: 1.15;
+  }
+  a { color: #1a3a52; text-decoration: none; }
+  .container { max-width: 880px; margin: 0 auto; padding: 0 24px; }
+
+  /* ── Top bar ──────────────────────────────────────────────────── */
+  .topbar {
+    background: #ffffff;
+    border-bottom: 1px solid #e8e4dc;
+    padding: 16px 0;
+  }
+  .topbar .container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .brand {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1a3a52;
+    letter-spacing: -0.01em;
+  }
+  .brand-mark { color: #c49a3c; }
+  .topbar-link {
+    font-size: 0.92rem;
+    color: rgba(26, 58, 82, 0.7);
+  }
+
+  /* ── Hero ─────────────────────────────────────────────────────── */
+  .hero {
+    background: #1a3a52;
+    color: #f7f4ee;
+    padding: 64px 0 84px;
+    text-align: center;
+  }
+  .hero h1 {
+    color: #f7f4ee;
+    font-size: clamp(2.4rem, 5vw, 3.6rem);
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+  .hero h1 em { color: #c49a3c; font-style: normal; }
+  .hero-eyebrow {
+    display: inline-block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #c49a3c;
+    margin-bottom: 18px;
+    padding: 6px 14px;
+    border: 1px solid rgba(196, 154, 60, 0.4);
+    border-radius: 50px;
+  }
+  .hero-subhead {
+    font-size: 1.2rem;
+    color: rgba(247, 244, 238, 0.85);
+    max-width: 600px;
+    margin: 0 auto 32px;
+    line-height: 1.55;
+  }
+  .hero-subhead em {
+    color: #c49a3c;
+    font-style: normal;
+    font-weight: 600;
+  }
+
+  .counter-block {
+    display: inline-block;
+    background: rgba(247, 244, 238, 0.06);
+    border: 1px solid rgba(196, 154, 60, 0.35);
+    border-radius: 12px;
+    padding: 14px 22px;
+    margin: 0 auto 32px;
+    min-width: 280px;
+  }
+  .counter-text {
+    font-size: 0.95rem;
+    color: rgba(247, 244, 238, 0.92);
+    margin-bottom: 8px;
+  }
+  .counter-text strong { color: #c49a3c; font-weight: 700; }
+  .counter-bar {
+    height: 6px;
+    background: rgba(247, 244, 238, 0.1);
+    border-radius: 50px;
+    overflow: hidden;
+  }
+  .counter-fill {
+    height: 100%;
+    background: #c49a3c;
+    width: 0%;
+    transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .cta-primary {
+    display: inline-block;
+    background: #c49a3c;
+    color: #1a3a52;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    padding: 16px 36px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    letter-spacing: 0.01em;
+    text-align: center;
+  }
+  .cta-primary:hover {
+    background: #b88a30;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(26, 58, 82, 0.18);
+  }
+  .cta-primary:active { transform: translateY(0); }
+  .cta-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+  .cta-form { display: block; width: 100%; margin-top: 8px; }
+
+  /* ── Deal section ─────────────────────────────────────────────── */
+  .section { padding: 70px 0; }
+  .section-title {
+    font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+    text-align: center;
+    margin-bottom: 14px;
+  }
+  .section-lede {
+    text-align: center;
+    font-size: 1.08rem;
+    color: rgba(26, 58, 82, 0.72);
+    max-width: 620px;
+    margin: 0 auto 48px;
+  }
+
+  .deal-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+    margin-bottom: 56px;
+    align-items: center;
+  }
+  @media (min-width: 700px) {
+    .deal-grid { grid-template-columns: 1fr auto 1fr; }
+  }
+  .deal-card {
+    background: #ffffff;
+    border: 1px solid #e8e4dc;
+    border-radius: 10px;
+    padding: 32px 28px;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(26, 58, 82, 0.04);
+  }
+  .deal-card.is-anchor {
+    border: 1px solid #c49a3c;
+    box-shadow: 0 4px 14px rgba(196, 154, 60, 0.12);
+  }
+  .deal-step-label {
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #c49a3c;
+    margin-bottom: 12px;
+  }
+  .deal-price {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 2.6rem;
+    font-weight: 700;
+    color: #1a3a52;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .deal-price .period {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: rgba(26, 58, 82, 0.6);
+  }
+  .deal-detail {
+    font-size: 0.94rem;
+    color: rgba(26, 58, 82, 0.72);
+    line-height: 1.55;
+    margin-top: 8px;
+  }
+  .deal-arrow {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 2.8rem;
+    color: #c49a3c;
+    text-align: center;
+    line-height: 1;
+  }
+
+  .features {
+    background: #ffffff;
+    border: 1px solid #e8e4dc;
+    border-radius: 10px;
+    padding: 36px 32px;
+    box-shadow: 0 1px 2px rgba(26, 58, 82, 0.04);
+  }
+  .features h3 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.4rem;
+    margin: 0 0 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e8e4dc;
+  }
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px 24px;
+  }
+  .feature-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    font-size: 0.98rem;
+    line-height: 1.55;
+    color: rgba(26, 58, 82, 0.88);
+  }
+  .feature-check {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 50px;
+    background: rgba(196, 154, 60, 0.14);
+    color: #c49a3c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-top: 2px;
+  }
+
+  /* ── Form section ─────────────────────────────────────────────── */
+  .form-section {
+    background: #ffffff;
+    border-top: 1px solid #e8e4dc;
+    padding: 70px 0 90px;
+  }
+  .form-card {
+    background: #f7f5f1;
+    border: 1px solid #e8e4dc;
+    border-radius: 12px;
+    padding: 44px 36px;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+  .form-card h2 {
+    font-size: 1.8rem;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  .form-card .form-lede {
+    text-align: center;
+    font-size: 1rem;
+    color: rgba(26, 58, 82, 0.72);
+    margin: 0 0 28px;
+  }
+
+  .field { margin-bottom: 18px; }
+  .field label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(26, 58, 82, 0.72);
+    margin-bottom: 8px;
+  }
+  .field input {
+    width: 100%;
+    padding: 13px 16px;
+    border: 1px solid #d8d2c2;
+    border-radius: 8px;
+    background: #ffffff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    color: #1a3a52;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .field input:focus {
+    outline: none;
+    border-color: #c49a3c;
+    box-shadow: 0 0 0 3px rgba(196, 154, 60, 0.18);
+  }
+
+  .form-fine {
+    font-size: 0.84rem;
+    color: rgba(26, 58, 82, 0.62);
+    text-align: center;
+    margin-top: 22px;
+    line-height: 1.55;
+  }
+  .form-error {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: #fdecec;
+    border: 1px solid #f5c7c7;
+    color: #9a2a2a;
+    font-size: 0.92rem;
+    text-align: center;
+    display: none;
+  }
+  .form-error.is-visible { display: block; }
+
+  /* ── Footer ───────────────────────────────────────────────────── */
+  .footer {
+    padding: 28px 0 40px;
+    font-size: 0.86rem;
+    color: rgba(26, 58, 82, 0.6);
+    text-align: center;
+    border-top: 1px solid #e8e4dc;
+    background: #f7f5f1;
+  }
+  .footer a { color: #c49a3c; font-weight: 600; }
+
+  /* ── Cohort-full state ─────────────────────────────────────────
+       When the cohort is full we lock the CTAs and recolor the badge so
+       the page degrades clearly rather than letting a coach hit a
+       checkout that would still accept them. */
+  body.cohort-full .cta-primary {
+    background: #d8d2c2;
+    color: rgba(26, 58, 82, 0.5);
+    cursor: not-allowed;
+    pointer-events: none;
+    box-shadow: none;
+    transform: none;
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="container">
+    <div class="brand"><span class="brand-mark">●</span> ineedcoaching</div>
+    <a href="/coach-signup.html" class="topbar-link">Standard pricing →</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="container">
+    <span class="hero-eyebrow">Founding Cohort &middot; 50 Spots &middot; Closes June 30</span>
+    <h1>Founding Coach Cohort</h1>
+    <p class="hero-subhead">Lock in <em>$99/month for life</em> &mdash; even when prices go up.</p>
+
+    <div class="counter-block" id="counter-block">
+      <div class="counter-text" id="counter-text">Loading cohort status&hellip;</div>
+      <div class="counter-bar"><div class="counter-fill" id="counter-fill"></div></div>
+    </div>
+
+    <div>
+      <a href="#claim-form" class="cta-primary">Claim my founder spot &rarr;</a>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2 class="section-title">The deal, plainly.</h2>
+    <p class="section-lede">Two benefits stacked: a lower entry cost <strong>and</strong> lifetime grandfathered pricing.</p>
+
+    <div class="deal-grid">
+      <div class="deal-card is-anchor">
+        <div class="deal-step-label">Months 1&ndash;3</div>
+        <div class="deal-price">$49<span class="period">/mo</span></div>
+        <div class="deal-detail">Your founder intro rate. Billed monthly, cancel anytime.</div>
+      </div>
+      <div class="deal-arrow" aria-hidden="true">&rarr;</div>
+      <div class="deal-card">
+        <div class="deal-step-label">Month 4 onward</div>
+        <div class="deal-price">$99<span class="period">/mo</span></div>
+        <div class="deal-detail">Your founder rate, locked in for life. We never raise it on you.</div>
+      </div>
+    </div>
+
+    <div class="features">
+      <h3>What's included on every founder account</h3>
+      <div class="feature-grid">
+        <div class="feature-item"><span class="feature-check" aria-hidden="true">&check;</span><span><strong>25 sessions / month</strong> &middot; $5/session overage above the cap &middot; unlimited clients</span></div>
+        <div class="feature-item"><span class="feature-check" aria-hidden="true">&check;</span><span><strong>Coach Clarity</strong> &mdash; full AI session intelligence layer</span></div>
+        <div class="feature-item"><span class="feature-check" aria-hidden="true">&check;</span><span><strong>Coaching Mirror</strong> &mdash; per-session reflection + missed-windows view</span></div>
+        <div class="feature-item"><span class="feature-check" aria-hidden="true">&check;</span><span><strong>Intervention Plan</strong> &mdash; locked, longitudinal coaching plan per client</span></div>
+        <div class="feature-item"><span class="feature-check" aria-hidden="true">&check;</span><span><strong>Pattern Map</strong> &mdash; canonical client pattern tracking across sessions</span></div>
+        <div class="feature-item"><span class="feature-check" aria-hidden="true">&check;</span><span><strong>Approach Lab</strong> &mdash; coaching-lens suggestions tied to your actual sessions</span></div>
+        <div class="feature-item"><span class="feature-check" aria-hidden="true">&check;</span><span><strong>Pre-Session Brief</strong> &mdash; live coaching action system, ready before each session</span></div>
+        <div class="feature-item"><span class="feature-check" aria-hidden="true">&check;</span><span><strong>Coach DNA</strong> &mdash; your evolving signature pattern profile</span></div>
+        <div class="feature-item"><span class="feature-check" aria-hidden="true">&check;</span><span><strong>Scheduler</strong> &mdash; bookings, calendar sync, Stripe-paid sessions</span></div>
+        <div class="feature-item"><span class="feature-check" aria-hidden="true">&check;</span><span><strong>Commons marketplace</strong> + <strong>course builder</strong></span></div>
+        <div class="feature-item"><span class="feature-check" aria-hidden="true">&check;</span><span><strong>Client journals</strong> + <strong>intake forms</strong></span></div>
+        <div class="feature-item"><span class="feature-check" aria-hidden="true">&check;</span><span><strong>White-glove newsletter</strong> + <strong>social posting</strong></span></div>
+        <div class="feature-item"><span class="feature-check" aria-hidden="true">&check;</span><span><strong>Invoicing</strong> &mdash; packages, gift certificates, refunds</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="form-section" id="claim-form">
+  <div class="container">
+    <div class="form-card">
+      <h2>Claim your founder spot</h2>
+      <p class="form-lede">Lock in $99/month for life. Practice tier with 25 sessions/month.</p>
+
+      <form id="founder-form" novalidate>
+        <div class="field">
+          <label for="full_name">Your name</label>
+          <input type="text" id="full_name" name="full_name" required pattern="[A-Za-z .'\-]{2,}" autocomplete="name" placeholder="First Last">
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com">
+        </div>
+
+        <!-- Turnstile widget. Same site key as coach-signup.html. The
+             checkout endpoint verifies the token server-side via the
+             Turnstile siteverify endpoint and tolerates a missing
+             TURNSTILE_SECRET in dev/test environments. -->
+        <div class="cf-turnstile"
+             data-sitekey="0x4AAAAAADDKlWVIhl7kMkdC"
+             data-callback="onTurnstileVerified"
+             data-expired-callback="onTurnstileExpired"
+             data-error-callback="onTurnstileError"
+             style="margin: 18px 0;"></div>
+
+        <button type="submit" class="cta-primary cta-form" id="claim-btn">Claim my founder spot &rarr;</button>
+
+        <div class="form-error" id="form-error" role="alert"></div>
+
+        <p class="form-fine">After June 30 or 50 signups (whichever comes first), the founder rate is gone &mdash; new coaches pay full price with no lifetime lock.</p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container">
+    &copy; 2026 ineedcoaching.org &middot; <a href="/privacy.html">Privacy</a> &middot; <a href="/terms-of-service.html">Terms</a>
+  </div>
+</footer>
+
+<script>
+(function () {
+  // ── Cohort counter ────────────────────────────────────────────
+  // Loads once on page render. If the cohort is full we lock all CTAs
+  // and swap the badge text so the page degrades clearly.
+  async function loadCohortStatus() {
+    const counterText = document.getElementById('counter-text');
+    const counterFill = document.getElementById('counter-fill');
+    try {
+      const r = await fetch('/api/founder-cohort-status', { cache: 'no-store' });
+      if (!r.ok) {
+        counterText.textContent = '50 founder spots available.';
+        return;
+      }
+      const data = await r.json();
+      const claimed = Math.max(0, Number(data.claimed) || 0);
+      const cap = Math.max(1, Number(data.cap) || 50);
+      const pct = Math.min(100, Math.round((claimed / cap) * 100));
+      counterText.innerHTML = '<strong>' + claimed + ' of ' + cap + '</strong> founder spots claimed';
+      counterFill.style.width = pct + '%';
+      if (data.is_full) {
+        document.body.classList.add('cohort-full');
+        counterText.innerHTML = '<strong>Cohort full.</strong> Standard pricing is available on the regular signup page.';
+        document.querySelectorAll('.cta-primary').forEach(function (btn) {
+          btn.setAttribute('aria-disabled', 'true');
+        });
+      }
+    } catch (e) {
+      // Network error — fail soft, just show the cap
+      counterText.textContent = '50 founder spots available.';
+    }
+  }
+  loadCohortStatus();
+
+  // ── Turnstile callbacks (window-scoped) ────────────────────────
+  let turnstileToken = '';
+  window.onTurnstileVerified = function (token) { turnstileToken = token || ''; };
+  window.onTurnstileExpired = function () { turnstileToken = ''; };
+  window.onTurnstileError = function () { turnstileToken = ''; };
+
+  // ── Form submission ───────────────────────────────────────────
+  const form = document.getElementById('founder-form');
+  const btn = document.getElementById('claim-btn');
+  const errBox = document.getElementById('form-error');
+
+  function showError(msg) {
+    errBox.textContent = msg;
+    errBox.classList.add('is-visible');
+  }
+  function clearError() {
+    errBox.textContent = '';
+    errBox.classList.remove('is-visible');
+  }
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    clearError();
+
+    const fullName = document.getElementById('full_name').value.trim();
+    const email = document.getElementById('email').value.trim().toLowerCase();
+
+    if (!fullName || fullName.length < 2) {
+      showError('Please enter your full name.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showError('Please enter a valid email address.');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Creating checkout…';
+
+    try {
+      const r = await fetch('/api/create-subscription-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cohort: 'founding',
+          tier: 'practice',
+          email: email,
+          full_name: fullName,
+          display_name: fullName,
+          turnstile_token: turnstileToken,
+        }),
+      });
+      const data = await r.json().catch(function () { return null; });
+      if (!r.ok || !data || !data.url) {
+        showError((data && data.error) || 'Something went wrong. Please try again or email admin@ineedcoaching.org.');
+        btn.disabled = false;
+        btn.textContent = 'Claim my founder spot →';
+        if (window.turnstile) window.turnstile.reset();
+        return;
+      }
+      // Redirect to Stripe Checkout
+      window.location.assign(data.url);
+    } catch (err) {
+      showError('Network error. Please try again or email admin@ineedcoaching.org.');
+      btn.disabled = false;
+      btn.textContent = 'Claim my founder spot →';
+      if (window.turnstile) window.turnstile.reset();
+    }
+  });
+})();
+</script>
+</body>
+</html>

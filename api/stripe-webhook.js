@@ -689,6 +689,66 @@ function isCoachSignup(subscription) {
   return meta.signup_intent === 'coach_subscription';
 }
 
+// Wrap a founder-cohort subscription in a subscription_schedule that bills
+// the $49 founder price for 3 months and then steps up to the standard $99
+// Practice price indefinitely. Idempotent: if the subscription is already
+// attached to a schedule we no-op. Failures are logged but never bubble up —
+// the subscription stays at $49 forever in that case, which is a worse deal
+// for us but a strictly better deal for the coach, and an operator can
+// manually convert it later.
+async function convertToFounderSchedule({ stripe, subscription }) {
+  try {
+    if (subscription.schedule) {
+      // Already attached to a schedule — likely a webhook retry on a sub we
+      // already converted on the first attempt.
+      return;
+    }
+    const mode = (process.env.STRIPE_MODE || 'test').toLowerCase();
+    const founderPriceId = mode === 'live'
+      ? process.env.STRIPE_PRICE_PRACTICE_FOUNDER_LIVE
+      : process.env.STRIPE_PRICE_PRACTICE_FOUNDER_TEST;
+    const standardPriceId = mode === 'live'
+      ? process.env.STRIPE_PRICE_PRACTICE_LIVE
+      : process.env.STRIPE_PRICE_PRACTICE_TEST;
+    if (!founderPriceId || !standardPriceId) {
+      console.error('[stripe-webhook][founder-schedule] missing price env vars', {
+        mode,
+        hasFounderPrice: !!founderPriceId,
+        hasStandardPrice: !!standardPriceId,
+      });
+      return;
+    }
+    // Step 1: wrap the existing subscription in a schedule. Stripe creates a
+    // single-phase schedule mirroring the current sub.
+    const schedule = await stripe.subscriptionSchedules.create({
+      from_subscription: subscription.id,
+    });
+    // Step 2: replace the phases with founder-intro + indefinite-standard.
+    // iterations:3 = bill 3 cycles on this price, then auto-advance to the
+    // next phase. The second phase has no iterations/end_date → indefinite.
+    await stripe.subscriptionSchedules.update(schedule.id, {
+      phases: [
+        {
+          items: [{ price: founderPriceId, quantity: 1 }],
+          iterations: 3,
+        },
+        {
+          items: [{ price: standardPriceId, quantity: 1 }],
+        },
+      ],
+    });
+    console.log('[stripe-webhook][founder-schedule] created', {
+      subscriptionId: subscription.id,
+      scheduleId: schedule.id,
+    });
+  } catch (e) {
+    console.error('[stripe-webhook][founder-schedule] failed', {
+      subscriptionId: subscription.id,
+      error: e && e.message,
+    });
+  }
+}
+
 // Create or upsert the Supabase auth user for a paid coach + send the
 // invite/recovery email so they can sign in. Tolerant of the user already
 // existing (e.g., the email was previously a client account).
@@ -811,6 +871,9 @@ async function handleSubscriptionCreated({ subscription, stripe, SUPABASE_URL, S
     }
   } else {
     coachSlug = await generateUniqueCoachSlug({ base: slugBase, SUPABASE_URL, SB_HEADERS });
+    // signup_source + founder_locked_price are written on INSERT only. We
+    // never overwrite them on re-signup (the PATCH path above) so the
+    // original acquisition channel is preserved across subscription churn.
     const profileRow = {
       ...subscriptionFields,
       user_email: email,
@@ -820,6 +883,10 @@ async function handleSubscriptionCreated({ subscription, stripe, SUPABASE_URL, S
       display_name: meta.signup_display_name || meta.signup_full_name || null,
       bio: meta.signup_bio || null,
       years_experience: meta.signup_years_experience ? parseInt(meta.signup_years_experience, 10) : null,
+      signup_source: meta.signup_source || 'organic',
+      founder_locked_price: meta.founder_locked_price
+        ? Number(meta.founder_locked_price)
+        : null,
       // specialty: meta.signup_specialty — coach_profiles uses an array
       // column `specialties`, populated when the coach edits their profile.
       // We deliberately leave it null here so the coach's own selections
@@ -835,6 +902,14 @@ async function handleSubscriptionCreated({ subscription, stripe, SUPABASE_URL, S
       console.error('[stripe-webhook][sub.created] insert failed', insertRes.status, t);
       return res.status(500).send('insert_failed');
     }
+  }
+
+  // Founder cohort: convert the subscription to a schedule so the price
+  // automatically steps up from $49 to $99 at month 4. Runs only on
+  // founder-tagged subscriptions and is a no-op if the schedule already
+  // exists (idempotent across retries).
+  if (meta.signup_source === 'founding_cohort') {
+    await convertToFounderSchedule({ stripe, subscription });
   }
 
   await ensureCoachAuthUser({ email, SUPABASE_URL, SB_HEADERS });

@@ -40,6 +40,18 @@ function resolvePriceId(tier) {
   return null;
 }
 
+// Founder cohort = Practice tier with a 3-month $49 intro price. The price
+// object is set up in Stripe and the ID is wired in via env var. The webhook
+// (handleSubscriptionCreated) reads signup_source from subscription metadata
+// and wraps the subscription in a subscription_schedule that steps up to the
+// standard $99 Practice price at the start of month 4.
+function resolveFounderPriceId() {
+  const mode = (process.env.STRIPE_MODE || 'test').toLowerCase();
+  return mode === 'live'
+    ? (process.env.STRIPE_PRICE_PRACTICE_FOUNDER_LIVE || null)
+    : (process.env.STRIPE_PRICE_PRACTICE_FOUNDER_TEST || null);
+}
+
 // Cloudflare Turnstile — verifies the captcha token issued client-side. Skips
 // silently if TURNSTILE_SECRET isn't set so test/dev environments aren't
 // blocked. Returns true on success or skip, false on outright failure.
@@ -95,9 +107,15 @@ export default async function handler(req, res) {
   const years = Number.isFinite(Number(yearsRaw)) ? String(Math.max(0, Math.floor(Number(yearsRaw)))) : '';
   const bio = String(body.bio || '').trim();
   const refCode = String(body.ref_code || '').trim();
+  const cohort = String(body.cohort || '').toLowerCase();
+  const isFounder = cohort === 'founding';
   const turnstileToken = body.turnstile_token || body.cf_turnstile_response || null;
 
-  if (!SUPPORTED_TIERS.includes(tier)) {
+  // Founder cohort is Practice tier only; force the tier to keep the rest of
+  // the flow simple regardless of what the LP submitted.
+  const effectiveTier = isFounder ? 'practice' : tier;
+
+  if (!SUPPORTED_TIERS.includes(effectiveTier)) {
     return res.status(400).json({ error: 'tier must be "practice" or "scale"' });
   }
   if (!isValidEmail(email)) {
@@ -107,9 +125,13 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'full_name required' });
   }
 
-  const priceId = resolvePriceId(tier);
+  const priceId = isFounder ? resolveFounderPriceId() : resolvePriceId(effectiveTier);
   if (!priceId) {
-    console.error('[subscription-checkout] price id missing for tier', { tier, mode: process.env.STRIPE_MODE });
+    console.error('[subscription-checkout] price id missing', {
+      tier: effectiveTier,
+      isFounder,
+      mode: process.env.STRIPE_MODE,
+    });
     return res.status(500).json({ error: 'Pricing not configured' });
   }
 
@@ -127,9 +149,15 @@ export default async function handler(req, res) {
   // Keep the surface narrow; the webhook reads only what it needs to seed
   // the coach_profiles row. ref_code is preserved verbatim for the affiliate
   // phase to read directly off the subscription metadata later.
+  //
+  // signup_source: 'founding_cohort' for the founder LP flow, 'organic' for
+  // every other path. Drives the grandfathering policy + segment analytics.
+  // founder_locked_price: the lifetime grandfathered monthly price the coach
+  // is locked at (Stripe price immutability is what actually holds the price;
+  // this is a denormalized hint for the webhook to write into coach_profiles).
   const signupMeta = {
     signup_intent: 'coach_subscription',
-    tier,
+    tier: effectiveTier,
     signup_email: email,
     signup_full_name: trimMeta(fullName),
     signup_display_name: trimMeta(displayName),
@@ -137,7 +165,12 @@ export default async function handler(req, res) {
     signup_years_experience: years,
     signup_bio: trimMeta(bio),
     signup_ref_code: trimMeta(refCode),
+    signup_source: isFounder ? 'founding_cohort' : 'organic',
   };
+  if (isFounder) {
+    signupMeta.founder_locked_price = '99.00';
+    signupMeta.cohort = 'founding';
+  }
 
   const { default: Stripe } = await import('stripe');
   const stripe = new Stripe(STRIPE_SECRET_KEY);
