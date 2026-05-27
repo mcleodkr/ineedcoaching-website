@@ -429,7 +429,7 @@
 
 <section class="form-section" id="claim-form">
   <div class="container">
-    <div class="form-card">
+    <div class="form-card" id="claim-form-card">
       <h2>Claim your founder spot</h2>
       <p class="form-lede">Lock in $99/month for life. Practice tier with 25 sessions/month.</p>
 
@@ -461,6 +461,17 @@
         <p class="form-fine">After June 30 or 50 signups (whichever comes first), the founder rate is gone &mdash; new coaches pay full price with no lifetime lock.</p>
       </form>
     </div>
+
+    <!-- Cohort-full state. Revealed when /api/founder-cohort-status reports
+         is_full on page load, OR when /api/create-subscription-checkout
+         rejects the submit with 409 + code=cohort_full (the coach was on
+         the page at #49 and got beaten to the post). Same UI either way —
+         friendly headline, the standard-pricing path forward. -->
+    <div class="form-card" id="cohort-full-card" style="display:none;">
+      <h2 id="cohort-full-headline">Founder cohort is full.</h2>
+      <p class="form-lede">Standard pricing is still available &mdash; Practice $99/mo or Scale $249/mo, both with the full feature set. The only thing the cohort offered that this doesn't is the lifetime grandfathered lock.</p>
+      <a href="/coach-signup.html" class="cta-primary cta-form">Go to standard signup &rarr;</a>
+    </div>
   </div>
 </section>
 
@@ -472,9 +483,44 @@
 
 <script>
 (function () {
+  // ── Cohort-full UI swap ───────────────────────────────────────
+  // Fires from two paths: the page-load counter when is_full=true (coach
+  // arrived after the cap was hit), or the form submit handler when the
+  // server returns 409 cohort_full (coach was on the page at #49 and
+  // got beaten to the post). Same destination state — hide the form,
+  // show the path-forward card, swap counter copy. The `justFilled` flag
+  // only changes the headline so the two cases read naturally.
+  function showCohortFullState(justFilled) {
+    document.body.classList.add('cohort-full');
+    const counterText = document.getElementById('counter-text');
+    if (counterText) {
+      counterText.innerHTML = '<strong>Cohort full.</strong> Standard pricing is available on the regular signup page.';
+    }
+    const counterFill = document.getElementById('counter-fill');
+    if (counterFill) counterFill.style.width = '100%';
+    document.querySelectorAll('.cta-primary').forEach(function (btn) {
+      btn.setAttribute('aria-disabled', 'true');
+    });
+    const headline = document.getElementById('cohort-full-headline');
+    if (headline) {
+      headline.textContent = justFilled ? 'Cohort just filled.' : 'Founder cohort is full.';
+    }
+    const claimCard = document.getElementById('claim-form-card');
+    if (claimCard) claimCard.style.display = 'none';
+    const fullCard = document.getElementById('cohort-full-card');
+    if (fullCard) {
+      fullCard.style.display = 'block';
+      // Bring the path-forward into view, but only on the 409 path so we
+      // don't yank a fresh visitor to mid-page on first paint.
+      if (justFilled) {
+        fullCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }
+
   // ── Cohort counter ────────────────────────────────────────────
-  // Loads once on page render. If the cohort is full we lock all CTAs
-  // and swap the badge text so the page degrades clearly.
+  // Loads once on page render. Hands off to showCohortFullState() when
+  // is_full is true so the page never shows a form a coach can't submit.
   async function loadCohortStatus() {
     const counterText = document.getElementById('counter-text');
     const counterFill = document.getElementById('counter-fill');
@@ -491,11 +537,7 @@
       counterText.innerHTML = '<strong>' + claimed + ' of ' + cap + '</strong> founder spots claimed';
       counterFill.style.width = pct + '%';
       if (data.is_full) {
-        document.body.classList.add('cohort-full');
-        counterText.innerHTML = '<strong>Cohort full.</strong> Standard pricing is available on the regular signup page.';
-        document.querySelectorAll('.cta-primary').forEach(function (btn) {
-          btn.setAttribute('aria-disabled', 'true');
-        });
+        showCohortFullState(false);
       }
     } catch (e) {
       // Network error — fail soft, just show the cap
@@ -557,6 +599,14 @@
         }),
       });
       const data = await r.json().catch(function () { return null; });
+      // Cohort filled while this coach was on the page. The server's
+      // count check beat their submit — show the friendly "just filled"
+      // state instead of a red error box, so it never feels like the
+      // form broke. They get a one-click path to standard signup.
+      if (r.status === 409 && data && data.code === 'cohort_full') {
+        showCohortFullState(true);
+        return;
+      }
       if (!r.ok || !data || !data.url) {
         showError((data && data.error) || 'Something went wrong. Please try again or email admin@ineedcoaching.org.');
         btn.disabled = false;

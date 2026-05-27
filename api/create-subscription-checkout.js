@@ -17,6 +17,14 @@
 const SUPPORTED_TIERS = ['practice', 'scale'];
 const META_VALUE_MAX = 480;
 
+// Founder cohort cap. Server-side enforcement complements the UI defense in
+// /founding-coaches.html (which fetches /api/founder-cohort-status on page
+// load and locks CTAs when is_full). The UI defense doesn't help coaches who
+// kept a stale tab open, or anyone POSTing directly to this endpoint, so we
+// also check here before creating the Stripe Checkout. Must match
+// FOUNDER_COHORT_CAP in api/founder-cohort-status.js.
+const FOUNDER_COHORT_CAP = 50;
+
 function resolveStripeKey() {
   const mode = (process.env.STRIPE_MODE || 'test').toLowerCase();
   if (mode === 'live') {
@@ -50,6 +58,42 @@ function resolveFounderPriceId() {
   return mode === 'live'
     ? (process.env.STRIPE_PRICE_PRACTICE_FOUNDER_LIVE || null)
     : (process.env.STRIPE_PRICE_PRACTICE_FOUNDER_TEST || null);
+}
+
+// Count the founders already provisioned in coach_profiles. Returns null on
+// any error so the caller can fail open (better to overshoot the cap by one
+// slot than block legitimate signups during a Supabase blip). Uses HEAD +
+// count=exact for a cheap header-only count — no rows transferred.
+async function fetchFounderCount() {
+  const supabaseUrl = process.env.SUPABASE_URL || 'https://qroizygknxdjsstkezsf.supabase.co';
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseKey) {
+    console.warn('[subscription-checkout] no supabase key for founder cap check');
+    return null;
+  }
+  try {
+    const r = await fetch(
+      `${supabaseUrl}/rest/v1/coach_profiles?signup_source=eq.founding_cohort&select=id`,
+      {
+        method: 'HEAD',
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+          Prefer: 'count=exact',
+        },
+      },
+    );
+    if (!r.ok) {
+      console.warn('[subscription-checkout] founder count non-ok', r.status);
+      return null;
+    }
+    const contentRange = r.headers.get('content-range') || '0-0/0';
+    const claimed = parseInt(contentRange.split('/')[1] || '0', 10);
+    return Number.isFinite(claimed) ? claimed : null;
+  } catch (e) {
+    console.warn('[subscription-checkout] founder count threw', e && e.message);
+    return null;
+  }
 }
 
 // Cloudflare Turnstile — verifies the captcha token issued client-side. Skips
@@ -143,6 +187,25 @@ export default async function handler(req, res) {
   const captchaOk = await verifyTurnstile(turnstileToken, remoteIp);
   if (!captchaOk) {
     return res.status(400).json({ error: 'Captcha verification failed. Please retry.' });
+  }
+
+  // Server-side founder cohort cap. Runs after captcha so bot traffic can't
+  // drain this query. Fails open: if fetchFounderCount returns null (Supabase
+  // error / missing key), we let signup proceed. The cap is best-effort —
+  // there's still a small race window between this check and the webhook
+  // insert where two simultaneous signups at #49 could both pass. Closing
+  // that window would need a race-free founder_slots table; the brief
+  // accepted overshoot-by-one over that engineering cost.
+  if (isFounder) {
+    const founderCount = await fetchFounderCount();
+    if (founderCount != null && founderCount >= FOUNDER_COHORT_CAP) {
+      return res.status(409).json({
+        error: 'Founder cohort is full.',
+        code: 'cohort_full',
+        cap: FOUNDER_COHORT_CAP,
+        claimed: founderCount,
+      });
+    }
   }
 
   // Stripe metadata — string-only, 500 char cap per value, 50 keys per object.
