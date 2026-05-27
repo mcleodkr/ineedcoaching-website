@@ -1,7 +1,7 @@
 // Coach platform-billing checkout. Distinct from /api/create-checkout-session
 // (which is for course/booking destination charges via Stripe Connect) — this
 // is a standard Stripe subscription, billed by the platform itself, for the
-// Practice $99 / Scale $179 tiers.
+// Practice $99 / Scale $249 tiers.
 //
 // Flow:
 //   coach-signup form  →  POST { tier, email, ...form fields, ref_code? }

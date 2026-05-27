@@ -627,7 +627,7 @@ async function handleGiftCompleted({ session, meta, SUPABASE_URL, SB_HEADERS, re
 // Platform-billing subscription events (Phase 2)
 // ──────────────────────────────────────────────────────────────────────────
 //
-// Provisioning + lifecycle for the Practice $99 / Scale $179 subscriptions
+// Provisioning + lifecycle for the Practice $99 / Scale $249 subscriptions
 // created via /api/create-subscription-checkout. Source of truth lives on
 // Stripe; coach_profiles columns mirror the Stripe state per event.
 
