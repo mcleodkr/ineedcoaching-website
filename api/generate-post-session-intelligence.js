@@ -286,7 +286,7 @@ Return ONLY this JSON:
     const pass2bOutput = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
-      3500,
+      6000,
       buildSystem(sharedPrefix, MIRROR_RULES),
       `CRITICAL: You must complete valid JSON. If you are running low on tokens, reduce the depth of later items rather than truncating mid-structure. Never leave an array or object unclosed. Prioritize completing the JSON structure over maximizing depth.
 
