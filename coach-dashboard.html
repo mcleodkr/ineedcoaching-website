@@ -2321,7 +2321,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
     <!-- BILLING TAB ──────────────────────────────────────────────────────
          Coach platform-billing surface. Reads coachProfile subscription
          columns (phase 1 schema) and renders tier, status, renewal date,
-         monthly client + session usage with overage warnings, and a
+         monthly session usage with overage warnings, and a
          platform-revenue summary (course + package payouts to date).
     ─────────────────────────────────────────────────────────────────── -->
     <div id="tab-billing" class="tab-panel">
@@ -2361,19 +2361,9 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 
       <div class="form-section" id="billing-usage-section" style="margin-top:20px;">
         <h2 class="form-section-title" style="margin-bottom:14px;">This month's usage</h2>
-        <p style="font-size:0.86rem;color:var(--muted);margin-bottom:22px;line-height:1.6;">Counters reset at the start of each billing period. Overage is billed at <strong>$3 per session</strong> above the cap; client overage is informational only.</p>
+        <p style="font-size:0.86rem;color:var(--muted);margin-bottom:22px;line-height:1.6;">Counters reset at the start of each billing period. Overage is billed at <strong>$5 per session</strong> above the cap. Unlimited clients on every tier.</p>
 
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;">
-          <div style="padding:20px 22px;background:#ffffff;border:1px solid #e8e4dc;border-radius:10px;">
-            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;">
-              <div style="font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);">Active clients</div>
-              <div id="billing-clients-count" style="font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:600;color:#1a3a52;line-height:1;">0 / —</div>
-            </div>
-            <div style="height:8px;background:#f1ece1;border-radius:50px;overflow:hidden;">
-              <div id="billing-clients-bar" style="height:100%;width:0%;background:#c49a3c;border-radius:50px;transition:width 0.4s ease;"></div>
-            </div>
-            <div id="billing-clients-detail" style="font-size:0.78rem;color:var(--muted);margin-top:8px;line-height:1.5;">—</div>
-          </div>
           <div style="padding:20px 22px;background:#ffffff;border:1px solid #e8e4dc;border-radius:10px;">
             <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;">
               <div style="font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);">Sessions run</div>
@@ -6219,10 +6209,10 @@ async function loadWaitlistTab() {
 // empty — that's expected for legacy + freshly-provisioned coaches.
 
 var BILLING_TIER_INFO = {
-  practice: { label: 'Practice', price: '$99 / month', clientCap: 20, sessionCap: 60 },
-  scale:    { label: 'Scale',    price: '$249 / month', clientCap: 60, sessionCap: 180 },
+  practice: { label: 'Practice', price: '$99 / month', sessionCap: 25 },
+  scale:    { label: 'Scale',    price: '$249 / month', sessionCap: 65 },
 };
-var BILLING_OVERAGE_RATE_CENTS = 300;
+var BILLING_OVERAGE_RATE_CENTS = 500;
 var BILLING_STATUS_PRESETS = {
   active:             { label: 'Active',           bg: '#e6f1e6', fg: '#2e6a2e', detail: 'Subscription is current.' },
   trialing:           { label: 'In trial',         bg: '#e6efef', fg: '#2c5b6b', detail: 'You\'re inside the trial window.' },
@@ -6282,36 +6272,25 @@ async function loadBillingTab() {
   setText('billing-renewal-detail', (days != null && days >= 0) ? ('in ' + days + ' day' + (days === 1 ? '' : 's')) : '');
 
   // ── Usage ───────────────────────────────────────────────────────
-  var clientCap = info ? info.clientCap : 0;
+  // Per-session pricing: only sessions count against the tier cap; client
+  // count is unlimited and no longer displayed here.
   var sessionCap = info ? info.sessionCap : 0;
-  var clientCount = Number(coachProfile.monthly_client_count) || 0;
   var sessionCount = Number(coachProfile.monthly_session_count) || 0;
 
-  setText('billing-clients-count', clientCount + ' / ' + (clientCap || '—'));
   setText('billing-sessions-count', sessionCount + ' / ' + (sessionCap ? '~' + sessionCap : '—'));
 
-  var clientPct = clientCap ? Math.min(100, Math.round(clientCount / clientCap * 100)) : 0;
   var sessionPct = sessionCap ? Math.min(100, Math.round(sessionCount / sessionCap * 100)) : 0;
-  var clientBar = document.getElementById('billing-clients-bar');
   var sessionBar = document.getElementById('billing-sessions-bar');
-  if (clientBar) {
-    clientBar.style.width = clientPct + '%';
-    clientBar.style.background = (clientCap && clientCount > clientCap) ? '#c47a3c' : '#c49a3c';
-  }
   if (sessionBar) {
     sessionBar.style.width = sessionPct + '%';
     sessionBar.style.background = (sessionCap && sessionCount > sessionCap) ? '#c47a3c' : '#c49a3c';
   }
 
   if (info) {
-    setText('billing-clients-detail', clientCount > clientCap
-      ? (clientCount - clientCap) + ' over your tier cap'
-      : (clientCap - clientCount) + ' more before you hit the cap');
     setText('billing-sessions-detail', sessionCount > sessionCap
       ? (sessionCount - sessionCap) + ' over your tier cap'
       : (sessionCap - sessionCount) + ' more before you hit the cap');
   } else {
-    setText('billing-clients-detail', 'Caps apply once you migrate to the tiered pricing.');
     setText('billing-sessions-detail', 'Caps apply once you migrate to the tiered pricing.');
   }
 
@@ -6321,7 +6300,8 @@ async function loadBillingTab() {
   if (overOver) {
     var extra = sessionCount - sessionCap;
     var overageCents = extra * BILLING_OVERAGE_RATE_CENTS;
-    setText('billing-overage-detail', extra + ' session' + (extra === 1 ? '' : 's') + ' over the cap × $3 = ' + billingDollars(overageCents) + ' on next invoice.');
+    var overageDollars = BILLING_OVERAGE_RATE_CENTS / 100;
+    setText('billing-overage-detail', extra + ' session' + (extra === 1 ? '' : 's') + ' over the cap × $' + overageDollars + ' = ' + billingDollars(overageCents) + ' on next invoice.');
   }
 
   // ── Platform revenue (lifetime) ────────────────────────────────
