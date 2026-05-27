@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>Zoom Reviewer Sign-In | ineedcoaching.org</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #1a3a52;
+    --gold: #c49a3c;
+    --gold-hover: #a87d1f;
+    --cream: #f7f5f1;
+    --white: #ffffff;
+    --ink: #1a2e3b;
+    --muted: #6b7280;
+    --border: #e8e4dc;
+    --r: 10px;
+    --r-sm: 8px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 48px 40px;
+    max-width: 480px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+  }
+  .logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 24px;
+  }
+  .logo em { color: var(--gold); font-style: italic; }
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 10px;
+    letter-spacing: -0.01em;
+  }
+  .sub {
+    font-size: 0.92rem;
+    color: var(--muted);
+    margin-bottom: 32px;
+    line-height: 1.6;
+  }
+  .btn {
+    width: 100%;
+    padding: 14px 24px;
+    background: var(--gold);
+    color: var(--white);
+    border: none;
+    border-radius: var(--r-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .btn:hover { background: var(--gold-hover); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .msg {
+    margin-top: 18px;
+    font-size: 0.85rem;
+    min-height: 20px;
+    color: var(--gold);
+  }
+  .msg.error { color: #c44; }
+  .notfound {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    color: var(--ink);
+  }
+</style>
+</head>
+<body>
+  <div class="card" id="card">
+    <div id="content"></div>
+  </div>
+
+<script>
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var key = (params.get('key') || '').trim();
+  var content = document.getElementById('content');
+
+  if (!key) {
+    content.innerHTML = '<div class="notfound">Not found</div>';
+    return;
+  }
+
+  content.innerHTML =
+    '<div class="logo">ineed<em>i</em>coach<em>ing</em>.org</div>' +
+    '<h1>Zoom Reviewer Sign-In</h1>' +
+    '<p class="sub">Click below to sign into the demo coach account used for Zoom Marketplace functional review.</p>' +
+    '<button id="signin" class="btn" type="button">Sign In to Demo Account</button>' +
+    '<div id="msg" class="msg"></div>';
+
+  var btn = document.getElementById('signin');
+  var msg = document.getElementById('msg');
+
+  btn.addEventListener('click', async function () {
+    btn.disabled = true;
+    btn.textContent = 'Signing in...';
+    msg.classList.remove('error');
+    msg.textContent = '';
+
+    try {
+      var res = await fetch('/api/zoom-reviewer-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-reviewer-secret': key,
+        },
+        body: '{}',
+      });
+
+      if (res.status === 401) {
+        msg.classList.add('error');
+        msg.textContent = 'Access denied';
+        btn.disabled = false;
+        btn.textContent = 'Sign In to Demo Account';
+        return;
+      }
+
+      var data = await res.json().catch(function () { return {}; });
+      if (!res.ok || !data.redirect_url) {
+        msg.classList.add('error');
+        msg.textContent = data.error || 'Sign-in failed. Please try again.';
+        btn.disabled = false;
+        btn.textContent = 'Sign In to Demo Account';
+        return;
+      }
+
+      window.location.href = data.redirect_url;
+    } catch (e) {
+      msg.classList.add('error');
+      msg.textContent = 'Network error. Please try again.';
+      btn.disabled = false;
+      btn.textContent = 'Sign In to Demo Account';
+    }
+  });
+})();
+</script>
+</body>
+</html>
