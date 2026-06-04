@@ -8,7 +8,6 @@
 import crypto from 'node:crypto';
 
 const REVIEWER_EMAIL = 'ineedcoaching.zoomreview@gmail.com';
-const REDIRECT_TO = 'https://www.ineedcoaching.org/coach-dashboard.html';
 
 function constantTimeEqual(a, b) {
   if (typeof a !== 'string' || typeof b !== 'string') return false;
@@ -71,6 +70,7 @@ export default async function handler(req, res) {
   }
 
   try {
+    // 1. Generate a magic link for the reviewer account (server-side only).
     const linkRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
       method: 'POST',
       headers: {
@@ -81,47 +81,63 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         type: 'magiclink',
         email: REVIEWER_EMAIL,
-        redirect_to: REDIRECT_TO,
       }),
     });
 
     if (!linkRes.ok) {
       const detail = await linkRes.text().catch(() => '');
       console.error('[zoom-reviewer-login] generate_link failed:', linkRes.status, detail.slice(0, 300));
-      await writeAudit(SUPABASE_URL, SERVICE_KEY, {
-        ip_address: ip,
-        user_agent: userAgent,
-        outcome: 'error',
-      });
+      await writeAudit(SUPABASE_URL, SERVICE_KEY, { ip_address: ip, user_agent: userAgent, outcome: 'error' });
       return res.status(502).json({ error: 'Could not generate sign-in link' });
     }
 
-    const data = await linkRes.json();
-    const actionLink = data?.action_link || data?.properties?.action_link;
-    if (!actionLink) {
-      console.error('[zoom-reviewer-login] no action_link in response keys:', Object.keys(data || {}));
-      await writeAudit(SUPABASE_URL, SERVICE_KEY, {
-        ip_address: ip,
-        user_agent: userAgent,
-        outcome: 'error',
-      });
-      return res.status(502).json({ error: 'No action_link returned' });
+    const linkData = await linkRes.json();
+    const hashedToken =
+      linkData?.properties?.hashed_token ||
+      linkData?.hashed_token ||
+      null;
+
+    if (!hashedToken) {
+      console.error('[zoom-reviewer-login] no hashed_token in response. top keys:', Object.keys(linkData || {}), 'props keys:', Object.keys(linkData?.properties || {}));
+      await writeAudit(SUPABASE_URL, SERVICE_KEY, { ip_address: ip, user_agent: userAgent, outcome: 'error' });
+      return res.status(502).json({ error: 'No hashed_token returned' });
     }
 
-    await writeAudit(SUPABASE_URL, SERVICE_KEY, {
-      ip_address: ip,
-      user_agent: userAgent,
-      outcome: 'success',
+    // 2. Verify the token server-side to mint a real session (access + refresh).
+    //    The verify endpoint only needs a valid apikey header; service key is accepted.
+    const VERIFY_APIKEY = process.env.SUPABASE_ANON_KEY || SERVICE_KEY;
+    const verifyRes = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
+      method: 'POST',
+      headers: {
+        'apikey': VERIFY_APIKEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ type: 'magiclink', token_hash: hashedToken }),
     });
 
-    return res.status(200).json({ redirect_url: actionLink });
+    if (!verifyRes.ok) {
+      const detail = await verifyRes.text().catch(() => '');
+      console.error('[zoom-reviewer-login] verify failed:', verifyRes.status, detail.slice(0, 300));
+      await writeAudit(SUPABASE_URL, SERVICE_KEY, { ip_address: ip, user_agent: userAgent, outcome: 'error' });
+      return res.status(502).json({ error: 'Could not establish session' });
+    }
+
+    const session = await verifyRes.json();
+    const accessToken = session?.access_token;
+    const refreshToken = session?.refresh_token;
+
+    if (!accessToken || !refreshToken) {
+      console.error('[zoom-reviewer-login] session missing tokens. keys:', Object.keys(session || {}));
+      await writeAudit(SUPABASE_URL, SERVICE_KEY, { ip_address: ip, user_agent: userAgent, outcome: 'error' });
+      return res.status(502).json({ error: 'Session missing tokens' });
+    }
+
+    await writeAudit(SUPABASE_URL, SERVICE_KEY, { ip_address: ip, user_agent: userAgent, outcome: 'success' });
+
+    return res.status(200).json({ access_token: accessToken, refresh_token: refreshToken });
   } catch (e) {
     console.error('[zoom-reviewer-login] unexpected error:', e.message);
-    await writeAudit(SUPABASE_URL, SERVICE_KEY, {
-      ip_address: ip,
-      user_agent: userAgent,
-      outcome: 'error',
-    });
+    await writeAudit(SUPABASE_URL, SERVICE_KEY, { ip_address: ip, user_agent: userAgent, outcome: 'error' });
     return res.status(500).json({ error: 'Internal error' });
   }
 }

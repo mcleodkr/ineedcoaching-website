@@ -143,7 +143,7 @@
       }
 
       var data = await res.json().catch(function () { return {}; });
-      if (!res.ok || !data.redirect_url) {
+      if (!res.ok || !data.access_token || !data.refresh_token) {
         msg.classList.add('error');
         msg.textContent = data.error || 'Sign-in failed. Please try again.';
         btn.disabled = false;
@@ -151,7 +151,11 @@
         return;
       }
 
-      window.location.href = data.redirect_url;
+      // Write the session directly to the keys coach-dashboard.html reads, then go
+      // straight to the dashboard. No Supabase redirect/hash handshake involved.
+      localStorage.setItem('sb_access_token', data.access_token);
+      localStorage.setItem('sb_refresh_token', data.refresh_token);
+      window.location.href = '/coach-dashboard.html';
     } catch (e) {
       msg.classList.add('error');
       msg.textContent = 'Network error. Please try again.';
