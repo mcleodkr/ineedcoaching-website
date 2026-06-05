@@ -340,7 +340,7 @@ function renderStats(s) {
     statCard('Total Coaches', s.totalCoaches),
     statCard('Total Clients', s.totalClients),
     statCard('Sessions This Month', s.sessionsThisMonth),
-    statCard('Coach Clarity Runs This Month', s.clarityRunsThisMonth),
+    statCard('Session Insights Runs This Month', s.clarityRunsThisMonth),
     statCard('Published Profiles', s.publishedCount),
     statCard('Estimated MRR', '$' + (s.estimatedMrr || 0).toLocaleString()),
     statCard('Clarity Runs This Month', s.clarityRunsThisMonth || 0),
@@ -364,7 +364,7 @@ function renderAttention(a) {
     return;
   }
   el.innerHTML = '<div class="card terracotta"><h2>Attention Needed</h2><div class="attention-grid">' +
-    attnItem(a.failedClarity, 'Failed Coach Clarity runs') +
+    attnItem(a.failedClarity, 'Failed Session Insights runs') +
     attnItem(a.sessionsMissingAnalysis, 'Sessions >48h with no analysis') +
     attnItem(a.coachesInactive14, 'Coaches inactive 14+ days') +
     attnItem(a.coachesZeroSessions7, 'Coaches, 0 sessions after 7 days') +
@@ -392,7 +392,7 @@ function renderActivity(a) {
   el.innerHTML =
     '<div class="activity-col"><h3>Last 10 coach signups</h3>' + signups + '</div>' +
     '<div class="activity-col"><h3>Last 10 sessions</h3>' + sessions + '</div>' +
-    '<div class="activity-col"><h3>Last 5 Coach Clarity analyses</h3>' + analyses + '</div>';
+    '<div class="activity-col"><h3>Last 5 Session Insights analyses</h3>' + analyses + '</div>';
 }
 
 /* ================================================
@@ -418,7 +418,7 @@ async function loadErrors() {
   }).join('') || '<tr><td colspan="3" class="empty">None</td></tr>';
 
   el.innerHTML =
-    '<div class="card terracotta"><h2>Failed Coach Clarity Runs</h2>' +
+    '<div class="card terracotta"><h2>Failed Session Insights Runs</h2>' +
     '<table><thead><tr><th>Coach</th><th>Client</th><th>Session date</th><th>Action</th></tr></thead><tbody>' + fc + '</tbody></table></div>' +
     '<div class="card terracotta"><h2>Sessions Missing Analysis (>24h)</h2>' +
     '<table><thead><tr><th>Coach</th><th>Client</th><th>Scheduled</th></tr></thead><tbody>' + ma + '</tbody></table></div>' +

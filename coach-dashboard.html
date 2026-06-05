@@ -2673,7 +2673,7 @@ function updateSessionProgress(sid, step, complete) {
   // spans: 0=step1, 1=arrow, 2=step2, 3=arrow, 4=step3
   var idx = (step - 1) * 2;
   if (spans[idx]) {
-    var labels = ['\u2460 Transcript', '\u2461 Notes', '\u2462 Coach Clarity', '\u2463 Coaching Mirror'];
+    var labels = ['\u2460 Transcript', '\u2461 Notes', '\u2462 Session Insights', '\u2463 Coaching Mirror'];
     spans[idx].style.color = complete ? 'var(--gold)' : 'var(--muted)';
     spans[idx].textContent = labels[step - 1] + (complete ? ' \u2713' : '');
   }
@@ -7926,7 +7926,7 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
         + '<span style="color:var(--border);font-size:0.7rem;">\u2192</span>'
         + '<span style="font-size:0.75rem;font-weight:700;color:' + (hasNotes ? 'var(--gold)' : 'var(--muted)') + ';">\u2461 Notes ' + (hasNotes ? '\u2713' : '') + '</span>'
         + '<span style="color:var(--border);font-size:0.7rem;">\u2192</span>'
-        + '<span style="font-size:0.75rem;font-weight:700;color:' + (hasAnalysis ? 'var(--gold)' : 'var(--muted)') + ';">\u2462 Coach Clarity ' + (hasAnalysis ? '\u2713' : '') + '</span>'
+        + '<span style="font-size:0.75rem;font-weight:700;color:' + (hasAnalysis ? 'var(--gold)' : 'var(--muted)') + ';">\u2462 Session Insights ' + (hasAnalysis ? '\u2713' : '') + '</span>'
         + '<span style="color:var(--border);font-size:0.7rem;">\u2192</span>'
         + '<span style="font-size:0.75rem;font-weight:700;color:' + (hasAnalysis ? 'var(--gold)' : 'var(--muted)') + ';">\u2463 Coaching Mirror ' + (hasAnalysis ? '\u2713' : '') + '</span>'
         + '</div>';
@@ -7938,7 +7938,7 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
         + '<button class="stab active" data-sid="' + s.id + '" data-stab="pre-session-prep" style="flex:1;padding:8px 14px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;color:var(--navy);background:var(--white);border:none;border-radius:6px;cursor:pointer;white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,0.04);transition:all 0.15s ease;">Pre-Session Prep</button>'
         + '<button class="stab" data-sid="' + s.id + '" data-stab="transcript" style="flex:1;padding:8px 14px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;color:var(--muted);background:none;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all 0.15s ease;">Transcript</button>'
         + '<button class="stab" data-sid="' + s.id + '" data-stab="notes" style="flex:1;padding:8px 14px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;color:var(--muted);background:none;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all 0.15s ease;">Session Notes</button>'
-        + '<button class="stab" data-sid="' + s.id + '" data-stab="coach-clarity" style="flex:1;padding:8px 14px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;color:var(--muted);background:none;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all 0.15s ease;">Coach Clarity</button>'
+        + '<button class="stab" data-sid="' + s.id + '" data-stab="coach-clarity" style="flex:1;padding:8px 14px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;color:var(--muted);background:none;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all 0.15s ease;">Session Insights</button>'
         + '<button class="stab" data-sid="' + s.id + '" data-stab="coaching-mirror" style="flex:1;padding:8px 14px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;color:var(--muted);background:none;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all 0.15s ease;">Coaching Mirror</button>'
         + '<button class="stab" data-sid="' + s.id + '" data-stab="approach-lab" style="flex:1;padding:8px 14px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:500;color:var(--muted);background:none;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;transition:all 0.15s ease;">Approach Lab</button>'
         + '</div>';
@@ -8006,7 +8006,7 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
       html += '<div class="session-processor" id="processor-' + s.id + '" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);"></div>';
       html += '</div>';
 
-      // Tab 3: Coach Clarity
+      // Tab 3: Session Insights (post-session analysis tab)
       // Per the cost-leak audit: no manual regenerate button. Analysis fires
       // automatically on transcript ingestion (the runPostSessionAnalysis call
       // wired into the transcript-paste flow below). To refresh, re-upload.
@@ -8017,12 +8017,12 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
       } else if (canAnalyze) {
         html += '<div id="post-analysis-' + s.id + '" data-tab-type="coach-clarity">'
           + '<div style="text-align:center;padding:32px 16px;">'
-          + '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:var(--muted);line-height:1.55;margin:0 auto 18px;max-width:380px;">Run Coach Clarity to surface what happened in this session — patterns, moves, and missed openings — from the transcript and notes.</p>'
-          + '<button class="btn-primary gen-coach-clarity-btn" data-sid="' + s.id + '" data-client-email="' + escapeHtml(client.email) + '">Analyze This Session with Coach Clarity</button>'
+          + '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:var(--muted);line-height:1.55;margin:0 auto 18px;max-width:380px;">Run Session Insights to surface what happened in this session — patterns, moves, and missed openings — from the transcript and notes.</p>'
+          + '<button class="btn-primary gen-coach-clarity-btn" data-sid="' + s.id + '" data-client-email="' + escapeHtml(client.email) + '">Analyze This Session</button>'
           + '</div>'
           + '</div>';
       } else {
-        html += '<p style="font-size:0.85rem;color:var(--muted);font-style:italic;">Add a transcript or session notes first to unlock Coach Clarity analysis.</p>'
+        html += '<p style="font-size:0.85rem;color:var(--muted);font-style:italic;">Add a transcript or session notes first to unlock Session Insights.</p>'
           + '<div id="post-analysis-' + s.id + '" data-tab-type="coach-clarity" style="margin-top:16px;"></div>';
       }
       html += '</div>';
@@ -8031,7 +8031,7 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
       html += '<div id="stab-coaching-mirror-' + s.id + '" class="stab-panel" data-sid="' + s.id + '" style="padding:20px;display:none;">';
       html += '<div id="coaching-mirror-' + s.id + '">';
       if (!hasAnalysis) {
-        html += '<p style="font-size:0.85rem;color:var(--muted);font-style:italic;">Run Coach Clarity analysis first to unlock your Coaching Mirror.</p>';
+        html += '<p style="font-size:0.85rem;color:var(--muted);font-style:italic;">Run Session Insights first to unlock your Coaching Mirror.</p>';
       }
       html += '</div>';
       html += '</div>';
@@ -8257,7 +8257,7 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
 
   html += '<p id="hw-empty-state" style="color:var(--muted);font-size:0.88rem;font-style:italic;'
     + ((!pendingDrafts.length && !officialHw.length) ? '' : 'display:none;')
-    + '">No homework yet. Add one below, or run Coach Clarity on a session to surface AI-detected assignments.</p>';
+    + '">No homework yet. Add one below, or run Session Insights on a session to surface AI-detected assignments.</p>';
 
   // Inline add homework (manual)
   html += '<div style="margin-top:12px;padding:16px 20px;background:var(--cream);border:1px solid var(--border);border-radius:var(--r-sm);">'
@@ -8375,7 +8375,7 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
       if (tab === 'pre-session-prep') {
         try { populatePreSessionPrep(sid, (typeof client !== 'undefined' && client && client.email) || ''); } catch (_) {}
       }
-      // Dynamically populate Coach Clarity tab on open
+      // Dynamically populate Session Insights tab on open
       if (tab === 'coach-clarity') {
         var analysisContainer = $('post-analysis-' + sid);
         var noteData = notesByBooking[sid];
@@ -8399,8 +8399,8 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
           } else if (hasData && !hasExisting) {
             var clientEmailForBtn = (noteData && noteData.client_email) || (typeof client !== 'undefined' && client && client.email) || '';
             analysisContainer.innerHTML = '<div style="text-align:center;padding:32px 16px;">'
-              + '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:var(--muted);line-height:1.55;margin:0 auto 18px;max-width:380px;">Run Coach Clarity to surface what happened in this session — patterns, moves, and missed openings — from the transcript and notes.</p>'
-              + '<button class="btn-primary gen-coach-clarity-btn" data-sid="' + sid + '" data-client-email="' + escapeHtml(clientEmailForBtn) + '">Analyze This Session with Coach Clarity</button>'
+              + '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:var(--muted);line-height:1.55;margin:0 auto 18px;max-width:380px;">Run Session Insights to surface what happened in this session — patterns, moves, and missed openings — from the transcript and notes.</p>'
+              + '<button class="btn-primary gen-coach-clarity-btn" data-sid="' + sid + '" data-client-email="' + escapeHtml(clientEmailForBtn) + '">Analyze This Session</button>'
               + '</div>';
           }
         }
@@ -8427,7 +8427,7 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
         } else if (!labContainer) {
           // container missing — nothing to do
         } else if (!labNote || (!labNote.raw_transcript && !labNote.post_session_analysis)) {
-          labContainer.innerHTML = '<div style="text-align:center;padding:48px 24px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#9a9490;">Coach Clarity needs session notes or a transcript to generate the Approach Lab. Run Coach Clarity analysis first.</div>';
+          labContainer.innerHTML = '<div style="text-align:center;padding:48px 24px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#9a9490;">The Approach Lab needs session notes or a transcript. Run Session Insights first.</div>';
         } else {
           labContainer.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;gap:16px;">'
             + '<div class="loading-spinner"></div>'
@@ -8443,7 +8443,7 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
               });
               var labData = await labRes.json();
               if (!labRes.ok || labData.error) {
-                labContainer.innerHTML = '<div style="text-align:center;padding:48px 24px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#9a9490;">' + escapeHtml(labData.error || 'Coach Clarity needs session notes or a transcript to generate the Approach Lab. Run Coach Clarity analysis first.') + '</div>';
+                labContainer.innerHTML = '<div style="text-align:center;padding:48px 24px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#9a9490;">' + escapeHtml(labData.error || 'The Approach Lab needs session notes or a transcript. Run Session Insights first.') + '</div>';
                 return;
               }
               if (!notesByBooking[sid]) notesByBooking[sid] = {};
@@ -9766,7 +9766,7 @@ async function sendCoachReply(key, thread) {
 /* ================================================
    COACHING INTELLIGENCE SUITE
    ================================================ */
-var CI_LABEL = '<span style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;display:block;">Coach Clarity</span>';
+var CI_LABEL = '<span style="font-size:0.65rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;display:block;">Session Insights</span>';
 
 function ciCard(title, content, opts) {
   opts = opts || {};
@@ -11373,7 +11373,7 @@ function renderApproachLab(data, container, ctx) {
   ctx = ctx || {};
   if (!container) return;
   if (!data || !Array.isArray(data.moments) || !data.moments.length) {
-    container.innerHTML = '<div style="text-align:center;padding:48px 24px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#9a9490;">Coach Clarity needs session notes or a transcript to generate the Approach Lab. Run Coach Clarity analysis first.</div>';
+    container.innerHTML = '<div style="text-align:center;padding:48px 24px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-style:italic;color:#9a9490;">The Approach Lab needs session notes or a transcript. Run Session Insights first.</div>';
     return;
   }
   var moments = data.moments;
