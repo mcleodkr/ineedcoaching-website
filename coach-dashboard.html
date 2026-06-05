@@ -7784,7 +7784,8 @@ async function openClientDetail(email) {
       supabaseGet('coach_messages?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&order=created_at.asc&select=*'),
       supabaseGet('coach_session_notes?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&select=*'),
       supabaseGet('coach_intake_forms?coach_id=eq.' + cid + '&form_type=eq.checkin&select=id,name'),
-      supabaseGet('coach_bookings?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&select=id')
+      supabaseGet('coach_bookings?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&select=id'),
+      supabaseGet('client_homework?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&order=created_at.desc&select=*')
     ]);
     var goals = results[0] || [];
     var legacyIntake = results[1] || [];
@@ -7793,6 +7794,7 @@ async function openClientDetail(email) {
     var sessionNotes = results[4] || [];
     var checkinForms = results[5] || [];
     var bookings = results[6] || [];
+    var officialHomework = results[7] || [];
 
     // New-shape per-booking intakes (booking_intake_responses) live on a
     // different table than the legacy coach_intake_responses (custom forms).
@@ -7835,13 +7837,13 @@ async function openClientDetail(email) {
     notesByBooking = {};
     sessionNotes.forEach(function(n) { notesByBooking[n.booking_id] = n; });
 
-    renderClientDetail(client, goals, intakeFeed, checkinResponses, messages, notesByBooking, checkinForms);
+    renderClientDetail(client, goals, intakeFeed, checkinResponses, messages, notesByBooking, checkinForms, officialHomework);
   } catch(e) {
     $('clients-detail-view').innerHTML = '<div class="empty-state"><p>Error loading client details.</p></div>';
   }
 }
 
-function renderClientDetail(client, goals, intakeFeed, checkinResponses, messages, notesByBooking, checkinForms) {
+function renderClientDetail(client, goals, intakeFeed, checkinResponses, messages, notesByBooking, checkinForms, officialHomework) {
   var statusLabels = { not_started: 'Not Started', in_progress: 'In Progress', proposed: 'Proposed', active: 'Active', progressing: 'Progressing', stalled: 'Stalled', blocked: 'Blocked', revised: 'Revised', completed: 'Completed', archived: 'Archived' };
   var statusColors = { not_started: 'background:rgba(107,107,96,0.15);color:var(--muted)', in_progress: 'background:#c49a3c;color:#fff', proposed: 'background:rgba(107,107,96,0.15);color:var(--muted)', active: 'background:rgba(26,58,82,0.12);color:var(--ink)', progressing: 'background:#c49a3c;color:#fff', stalled: 'background:#b8860b;color:#fff', blocked: 'background:#c44;color:#fff', revised: 'background:#7b5ea7;color:#fff', completed: 'background:#2d6a4f;color:#fff', archived: 'background:rgba(107,107,96,0.25);color:var(--muted)' };
   var firstStr = client.firstSession ? new Date(client.firstSession).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A';
@@ -8173,6 +8175,75 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
     + '<div class="form-group" style="flex:1;min-width:180px;margin-bottom:0;"><label for="client-goal-title">Goal Title</label><input type="text" id="client-goal-title" placeholder="e.g. Complete leadership assessment"></div>'
     + '<div class="form-group" style="flex:0 0 140px;margin-bottom:0;"><label for="client-goal-date">Target Date</label><input type="date" id="client-goal-date"></div>'
     + '<button class="save-btn" id="client-add-goal-btn" style="padding:10px 20px;font-size:0.82rem;">Add Goal</button>'
+    + '</div></div>';
+  html += '</div>';
+
+  // Section 4b: Homework (Stage A — Detect → Review → Approve → Official).
+  // Pending drafts come from notesByBooking[*].homework (AI extraction marked
+  // handled:false). Official rows come from client_homework. Approve/Edit/
+  // Dismiss/Add all POST to /api/approve-homework; the page refreshes via
+  // openClientDetail to pick up the new state.
+  var hwTypeOptions = '<option value="other">Other</option><option value="journal">Journal</option><option value="reflection">Reflection</option><option value="behavioral">Behavioral</option>';
+  var clientEmailEsc = escapeHtml(client.email);
+  var pendingDrafts = [];
+  Object.keys(notesByBooking || {}).forEach(function(bid) {
+    var note = notesByBooking[bid];
+    if (!note || !Array.isArray(note.homework)) return;
+    note.homework.forEach(function(d) {
+      if (d && d.handled === false) pendingDrafts.push({ booking_id: bid, draft: d });
+    });
+  });
+  var officialHw = Array.isArray(officialHomework) ? officialHomework : [];
+
+  html += '<div class="form-section" style="margin-bottom:24px;">'
+    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;">Homework</h2>';
+
+  if (pendingDrafts.length) {
+    html += '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);margin-bottom:8px;">Pending — AI-detected, awaiting your review</div>';
+    pendingDrafts.forEach(function(p) {
+      var d = p.draft;
+      var verbatim = d.assignment_verbatim || d.client_facing_text || '';
+      var draftType = d.type || 'other';
+      var typeSelect = hwTypeOptions.replace('value="' + draftType + '"', 'value="' + draftType + '" selected');
+      html += '<div data-hw-draft-card="' + escapeHtml(d.id) + '" style="background:var(--cream);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:var(--r-sm);padding:14px 18px;margin-bottom:10px;">'
+        + '<div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">' + escapeHtml(draftType) + ' &middot; Coach said:</div>'
+        + '<textarea data-hw-draft-text="' + escapeHtml(d.id) + '" style="width:100%;min-height:60px;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--white);line-height:1.5;resize:vertical;">' + escapeHtml(verbatim) + '</textarea>'
+        + '<div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">'
+        + '<select data-hw-draft-type="' + escapeHtml(d.id) + '" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;background:var(--white);color:var(--ink);">' + typeSelect + '</select>'
+        + '<button class="action-btn action-confirm" data-hw-approve="' + escapeHtml(d.id) + '" data-hw-booking="' + escapeHtml(p.booking_id) + '" style="padding:6px 14px;font-size:0.75rem;">Approve</button>'
+        + '<button class="action-btn" data-hw-dismiss="' + escapeHtml(d.id) + '" data-hw-booking="' + escapeHtml(p.booking_id) + '" style="padding:6px 14px;font-size:0.75rem;background:rgba(196,68,68,0.12);color:#c44;border:1px solid rgba(196,68,68,0.3);">Dismiss</button>'
+        + '</div></div>';
+    });
+  }
+
+  if (officialHw.length) {
+    html += '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink);margin:14px 0 8px;">Assigned</div>';
+    officialHw.forEach(function(h) {
+      var createdStr = h.created_at ? new Date(h.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      var sourceBadge = h.source === 'manual'
+        ? '<span style="font-size:0.66rem;padding:2px 8px;border-radius:10px;background:rgba(107,107,96,0.15);color:var(--muted);">Manual</span>'
+        : '<span style="font-size:0.66rem;padding:2px 8px;border-radius:10px;background:rgba(196,154,60,0.2);color:#7a5e1f;">AI &middot; Approved</span>';
+      html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 18px;margin-bottom:8px;">'
+        + '<div style="font-size:0.9rem;color:var(--ink);line-height:1.5;margin-bottom:6px;">' + escapeHtml(h.assignment_text || '') + '</div>'
+        + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+        + '<span style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">' + escapeHtml(h.type || 'other') + '</span>'
+        + sourceBadge
+        + (createdStr ? '<span style="font-size:0.72rem;color:var(--muted);">' + escapeHtml(createdStr) + '</span>' : '')
+        + '<span style="font-size:0.66rem;padding:2px 8px;border-radius:10px;background:rgba(45,106,79,0.15);color:#2d6a4f;">Assigned</span>'
+        + '</div></div>';
+    });
+  }
+
+  if (!pendingDrafts.length && !officialHw.length) {
+    html += '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;">No homework yet. Add one below, or run Coach Clarity on a session to surface AI-detected assignments.</p>';
+  }
+
+  // Inline add homework (manual)
+  html += '<div style="margin-top:12px;padding:16px 20px;background:var(--cream);border:1px solid var(--border);border-radius:var(--r-sm);">'
+    + '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">'
+    + '<div class="form-group" style="flex:1;min-width:220px;margin-bottom:0;"><label for="client-hw-text">Assignment</label><textarea id="client-hw-text" placeholder="e.g. Journal each evening on what felt off" style="min-height:44px;resize:vertical;"></textarea></div>'
+    + '<div class="form-group" style="flex:0 0 140px;margin-bottom:0;"><label for="client-hw-type">Type</label><select id="client-hw-type">' + hwTypeOptions + '</select></div>'
+    + '<button class="save-btn" id="client-add-hw-btn" data-client-email="' + clientEmailEsc + '" style="padding:10px 20px;font-size:0.82rem;">Add Homework</button>'
     + '</div></div>';
   html += '</div>';
 
@@ -8762,6 +8833,80 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
       openClientDetail(client.email);
     });
   });
+
+  // ── Homework: Approve / Dismiss / Add (Stage A) ──────────────────────
+  // All three POST to /api/approve-homework. The page refreshes via
+  // openClientDetail so the freshly approved row + the flipped handled flag
+  // both reload from Supabase — no client-side state to keep in sync.
+  async function postHomework(payload) {
+    var res = await fetch('/api/approve-homework', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    var data = await res.json().catch(function() { return {}; });
+    if (!res.ok || !data.ok) {
+      alert((data && data.error) || 'Homework action failed. Please try again.');
+      return false;
+    }
+    return true;
+  }
+
+  document.querySelectorAll('[data-hw-approve]').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      var draftId = this.dataset.hwApprove;
+      var bookingId = this.dataset.hwBooking;
+      var textEl = document.querySelector('[data-hw-draft-text="' + draftId + '"]');
+      var typeEl = document.querySelector('[data-hw-draft-type="' + draftId + '"]');
+      var text = textEl ? textEl.value.trim() : '';
+      if (!text) { alert('Assignment text cannot be empty.'); return; }
+      this.disabled = true;
+      this.textContent = 'Approving…';
+      var ok = await postHomework({
+        action: 'approve',
+        coachId: coachProfile.id,
+        clientEmail: client.email,
+        bookingId: bookingId,
+        draftId: draftId,
+        assignment_text: text,
+        type: typeEl ? typeEl.value : 'other'
+      });
+      if (ok) openClientDetail(client.email);
+      else { this.disabled = false; this.textContent = 'Approve'; }
+    });
+  });
+
+  document.querySelectorAll('[data-hw-dismiss]').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      var draftId = this.dataset.hwDismiss;
+      var bookingId = this.dataset.hwBooking;
+      this.disabled = true;
+      this.textContent = 'Dismissing…';
+      var ok = await postHomework({ action: 'dismiss', bookingId: bookingId, draftId: draftId });
+      if (ok) openClientDetail(client.email);
+      else { this.disabled = false; this.textContent = 'Dismiss'; }
+    });
+  });
+
+  var addHwBtn = $('client-add-hw-btn');
+  if (addHwBtn) {
+    addHwBtn.addEventListener('click', async function() {
+      var text = ($('client-hw-text').value || '').trim();
+      if (!text) { alert('Enter an assignment.'); return; }
+      var type = ($('client-hw-type').value || 'other');
+      this.disabled = true;
+      this.textContent = 'Adding…';
+      var ok = await postHomework({
+        action: 'add',
+        coachId: coachProfile.id,
+        clientEmail: client.email,
+        assignment_text: text,
+        type: type
+      });
+      if (ok) openClientDetail(client.email);
+      else { this.disabled = false; this.textContent = 'Add Homework'; }
+    });
+  }
 
   // Wire add goal
   $('client-add-goal-btn').addEventListener('click', async function() {
@@ -10014,6 +10159,23 @@ function renderPreSessionBrief(b, container) {
       + '<div style="font-size:0.88rem;color:var(--muted);line-height:1.7;margin-bottom:8px;">' + escapeHtml(ls.recap || '') + '</div>'
       + (ls.key_insight ? '<div style="font-size:0.85rem;color:var(--gold);font-weight:700;margin-bottom:4px;">Key insight: ' + escapeHtml(ls.key_insight) + '</div>' : '')
       + (ls.between_session_plan ? '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;">Between sessions: ' + escapeHtml(ls.between_session_plan) + '</div>' : '')
+      + '</div>';
+  }
+
+  // Homework assigned last session — surfaces approved client_homework rows
+  // verbatim. The brief.homework_review object is built server-side from
+  // client_homework (status=assigned). Silent fallthrough when nothing is
+  // assigned; older persisted briefs that pre-date this field also fall through.
+  if (b.homework_review && Array.isArray(b.homework_review.assigned) && b.homework_review.assigned.length) {
+    h += '<div style="margin-bottom:24px;background:var(--cream);border-radius:8px;padding:18px 22px;border-left:3px solid var(--ink);">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:10px;">Homework assigned last session</div>';
+    b.homework_review.assigned.forEach(function(hw) {
+      h += '<div style="margin-bottom:10px;">'
+        + '<div style="font-size:0.88rem;color:var(--ink);line-height:1.55;">' + escapeHtml(hw.assignment || '') + '</div>'
+        + (hw.type ? '<div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-top:4px;">' + escapeHtml(hw.type) + '</div>' : '')
+        + '</div>';
+    });
+    h += '<div style="font-size:0.78rem;color:var(--muted);font-style:italic;margin-top:6px;">Ask the client whether they completed this.</div>'
       + '</div>';
   }
 

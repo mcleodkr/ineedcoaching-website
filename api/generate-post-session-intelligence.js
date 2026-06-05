@@ -272,6 +272,10 @@ ${sessionContent}${priorPatternContext}${activeGoalsContext}`;
       ),
       `Extract from this session: client_quotes (max 5 verbatim), commitments, emotional_shifts [{before,after}], themes, coach_interventions, tension_points, mentioned_goals. All arrays of short strings.
 
+Also extract homework: any between-session assignment the coach gave (task, practice, reflection, journal entry, experiment, or commitment-to-do). For each:
+{ "assignment_verbatim": "the coach's EXACT words assigning it, quoted from the transcript — do not paraphrase or summarize", "type": "journal | reflection | behavioral | other", "client_facing_text": "one clear sentence a client could read as a reminder" }
+If no assignment was given, return an empty array. Do not invent. Coaching language only. Add "homework" as an array to the JSON.
+
 ${sessionContent}`,
       'Pass 1: Extraction'
     , { feature: 'coaching_mirror', coachId }
@@ -884,6 +888,21 @@ Limits: max 3 goal_proposals, max 3 goal_status_updates. Return empty arrays if 
       console.error('[generate-post-session-intelligence] canonicalization failed (non-fatal)', { message: canonErr && canonErr.message });
     }
 
+    // ── Homework drafts (Stage A) ───────────────────────────────────────
+    // Pass 1 extracts verbatim homework alongside the other evidence. Each
+    // draft gets the same {id, handled:false, ...payload} stamp the goal
+    // proposals use so approve-homework can flip handled=true on approval.
+    // Conditional spread on the PATCH below: an empty extraction must not
+    // clobber a previously-stored homework array.
+    const stampHw = (arr) => arr.map(item => ({
+      id: (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2,10)}`),
+      handled: false,
+      ...item,
+    }));
+    const homeworkExtracted = Array.isArray(extractionOutput.homework)
+      ? stampHw(extractionOutput.homework.filter(h => h && (h.assignment_verbatim || h.client_facing_text)))
+      : [];
+
     // ── Save results to Supabase ────────────────────────────────────────
     if (bookingId) {
       await fetch(
@@ -899,6 +918,7 @@ Limits: max 3 goal_proposals, max 3 goal_status_updates. Return empty arrays if 
             coaching_signals: formattedOutput.coaching_signals || null,
             frameworks_detected: formattedOutput.frameworks || null,
             dna_manifestations: formattedOutput.dna_manifestations,
+            ...(homeworkExtracted.length ? { homework: homeworkExtracted } : {}),
           }),
         }
       );

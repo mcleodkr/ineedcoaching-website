@@ -129,7 +129,7 @@ export default async function handler(req, res) {
       : `${SUPABASE_URL}/rest/v1/coach_session_notes?coach_id=eq.${coachId}&dna_manifestations=not.is.null&order=created_at.desc&limit=10&select=created_at,client_email,dna_manifestations`;
 
     console.log('[pre-session-brief] stage 2 fetching', { invokeId, ms: Date.now() - invokeStart });
-    const [notesRes, goalsRes, bookingsRes, checkinRes, intakeRes, patternMapRes, strategyRes, dnaProfileRes, coachWideManifestationsRes] = await Promise.all([
+    const [notesRes, goalsRes, bookingsRes, checkinRes, intakeRes, patternMapRes, strategyRes, dnaProfileRes, coachWideManifestationsRes, homeworkRes] = await Promise.all([
       fetch(notesUrl, { headers }),
       fetch(goalsUrl, { headers }),
       fetch(bookingsUrl, { headers }),
@@ -138,10 +138,11 @@ export default async function handler(req, res) {
       fetch(patternMapUrl, { headers }),
       fetch(strategyUrl, { headers }),
       fetch(coachDnaProfileUrl, { headers }),
-      fetch(coachWideManifestationsUrl, { headers })
+      fetch(coachWideManifestationsUrl, { headers }),
+      fetch(`${SUPABASE_URL}/rest/v1/client_homework?coach_id=eq.${coachId}&client_email=eq.${encodeURIComponent(clientEmail)}&status=eq.assigned&order=created_at.desc&limit=5&select=assignment_text,type,created_at,booking_id`, { headers })
     ]);
 
-    const [notes, goals, bookings, checkins, intakeData, patternMapRows, strategyRows, dnaProfileRows, coachWideManifestationsRaw] = await Promise.all([
+    const [notes, goals, bookings, checkins, intakeData, patternMapRows, strategyRows, dnaProfileRows, coachWideManifestationsRaw, officialHomeworkRows] = await Promise.all([
       notesRes.json(),
       goalsRes.json(),
       bookingsRes.json(),
@@ -150,7 +151,8 @@ export default async function handler(req, res) {
       patternMapRes.json().catch(function() { return null; }),
       strategyRes.json().catch(function() { return null; }),
       dnaProfileRes.json().catch(function() { return null; }),
-      coachWideManifestationsRes.json().catch(function() { return null; })
+      coachWideManifestationsRes.json().catch(function() { return null; }),
+      homeworkRes.json().catch(function() { return null; })
     ]);
     console.log('[pre-session-brief] stage 3 fetched', {
       invokeId,
@@ -627,13 +629,31 @@ Return ONLY valid JSON with these exact keys (in this order):
       return respondError(500, { error: 'Failed to parse brief', stop_reason: stopReason });
     }
 
+    // Stage A homework: surface APPROVED assignments only. Drafts live on
+    // coach_session_notes.homework and stay pending until the coach approves;
+    // the brief is for in-session use and should show the official text the
+    // coach committed to. assignment_text is rendered verbatim by the
+    // dashboard — no model paraphrasing.
+    const hwRows = Array.isArray(officialHomeworkRows) ? officialHomeworkRows : [];
+    const homework_review = {
+      source: hwRows.length ? 'official_from_last_session' : 'none_assigned',
+      assigned: hwRows.map(function(h) {
+        return {
+          assignment: h.assignment_text || '',
+          type: h.type || 'other',
+          completion: 'self_reported',
+          completion_note: 'Ask the client whether they completed this.'
+        };
+      })
+    };
+
     // Inject the static disclaimer at the top of the brief. Done server-side
     // (not via the model) so wording is fixed and tokens are not spent
     // regenerating product copy. Lands in both the response payload and the
     // persisted coach_session_notes.pre_session_intelligence row. Object.assign
     // with about_this_brief first puts the disclaimer at the top of the
     // JSON output for the frontend renderer.
-    brief = Object.assign({ about_this_brief: ABOUT_THIS_BRIEF }, brief);
+    brief = Object.assign({ about_this_brief: ABOUT_THIS_BRIEF, homework_review: homework_review }, brief);
 
     sendProgress('session_prep', 'complete');
     sendProgress('finalizing', 'in_progress');
