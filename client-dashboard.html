@@ -2483,6 +2483,14 @@ async function loadJournal() {
 window.loadJournal = loadJournal;
 
 async function fetchJournalPrompt() {
+  // Homework override: consume the one-shot seed set by a Homework "Write
+  // in your journal →" click and skip the system-prompt fetch entirely so
+  // the assignment text becomes the prompt the client writes against.
+  if (pendingJournalPrompt) {
+    journalState.prompt = pendingJournalPrompt;
+    pendingJournalPrompt = null;
+    return;
+  }
   try {
     const token = localStorage.getItem(TOKEN_KEY);
     const res = await fetch('/api/generate-journal-prompt', {
@@ -3542,6 +3550,13 @@ function updateLocationFields() {
 // after a successful PATCH so the DOM stays in sync without re-querying.
 let homeworkCache = null;
 
+// One-shot override consumed by fetchJournalPrompt — set by the homework
+// "Write in your journal →" button so the journal opens with the
+// assignment as the prompt instead of the system-generated reflection
+// prompt. Always cleared after consumption so the next normal Journal
+// visit fetches the system prompt as before.
+let pendingJournalPrompt = null;
+
 async function fetchHomework() {
   if (!currentEmail || !currentToken) return [];
   try {
@@ -3764,9 +3779,32 @@ function wireHomeworkHandlers() {
   document.querySelectorAll('[data-hw-journal]').forEach(function(btn) {
     if (btn._wired) return;
     btn._wired = true;
-    btn.addEventListener('click', function() {
+    btn.addEventListener('click', async function() {
+      const id = btn.getAttribute('data-hw-journal');
+      const hw = (homeworkCache || []).find(function(h) { return h && h.id === id; });
+      // Seed the override BEFORE switching to the Journal section so the
+      // forced loadJournal() below picks it up. Falls back to empty text
+      // if the cache lookup misses — that's still safer than letting the
+      // system prompt overwrite a homework intent.
+      pendingJournalPrompt = {
+        prompt_title: 'From your coach',
+        prompt_text: (hw && hw.assignment_text) || '',
+        source_type: 'homework'
+      };
+      // Switch sections manually (don't navBtn.click — its handler
+      // lazy-loads Journal only the FIRST time, which would skip the
+      // override on subsequent visits). Flip the same active classes
+      // the sidebar handler sets, then force loadJournal() directly so
+      // the override is consumed every time.
+      document.querySelectorAll('.side-item').forEach(function(b) { b.classList.remove('active'); });
       const navBtn = document.querySelector('.side-item[data-section="journal"]');
-      if (navBtn) navBtn.click();
+      if (navBtn) { navBtn.classList.add('active'); navBtn._loaded = true; }
+      document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
+      const sec = document.getElementById('sec-journal');
+      if (sec) sec.classList.add('active');
+      const sidebar = document.getElementById('sidebar');
+      if (sidebar) sidebar.classList.remove('open');
+      await loadJournal();
     });
   });
 }
