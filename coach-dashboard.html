@@ -8200,14 +8200,30 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
   // and for post-approve / post-add in-place appends. No source label per
   // the Stage A polish: once approved, the row's provenance no longer
   // matters in the UI; the `source` column stays in the DB for tracking.
+  //
+  // Stage B adds two client-status badges. completed/completed_at/
+  // shared_with_coach arrive via the existing select=* fetch — no API
+  // change needed. Privacy: this surface shows the COMPLETION flag only;
+  // the client's shared journal content is not surfaced here (deeper
+  // follow-on). "Completed, not shared" tells the coach the work was
+  // done without exposing the content.
   function buildAssignedRowHtml(row) {
     var createdStr = row.created_at ? new Date(row.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    var completedStr = row.completed_at ? new Date(row.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    var completedBadge = row.completed
+      ? '<span style="font-size:0.66rem;padding:2px 8px;border-radius:10px;background:rgba(45,106,79,0.15);color:#2d6a4f;font-weight:600;">✓ Completed' + (completedStr ? ' · ' + escapeHtml(completedStr) : '') + '</span>'
+      : '';
+    var sharedBadge = row.shared_with_coach
+      ? '<span style="font-size:0.66rem;padding:2px 8px;border-radius:10px;background:rgba(196,154,60,0.2);color:#7a5e1f;font-weight:600;">Shared with you</span>'
+      : '';
     return '<div data-hw-assigned-row="' + escapeHtml(row.id || '') + '" style="background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 18px;margin-bottom:8px;">'
       + '<div style="font-size:0.9rem;color:var(--ink);line-height:1.5;margin-bottom:6px;">' + escapeHtml(row.assignment_text || '') + '</div>'
       + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
       + '<span style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">' + escapeHtml(row.type || 'other') + '</span>'
       + (createdStr ? '<span style="font-size:0.72rem;color:var(--muted);">' + escapeHtml(createdStr) + '</span>' : '')
       + '<span style="font-size:0.66rem;padding:2px 8px;border-radius:10px;background:rgba(45,106,79,0.15);color:#2d6a4f;">Assigned</span>'
+      + completedBadge
+      + sharedBadge
       + '</div></div>';
   }
 

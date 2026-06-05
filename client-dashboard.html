@@ -378,6 +378,7 @@ a { color: var(--navy); text-decoration: none; }
       <nav class="side-nav">
         <button class="side-item active" data-section="sessions"><span class="icon">&#9679;</span>My Sessions</button>
         <button class="side-item" data-section="goals"><span class="icon">&#9679;</span>My Goals</button>
+        <button class="side-item" data-section="homework"><span class="icon">&#9679;</span>Homework</button>
         <button class="side-item" data-section="checkins"><span class="icon">&#9679;</span>My Check-ins</button>
         <button class="side-item" data-section="my-courses"><span class="icon">&#9679;</span>My Courses</button>
         <button class="side-item" data-section="journal"><span class="icon">&#9679;</span>Journal</button>
@@ -573,6 +574,13 @@ a { color: var(--navy); text-decoration: none; }
           <h1 class="page-title">My Goals</h1>
           <p class="page-sub">The intentions you and your coach are working toward. Mark where you are — no pressure, just a reflection.</p>
           <div id="goals-content"></div>
+        </section>
+
+        <!-- HOMEWORK -->
+        <section class="section" id="sec-homework">
+          <h1 class="page-title">Homework</h1>
+          <p class="page-sub">What you and your coach agreed to between sessions. Move at your own pace.</p>
+          <div id="homework-content"><div class="loading"><div class="spinner"></div></div></div>
         </section>
 
         <!-- CHECKINS -->
@@ -861,6 +869,10 @@ async function init() {
   // Surface the daily check-in modal once the dashboard is visible. Awaits
   // are intentionally not blocking the render — the modal can pop in.
   maybeShowDailyCheckin();
+  // Same fire-and-forget pattern for the homework popup. Skipped silently
+  // when sessionStorage shows the user already dismissed it this session,
+  // or when no incomplete homework rows exist.
+  maybeShowHomeworkPopup();
   // Commons surface — fire-and-forget; cascades to responses + archived.
   loadActiveRequest();
 }
@@ -1186,6 +1198,7 @@ function setupSidebar() {
       if (!btn._loaded) {
         btn._loaded = true;
         if (target === 'goals') loadGoals();
+        if (target === 'homework') loadHomework();
         if (target === 'checkins') loadCheckins();
         if (target === 'my-courses') loadMyCourses();
         if (target === 'journal') loadJournal();
@@ -3520,6 +3533,242 @@ function updateLocationFields() {
     usSel.style.display = 'none'; caSel.style.display = 'none'; txt.style.display = 'block';
     label.textContent = 'Your region';
   }
+}
+
+/* ================================================
+   HOMEWORK (Stage B)
+   ================================================ */
+// Cached so the popup pass + the section render share one fetch. Refilled
+// after a successful PATCH so the DOM stays in sync without re-querying.
+let homeworkCache = null;
+
+async function fetchHomework() {
+  if (!currentEmail || !currentToken) return [];
+  try {
+    const url = SUPABASE_URL + '/rest/v1/client_homework'
+      + '?client_email=eq.' + encodeURIComponent(currentEmail)
+      + '&status=eq.assigned'
+      + '&order=created_at.desc&select=*';
+    const res = await fetch(url, { headers: apiHeaders() });
+    if (!res.ok) return [];
+    const rows = await res.json();
+    return Array.isArray(rows) ? rows : [];
+  } catch (err) {
+    console.error('[Homework] fetch failed:', err);
+    return [];
+  }
+}
+
+async function patchHomework(id, body) {
+  // Direct PATCH under the client's JWT — client_updates_own_homework RLS
+  // policy authorizes it. Returns updated row(s) via Prefer header so the
+  // caller can update the cache.
+  try {
+    const res = await fetch(
+      SUPABASE_URL + '/rest/v1/client_homework?id=eq.' + encodeURIComponent(id),
+      {
+        method: 'PATCH',
+        headers: Object.assign({}, apiHeaders(), { 'Prefer': 'return=representation' }),
+        body: JSON.stringify(body)
+      }
+    );
+    if (!res.ok) {
+      const detail = await res.text().catch(function() { return ''; });
+      console.error('[Homework] PATCH failed:', res.status, detail.slice(0, 200));
+      return null;
+    }
+    const data = await res.json().catch(function() { return null; });
+    return Array.isArray(data) ? data[0] : data;
+  } catch (err) {
+    console.error('[Homework] PATCH threw:', err);
+    return null;
+  }
+}
+
+function homeworkPopupSkipKey() {
+  // Same shape as the daily-checkin skip key so the popup re-surfaces each
+  // day rather than vanishing forever after one dismissal.
+  const d = new Date();
+  return 'hw_popup_skip_' + d.getFullYear() + '_' + (d.getMonth() + 1) + '_' + d.getDate();
+}
+
+async function maybeShowHomeworkPopup() {
+  if (!currentEmail || !currentToken) return;
+  if (sessionStorage.getItem(homeworkPopupSkipKey())) return;
+  if (homeworkCache === null) homeworkCache = await fetchHomework();
+  const pending = homeworkCache.filter(function(h) { return h && h.completed === false; });
+  if (!pending.length) return;
+  renderHomeworkPopup(pending);
+}
+
+function renderHomeworkPopup(pending) {
+  // Reuse the daily-checkin overlay/modal CSS so the popup matches the
+  // existing visual language without adding a separate stylesheet pass.
+  let overlay = document.getElementById('hw-popup-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'hw-popup-overlay';
+    overlay.className = 'dc-overlay';
+    document.body.appendChild(overlay);
+  }
+  const itemsHtml = pending.slice(0, 5).map(function(h) {
+    const typeLabel = (h.type || 'other').toUpperCase();
+    return '<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;">'
+      + '<div style="font-size:0.66rem;font-weight:700;letter-spacing:0.05em;color:var(--muted);margin-bottom:4px;">' + escapeHtml(typeLabel) + '</div>'
+      + '<div style="font-size:0.88rem;color:var(--ink);line-height:1.5;">' + escapeHtml(h.assignment_text || '') + '</div>'
+      + '</div>';
+  }).join('');
+  const more = pending.length > 5
+    ? '<div style="font-size:0.78rem;color:var(--muted);font-style:italic;margin-top:4px;">+ ' + (pending.length - 5) + ' more in your homework section.</div>'
+    : '';
+
+  overlay.innerHTML = '<div class="dc-modal" role="dialog" aria-labelledby="hw-pop-title" aria-modal="true">'
+    + '<div class="dc-eyebrow">From your last session</div>'
+    + '<h2 class="dc-title" id="hw-pop-title">Homework from your coach</h2>'
+    + '<p class="dc-sub">A few things you said you might explore between sessions. Mark them done when you are ready — no rush.</p>'
+    + '<div style="margin-bottom:18px;">' + itemsHtml + more + '</div>'
+    + '<div class="dc-actions">'
+    +   '<button type="button" class="dc-skip" id="hw-pop-close">Close</button>'
+    +   '<button type="button" class="dc-submit" id="hw-pop-view">View homework</button>'
+    + '</div>'
+    + '</div>';
+
+  overlay.offsetHeight; // force reflow for transition
+  overlay.classList.add('open');
+
+  function dismiss() {
+    sessionStorage.setItem(homeworkPopupSkipKey(), '1');
+    overlay.classList.remove('open');
+    setTimeout(function() {
+      if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    }, 250);
+  }
+  document.getElementById('hw-pop-close').addEventListener('click', dismiss);
+  document.getElementById('hw-pop-view').addEventListener('click', function() {
+    dismiss();
+    // Switch to the homework section programmatically — clicking the
+    // sidebar button reuses the lazy-load path and the active-class flip.
+    const navBtn = document.querySelector('.side-item[data-section="homework"]');
+    if (navBtn) navBtn.click();
+  });
+}
+
+async function loadHomework() {
+  const container = document.getElementById('homework-content');
+  if (!container) return;
+  if (homeworkCache === null) homeworkCache = await fetchHomework();
+  renderHomeworkSection(homeworkCache);
+}
+
+function renderHomeworkSection(rows) {
+  const container = document.getElementById('homework-content');
+  if (!container) return;
+  if (!rows.length) {
+    container.innerHTML = '<div class="empty-card" style="padding:24px;background:var(--white);border:1px solid var(--border);border-radius:10px;font-size:0.88rem;color:var(--muted);font-style:italic;">No homework assigned right now. Anything you and your coach agree to between sessions will show up here.</div>';
+    return;
+  }
+  const html = rows.map(buildHomeworkCardHtml).join('');
+  container.innerHTML = '<div id="hw-list">' + html + '</div>';
+  wireHomeworkHandlers();
+}
+
+function buildHomeworkCardHtml(h) {
+  const id = escapeHtml(h.id || '');
+  const typeLabel = (h.type || 'other').toUpperCase();
+  const isJournal = (h.type || '').toLowerCase() === 'journal';
+  const done = h.completed === true;
+  const shared = h.shared_with_coach === true;
+  const completedAt = done && h.completed_at ? formatDate(h.completed_at) : '';
+  const cardStyle = 'background:var(--white);border:1px solid var(--border);border-left:3px solid ' + (done ? '#2d6a4f' : 'var(--gold)') + ';border-radius:10px;padding:16px 20px;margin-bottom:10px;';
+  const checkboxChecked = done ? ' checked' : '';
+  const shareChecked = shared ? ' checked' : '';
+  return '<div data-hw-card="' + id + '" style="' + cardStyle + '">'
+    + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap;">'
+    +   '<span style="font-size:0.66rem;font-weight:700;letter-spacing:0.05em;color:var(--muted);">' + escapeHtml(typeLabel) + '</span>'
+    +   (done ? '<span style="font-size:0.66rem;padding:2px 8px;border-radius:10px;background:rgba(45,106,79,0.15);color:#2d6a4f;font-weight:600;">✓ Done' + (completedAt ? ' · ' + escapeHtml(completedAt) : '') + '</span>' : '')
+    + '</div>'
+    + '<div style="font-size:0.95rem;color:var(--ink);line-height:1.55;margin-bottom:14px;' + (done ? 'opacity:0.7;' : '') + '">' + escapeHtml(h.assignment_text || '') + '</div>'
+    + '<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;font-size:0.82rem;color:var(--ink);">'
+    +   '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;">'
+    +     '<input type="checkbox" data-hw-done="' + id + '"' + checkboxChecked + ' style="width:16px;height:16px;cursor:pointer;"> Mark done'
+    +   '</label>'
+    +   '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;">'
+    +     '<input type="checkbox" data-hw-share="' + id + '"' + shareChecked + ' style="width:16px;height:16px;cursor:pointer;"> Share with my coach'
+    +   '</label>'
+    +   (isJournal ? '<button type="button" data-hw-journal="' + id + '" style="margin-left:auto;background:var(--cream);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:600;color:var(--navy);cursor:pointer;">Write in your journal →</button>' : '')
+    + '</div></div>';
+}
+
+function refreshHomeworkCacheRow(updated) {
+  if (!updated || !homeworkCache) return;
+  for (let i = 0; i < homeworkCache.length; i++) {
+    if (homeworkCache[i] && homeworkCache[i].id === updated.id) {
+      homeworkCache[i] = updated;
+      return;
+    }
+  }
+}
+
+function replaceHomeworkCard(updated) {
+  if (!updated) return;
+  const card = document.querySelector('[data-hw-card="' + updated.id + '"]');
+  if (!card) return;
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = buildHomeworkCardHtml(updated);
+  const fresh = wrapper.firstChild;
+  if (fresh && card.parentNode) {
+    card.parentNode.replaceChild(fresh, card);
+    wireHomeworkHandlers();
+  }
+}
+
+function wireHomeworkHandlers() {
+  document.querySelectorAll('[data-hw-done]').forEach(function(box) {
+    if (box._wired) return;
+    box._wired = true;
+    box.addEventListener('change', async function() {
+      const id = box.dataset.hwDone;
+      const nowDone = box.checked;
+      box.disabled = true;
+      const body = nowDone
+        ? { completed: true, completed_at: new Date().toISOString() }
+        : { completed: false, completed_at: null };
+      const updated = await patchHomework(id, body);
+      box.disabled = false;
+      if (!updated) {
+        box.checked = !nowDone; // revert on failure
+        return;
+      }
+      refreshHomeworkCacheRow(updated);
+      replaceHomeworkCard(updated);
+    });
+  });
+  document.querySelectorAll('[data-hw-share]').forEach(function(box) {
+    if (box._wired) return;
+    box._wired = true;
+    box.addEventListener('change', async function() {
+      const id = box.dataset.hwShare;
+      const nowShared = box.checked;
+      box.disabled = true;
+      const updated = await patchHomework(id, { shared_with_coach: nowShared });
+      box.disabled = false;
+      if (!updated) {
+        box.checked = !nowShared;
+        return;
+      }
+      refreshHomeworkCacheRow(updated);
+      // No card re-render needed for share — left chrome state is unchanged
+      // and the checkbox already reflects the new value.
+    });
+  });
+  document.querySelectorAll('[data-hw-journal]').forEach(function(btn) {
+    if (btn._wired) return;
+    btn._wired = true;
+    btn.addEventListener('click', function() {
+      const navBtn = document.querySelector('.side-item[data-section="journal"]');
+      if (navBtn) navBtn.click();
+    });
+  });
 }
 
 /* GO */
