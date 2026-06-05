@@ -8180,9 +8180,10 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
 
   // Section 4b: Homework (Stage A — Detect → Review → Approve → Official).
   // Pending drafts come from notesByBooking[*].homework (AI extraction marked
-  // handled:false). Official rows come from client_homework. Approve/Edit/
-  // Dismiss/Add all POST to /api/approve-homework; the page refreshes via
-  // openClientDetail to pick up the new state.
+  // handled:false). Official rows come from client_homework. Approve / Dismiss
+  // / Add POST to /api/approve-homework and then update the DOM IN PLACE so
+  // the coach's scroll position is preserved — full-panel re-renders were
+  // jumping the page to the top after every action.
   var hwTypeOptions = '<option value="other">Other</option><option value="journal">Journal</option><option value="reflection">Reflection</option><option value="behavioral">Behavioral</option>';
   var clientEmailEsc = escapeHtml(client.email);
   var pendingDrafts = [];
@@ -8195,48 +8196,68 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
   });
   var officialHw = Array.isArray(officialHomework) ? officialHomework : [];
 
+  // Shared template for an Assigned row — used both for the initial render
+  // and for post-approve / post-add in-place appends. No source label per
+  // the Stage A polish: once approved, the row's provenance no longer
+  // matters in the UI; the `source` column stays in the DB for tracking.
+  function buildAssignedRowHtml(row) {
+    var createdStr = row.created_at ? new Date(row.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    return '<div data-hw-assigned-row="' + escapeHtml(row.id || '') + '" style="background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 18px;margin-bottom:8px;">'
+      + '<div style="font-size:0.9rem;color:var(--ink);line-height:1.5;margin-bottom:6px;">' + escapeHtml(row.assignment_text || '') + '</div>'
+      + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+      + '<span style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">' + escapeHtml(row.type || 'other') + '</span>'
+      + (createdStr ? '<span style="font-size:0.72rem;color:var(--muted);">' + escapeHtml(createdStr) + '</span>' : '')
+      + '<span style="font-size:0.66rem;padding:2px 8px;border-radius:10px;background:rgba(45,106,79,0.15);color:#2d6a4f;">Assigned</span>'
+      + '</div></div>';
+  }
+
   html += '<div class="form-section" style="margin-bottom:24px;">'
     + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;">Homework</h2>';
 
-  if (pendingDrafts.length) {
-    html += '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);margin-bottom:8px;">Pending — AI-detected, awaiting your review</div>';
-    pendingDrafts.forEach(function(p) {
-      var d = p.draft;
-      var verbatim = d.assignment_verbatim || d.client_facing_text || '';
-      var draftType = d.type || 'other';
-      var typeSelect = hwTypeOptions.replace('value="' + draftType + '"', 'value="' + draftType + '" selected');
-      html += '<div data-hw-draft-card="' + escapeHtml(d.id) + '" style="background:var(--cream);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:var(--r-sm);padding:14px 18px;margin-bottom:10px;">'
-        + '<div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">' + escapeHtml(draftType) + ' &middot; Coach said:</div>'
-        + '<textarea data-hw-draft-text="' + escapeHtml(d.id) + '" style="width:100%;min-height:60px;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--white);line-height:1.5;resize:vertical;">' + escapeHtml(verbatim) + '</textarea>'
-        + '<div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">'
-        + '<select data-hw-draft-type="' + escapeHtml(d.id) + '" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;background:var(--white);color:var(--ink);">' + typeSelect + '</select>'
-        + '<button class="action-btn action-confirm" data-hw-approve="' + escapeHtml(d.id) + '" data-hw-booking="' + escapeHtml(p.booking_id) + '" style="padding:6px 14px;font-size:0.75rem;">Approve</button>'
-        + '<button class="action-btn" data-hw-dismiss="' + escapeHtml(d.id) + '" data-hw-booking="' + escapeHtml(p.booking_id) + '" style="padding:6px 14px;font-size:0.75rem;background:rgba(196,68,68,0.12);color:#c44;border:1px solid rgba(196,68,68,0.3);">Dismiss</button>'
-        + '</div></div>';
-    });
-  }
+  // Pending section — wrapped in a stable container so dismiss/approve can
+  // remove a card without re-rendering the surrounding panel.
+  html += '<div id="hw-pending-section"' + (pendingDrafts.length ? '' : ' style="display:none;"') + '>'
+    + '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);margin-bottom:8px;">Pending — AI-detected, awaiting your review</div>'
+    + '<div id="hw-pending-list">';
+  pendingDrafts.forEach(function(p) {
+    var d = p.draft;
+    // Clean text is the primary editable line; verbatim sits beneath as
+    // small, read-only provenance. assignment_verbatim is the transcript
+    // pull, client_facing_text is the grammatically clean rewrite — coaches
+    // edit the clean version and Approve sends that as assignment_text.
+    var cleanText = d.client_facing_text || d.assignment_verbatim || '';
+    var verbatim = d.assignment_verbatim || '';
+    var draftType = d.type || 'other';
+    var typeSelect = hwTypeOptions.replace('value="' + draftType + '"', 'value="' + draftType + '" selected');
+    html += '<div data-hw-draft-card="' + escapeHtml(d.id) + '" style="background:var(--cream);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:var(--r-sm);padding:14px 18px;margin-bottom:10px;">'
+      + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">'
+      + '<select data-hw-draft-type="' + escapeHtml(d.id) + '" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.72rem;background:var(--white);color:var(--ink);text-transform:uppercase;letter-spacing:0.04em;font-weight:600;">' + typeSelect + '</select>'
+      + '</div>'
+      + '<textarea data-hw-draft-text="' + escapeHtml(d.id) + '" style="width:100%;min-height:60px;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--white);line-height:1.5;resize:vertical;">' + escapeHtml(cleanText) + '</textarea>';
+    if (verbatim && verbatim !== cleanText) {
+      html += '<div style="margin-top:8px;font-size:0.74rem;color:var(--muted);line-height:1.5;">'
+        + '<span style="font-weight:700;text-transform:uppercase;letter-spacing:0.05em;font-size:0.66rem;">From your session: </span>'
+        + '<span style="font-style:italic;">' + escapeHtml(verbatim) + '</span>'
+        + '</div>';
+    }
+    html += '<div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">'
+      + '<button class="action-btn action-confirm" data-hw-approve="' + escapeHtml(d.id) + '" data-hw-booking="' + escapeHtml(p.booking_id) + '" style="padding:6px 14px;font-size:0.75rem;">Approve</button>'
+      + '<button class="action-btn" data-hw-dismiss="' + escapeHtml(d.id) + '" data-hw-booking="' + escapeHtml(p.booking_id) + '" style="padding:6px 14px;font-size:0.75rem;background:rgba(196,68,68,0.12);color:#c44;border:1px solid rgba(196,68,68,0.3);">Dismiss</button>'
+      + '</div></div>';
+  });
+  html += '</div></div>';
 
-  if (officialHw.length) {
-    html += '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink);margin:14px 0 8px;">Assigned</div>';
-    officialHw.forEach(function(h) {
-      var createdStr = h.created_at ? new Date(h.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-      var sourceBadge = h.source === 'manual'
-        ? '<span style="font-size:0.66rem;padding:2px 8px;border-radius:10px;background:rgba(107,107,96,0.15);color:var(--muted);">Manual</span>'
-        : '<span style="font-size:0.66rem;padding:2px 8px;border-radius:10px;background:rgba(196,154,60,0.2);color:#7a5e1f;">AI &middot; Approved</span>';
-      html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 18px;margin-bottom:8px;">'
-        + '<div style="font-size:0.9rem;color:var(--ink);line-height:1.5;margin-bottom:6px;">' + escapeHtml(h.assignment_text || '') + '</div>'
-        + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
-        + '<span style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">' + escapeHtml(h.type || 'other') + '</span>'
-        + sourceBadge
-        + (createdStr ? '<span style="font-size:0.72rem;color:var(--muted);">' + escapeHtml(createdStr) + '</span>' : '')
-        + '<span style="font-size:0.66rem;padding:2px 8px;border-radius:10px;background:rgba(45,106,79,0.15);color:#2d6a4f;">Assigned</span>'
-        + '</div></div>';
-    });
-  }
+  // Assigned section — same wrapper pattern so approve/add can append a row
+  // and show the header without redrawing.
+  html += '<div id="hw-assigned-section"' + (officialHw.length ? '' : ' style="display:none;"') + '>'
+    + '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink);margin:14px 0 8px;">Assigned</div>'
+    + '<div id="hw-assigned-list">';
+  officialHw.forEach(function(h) { html += buildAssignedRowHtml(h); });
+  html += '</div></div>';
 
-  if (!pendingDrafts.length && !officialHw.length) {
-    html += '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;">No homework yet. Add one below, or run Coach Clarity on a session to surface AI-detected assignments.</p>';
-  }
+  html += '<p id="hw-empty-state" style="color:var(--muted);font-size:0.88rem;font-style:italic;'
+    + ((!pendingDrafts.length && !officialHw.length) ? '' : 'display:none;')
+    + '">No homework yet. Add one below, or run Coach Clarity on a session to surface AI-detected assignments.</p>';
 
   // Inline add homework (manual)
   html += '<div style="margin-top:12px;padding:16px 20px;background:var(--cream);border:1px solid var(--border);border-radius:var(--r-sm);">'
@@ -8835,9 +8856,10 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
   });
 
   // ── Homework: Approve / Dismiss / Add (Stage A) ──────────────────────
-  // All three POST to /api/approve-homework. The page refreshes via
-  // openClientDetail so the freshly approved row + the flipped handled flag
-  // both reload from Supabase — no client-side state to keep in sync.
+  // All three POST to /api/approve-homework, then update the DOM IN PLACE.
+  // We deliberately do NOT re-call openClientDetail() — that re-renders the
+  // entire client panel and resets scroll to the top, forcing the coach to
+  // scroll back down after every action. In-place updates keep position.
   async function postHomework(payload) {
     var res = await fetch('/api/approve-homework', {
       method: 'POST',
@@ -8847,9 +8869,22 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
     var data = await res.json().catch(function() { return {}; });
     if (!res.ok || !data.ok) {
       alert((data && data.error) || 'Homework action failed. Please try again.');
-      return false;
+      return { ok: false };
     }
-    return true;
+    return { ok: true, data: data };
+  }
+
+  function updateHomeworkVisibility() {
+    var pendingList = document.getElementById('hw-pending-list');
+    var assignedList = document.getElementById('hw-assigned-list');
+    var pendingSection = document.getElementById('hw-pending-section');
+    var assignedSection = document.getElementById('hw-assigned-section');
+    var emptyState = document.getElementById('hw-empty-state');
+    var pendingCount = pendingList ? pendingList.children.length : 0;
+    var assignedCount = assignedList ? assignedList.children.length : 0;
+    if (pendingSection) pendingSection.style.display = pendingCount ? '' : 'none';
+    if (assignedSection) assignedSection.style.display = assignedCount ? '' : 'none';
+    if (emptyState) emptyState.style.display = (pendingCount || assignedCount) ? 'none' : '';
   }
 
   document.querySelectorAll('[data-hw-approve]').forEach(function(btn) {
@@ -8859,20 +8894,36 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
       var textEl = document.querySelector('[data-hw-draft-text="' + draftId + '"]');
       var typeEl = document.querySelector('[data-hw-draft-type="' + draftId + '"]');
       var text = textEl ? textEl.value.trim() : '';
+      var hwType = typeEl ? typeEl.value : 'other';
       if (!text) { alert('Assignment text cannot be empty.'); return; }
       this.disabled = true;
       this.textContent = 'Approving…';
-      var ok = await postHomework({
+      var result = await postHomework({
         action: 'approve',
         coachId: coachProfile.id,
         clientEmail: client.email,
         bookingId: bookingId,
         draftId: draftId,
         assignment_text: text,
-        type: typeEl ? typeEl.value : 'other'
+        type: hwType
       });
-      if (ok) openClientDetail(client.email);
-      else { this.disabled = false; this.textContent = 'Approve'; }
+      if (!result.ok) {
+        this.disabled = false;
+        this.textContent = 'Approve';
+        return;
+      }
+      var card = document.querySelector('[data-hw-draft-card="' + draftId + '"]');
+      if (card && card.parentNode) card.parentNode.removeChild(card);
+      var assignedList = document.getElementById('hw-assigned-list');
+      if (assignedList) {
+        assignedList.insertAdjacentHTML('afterbegin', buildAssignedRowHtml({
+          id: (result.data && result.data.id) || '',
+          assignment_text: text,
+          type: hwType,
+          created_at: new Date().toISOString()
+        }));
+      }
+      updateHomeworkVisibility();
     });
   });
 
@@ -8882,29 +8933,49 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
       var bookingId = this.dataset.hwBooking;
       this.disabled = true;
       this.textContent = 'Dismissing…';
-      var ok = await postHomework({ action: 'dismiss', bookingId: bookingId, draftId: draftId });
-      if (ok) openClientDetail(client.email);
-      else { this.disabled = false; this.textContent = 'Dismiss'; }
+      var result = await postHomework({ action: 'dismiss', bookingId: bookingId, draftId: draftId });
+      if (!result.ok) {
+        this.disabled = false;
+        this.textContent = 'Dismiss';
+        return;
+      }
+      var card = document.querySelector('[data-hw-draft-card="' + draftId + '"]');
+      if (card && card.parentNode) card.parentNode.removeChild(card);
+      updateHomeworkVisibility();
     });
   });
 
   var addHwBtn = $('client-add-hw-btn');
   if (addHwBtn) {
     addHwBtn.addEventListener('click', async function() {
-      var text = ($('client-hw-text').value || '').trim();
+      var textInput = $('client-hw-text');
+      var typeInput = $('client-hw-type');
+      var text = (textInput && textInput.value || '').trim();
       if (!text) { alert('Enter an assignment.'); return; }
-      var type = ($('client-hw-type').value || 'other');
+      var hwType = (typeInput && typeInput.value) || 'other';
       this.disabled = true;
       this.textContent = 'Adding…';
-      var ok = await postHomework({
+      var result = await postHomework({
         action: 'add',
         coachId: coachProfile.id,
         clientEmail: client.email,
         assignment_text: text,
-        type: type
+        type: hwType
       });
-      if (ok) openClientDetail(client.email);
-      else { this.disabled = false; this.textContent = 'Add Homework'; }
+      this.disabled = false;
+      this.textContent = 'Add Homework';
+      if (!result.ok) return;
+      var assignedList = document.getElementById('hw-assigned-list');
+      if (assignedList) {
+        assignedList.insertAdjacentHTML('afterbegin', buildAssignedRowHtml({
+          id: (result.data && result.data.id) || '',
+          assignment_text: text,
+          type: hwType,
+          created_at: new Date().toISOString()
+        }));
+      }
+      if (textInput) textInput.value = '';
+      updateHomeworkVisibility();
     });
   }
 
