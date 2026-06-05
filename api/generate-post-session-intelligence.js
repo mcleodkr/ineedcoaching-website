@@ -303,6 +303,64 @@ Return ONLY this JSON:
     , { feature: 'coaching_mirror', coachId }
       );
 
+    // ── Pass 2a-client: Client-facing summary (Phase 2a) ────────────────
+    // An authoritative, client-safe recap written server-side so the client
+    // dashboard no longer has to scrape the coach blob and rewrite pronouns
+    // with regex. This is a gentle 50-foot recap addressed to the CLIENT as
+    // "you" — it must NOT contain coach analysis, patterns, blind spots,
+    // technique, or anything diagnostic. To keep coach-only framing out even
+    // of the prompt context, we feed ONLY the client-safe slices of the
+    // extraction + core output (never strategic_direction, pattern timeline,
+    // missed windows, DNA, etc.). Fault-tolerant: on any failure we leave
+    // clientSummaryOutput null and the conditional PATCH below preserves any
+    // previously-stored client_summary rather than clobbering it.
+    let clientSummaryOutput = null;
+    try {
+      const clientSafeSignals = {
+        core_focus: coreOutput?.core_focus?.summary || '',
+        session_in_one_line: coreOutput?.session_in_one_line || '',
+        breakthrough_quote: coreOutput?.breakthrough?.client_quote || '',
+        breakthrough_what_changed: coreOutput?.breakthrough?.what_changed || '',
+        client_quotes: Array.isArray(extractionOutput.client_quotes) ? extractionOutput.client_quotes : [],
+        commitments: Array.isArray(extractionOutput.commitments) ? extractionOutput.commitments : [],
+        themes: Array.isArray(extractionOutput.themes) ? extractionOutput.themes : [],
+        emotional_shifts: Array.isArray(extractionOutput.emotional_shifts) ? extractionOutput.emotional_shifts : [],
+      };
+      const CLIENT_SUMMARY_SYSTEM = `You are Coach Clarity, writing a warm recap FOR THE CLIENT to read on their own dashboard after a coaching session.
+
+WHO YOU ARE WRITING TO: the client. Address them directly as "you". This is the only place "you" means the client — everywhere else in this product "you" means the coach, but here it is the client.
+
+WHAT THIS IS: a gentle, encouraging, 50-foot recap of what the session was about and what they are carrying forward. It helps them stay connected to their own growth between sessions.
+
+HARD CONTENT BOUNDARY — this is read by the client, so NEVER include:
+- coach analysis, coaching technique, or anything about what the coach did or could have done
+- patterns, blind spots, "what I noticed about you", or psychological interpretation
+- diagnostic or clinical language of any kind (no dysregulation, maladaptive, pathology, disorder, trauma-as-diagnosis)
+- "missed windows", strategic direction, future-risk framing, or anything that reads like an assessment
+If you are unsure whether something is client-safe, leave it out.
+
+LANGUAGE: ${TONE} Use the effectiveness frame — what is becoming clearer, what you are building, what you might carry forward. Never good/bad/right/wrong. Warm, plain, second person. Short sentences. ${CLARITY}
+
+${JSON_ONLY}`;
+      clientSummaryOutput = await callClaude(
+        ANTHROPIC_API_KEY,
+        'claude-sonnet-4-6',
+        800,
+        CLIENT_SUMMARY_SYSTEM,
+        `Write the client's recap from these client-safe signals only. Do not invent moments that are not present. If a field has nothing meaningful, return an empty string ("") or empty array ([]) — never fabricate.
+
+SIGNALS: ${JSON.stringify(clientSafeSignals)}
+
+Return ONLY this JSON:
+{"headline":"a short warm phrase naming the heart of this session, second person, max 10 words","recap":"2-3 warm sentences, second person, a 50-foot view of what you explored this session","what_stood_out":"one gentle sentence naming a meaningful moment for you this session, or empty string","practice":["1-3 short plain invitations to carry into the week"],"commitments":["what you said you would do, in your own voice — empty array if none"],"closing":"one warm, encouraging sentence"}`,
+        'Pass 2a-client: Client Summary'
+      , { feature: 'coaching_mirror', coachId }
+      );
+    } catch (e) {
+      console.error('[Pass 2a-client: Client Summary] Failed, leaving null (prior value preserved):', e.message);
+      clientSummaryOutput = null;
+    }
+
     // ── Pass 2b: Coaching Interventions (isolated to prevent truncation) ─
     const goalsContext = existingGoals && existingGoals.length
       ? '\nGoals: ' + existingGoals.join(', ')
@@ -919,6 +977,7 @@ Limits: max 3 goal_proposals, max 3 goal_status_updates. Return empty arrays if 
             frameworks_detected: formattedOutput.frameworks || null,
             dna_manifestations: formattedOutput.dna_manifestations,
             ...(homeworkExtracted.length ? { homework: homeworkExtracted } : {}),
+            ...(clientSummaryOutput ? { client_summary: clientSummaryOutput } : {}),
           }),
         }
       );
