@@ -905,20 +905,16 @@ async function loadClientProfile() {
    SESSION NOTES CACHE — shared by progress card, continuity block, goals
    ================================================ */
 async function loadSessionNotesCache() {
+  // Reads through the service-role /api/client-session-notes endpoint, which is
+  // the only client read path for session notes. It returns ONLY client-safe
+  // fields (client_summary, growth_dimensions, continuity_phrase, conditional
+  // notes) — coach-only columns never reach the browser. Newest first.
   try {
-    const res = await fetch(
-      SUPABASE_URL + '/rest/v1/coach_session_notes?client_email=eq.' + encodeURIComponent(currentEmail) +
-      '&order=created_at.desc&select=post_session_analysis,created_at',
-      { headers: apiHeaders() }
-    );
+    const res = await fetch('/api/client-session-notes', { headers: apiHeaders() });
     if (!res.ok) { sessionNotesCache = []; return; }
-    const rows = await res.json();
-    if (!Array.isArray(rows)) { sessionNotesCache = []; return; }
-    sessionNotesCache = rows.map(function(r) {
-      let a = r ? r.post_session_analysis : null;
-      if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) { a = null; } }
-      return { analysis: a, created_at: r ? r.created_at : null };
-    }).filter(function(r) { return r.analysis && typeof r.analysis === 'object'; });
+    const data = await res.json();
+    const rows = (data && Array.isArray(data.sessions)) ? data.sessions : [];
+    sessionNotesCache = rows;
   } catch (err) {
     console.error('[SessionNotes] load error:', err);
     sessionNotesCache = [];
@@ -928,9 +924,8 @@ async function loadSessionNotesCache() {
 function countCommitmentsAcrossNotes() {
   let total = 0;
   (sessionNotesCache || []).forEach(function(r) {
-    const a = r.analysis || {};
-    const c = Array.isArray(a.commitments) ? a.commitments
-      : (Array.isArray(a.client_commitments) ? a.client_commitments : []);
+    const cs = r && r.client_summary;
+    const c = (cs && Array.isArray(cs.commitments)) ? cs.commitments : [];
     total += c.length;
   });
   return total;
@@ -973,25 +968,14 @@ function growthLevel(sessionCount) {
 }
 
 // Normalize a tag for matching: lowercase, spaces/underscores -> hyphens
-function normTag(t) {
-  return String(t || '').toLowerCase().trim().replace(/[\s_]+/g, '-');
-}
-
-// Count how many sessions in sessionNotesCache contain at least one matching dna_tag
-function countSessionsWithTags(signalSet) {
+// Count how many sessions matched a given growth dimension. Dimension matching
+// is computed server-side (raw coach dna_tags never reach the browser); each
+// session carries only the matched dimension names in growth_dimensions.
+function countSessionsWithDimension(dimName) {
   let count = 0;
   (sessionNotesCache || []).forEach(function(r) {
-    const a = (r && r.analysis) || {};
-    const interventions = Array.isArray(a.coaching_interventions) ? a.coaching_interventions : [];
-    let matched = false;
-    for (let i = 0; i < interventions.length && !matched; i++) {
-      const ci = interventions[i] || {};
-      const tags = Array.isArray(ci.dna_tag) ? ci.dna_tag : [];
-      for (let j = 0; j < tags.length; j++) {
-        if (signalSet[normTag(tags[j])]) { matched = true; break; }
-      }
-    }
-    if (matched) count++;
+    const dims = (r && Array.isArray(r.growth_dimensions)) ? r.growth_dimensions : [];
+    if (dims.indexOf(dimName) !== -1) count++;
   });
   return count;
 }
@@ -1008,44 +992,36 @@ function renderGrowthCard() {
   const host = $('growth-host');
   if (!host) return;
 
-  // Signals kept internal — never surfaced to the client.
-  const toSet = function(arr) { const s = {}; arr.forEach(function(t) { s[normTag(t)] = true; }); return s; };
+  // Dimension names match what the endpoint computes server-side; the raw
+  // dna_tag signal sets live on the server so they never reach the browser.
   const dims = [
-    { name: 'Self-trust',         signals: toSet(['self-efficacy-building', 'self-trust']) },
-    { name: 'Follow-through',     signals: toSet(['behavioral-transfer', 'behavioral-activation']) },
-    { name: 'Clarity',            signals: toSet(['identity-shift', 'insight-to-action-bridge']) },
-    { name: 'Naming what is true',signals: toSet(['suppressed-conviction', 'visibility-avoidance']) }
+    { name: 'Self-trust' },
+    { name: 'Follow-through' },
+    { name: 'Clarity' },
+    { name: 'Naming what is true' }
   ];
 
   const notes = sessionNotesCache || [];
   const hasNotes = notes.length > 0;
 
-  // Check if the most recent session contains a matching tag for each dimension.
+  // Whether the most recent session matched a dimension.
   // sessionNotesCache is ordered most-recent first (per its loader).
   const latest = hasNotes ? notes[0] : null;
-  function latestHasSignal(signalSet) {
+  function latestHasDimension(dimName) {
     if (!latest) return false;
-    const a = latest.analysis || {};
-    const intvs = Array.isArray(a.coaching_interventions) ? a.coaching_interventions : [];
-    for (let i = 0; i < intvs.length; i++) {
-      const iv = intvs[i];
-      const tags = iv && Array.isArray(iv.dna_tag) ? iv.dna_tag : [];
-      for (let j = 0; j < tags.length; j++) {
-        if (signalSet[normTag(tags[j])]) return true;
-      }
-    }
-    return false;
+    const dims = Array.isArray(latest.growth_dimensions) ? latest.growth_dimensions : [];
+    return dims.indexOf(dimName) !== -1;
   }
 
   let rowsHtml = '';
   dims.forEach(function(d) {
-    const count = hasNotes ? countSessionsWithTags(d.signals) : 0;
+    const count = hasNotes ? countSessionsWithDimension(d.name) : 0;
     const lvl = hasNotes ? growthDimensionLevel(count) : { bars: 1, label: 'Emerging' };
     let barsHtml = '';
     for (let i = 0; i < 5; i++) {
       barsHtml += '<span class="bar ' + (i < lvl.bars ? 'filled' : '') + '"></span>';
     }
-    const moved = latestHasSignal(d.signals);
+    const moved = latestHasDimension(d.name);
     const dirArrow = moved ? '\u2191' : '\u2192';
     const dirClass = moved ? 'up' : 'flat';
     rowsHtml += '<div class="growth-row">'
@@ -1094,72 +1070,14 @@ async function renderProgressAndContinuity() {
     + '<div class="growth-scale">' + scaleHtml + '</div>'
     + '</div>';
 
-  // "What's becoming stronger" — last 3 core_focus phrases as clean, complete lines.
-  // Only surface phrases that are grammatically whole. Drop anything that looks
-  // truncated or fragmented. toClientVoice runs ONCE only.
+  // "What's becoming stronger" -- up to 3 finished phrases. The phrase
+  // construction (sentence picking + voicing) is done server-side and arrives
+  // as continuity_phrase; the browser just collects the newest non-empty ones.
   const phrases = [];
-  const incompleteTails = /^(and|but|because|that|which|so|or|to|of|in|with|for|a|an|the|on|at|by|from|as|if|when|while|about|have|has|had|is|are|was|were|be|been|being)$/i;
   (sessionNotesCache || []).forEach(function(r) {
     if (phrases.length >= 3) return;
-    const a = r.analysis || {};
-    const raw = (typeof a.core_focus === 'string' && a.core_focus)
-      || (typeof a.session_in_one_line === 'string' && a.session_in_one_line) || '';
-    if (!raw) return;
-
-    // Single pronoun transform — never run twice.
-    let source = toClientVoice(String(raw).trim());
-    if (!source) return;
-
-    // Prefer a complete sentence from the source. Split on sentence terminators
-    // and pick the first sentence that's 4-12 words long. If none, drop it.
-    const sentences = source.split(/(?<=[.!?])\s+/);
-    let picked = null;
-    for (let i = 0; i < sentences.length; i++) {
-      const s = sentences[i].trim().replace(/^[\s\-\u2013\u2014,;:]+/, '').replace(/\s+/g, ' ');
-      if (!s) continue;
-      const wc = s.split(/\s+/).length;
-      if (wc < 4 || wc > 14) continue;
-      // Must end with a proper terminator
-      if (!/[.!?]$/.test(s)) continue;
-      // Must not end with an incomplete tail word before the punctuation
-      const lastWord = s.replace(/[.!?]$/, '').split(/\s+/).pop() || '';
-      if (incompleteTails.test(lastWord)) continue;
-      picked = s;
-      break;
-    }
-
-    // If no complete sentence was found in the source, attempt a last-chance
-    // construction from the raw phrase only if it's short, has no trailing
-    // conjunctions, and doesn't have a mid-sentence "and/but/because/that/which".
-    if (!picked) {
-      const words = source.split(/\s+/);
-      if (words.length >= 4 && words.length <= 12 && !incompleteTails.test(words[words.length - 1])) {
-        const hasMidConj = /\b(and|but|because|that|which|so)\b/i.test(words.slice(0, -1).join(' '));
-        if (!hasMidConj) {
-          let candidate = words.join(' ').replace(/[,;:\-\u2013\u2014]\s*$/, '').trim();
-          if (!/[.!?]$/.test(candidate)) candidate += '.';
-          picked = candidate;
-        }
-      }
-    }
-    if (!picked) return;
-
-    // Determine rendering voice. Do NOT run toClientVoice again.
-    const firstWord = picked.split(/\s+/)[0].toLowerCase();
-    let line;
-    if (firstWord === 'you' || firstWord === 'your' || firstWord === "you're") {
-      line = picked.charAt(0).toUpperCase() + picked.slice(1);
-    } else if (firstWord === 'i' || firstWord === 'we') {
-      return;
-    } else {
-      const finiteVerbs = /^(stopped|stood|left|went|came|saw|said|told|noticed|decided|realized|recognized|learned|began|started|felt|found|knew|chose|made|took|gave|brought|got|had|did|was|were|became|built|spoke|wrote|wrote)$/i;
-      if (finiteVerbs.test(firstWord)) {
-        line = picked.charAt(0).toUpperCase() + picked.slice(1);
-      } else {
-        line = 'You are ' + picked.charAt(0).toLowerCase() + picked.slice(1);
-      }
-    }
-    phrases.push(line);
+    const p = r && typeof r.continuity_phrase === 'string' ? r.continuity_phrase.trim() : '';
+    if (p) phrases.push(p);
   });
 
   let continuityHtml = '<div class="continuity-block">'
@@ -1574,6 +1492,16 @@ function renderClientSummary(csRaw) {
     out += '</ul></div>';
   }
 
+  const goals = Array.isArray(cs.goals) ? cs.goals.filter(function(g) { return g && g.title; }) : [];
+  if (goals.length > 0) {
+    out += '<div class="summary-section"><h4>Goals this session moved forward</h4>';
+    goals.forEach(function(g) {
+      out += '<div class="summary-goal-title">' + escapeHtml(g.title) + '</div>';
+      if (g.relevance) out += '<div class="summary-goal-rel">' + escapeHtml(g.relevance) + '</div>';
+    });
+    out += '</div>';
+  }
+
   if (cs.closing && typeof cs.closing === 'string') {
     out += '<div class="summary-section"><p style="font-style:italic;color:var(--muted);">' + escapeHtml(cs.closing) + '</p></div>';
   }
@@ -1588,26 +1516,21 @@ async function toggleSummary(id) {
   if (panel._loaded) return;
   panel._loaded = true;
   try {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/coach_session_notes?booking_id=eq.' + encodeURIComponent(id) + '&select=client_summary,post_session_analysis&limit=1', {
+    // Read through the service-role endpoint, which returns only the client-safe
+    // client_summary (stored for post-2a sessions, derived server-side from the
+    // coach analysis for older ones) — coach-only columns never reach here.
+    const res = await fetch('/api/client-session-notes?booking_id=' + encodeURIComponent(id), {
       headers: apiHeaders()
     });
     if (!res.ok) throw new Error('fetch failed');
-    const rows = await res.json();
-    const row = (rows && rows.length > 0) ? rows[0] : null;
-    // Phase 2a: prefer the authoritative server-generated client_summary.
-    // Fall back to the legacy client-side derivation for older sessions.
-    const clientSummary = row ? row.client_summary : null;
-    const clientHtml = clientSummary ? renderClientSummary(clientSummary) : '';
+    const data = await res.json();
+    const row = (data && Array.isArray(data.sessions) && data.sessions.length > 0) ? data.sessions[0] : null;
+    const clientHtml = (row && row.client_summary) ? renderClientSummary(row.client_summary) : '';
     if (clientHtml) {
       panel.innerHTML = clientHtml;
       return;
     }
-    const analysis = row ? row.post_session_analysis : null;
-    if (!analysis) {
-      panel.innerHTML = '<p style="font-size:0.88rem;color:var(--muted);font-style:italic;">This session\'s summary is not available yet. Your coach may still be reflecting on it.</p>';
-      return;
-    }
-    panel.innerHTML = renderSummary(analysis);
+    panel.innerHTML = '<p style="font-size:0.88rem;color:var(--muted);font-style:italic;">This session\'s summary is not available yet. Your coach may still be reflecting on it.</p>';
   } catch (err) {
     console.error('[Summary] load error:', err);
     panel.innerHTML = '<p style="font-size:0.88rem;color:var(--muted);font-style:italic;">We had trouble loading this summary. Please try again in a moment.</p>';
@@ -1649,13 +1572,11 @@ async function loadGoals() {
       const needle = String(title).trim().toLowerCase();
       let count = 0;
       (sessionNotesCache || []).forEach(function(r) {
-        const a = r.analysis || {};
-        let arr = [];
-        if (a.goals && Array.isArray(a.goals.existing)) arr = a.goals.existing;
-        else if (Array.isArray(a.goal_review)) arr = a.goal_review;
+        const cs = r && r.client_summary;
+        const arr = (cs && Array.isArray(cs.goals)) ? cs.goals : [];
         const hit = arr.some(function(g) {
           if (!g) return false;
-          const t = (g.title || g.goal_title || '').toString().trim().toLowerCase();
+          const t = (g.title || '').toString().trim().toLowerCase();
           return t && t === needle;
         });
         if (hit) count++;
