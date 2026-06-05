@@ -26,6 +26,14 @@ const SMS_TIMINGS = [30, 15];
 
 const HALF_WIDTH_MIN = 15;
 
+// Post-session email (Phase 2b). Scans bookings whose session is already past
+// and sends the client their homework + commitments. MIN_AFTER keeps us from
+// emailing while a session is still running; LOOKBACK bounds how long we keep
+// retrying a booking that has no post-session content yet (coach hasn't run
+// analysis / approved homework). Idempotency: coach_bookings.post_session_email_sent_at.
+const POST_SESSION_MIN_AFTER_MIN = 90;
+const POST_SESSION_LOOKBACK_MIN = 14 * 24 * 60;
+
 function isoOffset(now, minutes) {
   return new Date(now.getTime() + minutes * 60000).toISOString();
 }
@@ -51,7 +59,7 @@ export default async function handler(req, res) {
   const writeHeaders = { ...headers, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
   const origin = req.headers.host ? `https://${req.headers.host}` : 'https://www.ineedcoaching.org';
   const now = new Date();
-  const counts = { emails_sent: 0, emails_failed: 0, sms_sent: 0, sms_failed: 0, sms_skipped: 0 };
+  const counts = { emails_sent: 0, emails_failed: 0, sms_sent: 0, sms_failed: 0, sms_skipped: 0, post_session_sent: 0, post_session_not_ready: 0, post_session_failed: 0 };
   const errors = [];
 
   // ── Email windows ──
@@ -166,6 +174,69 @@ export default async function handler(req, res) {
       await markSmsSent(SUPABASE_URL, writeHeaders, row.id, now).catch((e) => {
         console.error('[process-reminders] sms patch failed', row.id, e.message);
       });
+    }
+  }
+
+  // ── Post-session email (Phase 2b) ──
+  // Past-session window: scheduled_at between (now - LOOKBACK) and
+  // (now - MIN_AFTER). Only rows with post_session_email_sent_at still null.
+  {
+    const fromIso = isoOffset(now, -POST_SESSION_LOOKBACK_MIN);
+    const toIso = isoOffset(now, -POST_SESSION_MIN_AFTER_MIN);
+    const url = `${SUPABASE_URL}/rest/v1/coach_bookings`
+      + `?status=eq.confirmed`
+      + `&post_session_email_sent_at=is.null`
+      + `&scheduled_at=gte.${encodeURIComponent(fromIso)}`
+      + `&scheduled_at=lte.${encodeURIComponent(toIso)}`
+      + `&select=id`;
+    let rows = [];
+    try {
+      const lookup = await fetch(url, { headers });
+      if (!lookup.ok) throw new Error(`status ${lookup.status}`);
+      rows = await lookup.json();
+    } catch (e) {
+      console.error('[process-reminders] post-session lookup failed', e.message);
+      errors.push({ stage: 'post_session_lookup', error: e.message });
+      rows = [];
+    }
+    for (const row of rows) {
+      try {
+        const sendRes = await fetch(`${origin}/api/post-session-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ booking_id: row.id }),
+        });
+        const sendData = await sendRes.json().catch(() => ({}));
+        // Stamp the row only when the email went out (sent:true) or it's a
+        // terminal skip (e.g. no client_email) that can never succeed. A
+        // not-ready row (no post-session content yet) is left unstamped so a
+        // later cron retries once the coach has run analysis / approved homework.
+        const shouldMark = sendRes.ok && sendData && (sendData.sent === true || sendData.terminal === true);
+        if (sendData && sendData.sent === true) counts.post_session_sent++;
+        else if (sendData && sendData.reason === 'not_ready') counts.post_session_not_ready++;
+        else if (!shouldMark) {
+          counts.post_session_failed++;
+          errors.push({ stage: 'post_session_send', booking_id: row.id, status: sendRes.status, reason: sendData && (sendData.error || sendData.reason) });
+        }
+        if (shouldMark) {
+          const patchRes = await fetch(
+            `${SUPABASE_URL}/rest/v1/coach_bookings?id=eq.${encodeURIComponent(row.id)}`,
+            {
+              method: 'PATCH',
+              headers: writeHeaders,
+              body: JSON.stringify({ post_session_email_sent_at: now.toISOString() }),
+            }
+          );
+          if (!patchRes.ok) {
+            console.error('[process-reminders] post-session patch failed', row.id, patchRes.status);
+            errors.push({ stage: 'post_session_patch', booking_id: row.id, status: patchRes.status });
+          }
+        }
+      } catch (e) {
+        console.error('[process-reminders] post-session send failed', row.id, e.message);
+        counts.post_session_failed++;
+        errors.push({ stage: 'post_session_send', booking_id: row.id, error: e.message });
+      }
     }
   }
 
