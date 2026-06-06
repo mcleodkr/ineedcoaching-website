@@ -27,11 +27,16 @@ export default async function handler(req, res) {
     // being NULL — re-confirmations don't reset the token, so a single
     // booking has a stable reschedule URL. 30-day TTL.
     let rescheduleToken = booking.reschedule_token;
+    // Phase 3c: track the expiry too so this endpoint can hand the token + expiry
+    // back to the booker in its response (the only client-side delivery channel
+    // for the reschedule link once RLS blocks the old anon read by booking_id).
+    let rescheduleExpiry = booking.reschedule_token_expires_at || null;
     if (!rescheduleToken) {
       try {
         const { randomBytes } = await import('crypto');
         rescheduleToken = randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        rescheduleExpiry = expiresAt;
         const tokenPatch = await fetch(
           `${SUPABASE_URL}/rest/v1/coach_bookings?id=eq.${booking_id}`,
           {
@@ -48,10 +53,12 @@ export default async function handler(req, res) {
         if (!tokenPatch.ok) {
           console.warn('[booking-confirmation] reschedule token patch failed', tokenPatch.status);
           rescheduleToken = '';
+          rescheduleExpiry = null;
         }
       } catch (tokErr) {
         console.warn('[booking-confirmation] reschedule token mint failed', tokErr && tokErr.message);
         rescheduleToken = '';
+        rescheduleExpiry = null;
       }
     }
     const rescheduleLink = rescheduleToken
@@ -245,7 +252,15 @@ export default async function handler(req, res) {
     const coachResult = emailResults[1];
     if (coachResult.status === 'rejected') console.error('Coach email failed:', coachResult.reason);
 
-    return res.status(200).json({ sent: true, to: booking.client_email, subject: clientSubject });
+    return res.status(200).json({
+      sent: true,
+      to: booking.client_email,
+      subject: clientSubject,
+      // Phase 3c: hand the booker their reschedule token so book.html can build
+      // the manage link without an anon read of coach_bookings.
+      reschedule_token: rescheduleToken || null,
+      reschedule_token_expires_at: rescheduleExpiry || null,
+    });
   } catch (e) {
     console.error('booking-confirmation error:', e);
     return res.status(500).json({ error: e.message });

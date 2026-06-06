@@ -1164,13 +1164,7 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
             }),
           });
         } catch (giftErr) { console.warn('[book] gift redeem mark failed', giftErr); }
-        try {
-          await fetch('/api/booking-confirmation', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ booking_id: giftBookingId }),
-          });
-        } catch (mailErr) { console.warn('[book] confirmation email failed', mailErr); }
+        await confirmAndCaptureToken(giftBookingId);
         lastBookingId = giftBookingId;
         renderSuccess({ email: email, zoomLink: '' });
         return;
@@ -1210,15 +1204,7 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
         status: 'confirmed', price: 0,
         sms_opt_in: smsOptIn, sms_reminder_timing: smsTiming,
       });
-      try {
-        await fetch('/api/booking-confirmation', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ booking_id: bookingId }),
-        });
-      } catch (mailErr) {
-        console.warn('[book] confirmation email failed (booking still saved)', mailErr);
-      }
+      await confirmAndCaptureToken(bookingId);
       // Phase 3a: zoom_link comes back from /api/create-booking (stashed by
       // insertBooking) — no separate direct read of coach_bookings.
       var zoomLink = lastCreatedZoomLink || '';
@@ -1332,52 +1318,41 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
   // so by the time we land here the token row is populated. Reads happen
   // through the public anon key — same gates the existing /reschedule.html
   // page already uses.
-  async function fetchRescheduleToken(bookingId) {
-    if (!bookingId) return null;
+  // Phase 3c: call booking-confirmation and capture the reschedule token from its
+  // response. This is the only client-side delivery channel for the token now —
+  // book.html no longer reads coach_bookings to fetch it (that anon read goes away
+  // under RLS). Used by the free + gift flows, which both call confirmation.
+  async function confirmAndCaptureToken(bookingId) {
     try {
-      var res = await fetch(REST + '/coach_bookings?id=eq.' + encodeURIComponent(bookingId)
-        + '&select=reschedule_token,reschedule_token_expires_at,status&limit=1', { headers: HEADERS_GET });
-      if (!res.ok) return null;
-      var rows = await res.json();
-      var row = rows && rows[0];
-      if (!row) return null;
-      return {
-        token: row.reschedule_token || null,
-        expiry: row.reschedule_token_expires_at || null,
-        status: row.status || null,
-      };
-    } catch (e) {
-      console.warn('[book] reschedule token fetch failed', e);
-      return null;
+      var resp = await fetch('/api/booking-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ booking_id: bookingId }),
+      });
+      if (resp.ok) {
+        var cj = await resp.json().catch(function () { return null; });
+        if (cj && cj.reschedule_token) {
+          lastRescheduleToken = cj.reschedule_token;
+          lastRescheduleTokenExpiry = cj.reschedule_token_expires_at || null;
+        }
+      }
+    } catch (mailErr) {
+      console.warn('[book] confirmation email failed (booking still saved)', mailErr);
     }
   }
 
-  async function revealManageActions(bookingId) {
+  // Show the manage (reschedule) link only when we already hold a token from the
+  // confirmation response (free + gift flows). The paid flow polls booking-status
+  // for confirmation and never receives the token client-side — its manage link
+  // lives in the confirmation email instead, so the inline block stays hidden.
+  function revealManageActions(bookingId) {
     var manageEl = $('success-manage');
     if (!manageEl) return;
-    // Quick poll loop — token is usually present immediately, but on the
-    // paid path the webhook may have just fired and we want to give it a
-    // beat. Three attempts × 1s.
-    var info = null;
-    for (var attempt = 0; attempt < 3; attempt++) {
-      info = await fetchRescheduleToken(bookingId);
-      if (info && info.token) break;
-      await sleep(1000);
-    }
-    if (!info || !info.token) {
-      // Couldn't get a token — leave the manage block hidden. The
-      // confirmation email still includes a /reschedule link.
-      return;
-    }
-    if (info.status && info.status !== 'confirmed' && info.status !== 'manual') {
-      return;
-    }
-    lastRescheduleToken = info.token;
-    lastRescheduleTokenExpiry = info.expiry;
+    if (!lastRescheduleToken) return;
     var link = $('manage-reschedule-link');
     if (link) {
       link.href = '/reschedule?booking_id=' + encodeURIComponent(bookingId)
-        + '&token=' + encodeURIComponent(info.token);
+        + '&token=' + encodeURIComponent(lastRescheduleToken);
     }
     manageEl.classList.remove('hidden');
   }
@@ -1392,16 +1367,17 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
     var maxAttempts = 15; // 15 × 2s = 30s
     for (var i = 0; i < maxAttempts; i++) {
       try {
-        var url = REST + '/coach_bookings'
-          + '?id=eq.' + encodeURIComponent(bookingId)
-          + '&select=id,status,scheduled_at,zoom_link,client_email,service_name,service_price,'
-          +   'coach_profiles(id,slug,display_name,full_name,timezone,zoom_meeting_link),'
-          +   'coach_services(id,title,duration,price)'
-          + '&limit=1';
-        var res = await fetch(url, { headers: HEADERS_GET });
+        // Phase 3c: poll the booking-status endpoint (service role, non-secret
+        // fields only) instead of reading coach_bookings directly with the anon
+        // key. No reschedule_token is returned here.
+        var res = await fetch('/api/booking-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ booking_id: bookingId }),
+        });
         if (res.ok) {
-          var rows = await res.json();
-          var b = rows && rows[0];
+          var data = await res.json();
+          var b = data && data.booking;
           if (b && b.status === 'confirmed') {
             renderPaidSuccess(b);
             return;

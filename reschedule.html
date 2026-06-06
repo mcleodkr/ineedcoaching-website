@@ -200,6 +200,7 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
   var service = null;
   var coachTz = 'America/Chicago';
   var selectedSlot = null;
+  var rescheduleToken = '';  // Phase 3c: the email token, validated server-side
 
   function formatScheduledLabels(utcIso, tz) {
     if (!utcIso) return { day: 'TBD', time: 'TBD', tzLabel: '' };
@@ -227,28 +228,28 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
       return;
     }
     try {
-      var url = REST + '/coach_bookings'
-        + '?id=eq.' + encodeURIComponent(bookingId)
-        + '&select=id,client_email,client_name,scheduled_at,service_id,service_name,status,reschedule_token,reschedule_token_expires_at,'
-        +   'coach_profiles(id,slug,display_name,full_name,timezone),'
-        +   'coach_services(id,title,duration)'
-        + '&limit=1';
-      var res = await fetch(url, { headers: HEADERS_GET });
-      if (!res.ok) throw new Error('lookup failed');
-      var rows = await res.json();
-      booking = rows && rows[0];
+      // Phase 3c: token validation + booking load happen server-side in
+      // /api/reschedule-info (service role). The token is never returned. The
+      // old anon read of coach_bookings (which also exposed the token) is gone.
+      var res = await fetch('/api/reschedule-info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ booking_id: bookingId, token: token }),
+      });
+      if (!res.ok) {
+        if (res.status === 410) {
+          showError('Your reschedule link has expired', 'Reach out to your coach by replying to your confirmation email.');
+        } else if (res.status === 409) {
+          showError('This booking can’t be rescheduled', 'It looks like this session was already cancelled or marked as a no-show. Reply to your confirmation email if you need help.');
+        } else {
+          showError();
+        }
+        return;
+      }
+      var data = await res.json();
+      booking = data && data.booking;
       if (!booking) { showError(); return; }
-      // Auth gates: token must match exactly, must not be expired, and the
-      // booking must still be live (no reschedule on cancelled/no_show rows).
-      if (!booking.reschedule_token || booking.reschedule_token !== token) { showError(); return; }
-      if (booking.reschedule_token_expires_at && new Date(booking.reschedule_token_expires_at).getTime() < Date.now()) {
-        showError('Your reschedule link has expired', 'Reach out to your coach by replying to your confirmation email.');
-        return;
-      }
-      if (booking.status !== 'confirmed' && booking.status !== 'manual') {
-        showError('This booking can’t be rescheduled', 'It looks like this session was already cancelled or marked as a no-show. Reply to your confirmation email if you need help.');
-        return;
-      }
+      rescheduleToken = token;  // validated; reused for the confirm write
       coach = booking.coach_profiles || {};
       service = booking.coach_services || {};
       coachTz = coach.timezone || coachTz;
@@ -357,20 +358,15 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
     btn.disabled = true;
     btn.textContent = 'Saving…';
     try {
-      var patchRes = await fetch(REST + '/coach_bookings?id=eq.' + encodeURIComponent(booking.id), {
-        method: 'PATCH',
-        headers: HEADERS_WRITE,
-        body: JSON.stringify({ scheduled_at: selectedSlot.iso }),
+      // Phase 3c: the write goes through /api/reschedule-booking (service role),
+      // which re-validates the token, updates scheduled_at, and sends the
+      // coach + client reschedule emails. No direct anon PATCH of coach_bookings.
+      var patchRes = await fetch('/api/reschedule-booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ booking_id: booking.id, token: rescheduleToken, scheduled_at: selectedSlot.iso }),
       });
-      if (!patchRes.ok && patchRes.status !== 204) throw new Error('patch ' + patchRes.status);
-      // Email coach + client. Best-effort — the row is already updated.
-      try {
-        await fetch('/api/booking-rescheduled', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ booking_id: booking.id }),
-        });
-      } catch (mailErr) { console.warn('[reschedule] email failed', mailErr); }
+      if (!patchRes.ok) throw new Error('reschedule ' + patchRes.status);
       $('success-summary').innerHTML = ''
         + summaryRow('Session', service.title || booking.service_name || 'Coaching session')
         + summaryRow('Coach', coach.display_name || coach.full_name || 'Your coach')
