@@ -125,6 +125,7 @@ export default async function handler(req, res) {
         date_source: (bk && bk.scheduled_at) ? 'booking.scheduled_at' : 'psa.created_at',
         coaching_reflection: psa.coaching_reflection || null,
         missed_windows: Array.isArray(psa.missed_windows) ? psa.missed_windows : [],
+        blind_spot_verdicts: Array.isArray(psa.blind_spot_verdicts) ? psa.blind_spot_verdicts : [],
       };
     });
 
@@ -136,12 +137,33 @@ export default async function handler(req, res) {
     });
     sessions.forEach(function(s, i) { s.ordinal = i + 1; });
 
+    // Phase 1: blind-spot trend, per (coach, client). Walk oldest→newest and,
+    // for each verdict, attach previous_status (this pattern's status in the
+    // most recent earlier session that had a verdict for it) so the panel can
+    // render "Last time: X. This session: <verdict>". Also build a compact
+    // per-pattern history for an at-a-glance trend.
+    const lastStatusByPattern = {};
+    const trendHistory = {};
+    sessions.forEach(function(s) {
+      (s.blind_spot_verdicts || []).forEach(function(v) {
+        if (!v || !v.blind_spot) return;
+        const key = String(v.blind_spot).trim().toLowerCase();
+        v.previous_status = Object.prototype.hasOwnProperty.call(lastStatusByPattern, key)
+          ? lastStatusByPattern[key] : null;
+        lastStatusByPattern[key] = v.status || null;
+        if (!trendHistory[key]) trendHistory[key] = { blind_spot: v.blind_spot, history: [] };
+        trendHistory[key].history.push({ ordinal: s.ordinal, date: s.date, status: v.status || null });
+      });
+    });
+    const blind_spot_trends = Object.keys(trendHistory).map(function(k) { return trendHistory[k]; });
+
     // Then reverse so the panel renders newest-first.
     sessions.reverse();
 
     return res.status(200).json({
       display_name: displayName,
       sessions,
+      blind_spot_trends,
       total: sessions.length,
     });
   } catch (e) {

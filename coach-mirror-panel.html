@@ -205,6 +205,28 @@
       background: rgba(196,154,60,0.18);
       color: var(--warm-eyebrow);
     }
+    .pill.more_effective { background: rgba(196,154,60,0.20); color: var(--warm-eyebrow); }
+    .pill.persisted { background: rgba(26,58,82,0.12); color: var(--navy); }
+    .pill.not_observed { background: rgba(107,107,96,0.14); color: var(--muted); }
+    .verdict-row {
+      border: 1px solid var(--warm-border);
+      border-radius: 8px;
+      background: #fefcf6;
+      margin-bottom: 10px;
+      padding: 12px 14px;
+    }
+    .verdict-row:last-child { margin-bottom: 0; }
+    .verdict-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .verdict-name { font-weight: 600; color: var(--navy); font-size: 0.95rem; }
+    .verdict-prev {
+      font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--muted); margin-top: 6px;
+    }
+    .verdict-evidence {
+      font-size: 0.92rem; color: var(--ink); line-height: 1.55;
+      font-style: italic; margin-top: 8px;
+    }
+    .verdict-note { font-size: 0.85rem; color: var(--muted); line-height: 1.5; margin-top: 6px; }
     .missed-what-opened {
       font-size: 0.92rem;
       color: var(--ink);
@@ -450,6 +472,36 @@
     return html;
   }
 
+  // Phase 1: blind-spot verdict. Effectiveness language only — never fixed/failed.
+  function verdictStatusLabel(s) {
+    if (s === 'more_effective') return 'More effective';
+    if (s === 'persisted') return 'Persisted';
+    if (s === 'not_observed') return 'Not observed';
+    return s || '';
+  }
+  function renderBlindSpotVerdict(v) {
+    if (!v || typeof v !== 'object' || !v.blind_spot) return '';
+    const status = (v.status === 'more_effective' || v.status === 'persisted' || v.status === 'not_observed')
+      ? v.status : 'not_observed';
+    let html = '<div class="verdict-row">';
+    html += '<div class="verdict-head">';
+    html += '<span class="verdict-name">' + escapeHtml(v.blind_spot) + '</span>';
+    html += '<span class="pill ' + status + '">' + escapeHtml(verdictStatusLabel(status)) + '</span>';
+    html += '</div>';
+    if (v.previous_status) {
+      html += '<div class="verdict-prev">Last time: ' + escapeHtml(verdictStatusLabel(v.previous_status))
+        + ' · This session: ' + escapeHtml(verdictStatusLabel(status)) + '</div>';
+    }
+    if (v.evidence_verbatim) {
+      html += '<div class="verdict-evidence">“' + escapeHtml(v.evidence_verbatim) + '”</div>';
+    }
+    if (v.note) {
+      html += '<div class="verdict-note">' + escapeHtml(v.note) + '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
   function renderSession(session, totalSessions) {
     const dateLabel = formatDate(session.date);
     const ordinal = session.ordinal || null;
@@ -480,6 +532,14 @@
       html += '<div class="missed-section">';
       html += '<div class="missed-section-label">Missed windows</div>';
       missed.forEach(function(mw) { html += renderMissedWindow(mw); });
+      html += '</div>';
+    }
+
+    const verdicts = Array.isArray(session.blind_spot_verdicts) ? session.blind_spot_verdicts : [];
+    if (verdicts.length) {
+      html += '<div class="missed-section">';
+      html += '<div class="missed-section-label">Your development patterns this session</div>';
+      verdicts.forEach(function(v) { html += renderBlindSpotVerdict(v); });
       html += '</div>';
     }
 

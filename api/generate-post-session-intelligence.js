@@ -154,6 +154,12 @@ export default async function handler(req, res) {
     );
     const fetchData = await fetchRes.json();
     const isFirstAnalysis = !(fetchData && fetchData[0] && fetchData[0].post_session_analysis);
+    // Phase 1: prior blind-spot verdicts, so a failed verdict pass on a re-run
+    // never clobbers a previously-good set (post_session_analysis is rewritten
+    // wholesale on every run).
+    const priorPSA = (fetchData && fetchData[0] && fetchData[0].post_session_analysis) || null;
+    const priorBlindSpotVerdicts = (priorPSA && Array.isArray(priorPSA.blind_spot_verdicts))
+      ? priorPSA.blind_spot_verdicts : null;
 
     let sessionContent = '';
     if (fetchData && fetchData.length > 0) {
@@ -720,6 +726,97 @@ Return ONLY this JSON:
     }
 
     formattedOutput.dna_manifestations = pass3cOutput?.dna_manifestations || null;
+
+    // ── Pass 3c-bs: Blind-Spot Verdicts (Phase 1, fault-tolerant) ────────
+    // Carries the coach's established blind spots into this session's Mirror
+    // generation and returns a verdict for EVERY one — more_effective /
+    // persisted / not_observed — with a verbatim quote from THIS session as
+    // evidence, so the Mirror can show "Last time: X. This session: <verdict>"
+    // and trend it. Independent of Pass 3c (which it leaves untouched): its own
+    // fetch of coach_dna_profiles.signal_patterns.blind_spots, ALL of them (not
+    // sliced), blind_spots only (never growth_edges). On any failure we fall
+    // back to the prior verdicts rather than clobbering a good set. Effectiveness
+    // language only — never fixed/failed; never fabricate improvement.
+    let blindSpotVerdicts = null;
+    try {
+      const bsRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/coach_dna_profiles?coach_id=eq.${coachId}&select=signal_patterns`,
+        { headers: supabaseHeaders }
+      );
+      const bsRows = await bsRes.json();
+      const blindSpots = Array.isArray(bsRows?.[0]?.signal_patterns?.blind_spots)
+        ? bsRows[0].signal_patterns.blind_spots.filter(b => b && b.pattern_name)
+        : [];
+
+      if (blindSpots.length > 0) {
+        const verdictRaw = await callClaude(
+          ANTHROPIC_API_KEY,
+          'claude-sonnet-4-6',
+          1200,
+          buildSystem(
+            sharedPrefix,
+            `You are Coach Clarity. The coach has established blind spots — recurring tendencies that can reduce the effectiveness of their work. For EACH blind spot listed, judge how it played out in THIS session (the transcript is above), measured against that blind spot's own description and impact.
+
+status is exactly one of:
+- "more_effective": in a moment where this blind spot usually takes over, the coach worked more effectively than the blind spot's usual default this session.
+- "persisted": the blind spot showed up the way it usually does this session.
+- "not_observed": the situation that triggers this blind spot did not arise this session.
+
+RULES:
+- Effectiveness language only. NEVER use fixed, failed, good, bad, right, or wrong.
+- evidence_verbatim MUST be an exact quote copied from THIS session's transcript above (coach or client) that substantiates the status. For not_observed use "" — never invent or paraphrase a quote, and never fabricate improvement.
+- If you cannot ground more_effective or persisted in a real verbatim quote from this session, use not_observed instead.
+- note: one sentence, suggestive, grounded in this session.
+- Return a verdict for EVERY blind spot listed, using its exact pattern_name. Return ONLY valid JSON.${priorPatternContext}`
+          ),
+          `COACH BLIND SPOTS (judge each one):
+${JSON.stringify(blindSpots.map(b => ({ pattern_name: b.pattern_name, description: b.description || '', where_it_shows_up: b.where_it_shows_up || '', impact: b.impact || '' })))}
+
+THIS SESSION EVIDENCE:
+interventions: ${JSON.stringify((pass2bOutput.coaching_interventions || []).slice(0, 4))}
+missed_windows: ${JSON.stringify((pass2cOutput.missed_windows || []).slice(0, 4))}
+client_quotes: ${JSON.stringify((extractionOutput.client_quotes || []).slice(0, 6))}
+
+Return ONLY this JSON:
+{"blind_spot_verdicts":[{"blind_spot":"<exact pattern_name>","status":"more_effective|persisted|not_observed","evidence_verbatim":"<exact quote from THIS session, or empty string>","note":"<one sentence>"}]}`,
+          'Pass 3c-bs: Blind-Spot Verdicts'
+        , { feature: 'coaching_mirror', coachId }
+        );
+
+        // Anti-hallucination + substantiation guard: one verdict per REAL blind
+        // spot (exact pattern_name), valid status, not_observed → empty evidence,
+        // and any more_effective/persisted without a verbatim quote is downgraded
+        // to not_observed (never claim improvement we cannot ground).
+        const allowed = new Set(['more_effective', 'persisted', 'not_observed']);
+        const byName = {};
+        (Array.isArray(verdictRaw?.blind_spot_verdicts) ? verdictRaw.blind_spot_verdicts : []).forEach(v => {
+          if (v && typeof v.blind_spot === 'string') byName[v.blind_spot.trim().toLowerCase()] = v;
+        });
+        const verdicts = blindSpots.map(bs => {
+          const name = bs.pattern_name;
+          const m = byName[String(name).trim().toLowerCase()];
+          let status = (m && allowed.has(m.status)) ? m.status : 'not_observed';
+          let evidence = (m && typeof m.evidence_verbatim === 'string') ? m.evidence_verbatim.trim() : '';
+          if (status !== 'not_observed' && !evidence) status = 'not_observed';
+          if (status === 'not_observed') evidence = '';
+          let note = (m && typeof m.note === 'string') ? m.note.trim() : '';
+          if (!note) note = status === 'not_observed'
+            ? 'This pattern did not come up in this session.'
+            : '';
+          return { blind_spot: name, status, evidence_verbatim: evidence, note };
+        });
+        blindSpotVerdicts = verdicts.length ? verdicts : null;
+        console.log(`[Pass 3c-bs] Verdicts for ${verdicts.length} blind spot(s): ${verdicts.map(v => v.status).join(', ')}`);
+      } else {
+        console.log('[Pass 3c-bs] No coach blind spots on file, skipping.');
+      }
+    } catch (e) {
+      console.error('[Pass 3c-bs: Blind-Spot Verdicts] Failed, preserving prior verdicts:', e.message);
+      blindSpotVerdicts = null;
+    }
+    // Never clobber a prior good set: keep the new verdicts, else fall back to
+    // whatever was already stored, else null.
+    formattedOutput.blind_spot_verdicts = blindSpotVerdicts || priorBlindSpotVerdicts || null;
 
     // ── Pass 3d: Approaches to Explore Next (conditional, fault-tolerant) ─
     // Generates 1-2 fit-based approach lens suggestions based on this session's
