@@ -22,52 +22,7 @@
 //   continuity_phrase — finished, client-voiced "what's becoming stronger" line.
 //
 // post_session_analysis is read server-side for derivation but NEVER returned.
-
-// ── Safe-derivation helpers (ported from the old client-side logic so the
-//    client-visible output is unchanged, just computed behind the trust
-//    boundary). Pure functions, module scope. ─────────────────────────────
-
-// Rewrite coach-facing third-person into client-facing second person. Coach
-// Clarity writes about "the client" / "she" / "they"; the client reads this on
-// their dashboard, so pronouns are rewritten before anything is returned.
-function toClientVoice(raw) {
-  if (raw == null) return '';
-  let s = String(raw);
-  s = s.replace(/\bThe client\b/g, 'You');
-  s = s.replace(/\bthe client\b/g, 'you');
-  s = s.replace(/\bA client\b/g, 'You');
-  s = s.replace(/\ba client\b/g, 'you');
-  s = s.replace(/\bClient\b/g, 'You');
-  s = s.replace(/\bclient\b/g, 'you');
-  s = s.replace(/\bShe\b/g, 'You');
-  s = s.replace(/\bshe\b/g, 'you');
-  s = s.replace(/\bHe\b/g, 'You');
-  s = s.replace(/\bhe\b/g, 'you');
-  s = s.replace(/\bHer\b/g, 'Your');
-  s = s.replace(/\bher\b/g, 'your');
-  s = s.replace(/\bHis\b/g, 'Your');
-  s = s.replace(/\bhis\b/g, 'your');
-  s = s.replace(/\bHim\b/g, 'You');
-  s = s.replace(/\bhim\b/g, 'you');
-  s = s.replace(/\bThey\b/g, 'You');
-  s = s.replace(/\bthey\b/g, 'you');
-  s = s.replace(/\bThem\b/g, 'You');
-  s = s.replace(/\bthem\b/g, 'you');
-  s = s.replace(/\bTheir\b/g, 'Your');
-  s = s.replace(/\btheir\b/g, 'your');
-  s = s.replace(/\bherself\b/gi, 'yourself');
-  s = s.replace(/\bhimself\b/gi, 'yourself');
-  s = s.replace(/\bthemselves\b/gi, 'yourself');
-  s = s.replace(/\bYou is\b/g, 'You are');
-  s = s.replace(/\byou is\b/g, 'you are');
-  s = s.replace(/\bYou was\b/g, 'You were');
-  s = s.replace(/\byou was\b/g, 'you were');
-  s = s.replace(/\bYou has\b/g, 'You have');
-  s = s.replace(/\byou has\b/g, 'you have');
-  s = s.replace(/\bYou does\b/g, 'You do');
-  s = s.replace(/\byou does\b/g, 'you do');
-  return s;
-}
+import { toClientVoice, buildClientSummary } from '../lib/client-session-projection.js';
 
 function normTag(t) {
   return String(t || '').toLowerCase().trim().replace(/[\s_]+/g, '-');
@@ -96,84 +51,6 @@ function growthDimensionsForAnalysis(a) {
     if (dim.signals.some((sig) => present.has(normTag(sig)))) matched.push(dim.name);
   }
   return matched;
-}
-
-// Client-safe goals touched this session (titles + relevance). Goal titles are
-// the client's own goals — safe to surface. Used for both the per-session view
-// and the cross-session "sessions per goal" count.
-function goalsFromAnalysis(a) {
-  if (!a || typeof a !== 'object') return [];
-  let goalsArr = [];
-  if (a.goals && typeof a.goals === 'object' && Array.isArray(a.goals.existing)) goalsArr = a.goals.existing;
-  else if (Array.isArray(a.goal_review)) goalsArr = a.goal_review;
-  const goals = [];
-  for (const g of goalsArr) {
-    if (!g || typeof g !== 'object') continue;
-    const title = g.title || g.goal_title || '';
-    if (!title) continue;
-    goals.push({ title: toClientVoice(title), relevance: toClientVoice(g.session_relevance || '') });
-  }
-  return goals;
-}
-
-// Derive a client_summary-shaped object from the coach analysis blob, applying
-// the same safe extraction + voicing + clinical-leak guard the browser used.
-// Returns null if nothing safe can be derived.
-function deriveClientSummary(a) {
-  if (!a || typeof a !== 'object') return null;
-
-  // recap — prefer session_in_one_line (string), else core_focus.summary.
-  const oneLine = typeof a.session_in_one_line === 'string' ? a.session_in_one_line : '';
-  const coreSummary = (a.core_focus && typeof a.core_focus.summary === 'string') ? a.core_focus.summary : '';
-  const recap = toClientVoice((oneLine || coreSummary).trim());
-
-  // what_stood_out — patterns_and_your_role[0].what_this_means, guarded.
-  let whatStoodOut = '';
-  if (Array.isArray(a.patterns_and_your_role) && a.patterns_and_your_role.length > 0) {
-    const first = a.patterns_and_your_role[0];
-    if (first && typeof first.what_this_means === 'string') {
-      let transformed = toClientVoice(first.what_this_means);
-      const clinicalSignals = /\b(pattern is visible|loses its grip|coaching move|coach analysis|intervention|framework|dysregulat|maladaptive|the coach)\b/i;
-      if (clinicalSignals.test(transformed)) {
-        transformed = 'Something shifted in this session that is worth sitting with.';
-      }
-      whatStoodOut = transformed;
-    }
-  }
-
-  // practice — between_session[].invitation (or .title), strip passive prefixes.
-  const between = Array.isArray(a.between_session) ? a.between_session
-    : (Array.isArray(a.between_session_practices) ? a.between_session_practices : []);
-  const practice = [];
-  for (const b of between) {
-    let t = '';
-    if (typeof b === 'string') t = b;
-    else if (b && typeof b === 'object') t = b.invitation || b.title || '';
-    if (!t) continue;
-    let text = toClientVoice(t)
-      .replace(/^\s*[Yy]ou\s+(might|may|could)\s+(consider\s+|try\s+to\s+|try\s+)?/i, '');
-    if (text.length > 0) text = text.charAt(0).toUpperCase() + text.slice(1);
-    if (text) practice.push(text);
-  }
-
-  // commitments — commitments[].text (or .commitment / string).
-  const rawCommit = Array.isArray(a.commitments) ? a.commitments
-    : (Array.isArray(a.client_commitments) ? a.client_commitments : []);
-  const commitments = [];
-  for (const c of rawCommit) {
-    let t = '';
-    if (typeof c === 'string') t = c;
-    else if (c && typeof c === 'object') t = c.title || c.commitment || c.text || '';
-    if (t) commitments.push(toClientVoice(t));
-  }
-
-  // goals — goals.existing[] or goal_review[].
-  const goals = goalsFromAnalysis(a);
-
-  if (!recap && !whatStoodOut && practice.length === 0 && commitments.length === 0 && goals.length === 0) {
-    return null;
-  }
-  return { recap, what_stood_out: whatStoodOut, practice, commitments, goals };
 }
 
 // "What's becoming stronger" — pick one complete, client-voiced sentence.
@@ -292,12 +169,7 @@ export default async function handler(req, res) {
         ? row.post_session_analysis : null;
       const storedSummary = (row && row.client_summary && typeof row.client_summary === 'object')
         ? row.client_summary : null;
-      let clientSummary = storedSummary || deriveClientSummary(analysis);
-      // Always carry client-safe goal titles. A stored Phase 2a summary has no
-      // goals field; attach them (derived summaries already include goals).
-      if (clientSummary && !Array.isArray(clientSummary.goals)) {
-        clientSummary = { ...clientSummary, goals: goalsFromAnalysis(analysis) };
-      }
+      const clientSummary = buildClientSummary(storedSummary, analysis);
 
       return {
         id: row.id,

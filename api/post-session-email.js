@@ -1,18 +1,28 @@
 // POST /api/post-session-email { booking_id }
 //
-// Sends one post-session email to the client: the homework they were assigned
-// + the commitments they made this session, so they don't lose traction.
+// Sends one post-session email to the client. It LEADS with the session recap
+// (the same gentle, client-safe summary the dashboard shows) and then carries
+// the homework they were assigned + the commitments they made, so it reads as
+// "here's your session and what to carry forward," not a bare list.
 // Called by the /api/process-reminders cron orchestrator, which owns
 // idempotency via coach_bookings.post_session_email_sent_at and only stamps
 // it when this endpoint reports the email actually went out (sent:true) or the
 // booking is a terminal skip (terminal:true). Modeled on api/booking-reminder.js.
 //
-// Content sources (both client-safe):
+// Content sources (all client-safe):
+//   recap       — buildClientSummary() from lib/client-session-projection.js —
+//                 the SAME projection that powers the dashboard (stored Phase 2a
+//                 client_summary when present, else safe-derived). We use only
+//                 headline / recap / what_stood_out / closing from it. We never
+//                 read raw post_session_analysis recap fields here and never
+//                 write a second derivation — one source of truth.
 //   commitments — coach_session_notes.post_session_analysis.commitments[].text
 //   homework    — client_homework rows for this booking, status='assigned'
-// If neither exists yet (the coach hasn't run post-session analysis or approved
-// homework), this returns { sent:false, terminal:false, reason:'not_ready' } so
-// the orchestrator leaves the row unstamped and a later cron retries.
+// If none of recap / homework / commitments exists yet (coach hasn't run
+// analysis or approved homework), this returns { sent:false, terminal:false,
+// reason:'not_ready' } so the orchestrator leaves the row unstamped and retries.
+
+import { buildClientSummary } from '../lib/client-session-projection.js';
 
 function escapeHtml(s) {
   if (s === null || s === undefined) return '';
@@ -33,6 +43,15 @@ function clientDisplayName(booking) {
   return match ? match[1].trim() : (booking.client_email || 'there');
 }
 
+// Title-case the client name for the greeting ("candy apple" → "Candy Apple").
+// Only uppercases the first letter of each word — intentional capitals (McLeod)
+// are preserved. Leaves an email-address fallback untouched.
+function titleCaseName(name) {
+  if (!name || typeof name !== 'string') return name || '';
+  if (name.includes('@')) return name;
+  return name.split(/\s+/).map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w)).join(' ');
+}
+
 function wrap(inner) {
   return `<div style="font-family:'DM Sans',sans-serif;max-width:560px;margin:0 auto;padding:32px;color:#1a3a52;">${inner}<p style="font-size:0.78rem;color:#6b6b60;margin-top:24px;">— The <a href="https://www.ineedcoaching.org" style="color:#c49a3c;text-decoration:none;font-weight:600;">ineedcoaching.org</a> team</p></div>`;
 }
@@ -49,15 +68,27 @@ function listBlock(title, items) {
     </div>`;
 }
 
-function buildEmail({ clientName, coachName, commitments, homework }) {
+function buildEmail({ clientName, coachName, headline, recap, whatStoodOut, closing, commitments, homework }) {
   const subject = `What you're carrying forward from your session with ${coachName}`;
+  // Recap section — leads the email. Each piece renders only if present, so an
+  // older session with a null client_summary degrades gracefully (e.g. no
+  // what_stood_out rather than risking coach framing).
+  const recapBlock = `
+    ${headline ? `<p style="font-family:'Cormorant Garamond',Georgia,serif;font-size:1.2rem;color:#1a3a52;margin:8px 0 12px;">${escapeHtml(headline)}</p>` : ''}
+    ${recap ? `<p style="font-size:0.95rem;line-height:1.6;color:#1a3a52;">${escapeHtml(recap)}</p>` : ''}
+    ${whatStoodOut ? `<p style="font-size:0.92rem;line-height:1.6;color:#6b6b60;"><strong style="color:#1a3a52;">What stood out:</strong> ${escapeHtml(whatStoodOut)}</p>` : ''}
+  `;
+  const closingLine = closing
+    ? `<p style="font-size:0.92rem;line-height:1.6;color:#1a3a52;font-style:italic;margin-top:24px;">${escapeHtml(closing)}</p>`
+    : `<p style="font-size:0.9rem;line-height:1.6;color:#1a3a52;margin-top:24px;">One small step at a time — you might return to this whenever you need a nudge.</p>`;
   const html = wrap(`
-    <h1 style="font-family:'Cormorant Garamond',Georgia,serif;font-size:1.6rem;color:#1a3a52;margin-bottom:16px;">Carrying this forward</h1>
+    <h1 style="font-family:'Cormorant Garamond',Georgia,serif;font-size:1.6rem;color:#1a3a52;margin-bottom:16px;">Your session with ${escapeHtml(coachName)}</h1>
     <p style="font-size:0.95rem;line-height:1.6;color:#1a3a52;">Hi ${escapeHtml(clientName)},</p>
-    <p style="font-size:0.95rem;line-height:1.6;color:#6b6b60;">Here's what came out of your session with ${escapeHtml(coachName)} to keep close between now and next time.</p>
-    ${listBlock('What you committed to', commitments)}
+    <p style="font-size:0.95rem;line-height:1.6;color:#6b6b60;">Here's a look back at your session and what to keep close between now and next time.</p>
+    ${recapBlock}
     ${listBlock('Your practice this week', homework)}
-    <p style="font-size:0.9rem;line-height:1.6;color:#1a3a52;margin-top:24px;">One small step at a time — you might return to this whenever you need a nudge.</p>
+    ${listBlock('What you committed to', commitments)}
+    ${closingLine}
     <p style="font-size:0.9rem;line-height:1.6;color:#1a3a52;margin-top:8px;">With you,<br>${escapeHtml(coachName)}</p>
   `);
   return { subject, html };
@@ -104,25 +135,44 @@ export default async function handler(req, res) {
       return res.status(200).json({ sent: false, terminal: true, reason: 'no_client_email' });
     }
 
-    // ── Commitments (from the post-session output for this booking) ──
+    // ── Session note → recap (shared projection) + commitments ──
+    // One fetch supplies both the client-safe recap (via buildClientSummary —
+    // the same projection the dashboard uses) and the commitments. We never
+    // read raw post_session_analysis recap fields here; commitments stay sourced
+    // from analysis.commitments as before.
+    let clientSummary = null;
     let commitments = [];
     try {
       const noteRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/coach_session_notes?booking_id=eq.${encodeURIComponent(bookingId)}&select=post_session_analysis&limit=1`,
+        `${SUPABASE_URL}/rest/v1/coach_session_notes?booking_id=eq.${encodeURIComponent(bookingId)}&select=post_session_analysis,client_summary&limit=1`,
         { headers }
       );
       if (noteRes.ok) {
         const noteRows = await noteRes.json();
-        const analysis = Array.isArray(noteRows) && noteRows[0] && noteRows[0].post_session_analysis;
-        const raw = analysis && typeof analysis === 'object' && Array.isArray(analysis.commitments) ? analysis.commitments : [];
+        const note = Array.isArray(noteRows) && noteRows[0];
+        const analysis = note && note.post_session_analysis && typeof note.post_session_analysis === 'object'
+          ? note.post_session_analysis : null;
+        const stored = note && note.client_summary && typeof note.client_summary === 'object'
+          ? note.client_summary : null;
+        clientSummary = buildClientSummary(stored, analysis);
+        const raw = analysis && Array.isArray(analysis.commitments) ? analysis.commitments : [];
         commitments = raw
           .map((c) => (typeof c === 'string' ? c : (c && (c.text || c.title || c.commitment)) || ''))
           .map((t) => String(t).trim())
           .filter(Boolean);
       }
     } catch (e) {
-      console.error('[post-session-email] commitments lookup failed', bookingId, e.message);
+      console.error('[post-session-email] note lookup failed', bookingId, e.message);
     }
+
+    // Client-safe recap fields only — headline/recap/what_stood_out/closing.
+    // Anything absent (e.g. an older derived summary has no headline/closing)
+    // simply doesn't render.
+    const headline = clientSummary && typeof clientSummary.headline === 'string' ? clientSummary.headline.trim() : '';
+    const recap = clientSummary && typeof clientSummary.recap === 'string' ? clientSummary.recap.trim() : '';
+    const whatStoodOut = clientSummary && typeof clientSummary.what_stood_out === 'string' ? clientSummary.what_stood_out.trim() : '';
+    const closing = clientSummary && typeof clientSummary.closing === 'string' ? clientSummary.closing.trim() : '';
+    const hasRecap = !!(headline || recap || whatStoodOut);
 
     // ── Homework assigned this session ──
     let homework = [];
@@ -147,12 +197,22 @@ export default async function handler(req, res) {
     }
 
     // Nothing to send yet — not an error. Leave unstamped so a later cron
-    // retries once the coach has run analysis / approved homework.
-    if (commitments.length === 0 && homework.length === 0) {
+    // retries once the coach has run analysis / approved homework. Send if there
+    // is any client-safe content: recap OR homework OR commitments.
+    if (!hasRecap && commitments.length === 0 && homework.length === 0) {
       return res.status(200).json({ sent: false, terminal: false, reason: 'not_ready' });
     }
 
-    const { subject, html } = buildEmail({ clientName, coachName, commitments, homework });
+    const { subject, html } = buildEmail({
+      clientName: titleCaseName(clientName),
+      coachName,
+      headline,
+      recap,
+      whatStoodOut,
+      closing,
+      commitments,
+      homework,
+    });
 
     const origin = req.headers.host ? `https://${req.headers.host}` : 'https://www.ineedcoaching.org';
     const sendRes = await fetch(`${origin}/api/send-email`, {
@@ -166,7 +226,7 @@ export default async function handler(req, res) {
       return res.status(502).json({ sent: false, terminal: false, error: 'send_failed', status: sendRes.status });
     }
 
-    return res.status(200).json({ sent: true, booking_id: bookingId, commitments: commitments.length, homework: homework.length });
+    return res.status(200).json({ sent: true, booking_id: bookingId, recap: hasRecap, commitments: commitments.length, homework: homework.length });
   } catch (e) {
     console.error('[post-session-email] error', e);
     return res.status(500).json({ error: e.message });
