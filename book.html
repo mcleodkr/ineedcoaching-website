@@ -598,6 +598,9 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
   var lastRescheduleToken = null;
   var lastRescheduleTokenExpiry = null;
   var lastBookingCancelled = false;
+  // Phase 3a: zoom_link returned by /api/create-booking, stashed by insertBooking
+  // so the free flow surfaces it without a second direct read of coach_bookings.
+  var lastCreatedZoomLink = '';
 
   // ── Load coach + services ──
   async function loadCoach() {
@@ -1216,14 +1219,9 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
       } catch (mailErr) {
         console.warn('[book] confirmation email failed (booking still saved)', mailErr);
       }
-      var zoomLink = '';
-      try {
-        var zRes = await fetch(REST + '/coach_bookings?id=eq.' + encodeURIComponent(bookingId) + '&select=zoom_link', { headers: HEADERS_GET });
-        if (zRes.ok) {
-          var zRows = await zRes.json();
-          if (zRows && zRows.length) zoomLink = zRows[0].zoom_link || '';
-        }
-      } catch (zErr) { /* non-fatal */ }
+      // Phase 3a: zoom_link comes back from /api/create-booking (stashed by
+      // insertBooking) — no separate direct read of coach_bookings.
+      var zoomLink = lastCreatedZoomLink || '';
       lastBookingId = bookingId;
       renderSuccess({ email: email, zoomLink: zoomLink });
     } catch (err) {
@@ -1276,20 +1274,25 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
     if (typeof input.discount_amount_cents === 'number' && input.discount_amount_cents > 0) {
       payload.discount_amount_cents = input.discount_amount_cents;
     }
-    var res = await fetch(REST + '/coach_bookings', {
+    // Phase 3a: the insert now goes through the service-role /api/create-booking
+    // endpoint instead of a direct anon-key write to coach_bookings. Same payload,
+    // identical behavior; the endpoint returns the new id + zoom_link. zoom_link
+    // is stashed so the free flow can use it without a second direct read.
+    var res = await fetch('/api/create-booking', {
       method: 'POST',
-      headers: HEADERS_WRITE,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    if (!res.ok && res.status !== 201) {
+    if (!res.ok) {
       var body = '';
       try { body = await res.text(); } catch (e) {}
       throw new Error('Booking insert failed: ' + res.status + ' ' + body);
     }
-    var rows = [];
-    try { rows = await res.json(); } catch (e) {}
-    if (!rows || !rows.length || !rows[0].id) throw new Error('Booking insert returned no row');
-    return rows[0].id;
+    var data = null;
+    try { data = await res.json(); } catch (e) {}
+    if (!data || !data.id) throw new Error('Booking insert returned no row');
+    lastCreatedZoomLink = data.zoom_link || '';
+    return data.id;
   }
 
   function renderSuccess(info) {
@@ -1519,7 +1522,8 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
         // allows anon INSERT but restricts SELECT to authenticated coaches.
         // The default HEADERS_WRITE asks for return=representation, which
         // forces a read-back that anon can't satisfy → bogus permission error.
-        // Other writes (e.g. coach_bookings) keep HEADERS_WRITE untouched.
+        // (As of Phase 3a the coach_bookings insert no longer uses HEADERS_WRITE —
+        // it goes through the service-role /api/create-booking endpoint.)
         var res = await fetch(REST + '/booking_intake_responses', {
           method: 'POST',
           headers: { ...HEADERS_WRITE, Prefer: 'return=minimal' },
