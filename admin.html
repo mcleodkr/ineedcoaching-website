@@ -359,6 +359,19 @@ async function sGet(path){
   var r=await fetch(API+'/'+path,{headers:{...HEADERS,'Accept':'application/json'}});
   return r.ok?r.json():[];
 }
+// Phase 3b: coach_bookings (all coaches, full PII) is read server-side through
+// /api/admin-bookings, which re-verifies the admin server-side. The page UI gate
+// is not the security boundary — the endpoint is. Returns the rows array.
+async function adminBookings(view){
+  var r=await fetch('/api/admin-bookings',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({sessionAccessToken:currentToken,view:view})
+  });
+  if(!r.ok){console.error('[admin] admin-bookings '+view+' failed',r.status);return [];}
+  var d=await r.json().catch(function(){return null;});
+  return (d&&Array.isArray(d.bookings))?d.bookings:[];
+}
 async function sPatch(table,match,body){
   var params=Object.entries(match).map(function(e){return e[0]+'='+e[1];}).join('&');
   return fetch(API+'/'+table+'?'+params,{method:'PATCH',headers:{...HEADERS,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(body)});
@@ -388,7 +401,7 @@ function downloadCSV(rows,name){
 async function load_overview(){
   var [coaches,bookings,articles]=await Promise.all([
     sGet('coach_profiles?select=id,display_name,email,created_at,is_published'),
-    sGet('coach_bookings?select=id,client_email,coach_id,service_name,status,created_at,scheduled_at,service_price'),
+    adminBookings('overview'),
     sGet('articles?select=id,title,created_at,audience,category&order=created_at.desc&limit=10')
   ]);
 
@@ -492,7 +505,7 @@ function exportCoachesCSV(){
 // ============== CLIENTS ==============
 var allBookingsForClients=[];
 async function load_clients(){
-  allBookingsForClients=await sGet('coach_bookings?select=id,client_email,client_name,created_at,referral_source&order=created_at.desc');
+  allBookingsForClients=await adminBookings('clients');
   var seen={},clients=[];
   allBookingsForClients.forEach(function(b){
     if(!b.client_email||seen[b.client_email])return;
@@ -687,7 +700,7 @@ function exportCommonsCSV(){
 // ============== REVENUE ==============
 async function load_revenue(){
   var [bookings,enrollments]=await Promise.all([
-    sGet('coach_bookings?select=*,coach_profiles(display_name)&order=created_at.desc'),
+    adminBookings('revenue'),
     sGet('coach_course_enrollments?select=*,coach_courses(title,coach_profiles(display_name))&order=enrolled_at.desc')
   ]);
   var now=new Date(),monthStart=new Date(now.getFullYear(),now.getMonth(),1).toISOString();
