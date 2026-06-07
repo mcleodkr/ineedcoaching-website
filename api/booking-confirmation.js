@@ -213,6 +213,11 @@ export default async function handler(req, res) {
           <p style="margin:4px 0;font-size:0.9rem;"><strong>Meeting Link:</strong> ${zoomLink.startsWith('http') ? `<a href="${zoomLink}" style="color:#c49a3c;">${zoomLink}</a>` : zoomLink}</p>
         </div>
         <p style="font-size:0.85rem;color:#6b6b60;">${rescheduleLink ? `Need a different time? <a href="${rescheduleLink}" style="color:#c49a3c;text-decoration:none;font-weight:600;">Reschedule here</a> &mdash; or just reply to this email.` : 'If you need to reschedule, reply to this email.'}</p>
+        <div style="margin:24px 0;padding:18px 20px;background:#f7f4ee;border-radius:8px;">
+          <p style="margin:0 0 12px;font-size:0.9rem;line-height:1.5;color:#6b6b60;">Your private coaching space is ready. Sign in to see your sessions, track your goals, journal between sessions, and message ${coachName}.</p>
+          <a href="https://www.ineedcoaching.org/client-dashboard.html" style="display:inline-block;background:#c49a3c;color:#fff;text-decoration:none;font-weight:600;font-size:0.85rem;padding:10px 22px;border-radius:50px;">Access your coaching space &rarr;</a>
+          <p style="margin:10px 0 0;font-size:0.78rem;color:#9a9a8e;">You'll sign in with a magic link sent to this email address (${booking.client_email}) — no password needed.</p>
+        </div>
         <p style="font-size:0.82rem;color:#6b6b60;margin-top:24px;">— The <a href="https://www.ineedcoaching.org" style="color:#c49a3c;text-decoration:none;font-weight:600;">ineedcoaching.org</a> team</p>
       </div>`;
 
