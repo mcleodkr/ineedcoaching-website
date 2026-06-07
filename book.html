@@ -397,6 +397,29 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
     </div>
   </div>
 
+  <!-- Coaching-space CTA (location 1): shown right after "You're booked" so the
+       client knows their dashboard exists even if they skip the intake. Hidden
+       once intake is submitted — the post-intake CTA (#success-space-cta-end)
+       takes over so only one CTA shows at a time. -->
+  <div id="success-space-cta-top" style="margin:24px auto;max-width:520px;padding:20px 24px;
+            background:#f7f4ee;border-radius:10px;text-align:center;">
+    <p style="font-family:'Cabinet Grotesk',sans-serif;font-size:0.92rem;
+             color:#6b6b60;line-height:1.55;margin:0 0 14px;">
+      Your private coaching space is ready — track sessions, set goals,
+      journal between sessions, and message your coach.
+    </p>
+    <a href="https://www.ineedcoaching.org/client-dashboard.html"
+       style="display:inline-block;background:#c49a3c;color:#fff;
+            text-decoration:none;font-weight:600;font-size:0.88rem;
+            padding:11px 26px;border-radius:50px;font-family:'Cabinet Grotesk',sans-serif;">
+      Access your coaching space &rarr;
+    </a>
+    <p style="font-family:'Cabinet Grotesk',sans-serif;font-size:0.76rem;
+             color:#9a9a8e;margin:12px 0 0;line-height:1.5;">
+      Sign in with a magic link — no password needed.
+    </p>
+  </div>
+
   <!-- Post-booking intake. Optional — submission is not required to keep
        the booking valid, but coaches see these answers in their booking
        detail and use them to prep. Hidden until renderSuccess() unlocks it. -->
@@ -445,6 +468,28 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
   <div id="success-intake-thanks" class="success-intake-thanks hidden">
     <div class="success-intake-thanks-icon">&#10003;</div>
     <p><strong>Thanks &mdash; your coach will see this before your session.</strong></p>
+  </div>
+
+  <!-- Coaching-space CTA (location 2): the true end state. Revealed when intake
+       is submitted, directly under the "Thanks" confirmation and above the
+       Reschedule/Cancel block. -->
+  <div id="success-space-cta-end" class="hidden" style="margin:24px auto;max-width:520px;padding:20px 24px;
+            background:#f7f4ee;border-radius:10px;text-align:center;">
+    <p style="font-family:'Cabinet Grotesk',sans-serif;font-size:0.92rem;
+             color:#6b6b60;line-height:1.55;margin:0 0 14px;">
+      Your private coaching space is ready — track sessions, set goals,
+      journal between sessions, and message your coach.
+    </p>
+    <a href="https://www.ineedcoaching.org/client-dashboard.html"
+       style="display:inline-block;background:#c49a3c;color:#fff;
+            text-decoration:none;font-weight:600;font-size:0.88rem;
+            padding:11px 26px;border-radius:50px;font-family:'Cabinet Grotesk',sans-serif;">
+      Access your coaching space &rarr;
+    </a>
+    <p style="font-family:'Cabinet Grotesk',sans-serif;font-size:0.76rem;
+             color:#9a9a8e;margin:12px 0 0;line-height:1.5;">
+      Sign in with a magic link — no password needed.
+    </p>
   </div>
 
   <!-- Brief 1: post-booking client self-serve actions. Hidden until
@@ -1302,6 +1347,12 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
       else intakeEl.classList.add('hidden');
     }
     if (intakeThanksEl) intakeThanksEl.classList.add('hidden');
+    // Coaching-space CTA: top variant shows immediately (even if intake is
+    // skipped); end variant stays hidden until intake is submitted.
+    var ctaTopEl = $('success-space-cta-top');
+    var ctaEndEl = $('success-space-cta-end');
+    if (ctaTopEl) ctaTopEl.classList.remove('hidden');
+    if (ctaEndEl) ctaEndEl.classList.add('hidden');
     // Brief 1: post-booking manage block. Token fetch is async and lazy —
     // the buttons stay hidden until the row's reschedule_token is readable.
     var manageEl = $('success-manage');
@@ -1519,6 +1570,12 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
         $('success-intake').classList.add('hidden');
         var thx = $('success-intake-thanks');
         if (thx) thx.classList.remove('hidden');
+        // Swap the coaching-space CTA from the top variant to the end-state one
+        // so a single CTA sits directly under the Thanks confirmation.
+        var ctaTopDone = $('success-space-cta-top');
+        if (ctaTopDone) ctaTopDone.classList.add('hidden');
+        var ctaEndDone = $('success-space-cta-end');
+        if (ctaEndDone) ctaEndDone.classList.remove('hidden');
       } catch (err) {
         console.warn('[book] intake submit failed', err);
         errEl.textContent = 'Could not save your responses. Please retry.';
@@ -1666,6 +1723,10 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
         var intakeThanksEl = $('success-intake-thanks');
         if (intakeEl) intakeEl.classList.add('hidden');
         if (intakeThanksEl) intakeThanksEl.classList.add('hidden');
+        var ctaTopCancel = $('success-space-cta-top');
+        var ctaEndCancel = $('success-space-cta-end');
+        if (ctaTopCancel) ctaTopCancel.classList.add('hidden');
+        if (ctaEndCancel) ctaEndCancel.classList.add('hidden');
         if (cancelledEl) {
           if (cancelledText) {
             var refundLine = (Number(data.refund_cents) > 0)
