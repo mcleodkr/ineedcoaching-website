@@ -10824,7 +10824,7 @@ function renderPostSessionAnalysis(a, container) {
     ['key-insights', 'Key Insights'], ['core-focus', 'Core Focus'], ['breakthrough', 'What Shifted'],
     ['pattern', 'Recurring Pattern'], ['strategic', 'Strategic Direction'], ['early-cues', 'Early Cues'],
     ['opening', 'Opening Question'], ['next-session', 'Next Session'], ['friction', 'Friction Points'],
-    ['if-stuck', 'If Stuck'], ['goals', 'Goals'], ['commitments', 'Commitments'],
+    ['if-stuck', 'If Stuck'], ['goals', 'Goals'], ['commitments', 'Homework'],
     ['between-session', 'Between-Session']
   ];
 
@@ -10857,7 +10857,7 @@ function renderPostSessionAnalysis(a, container) {
     + '<a href="#psi-friction" class="psi-nav-link" data-section="psi-friction" style="' + navLinkStyle + '">Friction Points</a>'
     + '<a href="#psi-if-stuck" class="psi-nav-link" data-section="psi-if-stuck" style="' + navLinkStyle + '">If Stuck</a>'
     + '<a href="#psi-goals" class="psi-nav-link" data-section="psi-goals" style="' + navLinkStyle + '">Goals</a>'
-    + '<a href="#psi-commitments" class="psi-nav-link" data-section="psi-commitments" style="' + navLinkStyle + '">Commitments</a>'
+    + '<a href="#psi-commitments" class="psi-nav-link" data-section="psi-commitments" style="' + navLinkStyle + '">Homework</a>'
     + '<a href="#psi-between-session" class="psi-nav-link" data-section="psi-between-session" style="' + navLinkStyle + '">Between-Session</a>'
     + '</nav>';
 
@@ -11098,7 +11098,7 @@ function renderPostSessionAnalysis(a, container) {
         + (c.follow_up_question ? '<div style="background:var(--ink);border-radius:6px;padding:10px 14px;margin-top:6px;"><div style="font-size:0.7rem;font-weight:600;color:var(--gold);margin-bottom:4px;">A question you might explore with them:</div><div style="font-size:0.82rem;color:var(--cream);line-height:1.5;font-style:italic;">\u201c' + escapeHtml(c.follow_up_question || c.accountability_question || '') + '\u201d</div></div>' : '')
         + '</div>';
     });
-    h += psCard('Client-Stated Commitments', 'Specific agreements this client expressed during this session. These are not Coach Clarity suggestions', 'Observed', cmBody, {id:'commitments'});
+    h += psCard('Homework', 'Specific agreements this client expressed during this session. These are not Coach Clarity suggestions', 'Observed', cmBody, {id:'commitments'});
   }
 
   // 12. Between-Session Practices
