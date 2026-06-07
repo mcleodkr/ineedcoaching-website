@@ -442,6 +442,19 @@ function formatPrice(price) {
   return `<span class="service-price">$${Number(price).toLocaleString()}</span>`;
 }
 
+// Inquiry-only services route here instead of the booking calendar: scroll the
+// visitor to the on-page "Send Me a Message" form and pre-fill the service name.
+function inquireAboutService(name) {
+  const form = document.getElementById('message-form');
+  if (!form) return;
+  form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const txt = document.getElementById('msg-text');
+  if (txt && !txt.value) {
+    txt.value = `I'm interested in ${name || 'your services'}. Could you share more details?`;
+  }
+  setTimeout(() => { if (txt) txt.focus(); }, 400);
+}
+
 function renderStars(rating) {
   let html = '';
   for (let i = 1; i <= 5; i++) {
@@ -584,51 +597,46 @@ function renderProfile(coach, services, testimonials, recommendations, courses, 
     }
   }
 
-  // Services (from jsonb array on profile)
-  const jsonbServices = coach.services || [];
-  const allServices = [...jsonbServices];
-
-  // Also include coach_services table entries
-  services.forEach(s => {
-    allServices.push({
-      name: s.title,
-      description: s.description,
-      price: s.price,
-      price_type: s.price_type,
-      duration: s.duration,
-      id: s.id
-    });
-  });
-
+  // Services — coach_services is the single source of truth (the legacy
+  // coach_profiles.services JSONB field is retired). Bookable services route to
+  // the calendar; non-bookable (inquiry-only) services route to the message flow.
   const hasCalendly = !!(coach.calendly_url && coach.calendly_url.trim());
 
   let servicesHtml = '';
-  allServices.forEach((svc, idx) => {
-    const priceHtml = formatPrice(svc.price);
-    const bookLabel = svc.price !== null && svc.price !== undefined ? 'Book Now' : 'Inquire';
-    let bookAction;
-    if (hasCalendly) {
-      bookAction = `onclick="window.open('${escapeHtml(coach.calendly_url)}', '_blank')"`;
+  (services || []).forEach((s) => {
+    const isBookable = s.is_bookable !== false;
+    const priceHtml = s.price_type === 'contact'
+      ? '<span class="service-price contact">Contact for pricing</span>'
+      : formatPrice(s.price);
+    let btn;
+    if (isBookable) {
+      const bookAction = hasCalendly
+        ? `onclick="window.open('${escapeHtml(coach.calendly_url)}', '_blank')"`
+        : `onclick="window.location.href='${escapeHtml('/book?coach=' + encodeURIComponent(coach.slug || ''))}'"`;
+      btn = `<button class="service-book-btn" ${bookAction}>Book Now</button>`;
     } else {
-      // Route to the new public booking flow (book.html). The legacy
-      // inline form below stays on the page as a fallback for direct
-      // navigation but is no longer the primary path.
-      const bookHref = '/book?coach=' + encodeURIComponent(coach.slug || '');
-      bookAction = `onclick="window.location.href='${escapeHtml(bookHref)}'"`;
+      // Inquiry-only: route to the on-page message/contact flow, never the calendar.
+      btn = `<button class="service-book-btn service-inquire-btn" data-svc-name="${escapeHtml(s.title || '')}">Contact to inquire</button>`;
     }
     servicesHtml += `
       <div class="service-card">
-        <h3>${escapeHtml(svc.name || svc.title || 'Service')}</h3>
-        <p>${escapeHtml(svc.description || '')}</p>
+        <h3>${escapeHtml(s.title || 'Service')}</h3>
+        <p>${escapeHtml(s.description || '')}</p>
         <div class="service-meta">
           ${priceHtml}
-          ${svc.duration ? `<span class="service-duration">${escapeHtml(svc.duration)}</span>` : ''}
+          ${s.duration ? `<span class="service-duration">${escapeHtml(s.duration)}</span>` : ''}
         </div>
-        <button class="service-book-btn" ${bookAction}>${bookLabel}</button>
+        ${btn}
       </div>
     `;
   });
-  document.getElementById('services-grid').innerHTML = servicesHtml;
+  const servicesGrid = document.getElementById('services-grid');
+  servicesGrid.innerHTML = servicesHtml;
+  // Wire inquiry-only buttons to the message form (data attr avoids inline-onclick
+  // escaping issues with service names).
+  servicesGrid.querySelectorAll('.service-inquire-btn').forEach((b) => {
+    b.addEventListener('click', () => inquireAboutService(b.dataset.svcName));
+  });
 
   // Courses
   if (courses && courses.length > 0) {

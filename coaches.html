@@ -228,6 +228,9 @@ var ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 var _allCoaches = [];
 var _currentFilter = '';
 var _currentPriceFilter = '';
+// coach_id → lowest active+bookable price (coach_services is the source of truth;
+// the coach_profiles.services JSONB is retired).
+var _priceByCoach = {};
 
 function esc(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
@@ -237,11 +240,30 @@ async function loadCoaches() {
       headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
     });
     _allCoaches = await res.json();
+    await loadServicePrices();
     buildFilters();
     renderCoaches(_allCoaches);
   } catch(e) {
     document.getElementById('coaches-grid').innerHTML = '<p class="empty">Unable to load coaches right now.</p>';
   }
+}
+
+// Build coach_id → lowest active+bookable price from coach_services (public RLS
+// allows reading is_active=true rows). Replaces the old per-coach JSONB scan.
+async function loadServicePrices() {
+  _priceByCoach = {};
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_services?is_active=eq.true&is_bookable=eq.true&select=coach_id,price', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
+    });
+    var rows = await res.json();
+    if (!Array.isArray(rows)) return;
+    rows.forEach(function(s) {
+      var p = parseFloat(s.price);
+      if (!s.coach_id || isNaN(p) || p <= 0) return;
+      if (_priceByCoach[s.coach_id] == null || p < _priceByCoach[s.coach_id]) _priceByCoach[s.coach_id] = p;
+    });
+  } catch(e) { /* price filter just yields no matches if this fails */ }
 }
 
 function buildFilters() {
@@ -274,16 +296,9 @@ function setPriceFilter(range) {
 }
 
 function getMinPrice(coach) {
-  var services = coach.services;
-  if (!services) return null;
-  if (typeof services === 'string') { try { services = JSON.parse(services); } catch(e) { return null; } }
-  if (!Array.isArray(services)) return null;
-  var min = null;
-  services.forEach(function(s) {
-    var p = parseFloat(s.price);
-    if (!isNaN(p) && p > 0 && (min === null || p < min)) min = p;
-  });
-  return min;
+  if (!coach || !coach.id) return null;
+  var p = _priceByCoach[coach.id];
+  return (p == null) ? null : p;
 }
 
 function applyFilters() {
@@ -333,13 +348,7 @@ function renderCoaches(coaches) {
     var name = esc(c.display_name || c.full_name || 'Coach');
     var initials = name.replace(/<[^>]+>/g, '').split(' ').map(function(w) { return w[0]; }).join('').slice(0, 2).toUpperCase();
     var specs = Array.isArray(c.specialties) ? c.specialties.slice(0, 3) : [];
-    var services = c.services;
-    if (typeof services === 'string') { try { services = JSON.parse(services); } catch(e) { services = []; } }
-    var company = '';
-    if (Array.isArray(services) && services.length) {
-      var first = services[0];
-      if (first.company) company = first.company;
-    }
+    var company = c.company_name || '';
 
     return '<div class="card">'
       + '<div class="card-photo">' + (c.photo_url

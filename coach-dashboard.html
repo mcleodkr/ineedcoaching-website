@@ -1493,45 +1493,12 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
         <span class="save-msg" id="save-profile-msg">Saved</span>
       </div>
 
-      <!-- Services -->
+      <!-- Services (coach_services — the single source of truth for all services) -->
       <div class="form-section">
         <h2 class="form-section-title">Services</h2>
-        <div id="services-list"></div>
-        <button class="add-service-btn" id="toggle-add-service">+ Add service</button>
-        <div class="add-service-form" id="add-service-form">
-          <div class="form-group">
-            <label for="svc-name">Service Name</label>
-            <input type="text" id="svc-name" placeholder="1:1 Executive Coaching">
-          </div>
-          <div class="form-group">
-            <label for="svc-desc">Description</label>
-            <textarea id="svc-desc" placeholder="What this service includes..." style="min-height:80px;"></textarea>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="svc-price">Price ($)</label>
-              <input type="number" id="svc-price" placeholder="250" min="0">
-              <div class="checkbox-row" style="margin-top:8px;">
-                <input type="checkbox" id="svc-contact-pricing">
-                <label for="svc-contact-pricing">Contact for pricing</label>
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="svc-duration">Duration</label>
-              <input type="text" id="svc-duration" placeholder="60 min">
-            </div>
-          </div>
-          <button class="save-btn" id="save-service-btn" style="margin-right:8px;">Save service</button>
-          <button class="action-decline" id="cancel-service-btn" style="padding:14px 24px;">Cancel</button>
-        </div>
-      </div>
-
-      <!-- Bookable Services (coach_services — the sessions clients actually book/pay for) -->
-      <div class="form-section">
-        <h2 class="form-section-title">Bookable Services</h2>
-        <p style="font-family:'DM Sans',sans-serif;font-size:0.88rem;color:var(--muted);line-height:1.6;margin-bottom:16px;">These are the sessions clients can book and pay for through your scheduling page. The list above only controls how services read on your public profile.</p>
+        <p style="font-family:'DM Sans',sans-serif;font-size:0.88rem;color:var(--muted);line-height:1.6;margin-bottom:16px;">Everything you offer, in one place. Mark a service “Bookable on calendar” so clients can book and pay online, or “Inquiry only” for offerings clients reach out about (packages, workshops, speaking). These appear on your public profile.</p>
         <div id="coach-services-list"></div>
-        <button class="add-service-btn" id="add-bookable-service-btn">+ Add bookable service</button>
+        <button class="add-service-btn" id="add-bookable-service-btn">+ Add service</button>
       </div>
 
       <!-- Payments / Stripe Connect -->
@@ -3227,8 +3194,6 @@ function setupTabs() {
 var profileSpecialties = [];
 var profileCredentials = [];
 var profileCertifications = [];
-var profileServices = [];
-var editingServiceIdx = -1;
 
 function populateProfileForm() {
   var p = coachProfile;
@@ -3254,12 +3219,10 @@ function populateProfileForm() {
   profileSpecialties = Array.isArray(p.specialties) ? p.specialties.slice() : [];
   profileCredentials = Array.isArray(p.credentials) ? p.credentials.slice() : [];
   profileCertifications = Array.isArray(p.certifications) ? p.certifications.slice() : [];
-  profileServices = Array.isArray(p.services) ? p.services.slice() : [];
 
   renderPills('specialties-pills', profileSpecialties, 'specialty');
   renderPills('credentials-pills', profileCredentials, 'credential');
   renderPills('certifications-pills', profileCertifications, 'certification');
-  renderServices();
   loadCoachServices();
 }
 
@@ -3286,212 +3249,6 @@ function renderPills(containerId, arr, type) {
     pill.innerHTML = escapeHtml(item) + ' <button class="pill-remove" data-type="' + type + '" data-idx="' + idx + '">&times;</button>';
     c.appendChild(pill);
   });
-}
-
-function renderServices() {
-  var c = $('services-list');
-  if (!profileServices.length) {
-    c.innerHTML = '<div class="empty-state"><p>No services added yet.</p></div>';
-    return;
-  }
-  var html = '';
-  profileServices.forEach(function(svc, idx) {
-    var isActive = svc.active !== false;
-    if (editingServiceIdx === idx) {
-      html += '<div class="service-item" data-editing="1" style="border:1px solid var(--gold);">'
-        + '<div style="display:flex;flex-direction:column;gap:10px;">'
-        + '<div><label style="display:block;font-size:0.75rem;font-weight:600;color:var(--ink);margin-bottom:4px;">Service name</label>'
-        + '<input type="text" data-svc-edit-field="name" data-svc-idx="' + idx + '" value="' + escapeHtml(svc.name || '') + '" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--cream);"></div>'
-        + '<div><label style="display:block;font-size:0.75rem;font-weight:600;color:var(--ink);margin-bottom:4px;">Description</label>'
-        + '<textarea data-svc-edit-field="description" data-svc-idx="' + idx + '" rows="2" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--cream);resize:vertical;">' + escapeHtml(svc.description || '') + '</textarea></div>'
-        + '<div style="display:flex;gap:10px;flex-wrap:wrap;">'
-        + '<div style="flex:1;min-width:140px;"><label style="display:block;font-size:0.75rem;font-weight:600;color:var(--ink);margin-bottom:4px;">Price ($)</label>'
-        + '<input type="number" min="0" step="0.01" data-svc-edit-field="price" data-svc-idx="' + idx + '" value="' + (svc.price != null ? escapeHtml(String(svc.price)) : '') + '"' + (svc.contact_pricing ? ' disabled' : '') + ' style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--cream);"></div>'
-        + '<div style="flex:1;min-width:140px;"><label style="display:block;font-size:0.75rem;font-weight:600;color:var(--ink);margin-bottom:4px;">Duration</label>'
-        + '<input type="text" data-svc-edit-field="duration" data-svc-idx="' + idx + '" value="' + escapeHtml(svc.duration || '') + '" placeholder="e.g. 60 min" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--cream);"></div>'
-        + '</div>'
-        + '<label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;color:var(--ink);"><input type="checkbox" data-svc-edit-field="contact_pricing" data-svc-idx="' + idx + '"' + (svc.contact_pricing ? ' checked' : '') + '> Contact for pricing (hides price)</label>'
-        + '<div id="svc-edit-msg-' + idx + '" style="display:none;font-size:0.82rem;margin-top:4px;"></div>'
-        + '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px;">'
-        + '<button class="svc-edit-cancel" data-svc-idx="' + idx + '" style="padding:8px 16px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;cursor:pointer;">Cancel</button>'
-        + '<button class="svc-edit-save" data-svc-idx="' + idx + '" style="padding:8px 18px;background:var(--gold);color:#fff;border:none;border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:600;cursor:pointer;">Save</button>'
-        + '</div></div></div>';
-      return;
-    }
-    var priceDisplay = svc.contact_pricing ? 'Contact for pricing' : (svc.price != null && svc.price !== '' ? '$' + svc.price : 'Free');
-    var visibilityLabel = isActive ? 'Visible on your profile' : 'Hidden from your profile';
-    html += '<div class="service-item">'
-      + '<div class="service-item-header">'
-      + '<h3>' + escapeHtml(svc.name || 'Untitled') + '</h3>'
-      + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
-      + '<button class="svc-edit-btn" data-svc-idx="' + idx + '" style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#fff;cursor:pointer;border:none;background:var(--gold);font-weight:500;padding:7px 16px;border-radius:50px;transition:background 0.15s ease;" onmouseenter="this.style.background=\'var(--gold-hover)\'" onmouseleave="this.style.background=\'var(--gold)\'">Edit</button>'
-      + '<button class="svc-delete-btn" data-svc-idx="' + idx + '" style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:var(--muted);cursor:pointer;border:1px solid var(--muted);background:transparent;font-weight:500;padding:6px 16px;border-radius:50px;transition:color 0.15s ease,border-color 0.15s ease;" onmouseenter="this.style.color=\'#b93a3a\';this.style.borderColor=\'#b93a3a\'" onmouseleave="this.style.color=\'var(--muted)\';this.style.borderColor=\'var(--muted)\'">Delete</button>'
-      + '<span class="svc-visibility-label" id="svc-visibility-' + idx + '" style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:var(--muted);">' + escapeHtml(visibilityLabel) + '</span>'
-      + '<label class="toggle-switch"><input type="checkbox" data-svc-idx="' + idx + '" ' + (isActive ? 'checked' : '') + '><span class="toggle-slider"></span></label>'
-      + '</div>'
-      + '</div>'
-      + (svc.description ? '<p>' + escapeHtml(svc.description) + '</p>' : '')
-      + '<div class="service-item-meta">'
-      + '<span class="price">' + escapeHtml(priceDisplay) + '</span>'
-      + (svc.duration ? '<span>' + escapeHtml(svc.duration) + '</span>' : '')
-      + '</div>'
-      + '</div>';
-  });
-  c.innerHTML = html;
-  // Listeners live on the persistent parent (#services-list); see setupServicesDelegation().
-}
-
-// Attach once on page load — survives innerHTML rebuilds because the parent never re-renders.
-function setupServicesDelegation() {
-  var c = $('services-list');
-  if (!c || c.dataset.delegated === '1') return;
-  c.dataset.delegated = '1';
-
-  c.addEventListener('click', function(e) {
-    var editBtn = e.target.closest && e.target.closest('.svc-edit-btn');
-    if (editBtn && c.contains(editBtn)) {
-      console.log('[services] edit clicked for idx', editBtn.dataset.svcIdx);
-      editingServiceIdx = parseInt(editBtn.dataset.svcIdx);
-      renderServices();
-      return;
-    }
-    var cancelBtn = e.target.closest && e.target.closest('.svc-edit-cancel');
-    if (cancelBtn && c.contains(cancelBtn)) {
-      console.log('[services] cancel clicked for idx', cancelBtn.dataset.svcIdx);
-      editingServiceIdx = -1;
-      renderServices();
-      return;
-    }
-    var saveBtn = e.target.closest && e.target.closest('.svc-edit-save');
-    if (saveBtn && c.contains(saveBtn)) {
-      console.log('[services] save clicked for idx', saveBtn.dataset.svcIdx);
-      submitServiceEdit(parseInt(saveBtn.dataset.svcIdx), saveBtn);
-      return;
-    }
-    var deleteBtn = e.target.closest && e.target.closest('.svc-delete-btn');
-    if (deleteBtn && c.contains(deleteBtn)) {
-      console.log('[services] delete clicked for idx', deleteBtn.dataset.svcIdx);
-      openDeleteServiceConfirm(parseInt(deleteBtn.dataset.svcIdx));
-      return;
-    }
-  });
-
-  c.addEventListener('change', function(e) {
-    var t = e.target;
-    if (!t) return;
-    // Active toggle — only the checkbox inside .toggle-switch
-    if (t.matches && t.matches('.toggle-switch input[data-svc-idx]')) {
-      var idx = parseInt(t.dataset.svcIdx);
-      if (profileServices[idx]) {
-        profileServices[idx].active = t.checked;
-        var label = document.getElementById('svc-visibility-' + idx);
-        if (label) label.textContent = t.checked ? 'Visible on your profile' : 'Hidden from your profile';
-        saveServices();
-      }
-      return;
-    }
-    // Contact-for-pricing checkbox inside edit form toggles price-input disabled
-    if (t.matches && t.matches('input[data-svc-edit-field="contact_pricing"]')) {
-      var sidx = t.dataset.svcIdx;
-      var priceInput = c.querySelector('input[data-svc-edit-field="price"][data-svc-idx="' + sidx + '"]');
-      if (priceInput) {
-        priceInput.disabled = t.checked;
-        if (t.checked) priceInput.value = '';
-      }
-      return;
-    }
-  });
-}
-
-async function submitServiceEdit(idx, saveBtn) {
-  var c = $('services-list');
-  var svc = profileServices[idx];
-  if (!svc) return;
-  var nameInput = c.querySelector('input[data-svc-edit-field="name"][data-svc-idx="' + idx + '"]');
-  var descInput = c.querySelector('textarea[data-svc-edit-field="description"][data-svc-idx="' + idx + '"]');
-  var priceInput = c.querySelector('input[data-svc-edit-field="price"][data-svc-idx="' + idx + '"]');
-  var durationInput = c.querySelector('input[data-svc-edit-field="duration"][data-svc-idx="' + idx + '"]');
-  var contactPricingInput = c.querySelector('input[data-svc-edit-field="contact_pricing"][data-svc-idx="' + idx + '"]');
-  var msg = $('svc-edit-msg-' + idx);
-  var newName = nameInput ? nameInput.value.trim() : '';
-  if (!newName) {
-    if (msg) { msg.textContent = 'Service name is required.'; msg.style.color = '#b93a3a'; msg.style.display = 'block'; }
-    return;
-  }
-  var cp = contactPricingInput ? contactPricingInput.checked : false;
-  var priceVal = priceInput ? priceInput.value : '';
-  svc.name = newName;
-  svc.description = descInput ? descInput.value.trim() : '';
-  svc.duration = durationInput ? durationInput.value.trim() : '';
-  svc.contact_pricing = cp;
-  svc.price = cp ? null : (priceVal === '' ? null : parseFloat(priceVal));
-  saveBtn.disabled = true;
-  saveBtn.textContent = 'Saving...';
-  try {
-    await saveServices();
-    editingServiceIdx = -1;
-    renderServices();
-  } catch (e) {
-    if (msg) { msg.textContent = 'Could not save. ' + (e.message || '').slice(0, 120); msg.style.color = '#b93a3a'; msg.style.display = 'block'; }
-    saveBtn.disabled = false;
-    saveBtn.textContent = 'Save';
-  }
-}
-
-function openDeleteServiceConfirm(idx) {
-  var svc = profileServices[idx];
-  if (!svc) return;
-  var modal = document.getElementById('svc-delete-modal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'svc-delete-modal';
-    modal.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:600;align-items:center;justify-content:center;';
-    modal.innerHTML = '<div style="background:var(--white);border-radius:var(--r);max-width:420px;width:90%;padding:28px;position:relative;box-shadow:0 12px 40px rgba(0,0,0,0.15);">'
-      + '<h3 style="font-family:\'Cormorant Garamond\',serif;font-size:1.3rem;font-weight:700;color:var(--ink);margin:0 0 10px 0;">Delete this service?</h3>'
-      + '<p id="svc-delete-modal-name" style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:var(--muted);margin:0 0 8px 0;"></p>'
-      + '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:var(--muted);margin:0 0 20px 0;">This can\'t be undone.</p>'
-      + '<div id="svc-delete-modal-error" style="display:none;color:#b93a3a;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;margin-bottom:12px;"></div>'
-      + '<div style="display:flex;gap:10px;justify-content:flex-end;">'
-      + '<button id="svc-delete-cancel-btn" style="padding:8px 16px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;cursor:pointer;">Cancel</button>'
-      + '<button id="svc-delete-confirm-btn" style="padding:8px 18px;background:#b93a3a;color:#fff;border:none;border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:600;cursor:pointer;">Delete</button>'
-      + '</div></div>';
-    document.body.appendChild(modal);
-    modal.addEventListener('click', function(e) { if (e.target === modal) modal.style.display = 'none'; });
-    document.getElementById('svc-delete-cancel-btn').addEventListener('click', function() { modal.style.display = 'none'; });
-  }
-  document.getElementById('svc-delete-modal-name').textContent = svc.name || '(unnamed service)';
-  var errorEl = document.getElementById('svc-delete-modal-error');
-  errorEl.style.display = 'none';
-  errorEl.textContent = '';
-  var confirmBtn = document.getElementById('svc-delete-confirm-btn');
-  confirmBtn.disabled = false;
-  confirmBtn.textContent = 'Delete';
-  confirmBtn.onclick = async function() {
-    confirmBtn.disabled = true;
-    confirmBtn.textContent = 'Deleting...';
-    // Keep a snapshot in case save fails and we need to roll back
-    var snapshot = profileServices.slice();
-    profileServices.splice(idx, 1);
-    // If we were editing this one or a later index, reset editing state cleanly
-    if (editingServiceIdx === idx) editingServiceIdx = -1;
-    else if (editingServiceIdx > idx) editingServiceIdx -= 1;
-    try {
-      await saveServices();
-      modal.style.display = 'none';
-      renderServices();
-    } catch (e) {
-      profileServices = snapshot;
-      errorEl.textContent = 'Could not delete. ' + (e.message || '').slice(0, 120);
-      errorEl.style.display = 'block';
-      confirmBtn.disabled = false;
-      confirmBtn.textContent = 'Delete';
-    }
-  };
-  modal.style.display = 'flex';
-}
-
-async function saveServices() {
-  await supabasePatch('coach_profiles', { id: 'eq.' + coachProfile.id }, { services: profileServices });
 }
 
 // ─── Bookable Services (coach_services rows) ──────────────────────────────
@@ -3533,19 +3290,28 @@ function buildCoachServiceEditCard(row) {
   var durHtml = durationOpts.map(function (d) {
     return '<option value="' + escapeHtml(d) + '"' + (row.duration === d ? ' selected' : '') + '>' + escapeHtml(d) + '</option>';
   }).join('');
+  var isContact = row.price_type === 'contact';
+  var ptHtml = '<option value="fixed"' + (isContact ? '' : ' selected') + '>Fixed price</option>'
+    + '<option value="contact"' + (isContact ? ' selected' : '') + '>Contact for pricing</option>';
+  var fld = coachServiceFieldCss();
+  var lbl = 'display:block;font-size:0.75rem;font-weight:600;color:var(--ink);margin-bottom:4px;';
+  var chk = 'display:flex;align-items:flex-start;gap:8px;font-size:0.85rem;color:var(--ink);line-height:1.4;';
   return '<div class="service-item" data-cs-id="' + escapeHtml(id) + '" style="border:1px solid var(--gold);">'
     + '<div style="display:flex;flex-direction:column;gap:10px;">'
-    + '<div><label style="display:block;font-size:0.75rem;font-weight:600;color:var(--ink);margin-bottom:4px;">Title</label>'
-    + '<input type="text" data-cs-field="title" value="' + escapeHtml(row.title || '') + '" style="' + coachServiceFieldCss() + '"></div>'
-    + '<div><label style="display:block;font-size:0.75rem;font-weight:600;color:var(--ink);margin-bottom:4px;">Description</label>'
-    + '<textarea data-cs-field="description" rows="2" style="' + coachServiceFieldCss() + 'resize:vertical;">' + escapeHtml(row.description || '') + '</textarea></div>'
+    + '<div><label style="' + lbl + '">Title</label>'
+    + '<input type="text" data-cs-field="title" value="' + escapeHtml(row.title || '') + '" style="' + fld + '"></div>'
+    + '<div><label style="' + lbl + '">Description</label>'
+    + '<textarea data-cs-field="description" rows="2" style="' + fld + 'resize:vertical;">' + escapeHtml(row.description || '') + '</textarea></div>'
     + '<div style="display:flex;gap:10px;flex-wrap:wrap;">'
-    + '<div style="flex:1;min-width:140px;"><label style="display:block;font-size:0.75rem;font-weight:600;color:var(--ink);margin-bottom:4px;">Price ($)</label>'
-    + '<input type="number" min="0" step="0.01" data-cs-field="price" value="' + (row.price != null && row.price !== '' ? escapeHtml(String(row.price)) : '') + '" placeholder="0" style="' + coachServiceFieldCss() + '"></div>'
-    + '<div style="flex:1;min-width:140px;"><label style="display:block;font-size:0.75rem;font-weight:600;color:var(--ink);margin-bottom:4px;">Duration</label>'
-    + '<select data-cs-field="duration" style="' + coachServiceFieldCss() + '">' + durHtml + '</select></div>'
+    + '<div style="flex:1;min-width:140px;"><label style="' + lbl + '">Pricing</label>'
+    + '<select data-cs-field="price_type" style="' + fld + '">' + ptHtml + '</select></div>'
+    + '<div style="flex:1;min-width:140px;"><label style="' + lbl + '">Duration</label>'
+    + '<select data-cs-field="duration" style="' + fld + '">' + durHtml + '</select></div>'
     + '</div>'
-    + '<label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;color:var(--ink);"><input type="checkbox" data-cs-field="is_active"' + (row.is_active !== false ? ' checked' : '') + '> Active (bookable)</label>'
+    + '<div class="cs-price-wrap"' + (isContact ? ' style="display:none;"' : '') + '><label style="' + lbl + '">Price ($)</label>'
+    + '<input type="number" min="0" step="0.01" data-cs-field="price" value="' + (row.price != null && row.price !== '' ? escapeHtml(String(row.price)) : '') + '" placeholder="0" style="' + fld + '"></div>'
+    + '<label style="' + chk + '"><input type="checkbox" data-cs-field="is_bookable"' + (row.is_bookable !== false ? ' checked' : '') + '> <span>Bookable on calendar — clients can book &amp; pay online. Uncheck for inquiry-only offerings (packages, workshops, speaking).</span></label>'
+    + '<label style="' + chk + '"><input type="checkbox" data-cs-field="is_active"' + (row.is_active !== false ? ' checked' : '') + '> <span>Active — visible on your public profile.</span></label>'
     + '<div class="cs-edit-msg" style="display:none;font-size:0.82rem;color:#b93a3a;margin-top:4px;"></div>'
     + '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px;">'
     + '<button class="cs-cancel-btn" style="padding:8px 16px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;cursor:pointer;">Cancel</button>'
@@ -3555,22 +3321,27 @@ function buildCoachServiceEditCard(row) {
 
 function buildCoachServiceCard(row) {
   var isActive = row.is_active !== false;
+  var isBookable = row.is_bookable !== false;
   var priceNum = (row.price != null && row.price !== '') ? Number(row.price) : 0;
-  var priceDisplay = priceNum > 0 ? '$' + row.price : 'Free';
+  var priceDisplay = row.price_type === 'contact' ? 'Contact for pricing' : (priceNum > 0 ? '$' + row.price : 'Free');
+  var typeTag = isBookable
+    ? '<span style="font-size:0.7rem;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(196,154,60,0.15);color:#8a6d1f;">Bookable</span>'
+    : '<span style="font-size:0.7rem;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(26,58,82,0.1);color:var(--navy);">Inquiry only</span>';
   return '<div class="service-item" data-cs-id="' + escapeHtml(row.id) + '"' + (isActive ? '' : ' style="opacity:0.6;"') + '>'
     + '<div class="service-item-header">'
     + '<h3>' + escapeHtml(row.title || 'Untitled') + '</h3>'
     + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
     + '<button class="cs-edit-btn" style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#fff;cursor:pointer;border:none;background:var(--gold);font-weight:500;padding:7px 16px;border-radius:50px;">Edit</button>'
     + '<button class="cs-delete-btn" style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:var(--muted);cursor:pointer;border:1px solid var(--muted);background:transparent;font-weight:500;padding:6px 16px;border-radius:50px;">Delete</button>'
-    + '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:var(--muted);">' + (isActive ? 'Bookable' : 'Hidden') + '</span>'
+    + '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:var(--muted);">' + (isActive ? 'Active' : 'Hidden') + '</span>'
     + '<label class="toggle-switch"><input type="checkbox" class="cs-active-toggle"' + (isActive ? ' checked' : '') + '><span class="toggle-slider"></span></label>'
     + '</div>'
     + '</div>'
     + (row.description ? '<p>' + escapeHtml(row.description) + '</p>' : '')
     + '<div class="service-item-meta">'
     + '<span class="price">' + escapeHtml(priceDisplay) + '</span>'
-    + (row.duration ? '<span>' + escapeHtml(row.duration) + '</span>' : '')
+    + (row.duration && isBookable ? '<span>' + escapeHtml(row.duration) + '</span>' : '')
+    + typeTag
     + '</div>'
     + '</div>';
 }
@@ -3583,7 +3354,7 @@ function renderCoachServices() {
     html += buildCoachServiceEditCard({ is_active: true });
   }
   if (!coachServicesRows.length && editingCoachServiceId !== '__new__') {
-    html += '<div class="empty-state"><p>No bookable services yet.</p></div>';
+    html += '<div class="empty-state"><p>No services yet. Add your first one below.</p></div>';
   } else {
     coachServicesRows.forEach(function (row) {
       html += (editingCoachServiceId === row.id) ? buildCoachServiceEditCard(row) : buildCoachServiceCard(row);
@@ -3608,9 +3379,16 @@ function setupCoachServicesDelegation() {
 
   listEl.addEventListener('change', function (e) {
     var t = e.target;
-    if (t && t.classList && t.classList.contains('cs-active-toggle')) {
+    if (!t) return;
+    if (t.classList && t.classList.contains('cs-active-toggle')) {
       var card = t.closest('[data-cs-id]');
       if (card) toggleCoachServiceActive(card.getAttribute('data-cs-id'), t.checked);
+      return;
+    }
+    // Pricing select → show/hide the price field (contact-for-pricing has no price)
+    if (t.matches && t.matches('[data-cs-field="price_type"]')) {
+      var wrap = t.closest('.service-item') && t.closest('.service-item').querySelector('.cs-price-wrap');
+      if (wrap) wrap.style.display = (t.value === 'contact') ? 'none' : '';
     }
   });
 }
@@ -3624,10 +3402,17 @@ async function submitCoachServiceSave(id, saveBtn) {
   var priceRaw = card.querySelector('[data-cs-field="price"]').value;
   var duration = card.querySelector('[data-cs-field="duration"]').value;
   var isActive = card.querySelector('[data-cs-field="is_active"]').checked;
+  var isBookable = card.querySelector('[data-cs-field="is_bookable"]').checked;
+  var priceType = card.querySelector('[data-cs-field="price_type"]').value === 'contact' ? 'contact' : 'fixed';
   function fail(m) { if (msg) { msg.textContent = m; msg.style.display = 'block'; } }
   if (!title) return fail('Title is required.');
-  var price = priceRaw === '' ? 0 : Number(priceRaw);
-  if (!Number.isFinite(price) || price < 0) return fail('Price must be 0 or more.');
+  // Contact-for-pricing ignores the price field (stored as 0; the public
+  // profile renders "Contact for pricing" off price_type, not the number).
+  var price = 0;
+  if (priceType !== 'contact') {
+    price = priceRaw === '' ? 0 : Number(priceRaw);
+    if (!Number.isFinite(price) || price < 0) return fail('Price must be 0 or more.');
+  }
 
   if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
   try {
@@ -3638,14 +3423,15 @@ async function submitCoachServiceSave(id, saveBtn) {
         body: JSON.stringify({
           coach_id: coachProfile.id,
           title: title, description: description, price: price,
-          duration: duration, is_active: isActive,
-          service_type: 'session', price_type: 'fixed',
+          duration: duration, is_active: isActive, is_bookable: isBookable,
+          service_type: 'session', price_type: priceType,
         }),
       });
       if (!res.ok) throw new Error('insert ' + res.status);
     } else {
       await supabasePatch('coach_services', { id: 'eq.' + id },
-        { title: title, description: description, price: price, duration: duration, is_active: isActive });
+        { title: title, description: description, price: price, duration: duration,
+          is_active: isActive, is_bookable: isBookable, price_type: priceType });
     }
     editingCoachServiceId = null;
     await loadCoachServices();
@@ -3748,35 +3534,11 @@ function setupProfileHandlers() {
   // Save profile
   $('save-profile-btn').addEventListener('click', saveProfile);
 
-  // Services list: delegate all edit/cancel/save/toggle events to the persistent parent
-  setupServicesDelegation();
-
-  // Bookable services (coach_services) — delegate CRUD + wire the add button
+  // Services (coach_services) — delegate CRUD + wire the add button
   setupCoachServicesDelegation();
   $('add-bookable-service-btn').addEventListener('click', function() {
     editingCoachServiceId = '__new__';
     renderCoachServices();
-  });
-
-  // Add service toggle
-  $('toggle-add-service').addEventListener('click', function() {
-    var form = $('add-service-form');
-    form.classList.toggle('open');
-    if (form.classList.contains('open')) {
-      this.style.display = 'none';
-    }
-  });
-  $('cancel-service-btn').addEventListener('click', function() {
-    $('add-service-form').classList.remove('open');
-    $('toggle-add-service').style.display = '';
-    clearServiceForm();
-  });
-  $('save-service-btn').addEventListener('click', addService);
-
-  // Contact for pricing toggle
-  $('svc-contact-pricing').addEventListener('change', function() {
-    $('svc-price').disabled = this.checked;
-    if (this.checked) $('svc-price').value = '';
   });
 
   // Sign out
@@ -3846,36 +3608,6 @@ async function saveProfile() {
 
   btn.disabled = false;
   btn.textContent = 'Save profile';
-}
-
-function clearServiceForm() {
-  $('svc-name').value = '';
-  $('svc-desc').value = '';
-  $('svc-price').value = '';
-  $('svc-price').disabled = false;
-  $('svc-contact-pricing').checked = false;
-  $('svc-duration').value = '';
-}
-
-async function addService() {
-  var name = $('svc-name').value.trim();
-  if (!name) { alert('Service name is required.'); return; }
-
-  var svc = {
-    name: name,
-    description: $('svc-desc').value.trim(),
-    price: $('svc-contact-pricing').checked ? null : ($('svc-price').value ? parseFloat($('svc-price').value) : null),
-    contact_pricing: $('svc-contact-pricing').checked,
-    duration: $('svc-duration').value.trim(),
-    active: true
-  };
-
-  profileServices.push(svc);
-  await saveServices();
-  renderServices();
-  clearServiceForm();
-  $('add-service-form').classList.remove('open');
-  $('toggle-add-service').style.display = '';
 }
 
 /* ================================================
@@ -6282,7 +6014,7 @@ async function openCouponModal() {
   if (sel && sel.children.length <= 0) {
     var rows = await supabaseGet(
       'coach_services?coach_id=eq.' + encodeURIComponent(coachProfile.id)
-      + '&is_active=eq.true&select=id,title&order=title.asc'
+      + '&is_active=eq.true&is_bookable=eq.true&select=id,title&order=title.asc'
     ) || [];
     sel.innerHTML = rows.map(function (s) {
       return '<option value="' + escapeHtml(s.id) + '">' + escapeHtml(s.title || 'Untitled') + '</option>';

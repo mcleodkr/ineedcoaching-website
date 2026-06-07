@@ -449,9 +449,15 @@ async function load_overview(){
 function statCard(num,label,cls){return '<div class="stat-card"><div class="stat-num'+(cls?' '+cls:'')+'">'+num+'</div><div class="stat-label">'+label+'</div></div>';}
 
 // ============== COACHES ==============
-var allCoaches=[],coachFilter='all',coachSearch='';
+var allCoaches=[],coachFilter='all',coachSearch='',_svcCountByCoach={};
 async function load_coaches(){
   allCoaches=await sGet('coach_profiles?select=*&order=created_at.desc');
+  // Service count per coach from coach_services (the coach_profiles.services JSONB
+  // is retired). Anon RLS exposes active rows, so this counts active services.
+  _svcCountByCoach={};
+  (await sGet('coach_services?select=coach_id')||[]).forEach(function(s){
+    if(s&&s.coach_id){_svcCountByCoach[s.coach_id]=(_svcCountByCoach[s.coach_id]||0)+1;}
+  });
   document.getElementById('coaches-toolbar').innerHTML=
     '<input type="search" placeholder="Search coaches..." oninput="coachSearch=this.value.toLowerCase();renderCoaches()">'+
     '<div class="filter-pills"><button class="fp active" onclick="setCoachFilter(this,\'all\')">All</button><button class="fp" onclick="setCoachFilter(this,\'pub\')">Published</button><button class="fp" onclick="setCoachFilter(this,\'unpub\')">Unpublished</button></div>'+
@@ -470,7 +476,7 @@ function renderCoaches(){
   var tbody='';
   list.forEach(function(c,i){
     var specs=(c.specialties||[]).slice(0,2).map(function(s){return '<span class="pill pill-navy">'+esc(s)+'</span>';}).join(' ');
-    var svcCount=Array.isArray(c.services)?c.services.length:0;
+    var svcCount=_svcCountByCoach[c.id]||0;
     var statusPill=c.is_published?'<span class="pill pill-green">Published</span>':'<span class="pill pill-muted">Draft</span>';
     var photo=c.photo_url?'<div class="avatar"><img src="'+esc(c.photo_url)+'" alt=""></div>':'<div class="avatar">'+initials(c.display_name)+'</div>';
     tbody+='<tr style="cursor:pointer" onclick="toggleCoachRow('+i+')">'+

@@ -321,42 +321,44 @@ function esc(s) { var d = document.createElement('div'); d.textContent = s || ''
 
 async function loadSessions() {
   try {
-    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles?is_published=eq.true&select=slug,display_name,photo_url,specialties,services', {
+    // coach_services is the single source of truth (the coach_profiles.services
+    // JSONB is retired). Only bookable + active services appear here; inquiry-only
+    // offerings (is_bookable=false) never reach this listing. Coach info is
+    // embedded via the coach_id FK and filtered to published profiles.
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_services'
+      + '?is_active=eq.true&is_bookable=eq.true'
+      + '&select=title,price,duration,coach_profiles!inner(slug,display_name,photo_url,specialties,is_published)'
+      + '&coach_profiles.is_published=eq.true', {
       headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
     });
-    var coaches = await res.json();
-    if (!coaches || coaches.error) coaches = [];
+    var rows = await res.json();
+    if (!rows || rows.error) rows = [];
 
     var indSpecs = {};
     var corpSpecs = {};
 
-    coaches.forEach(function(c) {
-      var services = [];
-      try { services = typeof c.services === 'string' ? JSON.parse(c.services) : (c.services || []); } catch(e) {}
-      var firstSpec = (c.specialties || [])[0] || null;
+    rows.forEach(function(svc) {
+      var c = svc.coach_profiles;
+      if (!c) return;
+      var serviceName = svc.title || 'Session';
+      var session = {
+        serviceName: serviceName,
+        price: svc.price != null && svc.price !== '' ? Number(svc.price) : null,
+        duration: svc.duration || null,
+        coachName: c.display_name || 'Coach',
+        coachPhoto: c.photo_url || null,
+        coachSlug: c.slug,
+        specialty: (c.specialties || [])[0] || null,
+        specialties: c.specialties || []
+      };
 
-      services.forEach(function(svc) {
-        if (!svc.name && !svc.title) return;
-        var serviceName = svc.name || svc.title || 'Session';
-        var session = {
-          serviceName: serviceName,
-          price: svc.price != null && svc.price !== '' ? Number(svc.price) : null,
-          duration: svc.duration || null,
-          coachName: c.display_name || 'Coach',
-          coachPhoto: c.photo_url || null,
-          coachSlug: c.slug,
-          specialty: firstSpec,
-          specialties: c.specialties || []
-        };
-
-        if (isCorporate(serviceName)) {
-          _corporateSessions.push(session);
-          (c.specialties || []).forEach(function(s) { corpSpecs[s] = (corpSpecs[s] || 0) + 1; });
-        } else {
-          _individualSessions.push(session);
-          (c.specialties || []).forEach(function(s) { indSpecs[s] = (indSpecs[s] || 0) + 1; });
-        }
-      });
+      if (isCorporate(serviceName)) {
+        _corporateSessions.push(session);
+        (c.specialties || []).forEach(function(s) { corpSpecs[s] = (corpSpecs[s] || 0) + 1; });
+      } else {
+        _individualSessions.push(session);
+        (c.specialties || []).forEach(function(s) { indSpecs[s] = (indSpecs[s] || 0) + 1; });
+      }
     });
 
     buildSpecFilters('individual-spec-filters', indSpecs, 'setIndSpecFilter');

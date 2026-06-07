@@ -659,6 +659,7 @@ nav.book-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display
       var url = REST + '/coach_services'
         + '?coach_id=eq.' + encodeURIComponent(coach.id)
         + '&is_active=eq.true'
+        + '&is_bookable=eq.true'
         + '&select=id,title,description,duration,slot_increment_minutes,price'
         + '&order=price.asc.nullsfirst,title.asc';
       var res = await fetch(url, { headers: HEADERS_GET });
