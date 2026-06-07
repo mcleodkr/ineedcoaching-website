@@ -6113,14 +6113,12 @@ async function saveCoupon(e) {
     return;
   }
   try {
-    // Insert in DB. The Stripe coupon id is created by an admin/server step
-    // (Stripe admin dashboard or a server endpoint with the secret key) and
-    // backfilled — until that lands, the coupon won't apply discounts at
-    // checkout, but it will still validate via /api/validate-coupon for
-    // display purposes.
-    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_coupons', {
+    // Create the Stripe coupon + local row server-side so stripe_coupon_id is
+    // populated and the discount actually applies at checkout. The coach JWT
+    // authorizes the call (the endpoint verifies it and derives coach_id).
+    var res = await fetch('/api/create-coupon', {
       method: 'POST',
-      headers: { ...apiHeaders(), Prefer: 'return=minimal' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
       body: JSON.stringify({
         coach_id: coachProfile.id,
         code: code,
@@ -6130,18 +6128,17 @@ async function saveCoupon(e) {
         service_id: serviceId,
         max_uses: maxUses,
         expires_at: expiresAt,
-        is_active: true,
       }),
     });
+    var data = await res.json().catch(function () { return {}; });
     if (!res.ok) {
-      var t = await res.text().catch(function () { return ''; });
-      throw new Error('Save failed: ' + res.status + ' ' + t);
+      throw new Error(data.error || ('Save failed: ' + res.status));
     }
     closeCouponModal();
     loadCouponsTab();
   } catch (err) {
     console.error('[coupons] save', err);
-    errEl.textContent = err.message.includes('duplicate') ? 'That code already exists.' : err.message;
+    errEl.textContent = err.message;
     errEl.style.display = 'block';
   }
 }
