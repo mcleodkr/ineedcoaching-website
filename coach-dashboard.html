@@ -794,6 +794,10 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       <a href="/articles.html?audience=coach" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Articles</a>
       <a href="/coaching-commons.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Commons</a>
       <a href="/find-a-match.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Find Clients</a>
+      <a href="/founding-coaches"
+         style="font-size:0.75rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#ffffff;text-decoration:none;background:#c49a3c;padding:5px 14px;border-radius:50px;white-space:nowrap;">
+        Founding Cohort
+      </a>
       <a href="/coach-dashboard.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Dashboard</a>
       <span id="nav-coach-name" class="nav-coach-name"></span>
       <a id="nav-profile-link" class="nav-profile-link" href="#">View Profile</a>
@@ -1387,6 +1391,39 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 
   <!-- CONTENT -->
   <div id="dash-content" class="dash-content hidden">
+
+    <!-- FOUNDING COHORT BANNER — dismissible, persists via localStorage -->
+    <div id="founding-cohort-banner"
+         style="background:linear-gradient(135deg,#1a3a52 0%,#0f2535 100%);
+                border-left:4px solid #c49a3c;
+                padding:14px 20px;
+                display:flex;
+                align-items:center;
+                justify-content:space-between;
+                gap:16px;
+                margin-bottom:20px;
+                border-radius:8px;
+                flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font-size:0.7rem;font-weight:700;letter-spacing:0.1em;
+                     text-transform:uppercase;color:#c49a3c;">Limited offer</span>
+        <span style="font-size:0.88rem;color:#f7f5f1;font-family:'DM Sans',sans-serif;">
+          Lock in $99/mo for life — 50 founding coach spots, closes July 30.
+        </span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;">
+        <a href="/founding-coaches"
+           style="font-size:0.8rem;font-weight:700;color:#ffffff;
+                  background:#c49a3c;text-decoration:none;
+                  padding:7px 18px;border-radius:50px;white-space:nowrap;">
+          Claim my spot
+        </a>
+        <button id="dismiss-founding-banner"
+                style="background:none;border:none;color:rgba(247,244,238,0.5);
+                       font-size:1.1rem;cursor:pointer;padding:0;line-height:1;"
+                aria-label="Dismiss">&#215;</button>
+      </div>
+    </div>
 
     <!-- INLINE NOTIFICATION STRIPE — surfaces unread, dismissible per-stripe -->
     <div id="notif-stripe" style="display:none;margin:18px 22px 0;"></div>
@@ -17508,6 +17545,25 @@ function submitSplitFromModal() {
       btn.focus();
     }
   });
+})();
+</script>
+
+<script>
+// Founding cohort banner — dismiss and remember
+(function() {
+  var banner = document.getElementById('founding-cohort-banner');
+  var btn = document.getElementById('dismiss-founding-banner');
+  if (!banner) return;
+  if (localStorage.getItem('founding_banner_dismissed') === 'true') {
+    banner.style.display = 'none';
+    return;
+  }
+  if (btn) {
+    btn.addEventListener('click', function() {
+      banner.style.display = 'none';
+      localStorage.setItem('founding_banner_dismissed', 'true');
+    });
+  }
 })();
 </script>
 
