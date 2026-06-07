@@ -2410,6 +2410,7 @@ window.saveProfile = saveProfile;
 let journalState = {
   stage: 'prompt',
   prompt: null,
+  homeworkId: null,
   entryId: null,
   entryText: '',
   entryTitle: '',
@@ -2444,6 +2445,7 @@ async function loadJournal() {
   journalState = {
     stage: 'prompt',
     prompt: null,
+    homeworkId: null,
     entryId: null,
     entryText: '',
     entryTitle: '',
@@ -2463,7 +2465,11 @@ async function fetchJournalPrompt() {
   // the assignment text becomes the prompt the client writes against.
   if (pendingJournalPrompt) {
     journalState.prompt = pendingJournalPrompt;
+    // Carry the client_homework.id that seeded this prompt so saving the
+    // entry can auto-complete the homework. One-shot, like the prompt itself.
+    journalState.homeworkId = pendingJournalHomeworkId || null;
     pendingJournalPrompt = null;
+    pendingJournalHomeworkId = null;
     return;
   }
   try {
@@ -2711,6 +2717,10 @@ async function persistJournalEntry() {
     share_mode: 'full',
     shared_with_coach: true
   };
+  // Link the entry to the homework that seeded it (only when present, so a
+  // normal journal entry never names the column — keeps working even if the
+  // homework_id migration hasn't run yet).
+  if (journalState.homeworkId) body.homework_id = journalState.homeworkId;
   const res = await fetch(SUPABASE_URL + '/rest/v1/coach_journal_entries', {
     method: 'POST',
     headers: {
@@ -2725,6 +2735,26 @@ async function persistJournalEntry() {
   const rows = await res.json().catch(function() { return []; });
   if (Array.isArray(rows) && rows[0] && rows[0].id) {
     journalState.entryId = rows[0].id;
+  }
+  // Auto-complete the seeding homework now that the entry is safely saved.
+  // Reuse the vetted patchHomework helper — an id-scoped PATCH authorized by
+  // the live client_updates_own_homework RLS policy (lower(client_email) =
+  // lower(jwt email)); id-only avoids the email-casing footgun of a literal
+  // client_email filter. Then refresh the in-memory cache so the Homework list
+  // shows it Done when the client navigates back — loadHomework only re-fetches
+  // when the cache is empty. Best-effort: a failure must not fail the journal
+  // save (already done); patchHomework itself swallows and logs errors.
+  if (journalState.homeworkId) {
+    const hwId = journalState.homeworkId;
+    journalState.homeworkId = null; // one-shot; a later persist won't redo it
+    const updated = await patchHomework(hwId, { completed: true, completed_at: new Date().toISOString() });
+    if (updated) {
+      refreshHomeworkCacheRow(updated);
+      // Re-render the (currently hidden) Homework section from the updated
+      // cache. The sidebar lazy-loads each section only once (_loaded gate),
+      // so navigating back would otherwise show the stale "assigned" card.
+      if (homeworkCache) renderHomeworkSection(homeworkCache);
+    }
   }
 }
 
@@ -3531,6 +3561,10 @@ let homeworkCache = null;
 // prompt. Always cleared after consumption so the next normal Journal
 // visit fetches the system prompt as before.
 let pendingJournalPrompt = null;
+// The client_homework.id paired with pendingJournalPrompt when the journal was
+// opened from a homework "Write in your journal →" click. Consumed alongside
+// the prompt so the saved entry can auto-complete that homework row.
+let pendingJournalHomeworkId = null;
 
 async function fetchHomework() {
   if (!currentEmail || !currentToken) return [];
@@ -3766,6 +3800,9 @@ function wireHomeworkHandlers() {
         prompt_text: (hw && hw.assignment_text) || '',
         source_type: 'homework'
       };
+      // Remember which homework seeded this prompt so the saved journal entry
+      // links back to it and marks it complete.
+      pendingJournalHomeworkId = id;
       // Switch sections manually (don't navBtn.click — its handler
       // lazy-loads Journal only the FIRST time, which would skip the
       // override on subsequent visits). Flip the same active classes
