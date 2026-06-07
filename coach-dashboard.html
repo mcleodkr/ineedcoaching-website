@@ -160,6 +160,14 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 .bookings-table td { padding: 6px 12px; font-size: 0.82rem; color: var(--ink); border-bottom: 1px solid var(--border); vertical-align: middle; word-break: break-word; line-height: 1.35; }
 .bookings-table tr:last-child td { border-bottom: none; }
 .bookings-table tbody tr:nth-child(even) { background: var(--cream); }
+/* Fix 4: clearer separation between booking rows — the default 1px divider
+   gets lost next to tall, multi-button action cells. Give each booking's main
+   row a stronger 2px rule and a little vertical breathing room. */
+.bookings-table tbody tr[data-booking-id] > td { border-bottom: 2px solid var(--border); padding-top: 12px; padding-bottom: 12px; }
+/* Fix 3: strong section dividers in the client detail view. Every major
+   section is a direct child of #clients-detail-view; a thick gold top border
+   plus generous top margin makes each boundary obvious on the beige page. */
+#clients-detail-view > .form-section { border-top: 3px solid var(--gold) !important; margin-top: 36px; }
 .bookings-section { margin-top: 10px; }
 .bookings-section:first-child { margin-top: 0; }
 .bookings-section-header { font-family: 'DM Sans', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; margin: 0 0 4px; }
@@ -7826,6 +7834,31 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
     + '<div style="font-size:0.8rem;color:rgba(247,244,238,0.5);margin-top:6px;">Client since ' + escapeHtml(firstStr) + ' &bull; ' + client.sessions.length + ' session' + (client.sessions.length !== 1 ? 's' : '') + '</div>'
     + '</div></div>';
 
+  // Messages — moved directly under the header card (Fix 5) so an unread
+  // message is the first thing the coach sees without scrolling. Markup and
+  // wiring are unchanged from its former position below Homework.
+  html += '<div class="form-section" style="margin-bottom:24px;">'
+    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;">Messages</h2>';
+  if (!messages.length) {
+    html += '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;">No messages yet</p>';
+  } else {
+    html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px 20px;max-height:320px;overflow-y:auto;">';
+    messages.forEach(function(m) {
+      var isCoach = m.sender === 'coach';
+      var timeStr = m.created_at ? new Date(m.created_at).toLocaleTimeString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+      html += '<div style="margin-bottom:12px;display:flex;flex-direction:column;align-items:' + (isCoach ? 'flex-end' : 'flex-start') + ';">'
+        + '<div style="background:' + (isCoach ? 'var(--ink)' : 'var(--cream)') + ';color:' + (isCoach ? 'var(--cream)' : 'var(--ink)') + ';padding:10px 14px;border-radius:var(--r-sm);max-width:80%;font-size:0.88rem;line-height:1.5;">' + escapeHtml(m.message || '') + '</div>'
+        + '<div style="font-size:0.72rem;color:var(--muted);margin-top:4px;">' + escapeHtml(timeStr) + '</div>'
+        + '</div>';
+    });
+    html += '</div>';
+  }
+  // Reply input
+  html += '<div style="display:flex;gap:8px;margin-top:12px;">'
+    + '<textarea id="client-reply-input" placeholder="Type a message..." style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:\'DM Sans\',\'Cabinet Grotesk\',sans-serif;font-size:0.88rem;color:var(--ink);background:var(--cream);min-height:44px;resize:none;"></textarea>'
+    + '<button class="save-btn" id="client-send-msg-btn" data-client-email="' + escapeHtml(client.email) + '" style="padding:10px 20px;font-size:0.82rem;align-self:flex-end;">Send</button>'
+    + '</div></div>';
+
   // Section 1: Sessions
   html += '<div class="form-section" style="margin-bottom:24px;">'
     + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">'
@@ -8026,15 +8059,16 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
 
   // Section 1.45: Daily Check-ins (client-initiated, mood/one-word/pattern)
   var dcBodyId = 'daily-checkins-body-' + (client.email || '').replace(/[@.]/g, '-');
+  // Fix 6: the whole section no longer collapses behind "Open". The body
+  // auto-loads (call after innerHTML below) and shows an always-visible
+  // 3–4 sentence summary; the chart / one-words / pattern reflections collapse
+  // behind a "View details" toggle inside loadDailyCheckins.
   html += '<div class="form-section" style="margin-bottom:24px;background:#f7f4ef;padding:24px 28px;border:1px solid #e8e4dc;border-left:3px solid #1a3a52;">'
-    + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;cursor:pointer;" onclick="toggleDailyCheckins(\'' + dcBodyId + '\',\'' + escapeHtml(client.email) + '\')">'
-    +   '<div>'
-    +     '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.4rem;font-weight:600;color:#1a3a52;margin-bottom:2px;">Daily Check-ins</div>'
-    +     '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#8a8580;">Mood, one-word, and pattern reflections this client wrote between sessions.</div>'
-    +   '</div>'
-    +   '<button type="button" style="background:transparent;border:1px solid #1a3a52;color:#1a3a52;padding:6px 14px;border-radius:6px;font-size:0.78rem;font-family:\'DM Sans\',sans-serif;font-weight:600;cursor:pointer;">Open</button>'
+    + '<div style="margin-bottom:14px;">'
+    +   '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.4rem;font-weight:600;color:#1a3a52;margin-bottom:2px;">Daily Check-ins</div>'
+    +   '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#8a8580;">Mood, one-word, and pattern reflections this client wrote between sessions.</div>'
     + '</div>'
-    + '<div id="' + dcBodyId + '" style="display:none;margin-top:18px;"><div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#8a8580;">Loading&hellip;</div></div>'
+    + '<div id="' + dcBodyId + '"><div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#8a8580;">Loading&hellip;</div></div>'
     + '</div>';
 
   // Section 1.5: Coach Intelligence — launcher block for the three coach-facing panels.
@@ -8155,7 +8189,10 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
   // Pending section — wrapped in a stable container so dismiss/approve can
   // remove a card without re-rendering the surrounding panel.
   html += '<div id="hw-pending-section"' + (pendingDrafts.length ? '' : ' style="display:none;"') + '>'
-    + '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);margin-bottom:8px;">Pending — AI-detected, awaiting your review</div>'
+    + '<div style="margin-bottom:8px;">'
+    +   '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);">Coach Clarity detected</div>'
+    +   '<div style="font-size:0.74rem;font-style:italic;font-weight:400;color:var(--muted);margin-top:1px;">Awaiting your review</div>'
+    + '</div>'
     + '<div id="hw-pending-list">';
   pendingDrafts.forEach(function(p) {
     var d = p.draft;
@@ -8167,7 +8204,23 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
     var verbatim = d.assignment_verbatim || '';
     var draftType = d.type || 'other';
     var typeSelect = hwTypeOptions.replace('value="' + draftType + '"', 'value="' + draftType + '" selected');
+    // Session attribution: which session this draft was detected from. Looked
+    // up by booking_id against the already-loaded client.sessions (same source
+    // the Sessions list renders from). Date always shows; service name only
+    // when joinable from the booking notes.
+    var hwSess = (client.sessions || []).find(function(s) { return s.id === p.booking_id; });
+    var hwSessDate = (hwSess && hwSess.scheduled_at) ? new Date(hwSess.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    var hwSvcMatch = hwSess ? (hwSess.notes || '').match(/^Service:\s*(.+)/m) : null;
+    var hwSvcName = hwSvcMatch ? hwSvcMatch[1].trim() : '';
+    var hwAttrib = hwSessDate
+      ? '<div style="font-size:0.72rem;color:var(--muted);letter-spacing:0.04em;margin-bottom:8px;">'
+          + '<span style="font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Session</span>'
+          + ' &middot; ' + escapeHtml(hwSessDate)
+          + (hwSvcName ? ' &middot; ' + escapeHtml(hwSvcName) : '')
+          + '</div>'
+      : '';
     html += '<div data-hw-draft-card="' + escapeHtml(d.id) + '" style="background:var(--cream);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:var(--r-sm);padding:14px 18px;margin-bottom:10px;">'
+      + hwAttrib
       + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">'
       + '<select data-hw-draft-type="' + escapeHtml(d.id) + '" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.72rem;background:var(--white);color:var(--ink);text-transform:uppercase;letter-spacing:0.04em;font-weight:600;">' + typeSelect + '</select>'
       + '</div>'
@@ -8206,28 +8259,7 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
     + '</div></div>';
   html += '</div>';
 
-  // Section 5: Messages
-  html += '<div class="form-section" style="margin-bottom:24px;">'
-    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;">Messages</h2>';
-  if (!messages.length) {
-    html += '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;">No messages yet</p>';
-  } else {
-    html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px 20px;max-height:320px;overflow-y:auto;">';
-    messages.forEach(function(m) {
-      var isCoach = m.sender === 'coach';
-      var timeStr = m.created_at ? new Date(m.created_at).toLocaleTimeString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
-      html += '<div style="margin-bottom:12px;display:flex;flex-direction:column;align-items:' + (isCoach ? 'flex-end' : 'flex-start') + ';">'
-        + '<div style="background:' + (isCoach ? 'var(--ink)' : 'var(--cream)') + ';color:' + (isCoach ? 'var(--cream)' : 'var(--ink)') + ';padding:10px 14px;border-radius:var(--r-sm);max-width:80%;font-size:0.88rem;line-height:1.5;">' + escapeHtml(m.message || '') + '</div>'
-        + '<div style="font-size:0.72rem;color:var(--muted);margin-top:4px;">' + escapeHtml(timeStr) + '</div>'
-        + '</div>';
-    });
-    html += '</div>';
-  }
-  // Reply input
-  html += '<div style="display:flex;gap:8px;margin-top:12px;">'
-    + '<textarea id="client-reply-input" placeholder="Type a message..." style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:\'DM Sans\',\'Cabinet Grotesk\',sans-serif;font-size:0.88rem;color:var(--ink);background:var(--cream);min-height:44px;resize:none;"></textarea>'
-    + '<button class="save-btn" id="client-send-msg-btn" data-client-email="' + escapeHtml(client.email) + '" style="padding:10px 20px;font-size:0.82rem;align-self:flex-end;">Send</button>'
-    + '</div></div>';
+  // Messages section moved up directly under the header card (Fix 5).
 
   // Section 6: Send Check-in
   if (checkinForms.length) {
@@ -8256,6 +8288,12 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
     + '</div></div>';
 
   $('clients-detail-view').innerHTML = html;
+
+  // Fix 6: auto-load Daily Check-ins so the computed summary shows immediately
+  // (detail stays collapsed behind a toggle inside loadDailyCheckins). Async,
+  // best-effort — a failure renders its own inline error and never blocks the
+  // rest of the detail view.
+  try { loadDailyCheckins(dcBodyId, client.email); } catch (e) { /* non-fatal */ }
 
   // Wire back button
   $('back-to-clients').addEventListener('click', function() {
@@ -16207,6 +16245,66 @@ function dcMoodScore(m) {
   return map[k] != null ? map[k] : null;
 }
 
+// Fix 6: collapse/expand the Daily Check-ins detail (chart, one-words,
+// pattern reflections) beneath the always-visible summary.
+function toggleDcDetail(detailId, btn) {
+  var d = document.getElementById(detailId);
+  if (!d) return;
+  var willOpen = (d.style.display === 'none' || !d.style.display);
+  d.style.display = willOpen ? 'block' : 'none';
+  if (btn) btn.innerHTML = willOpen ? '&#9652; Hide details' : '&#9662; View details';
+}
+window.toggleDcDetail = toggleDcDetail;
+
+// Fix 6: a 3–4 sentence natural-language summary computed from the check-in
+// rows already fetched (no extra API call). Mood trend compares the oldest vs
+// newest scored mood in the 14-day window; one-words and pattern reflections
+// pull from the most recent entries. All dynamic values are escaped.
+function buildDailyCheckinSummary(rows, clientEmail) {
+  var possessive = 'This client’s';
+  try {
+    var c = (typeof clientsData !== 'undefined' && Array.isArray(clientsData)) ? clientsData.find(function(x){ return x && x.email === clientEmail; }) : null;
+    if (c && c.name) {
+      var first = String(c.name).trim().split(/\s+/)[0];
+      if (first) possessive = escapeHtml(first) + '’s';
+    }
+  } catch (e) {}
+
+  var now = new Date();
+  var cutoff = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+  var windowRows = rows
+    .filter(function(r){ return r && r.created_at && new Date(r.created_at) >= cutoff; })
+    .slice()
+    .sort(function(a, b){ return new Date(a.created_at) - new Date(b.created_at); });
+  var scored = windowRows.map(function(r){ return dcMoodScore(r.mood); }).filter(function(v){ return v != null; });
+
+  var sentences = [];
+  var lead = windowRows.length >= 1 ? 'Over the last 14 days, ' : 'Across recent check-ins, ';
+  if (scored.length >= 2) {
+    var firstS = scored[0], lastS = scored[scored.length - 1];
+    var trendPhrase = lastS < firstS ? 'trending heavier' : (lastS > firstS ? 'trending steadier' : 'holding steady');
+    sentences.push(lead + possessive + ' check-ins show a mood ' + trendPhrase + '.');
+  } else {
+    sentences.push(lead + possessive + ' check-ins are just getting started — ' + rows.length + ' logged so far.');
+  }
+
+  var words = rows.filter(function(r){ return r && r.one_word; }).slice(0, 3).map(function(r){ return String(r.one_word).trim(); }).filter(Boolean);
+  if (words.length) {
+    var quoted = words.map(function(w){ return '‘' + escapeHtml(w) + '’'; });
+    var wlist = quoted.length === 1 ? quoted[0] : quoted.slice(0, -1).join(', ') + ' and ' + quoted[quoted.length - 1];
+    sentences.push('Recent one-words include ' + wlist + '.');
+  }
+
+  var patterns = rows.filter(function(r){ return r && r.pattern_response; });
+  if (patterns.length) {
+    var latest = String(patterns[0].pattern_response).trim().replace(/\s+/g, ' ');
+    if (latest.length > 140) latest = latest.slice(0, 137).replace(/[\s,;:.]+\S*$/, '') + '…';
+    sentences.push('Their most recent reflection noted ‘' + escapeHtml(latest) + '’.');
+  }
+
+  return '<div style="background:#fff;border:1px solid #e8e4dc;border-left:3px solid #c49a3c;border-radius:8px;padding:14px 16px;margin-bottom:14px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:#1a3a52;line-height:1.65;">' + sentences.join(' ') + '</div>';
+}
+
 async function loadDailyCheckins(bodyId, clientEmail) {
   var el = document.getElementById(bodyId);
   if (!el) return;
@@ -16313,10 +16411,13 @@ async function loadDailyCheckins(bodyId, clientEmail) {
       patternHtml += '</div></div>';
     }
 
-    el.innerHTML = trendHtml + wordsHtml + patternHtml || trendHtml;
-    if (!wordsHtml && !patternHtml && !trendHtml) {
-      el.innerHTML = '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:#8a8580;font-style:italic;">No check-ins yet from this client.</div>';
-    }
+    // Fix 6: always-visible summary on top; chart / one-words / pattern
+    // reflections collapse behind a "View details" toggle (collapsed default).
+    var summaryHtml = buildDailyCheckinSummary(rows, clientEmail);
+    var detailId = bodyId + '-detail';
+    el.innerHTML = summaryHtml
+      + '<button type="button" onclick="toggleDcDetail(\'' + detailId + '\', this)" style="background:transparent;border:1px solid #1a3a52;color:#1a3a52;padding:6px 14px;border-radius:6px;font-size:0.78rem;font-family:\'DM Sans\',sans-serif;font-weight:600;cursor:pointer;">&#9662; View details</button>'
+      + '<div id="' + detailId + '" style="display:none;margin-top:14px;">' + (trendHtml + wordsHtml + patternHtml) + '</div>';
   } catch (err) {
     console.error('[DailyCheckins] load error', err);
     el.innerHTML = '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#c44;">Could not load daily check-ins. Please try again.</div>';
