@@ -343,7 +343,6 @@ function renderStats(s) {
     statCard('Session Insights Runs This Month', s.clarityRunsThisMonth),
     statCard('Published Profiles', s.publishedCount),
     statCard('Estimated MRR', '$' + (s.estimatedMrr || 0).toLocaleString()),
-    statCard('Clarity Runs This Month', s.clarityRunsThisMonth || 0),
     statCard('Regenerations This Month', s.regenerationsThisMonth || 0),
     statCard('Estimated AI Cost (Month)', '$' + aiCost)
   ].join('');
