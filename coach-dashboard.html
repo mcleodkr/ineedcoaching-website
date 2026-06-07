@@ -7823,7 +7823,7 @@ async function openClientDetail(email) {
 // title, gold left accent. Open returns the wrapper + body opener; Close emits
 // the two closing divs (body + panel). Keeps every section's boundary obvious.
 function clientPanelOpen(title) {
-  return '<div class="client-panel"><div class="client-panel-header"><h2>' + escapeHtml(title) + '</h2></div><div class="client-panel-body">';
+  return '<div class="client-panel"><div class="client-panel-header"><h2 style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:700;color:#ffffff;margin:0;letter-spacing:0.02em;">' + escapeHtml(title) + '</h2></div><div class="client-panel-body">';
 }
 function clientPanelClose() {
   return '</div></div>';
