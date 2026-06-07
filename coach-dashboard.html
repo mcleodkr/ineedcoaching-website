@@ -164,10 +164,19 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
    gets lost next to tall, multi-button action cells. Give each booking's main
    row a stronger 2px rule and a little vertical breathing room. */
 .bookings-table tbody tr[data-booking-id] > td { border-bottom: 2px solid var(--border); padding-top: 12px; padding-bottom: 12px; }
-/* Fix 3: strong section dividers in the client detail view. Every major
-   section is a direct child of #clients-detail-view; a thick gold top border
-   plus generous top margin makes each boundary obvious on the beige page. */
-#clients-detail-view > .form-section { border-top: 3px solid var(--gold) !important; margin-top: 36px; }
+/* Client detail view: every major section is a white panel floating on the
+   beige page with a navy header bar + gold left accent (matches the login
+   card pattern), so each section boundary is unmistakable. Replaces the
+   earlier near-invisible top-border dividers. */
+.client-panel { background: #ffffff; border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 28px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+.client-panel-header { background: var(--navy); padding: 12px 20px; display: flex; align-items: center; gap: 10px; border-left: 4px solid var(--gold); }
+.client-panel-header h2, .client-panel-header h3 { font-family: 'Cormorant Garamond', serif; font-size: 1.05rem; font-weight: 600; color: #f7f5f1; margin: 0; letter-spacing: 0.01em; }
+.client-panel-body { padding: 20px 24px; }
+/* Homework sub-section dividers within the single Homework panel. */
+.homework-subsection-header { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); padding: 10px 0 6px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.homework-subsection-header.is-assigned { color: var(--muted); margin-top: 28px; }
+/* "Add new" affordance — dashed border distinguishes input forms from data. */
+.add-goal-form { margin-top: 20px; padding: 14px 16px; border: 1.5px dashed var(--border); border-radius: var(--r-sm); background: transparent; }
 .bookings-section { margin-top: 10px; }
 .bookings-section:first-child { margin-top: 0; }
 .bookings-section-header { font-family: 'DM Sans', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; margin: 0 0 4px; }
@@ -7810,6 +7819,16 @@ async function openClientDetail(email) {
   }
 }
 
+// Client detail section panel: white card, navy header bar with the section
+// title, gold left accent. Open returns the wrapper + body opener; Close emits
+// the two closing divs (body + panel). Keeps every section's boundary obvious.
+function clientPanelOpen(title) {
+  return '<div class="client-panel"><div class="client-panel-header"><h2>' + escapeHtml(title) + '</h2></div><div class="client-panel-body">';
+}
+function clientPanelClose() {
+  return '</div></div>';
+}
+
 function renderClientDetail(client, goals, intakeFeed, checkinResponses, messages, notesByBooking, checkinForms, officialHomework) {
   var statusLabels = { not_started: 'Not Started', in_progress: 'In Progress', proposed: 'Proposed', active: 'Active', progressing: 'Progressing', stalled: 'Stalled', blocked: 'Blocked', revised: 'Revised', completed: 'Completed', archived: 'Archived' };
   var statusColors = { not_started: 'background:rgba(107,107,96,0.15);color:var(--muted)', in_progress: 'background:#c49a3c;color:#fff', proposed: 'background:rgba(107,107,96,0.15);color:var(--muted)', active: 'background:rgba(26,58,82,0.12);color:var(--ink)', progressing: 'background:#c49a3c;color:#fff', stalled: 'background:#b8860b;color:#fff', blocked: 'background:#c44;color:#fff', revised: 'background:#7b5ea7;color:#fff', completed: 'background:#2d6a4f;color:#fff', archived: 'background:rgba(107,107,96,0.25);color:var(--muted)' };
@@ -7837,12 +7856,11 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
   // Messages — moved directly under the header card (Fix 5) so an unread
   // message is the first thing the coach sees without scrolling. Markup and
   // wiring are unchanged from its former position below Homework.
-  html += '<div class="form-section" style="margin-bottom:24px;">'
-    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;">Messages</h2>';
+  html += clientPanelOpen('Messages');
   if (!messages.length) {
     html += '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;">No messages yet</p>';
   } else {
-    html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px 20px;max-height:320px;overflow-y:auto;">';
+    html += '<div style="border:1px solid var(--border);border-radius:var(--r-sm);padding:16px 20px;max-height:280px;overflow-y:auto;">';
     messages.forEach(function(m) {
       var isCoach = m.sender === 'coach';
       var timeStr = m.created_at ? new Date(m.created_at).toLocaleTimeString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
@@ -7853,18 +7871,15 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
     });
     html += '</div>';
   }
-  // Reply input
-  html += '<div style="display:flex;gap:8px;margin-top:12px;">'
+  // Reply input — attached to the thread above with a top border so it reads as
+  // part of the Messages panel rather than a separate section.
+  html += '<div style="display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">'
     + '<textarea id="client-reply-input" placeholder="Type a message..." style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:\'DM Sans\',\'Cabinet Grotesk\',sans-serif;font-size:0.88rem;color:var(--ink);background:var(--cream);min-height:44px;resize:none;"></textarea>'
     + '<button class="save-btn" id="client-send-msg-btn" data-client-email="' + escapeHtml(client.email) + '" style="padding:10px 20px;font-size:0.82rem;align-self:flex-end;">Send</button>'
-    + '</div></div>';
+    + '</div>' + clientPanelClose();
 
   // Section 1: Sessions
-  html += '<div class="form-section" style="margin-bottom:24px;">'
-    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">'
-    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;margin-bottom:0;">Sessions</h2>'
-    + ''
-    + '</div>'
+  html += clientPanelOpen('Sessions')
     + '<div id="pre-session-brief-container" style="margin-bottom:16px;"></div>';
   if (!client.sessions.length) {
     html += '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;">No sessions yet</p>';
@@ -8037,7 +8052,7 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
       html += '</div>'; // session card
     });
   }
-  html += '</div>';
+  html += clientPanelClose();
 
   // The inline Pattern Map aggregation, helpers, and rendering that lived
   // here were removed in Split 5c. Pattern Map content now lives in
@@ -8046,16 +8061,13 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
 
   // Section 1.4: Journal Intelligence (client-shared journal entries)
   var jiBodyId = 'journal-intel-body-' + (client.email || '').replace(/[@.]/g, '-');
-  html += '<div class="form-section" style="margin-bottom:24px;background:#fdf9f1;padding:24px 28px;border:1px solid #edeae4;border-left:3px solid #c49a3c;">'
+  html += clientPanelOpen('Journal Intelligence')
     + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;cursor:pointer;" onclick="toggleJournalIntel(\'' + jiBodyId + '\',\'' + escapeHtml(client.email) + '\')">'
-    +   '<div>'
-    +     '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.4rem;font-weight:600;color:#1a3a52;margin-bottom:2px;">Journal Intelligence</div>'
-    +     '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#8a8580;">Reflections this client has chosen to share with you.</div>'
-    +   '</div>'
+    +   '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#8a8580;">Reflections this client has chosen to share with you.</div>'
     +   '<button type="button" style="background:transparent;border:1px solid #1a3a52;color:#1a3a52;padding:6px 14px;border-radius:6px;font-size:0.78rem;font-family:\'DM Sans\',sans-serif;font-weight:600;cursor:pointer;">Open</button>'
     + '</div>'
     + '<div id="' + jiBodyId + '" style="display:none;margin-top:18px;"><div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#8a8580;">Loading&hellip;</div></div>'
-    + '</div>';
+    + clientPanelClose();
 
   // Section 1.45: Daily Check-ins (client-initiated, mood/one-word/pattern)
   var dcBodyId = 'daily-checkins-body-' + (client.email || '').replace(/[@.]/g, '-');
@@ -8063,18 +8075,14 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
   // auto-loads (call after innerHTML below) and shows an always-visible
   // 3–4 sentence summary; the chart / one-words / pattern reflections collapse
   // behind a "View details" toggle inside loadDailyCheckins.
-  html += '<div class="form-section" style="margin-bottom:24px;background:#f7f4ef;padding:24px 28px;border:1px solid #e8e4dc;border-left:3px solid #1a3a52;">'
-    + '<div style="margin-bottom:14px;">'
-    +   '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.4rem;font-weight:600;color:#1a3a52;margin-bottom:2px;">Daily Check-ins</div>'
-    +   '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#8a8580;">Mood, one-word, and pattern reflections this client wrote between sessions.</div>'
-    + '</div>'
+  html += clientPanelOpen('Daily Check-ins')
+    + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#8a8580;margin-bottom:14px;">Mood, one-word, and pattern reflections this client wrote between sessions.</div>'
     + '<div id="' + dcBodyId + '"><div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#8a8580;">Loading&hellip;</div></div>'
-    + '</div>';
+    + clientPanelClose();
 
   // Section 1.5: Coach Intelligence — launcher block for the three coach-facing panels.
   // Inline Pattern Map rendering was removed in Split 5c; the panels handle their own data load.
-  html += '<div class="form-section" style="margin-bottom:24px;background:#f7f4ef;padding:28px 32px;border:1px solid #e8e4dc;">'
-    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:600;color:#1a3a52;letter-spacing:-0.005em;margin-bottom:4px;">Coach Intelligence</div>'
+  html += clientPanelOpen('Coach Intelligence')
     + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#5a5560;line-height:1.6;margin-bottom:18px;">Strategy, patterns, reflection \u2014 all session-grounded. Open the panel that fits what you need right now.</div>'
     + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">'
     +   '<a href="/intervention-plan?client_email=' + encodeURIComponent(client.email) + '" style="display:flex;flex-direction:column;gap:4px;background:#1a3a52;color:#ffffff;border-radius:6px;padding:14px 18px;text-decoration:none;transition:background 0.12s ease;">'
@@ -8094,7 +8102,7 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
     +     '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.74rem;color:rgba(255,255,255,0.85);line-height:1.45;">Longitudinal game plan \u2014 what\u2019s working, what\u2019s not, when to pivot.</span>'
     +   '</a>'
     + '</div>'
-    + '</div>';
+    + clientPanelClose();
 
   // Intake Responses + Pre-Session Check-ins flat sections removed: the same
   // per-booking intake and check-in data now surfaces inline inside each
@@ -8105,8 +8113,7 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
   // these (the flat check-in list only ever showed submitted rows).
 
   // Section 4: Goals
-  html += '<div class="form-section" style="margin-bottom:24px;">'
-    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;">Goals</h2>';
+  html += clientPanelOpen('Goals');
   if (!goals.length) {
     html += '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;">No goals set yet</p>';
   } else {
@@ -8125,14 +8132,14 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
         + '</div>';
     });
   }
-  // Inline add goal
-  html += '<div style="margin-top:12px;padding:16px 20px;background:var(--cream);border:1px solid var(--border);border-radius:var(--r-sm);">'
+  // Inline add goal — dashed border marks it as the "add new" input, not a goal.
+  html += '<div class="add-goal-form">'
     + '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">'
     + '<div class="form-group" style="flex:1;min-width:180px;margin-bottom:0;"><label for="client-goal-title">Goal Title</label><input type="text" id="client-goal-title" placeholder="e.g. Complete leadership assessment"></div>'
     + '<div class="form-group" style="flex:0 0 140px;margin-bottom:0;"><label for="client-goal-date">Target Date</label><input type="date" id="client-goal-date"></div>'
     + '<button class="save-btn" id="client-add-goal-btn" style="padding:10px 20px;font-size:0.82rem;">Add Goal</button>'
     + '</div></div>';
-  html += '</div>';
+  html += clientPanelClose();
 
   // Section 4b: Homework (Stage A — Detect → Review → Approve → Official).
   // Pending drafts come from notesByBooking[*].homework (AI extraction marked
@@ -8183,16 +8190,12 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
       + '</div></div>';
   }
 
-  html += '<div class="form-section" style="margin-bottom:24px;">'
-    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;">Homework</h2>';
+  html += clientPanelOpen('Homework');
 
   // Pending section — wrapped in a stable container so dismiss/approve can
   // remove a card without re-rendering the surrounding panel.
   html += '<div id="hw-pending-section"' + (pendingDrafts.length ? '' : ' style="display:none;"') + '>'
-    + '<div style="margin-bottom:8px;">'
-    +   '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--gold);">Coach Clarity detected</div>'
-    +   '<div style="font-size:0.74rem;font-style:italic;font-weight:400;color:var(--muted);margin-top:1px;">Awaiting your review</div>'
-    + '</div>'
+    + '<div class="homework-subsection-header">Coach Clarity detected &middot; Awaiting your review</div>'
     + '<div id="hw-pending-list">';
   pendingDrafts.forEach(function(p) {
     var d = p.draft;
@@ -8219,7 +8222,7 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
           + (hwSvcName ? ' &middot; ' + escapeHtml(hwSvcName) : '')
           + '</div>'
       : '';
-    html += '<div data-hw-draft-card="' + escapeHtml(d.id) + '" style="background:var(--cream);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:var(--r-sm);padding:14px 18px;margin-bottom:10px;">'
+    html += '<div data-hw-draft-card="' + escapeHtml(d.id) + '" style="border:1px solid var(--border);border-radius:var(--r-sm);padding:16px;margin-bottom:12px;background:var(--cream);">'
       + hwAttrib
       + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">'
       + '<select data-hw-draft-type="' + escapeHtml(d.id) + '" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.72rem;background:var(--white);color:var(--ink);text-transform:uppercase;letter-spacing:0.04em;font-weight:600;">' + typeSelect + '</select>'
@@ -8241,7 +8244,7 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
   // Assigned section — same wrapper pattern so approve/add can append a row
   // and show the header without redrawing.
   html += '<div id="hw-assigned-section"' + (officialHw.length ? '' : ' style="display:none;"') + '>'
-    + '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink);margin:14px 0 8px;">Assigned</div>'
+    + '<div class="homework-subsection-header is-assigned">Assigned</div>'
     + '<div id="hw-assigned-list">';
   officialHw.forEach(function(h) { html += buildAssignedRowHtml(h); });
   html += '</div></div>';
@@ -8257,14 +8260,13 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
     + '<div class="form-group" style="flex:0 0 140px;margin-bottom:0;"><label for="client-hw-type">Type</label><select id="client-hw-type">' + hwTypeOptions + '</select></div>'
     + '<button class="save-btn" id="client-add-hw-btn" data-client-email="' + clientEmailEsc + '" style="padding:10px 20px;font-size:0.82rem;">Add Homework</button>'
     + '</div></div>';
-  html += '</div>';
+  html += clientPanelClose();
 
   // Messages section moved up directly under the header card (Fix 5).
 
   // Section 6: Send Check-in
   if (checkinForms.length) {
-    html += '<div class="form-section">'
-      + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;">Send Check-in</h2>'
+    html += clientPanelOpen('Send Check-in')
       + '<div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">'
       + '<div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;"><label for="client-checkin-form">Check-in Form</label>'
       + '<select id="client-checkin-form"><option value="">Select a form...</option>';
@@ -8275,17 +8277,16 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
       + '<button class="save-btn" id="client-send-checkin-btn" data-client-email="' + escapeHtml(client.email) + '" data-client-name="' + escapeHtml(client.name) + '" style="padding:10px 20px;font-size:0.82rem;background:var(--gold);">Send Check-in</button>'
       + '</div>'
       + '<div id="client-checkin-msg" style="margin-top:8px;font-size:0.82rem;"></div>'
-      + '</div>';
+      + clientPanelClose();
   }
 
   // Section 7: Request Testimonial
-  html += '<div class="form-section">'
-    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;">Request Testimonial</h2>'
+  html += clientPanelOpen('Request Testimonial')
     + '<p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">Ask this client to share their experience working with you.</p>'
     + '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">'
     + '<button class="save-btn" id="client-request-testimonial-btn" data-client-email="' + escapeHtml(client.email) + '" data-client-name="' + escapeHtml(client.name) + '" style="padding:10px 24px;font-size:0.82rem;background:none;border:2px solid var(--gold);color:var(--gold);">Request Testimonial</button>'
     + '<span id="client-testimonial-msg" style="font-size:0.82rem;"></span>'
-    + '</div></div>';
+    + '</div>' + clientPanelClose();
 
   $('clients-detail-view').innerHTML = html;
 
