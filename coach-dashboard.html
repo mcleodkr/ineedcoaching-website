@@ -10262,7 +10262,7 @@ function renderPreSessionBrief(b, container) {
       + '<div style="background:var(--cream);border-radius:8px;padding:14px;"><div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Primary Focus</div><div style="font-size:0.88rem;color:var(--ink);">' + escapeHtml(os.primary_focus || '') + '</div></div>'
       + '</div>';
     if (os.open_commitments && os.open_commitments.length) {
-      h += '<div style="margin-top:10px;"><div style="font-size:0.75rem;font-weight:700;color:var(--muted);margin-bottom:6px;">OPEN COMMITMENTS</div>';
+      h += '<div style="margin-top:10px;"><div style="font-size:0.75rem;font-weight:700;color:var(--muted);margin-bottom:6px;">OPEN HOMEWORK</div>';
       os.open_commitments.forEach(function(c) {
         h += '<div style="display:flex;align-items:center;gap:8px;font-size:0.85rem;color:var(--ink);margin-bottom:4px;"><span style="color:' + (c.is_complete ? '#2d6a4f' : 'var(--gold)') + ';">' + (c.is_complete ? '✓' : '○') + '</span>' + escapeHtml(c.title) + '</div>';
       });
