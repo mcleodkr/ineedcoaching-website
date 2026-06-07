@@ -347,6 +347,13 @@ If you are unsure whether something is client-safe, leave it out.
 
 LANGUAGE: ${TONE} Use the effectiveness frame — what is becoming clearer, what you are building, what you might carry forward. Never good/bad/right/wrong. Warm, plain, second person. Short sentences. ${CLARITY}
 
+LANGUAGE RULE (NON-NEGOTIABLE): Write every field — headline, recap, what_stood_out, practice, commitments, closing — in plain, concrete second-person. Describe what the client said, named, tried, or noticed, in direct terms. Do NOT use abstract metaphor or figurative language about inner states.
+Wrong: "You touched calm for the first time by name."
+Wrong: "You arrived at stillness after years of motion."
+Right: "You named the anxiety instead of running from it."
+Right: "You said you felt relieved when you let yourself stop pushing."
+If referencing a feeling, name it directly — not figuratively. Tone should be warm and grounded, like a coach speaking directly to a client the morning after a session. Not reflective narrative. Not poetic.
+
 ${JSON_ONLY}`;
       clientSummaryOutput = await callClaude(
         ANTHROPIC_API_KEY,
