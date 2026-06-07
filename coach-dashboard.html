@@ -9483,10 +9483,7 @@ function wireSendCheckinButtons() {
           });
           var data = await res.json();
           if (!res.ok) throw new Error(data.error || data.details || 'Failed to send check-in');
-          this.parentElement.innerHTML = '<span style="font-size:0.72rem;color:var(--gold);font-weight:600;">' + escapeHtml(data.formName) + '</span> '
-            + '<a href="' + escapeHtml(data.checkinUrl) + '" target="_blank" style="font-size:0.72rem;color:var(--gold);font-weight:700;text-decoration:none;">View form &rarr;</a> '
-            + '<button onclick="navigator.clipboard.writeText(\'' + escapeHtml(data.checkinUrl) + '\');this.textContent=\'Copied!\';setTimeout(()=>this.textContent=\'Copy link\',1500)" style="font-size:0.68rem;color:var(--muted);background:none;border:1px solid var(--border);padding:2px 8px;border-radius:50px;cursor:pointer;">Copy link</button> '
-            + '<span class="status-pill status-pending" style="font-size:0.62rem;padding:2px 8px;">Pending</span>';
+          this.parentElement.outerHTML = '<div class="booking-row-action" style="color:#2d6a4f;font-weight:600;border-color:#2d6a4f;cursor:default;">&#10003; Check-in sent</div>';
         } catch(e) {
           console.error('[SendCheckin] Error:', e);
           alert('Error sending check-in: ' + (e.message || e));
