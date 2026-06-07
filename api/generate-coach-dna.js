@@ -10,6 +10,14 @@ async function callClaude(apiKey, model, maxTokens, system, userMessage, passNam
   console.log(`[DNA ${passName}] model: ${model}`);
   const startTime = Date.now();
   let res, data;
+  // The DNA run sends this same SYSTEM string across 3 passes seconds apart.
+  // Wrap a string system prompt in the cached-content-block form so passes 2
+  // and 3 read it from the 5-minute ephemeral cache (~90% off input on the
+  // system block). Default ephemeral TTL needs no anthropic-beta header.
+  // Already-array system arguments pass through unchanged.
+  const systemPayload = typeof system === 'string'
+    ? [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }]
+    : system;
   try {
     res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -18,7 +26,7 @@ async function callClaude(apiKey, model, maxTokens, system, userMessage, passNam
         'anthropic-version': '2023-06-01',
         'content-type': 'application/json',
       },
-      body: JSON.stringify({ model, max_tokens: maxTokens, system, messages: [{ role: 'user', content: userMessage }] }),
+      body: JSON.stringify({ model, max_tokens: maxTokens, system: systemPayload, messages: [{ role: 'user', content: userMessage }] }),
     });
     data = await res.json().catch(function() { return null; });
   } catch (err) {
