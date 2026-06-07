@@ -1526,6 +1526,14 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
         </div>
       </div>
 
+      <!-- Bookable Services (coach_services — the sessions clients actually book/pay for) -->
+      <div class="form-section">
+        <h2 class="form-section-title">Bookable Services</h2>
+        <p style="font-family:'DM Sans',sans-serif;font-size:0.88rem;color:var(--muted);line-height:1.6;margin-bottom:16px;">These are the sessions clients can book and pay for through your scheduling page. The list above only controls how services read on your public profile.</p>
+        <div id="coach-services-list"></div>
+        <button class="add-service-btn" id="add-bookable-service-btn">+ Add bookable service</button>
+      </div>
+
       <!-- Payments / Stripe Connect -->
       <div class="form-section">
         <h2 class="form-section-title">Payments</h2>
@@ -3252,6 +3260,7 @@ function populateProfileForm() {
   renderPills('credentials-pills', profileCredentials, 'credential');
   renderPills('certifications-pills', profileCertifications, 'certification');
   renderServices();
+  loadCoachServices();
 }
 
 function renderPhotoPreview() {
@@ -3485,6 +3494,193 @@ async function saveServices() {
   await supabasePatch('coach_profiles', { id: 'eq.' + coachProfile.id }, { services: profileServices });
 }
 
+// ─── Bookable Services (coach_services rows) ──────────────────────────────
+// Separate from the JSONB profile-services editor above: these are real
+// coach_services rows the scheduling/booking system reads. CRUD goes straight
+// to the table under the coach JWT — RLS (coach_*_own_services) scopes every
+// op to this coach's rows. duration is stored as text ("60 minutes") to match
+// the booking duration parser; price is numeric dollars.
+var coachServicesRows = [];
+var editingCoachServiceId = null; // a row id, or '__new__' for an unsaved draft
+var COACH_SVC_DURATIONS = ['15 minutes', '30 minutes', '45 minutes', '60 minutes', '90 minutes', '120 minutes'];
+
+async function loadCoachServices() {
+  var listEl = document.getElementById('coach-services-list');
+  if (!listEl || !coachProfile || !coachProfile.id) return;
+  listEl.innerHTML = '<div style="padding:14px;color:var(--muted);font-size:0.86rem;">Loading…</div>';
+  try {
+    var rows = await supabaseGet(
+      'coach_services?coach_id=eq.' + encodeURIComponent(coachProfile.id)
+      + '&select=id,title,description,price,price_type,duration,is_active,service_type,slot_increment_minutes'
+      + '&order=created_at.asc'
+    );
+    coachServicesRows = Array.isArray(rows) ? rows : [];
+  } catch (e) {
+    console.error('[coach-services] load failed', e);
+    coachServicesRows = [];
+  }
+  renderCoachServices();
+}
+
+function coachServiceFieldCss() {
+  return 'width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--cream);';
+}
+
+function buildCoachServiceEditCard(row) {
+  var id = row.id || '__new__';
+  var durationOpts = COACH_SVC_DURATIONS.slice();
+  if (row.duration && durationOpts.indexOf(row.duration) === -1) durationOpts.unshift(row.duration);
+  var durHtml = durationOpts.map(function (d) {
+    return '<option value="' + escapeHtml(d) + '"' + (row.duration === d ? ' selected' : '') + '>' + escapeHtml(d) + '</option>';
+  }).join('');
+  return '<div class="service-item" data-cs-id="' + escapeHtml(id) + '" style="border:1px solid var(--gold);">'
+    + '<div style="display:flex;flex-direction:column;gap:10px;">'
+    + '<div><label style="display:block;font-size:0.75rem;font-weight:600;color:var(--ink);margin-bottom:4px;">Title</label>'
+    + '<input type="text" data-cs-field="title" value="' + escapeHtml(row.title || '') + '" style="' + coachServiceFieldCss() + '"></div>'
+    + '<div><label style="display:block;font-size:0.75rem;font-weight:600;color:var(--ink);margin-bottom:4px;">Description</label>'
+    + '<textarea data-cs-field="description" rows="2" style="' + coachServiceFieldCss() + 'resize:vertical;">' + escapeHtml(row.description || '') + '</textarea></div>'
+    + '<div style="display:flex;gap:10px;flex-wrap:wrap;">'
+    + '<div style="flex:1;min-width:140px;"><label style="display:block;font-size:0.75rem;font-weight:600;color:var(--ink);margin-bottom:4px;">Price ($)</label>'
+    + '<input type="number" min="0" step="0.01" data-cs-field="price" value="' + (row.price != null && row.price !== '' ? escapeHtml(String(row.price)) : '') + '" placeholder="0" style="' + coachServiceFieldCss() + '"></div>'
+    + '<div style="flex:1;min-width:140px;"><label style="display:block;font-size:0.75rem;font-weight:600;color:var(--ink);margin-bottom:4px;">Duration</label>'
+    + '<select data-cs-field="duration" style="' + coachServiceFieldCss() + '">' + durHtml + '</select></div>'
+    + '</div>'
+    + '<label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;color:var(--ink);"><input type="checkbox" data-cs-field="is_active"' + (row.is_active !== false ? ' checked' : '') + '> Active (bookable)</label>'
+    + '<div class="cs-edit-msg" style="display:none;font-size:0.82rem;color:#b93a3a;margin-top:4px;"></div>'
+    + '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px;">'
+    + '<button class="cs-cancel-btn" style="padding:8px 16px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;cursor:pointer;">Cancel</button>'
+    + '<button class="cs-save-btn" style="padding:8px 18px;background:var(--gold);color:#fff;border:none;border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:600;cursor:pointer;">Save</button>'
+    + '</div></div></div>';
+}
+
+function buildCoachServiceCard(row) {
+  var isActive = row.is_active !== false;
+  var priceNum = (row.price != null && row.price !== '') ? Number(row.price) : 0;
+  var priceDisplay = priceNum > 0 ? '$' + row.price : 'Free';
+  return '<div class="service-item" data-cs-id="' + escapeHtml(row.id) + '"' + (isActive ? '' : ' style="opacity:0.6;"') + '>'
+    + '<div class="service-item-header">'
+    + '<h3>' + escapeHtml(row.title || 'Untitled') + '</h3>'
+    + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+    + '<button class="cs-edit-btn" style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#fff;cursor:pointer;border:none;background:var(--gold);font-weight:500;padding:7px 16px;border-radius:50px;">Edit</button>'
+    + '<button class="cs-delete-btn" style="font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:var(--muted);cursor:pointer;border:1px solid var(--muted);background:transparent;font-weight:500;padding:6px 16px;border-radius:50px;">Delete</button>'
+    + '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;color:var(--muted);">' + (isActive ? 'Bookable' : 'Hidden') + '</span>'
+    + '<label class="toggle-switch"><input type="checkbox" class="cs-active-toggle"' + (isActive ? ' checked' : '') + '><span class="toggle-slider"></span></label>'
+    + '</div>'
+    + '</div>'
+    + (row.description ? '<p>' + escapeHtml(row.description) + '</p>' : '')
+    + '<div class="service-item-meta">'
+    + '<span class="price">' + escapeHtml(priceDisplay) + '</span>'
+    + (row.duration ? '<span>' + escapeHtml(row.duration) + '</span>' : '')
+    + '</div>'
+    + '</div>';
+}
+
+function renderCoachServices() {
+  var listEl = document.getElementById('coach-services-list');
+  if (!listEl) return;
+  var html = '';
+  if (editingCoachServiceId === '__new__') {
+    html += buildCoachServiceEditCard({ is_active: true });
+  }
+  if (!coachServicesRows.length && editingCoachServiceId !== '__new__') {
+    html += '<div class="empty-state"><p>No bookable services yet.</p></div>';
+  } else {
+    coachServicesRows.forEach(function (row) {
+      html += (editingCoachServiceId === row.id) ? buildCoachServiceEditCard(row) : buildCoachServiceCard(row);
+    });
+  }
+  listEl.innerHTML = html;
+}
+
+function setupCoachServicesDelegation() {
+  var listEl = document.getElementById('coach-services-list');
+  if (!listEl || listEl.dataset.delegated === '1') return;
+  listEl.dataset.delegated = '1';
+
+  listEl.addEventListener('click', function (e) {
+    var card = e.target.closest && e.target.closest('[data-cs-id]');
+    var id = card ? card.getAttribute('data-cs-id') : null;
+    if (e.target.closest('.cs-edit-btn') && id) { editingCoachServiceId = id; renderCoachServices(); return; }
+    if (e.target.closest('.cs-cancel-btn')) { editingCoachServiceId = null; renderCoachServices(); return; }
+    if (e.target.closest('.cs-save-btn') && id) { submitCoachServiceSave(id, e.target.closest('.cs-save-btn')); return; }
+    if (e.target.closest('.cs-delete-btn') && id) { deleteCoachService(id); return; }
+  });
+
+  listEl.addEventListener('change', function (e) {
+    var t = e.target;
+    if (t && t.classList && t.classList.contains('cs-active-toggle')) {
+      var card = t.closest('[data-cs-id]');
+      if (card) toggleCoachServiceActive(card.getAttribute('data-cs-id'), t.checked);
+    }
+  });
+}
+
+async function submitCoachServiceSave(id, saveBtn) {
+  var card = document.querySelector('#coach-services-list [data-cs-id="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]');
+  if (!card) return;
+  var msg = card.querySelector('.cs-edit-msg');
+  var title = (card.querySelector('[data-cs-field="title"]').value || '').trim();
+  var description = (card.querySelector('[data-cs-field="description"]').value || '').trim();
+  var priceRaw = card.querySelector('[data-cs-field="price"]').value;
+  var duration = card.querySelector('[data-cs-field="duration"]').value;
+  var isActive = card.querySelector('[data-cs-field="is_active"]').checked;
+  function fail(m) { if (msg) { msg.textContent = m; msg.style.display = 'block'; } }
+  if (!title) return fail('Title is required.');
+  var price = priceRaw === '' ? 0 : Number(priceRaw);
+  if (!Number.isFinite(price) || price < 0) return fail('Price must be 0 or more.');
+
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
+  try {
+    if (id === '__new__') {
+      var res = await fetch(SUPABASE_URL + '/rest/v1/coach_services', {
+        method: 'POST',
+        headers: { ...apiHeaders(), Prefer: 'return=representation' },
+        body: JSON.stringify({
+          coach_id: coachProfile.id,
+          title: title, description: description, price: price,
+          duration: duration, is_active: isActive,
+          service_type: 'session', price_type: 'fixed',
+        }),
+      });
+      if (!res.ok) throw new Error('insert ' + res.status);
+    } else {
+      await supabasePatch('coach_services', { id: 'eq.' + id },
+        { title: title, description: description, price: price, duration: duration, is_active: isActive });
+    }
+    editingCoachServiceId = null;
+    await loadCoachServices();
+  } catch (e) {
+    console.error('[coach-services] save failed', e);
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+    fail('Could not save. Please try again.');
+  }
+}
+
+async function toggleCoachServiceActive(id, checked) {
+  try {
+    await supabasePatch('coach_services', { id: 'eq.' + id }, { is_active: checked });
+    var row = coachServicesRows.find(function (r) { return r.id === id; });
+    if (row) row.is_active = checked;
+    renderCoachServices();
+  } catch (e) {
+    console.error('[coach-services] toggle failed', e);
+    loadCoachServices(); // re-sync from DB on failure
+  }
+}
+
+async function deleteCoachService(id) {
+  var row = coachServicesRows.find(function (r) { return r.id === id; });
+  if (!confirm('Delete "' + ((row && row.title) || 'this service') + '"? This can\'t be undone.')) return;
+  try {
+    await supabaseDelete('coach_services', { id: 'eq.' + id });
+    if (editingCoachServiceId === id) editingCoachServiceId = null;
+    await loadCoachServices();
+  } catch (e) {
+    console.error('[coach-services] delete failed', e);
+    alert('Could not delete the service. Please try again.');
+  }
+}
+
 function setupProfileHandlers() {
   // Headline char count
   $('f-headline').addEventListener('input', function() {
@@ -3554,6 +3750,13 @@ function setupProfileHandlers() {
 
   // Services list: delegate all edit/cancel/save/toggle events to the persistent parent
   setupServicesDelegation();
+
+  // Bookable services (coach_services) — delegate CRUD + wire the add button
+  setupCoachServicesDelegation();
+  $('add-bookable-service-btn').addEventListener('click', function() {
+    editingCoachServiceId = '__new__';
+    renderCoachServices();
+  });
 
   // Add service toggle
   $('toggle-add-service').addEventListener('click', function() {
