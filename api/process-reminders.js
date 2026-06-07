@@ -203,7 +203,10 @@ export default async function handler(req, res) {
       try {
         const sendRes = await fetch(`${origin}/api/post-session-email`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(cronSecret ? { Authorization: `Bearer ${cronSecret}` } : {}),
+          },
           body: JSON.stringify({ booking_id: row.id }),
         });
         const sendData = await sendRes.json().catch(() => ({}));

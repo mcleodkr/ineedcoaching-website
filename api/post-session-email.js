@@ -101,6 +101,17 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
+  // Cron-only — if CRON_SECRET is set in Vercel, require it. The
+  // /api/process-reminders orchestrator forwards `Authorization: Bearer
+  // <CRON_SECRET>` on its internal call. Same pattern as process-reminders.js.
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret) {
+    const auth = req.headers && req.headers.authorization;
+    if (auth !== `Bearer ${cronSecret}`) {
+      return res.status(401).json({ error: 'unauthorized' });
+    }
+  }
+
   const SUPABASE_URL = process.env.SUPABASE_URL || 'https://qroizygknxdjsstkezsf.supabase.co';
   const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SUPABASE_KEY) return res.status(500).json({ error: 'Server not configured' });
