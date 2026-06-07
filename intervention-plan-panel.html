@@ -17,6 +17,8 @@
       --border: #e8e4dc;
       --ink: #1a1a1a;
       --muted: #6b6b60;
+      --r: 10px;
+      --r-sm: 6px;
     }
     * { box-sizing: border-box; }
     body {
@@ -217,9 +219,112 @@
       border-radius: 8px;
       margin-bottom: 18px;
       font-size: 0.92rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
     }
+    #status-banner > span { flex: 1; min-width: 220px; }
     .status-draft { background: rgba(196,154,60,0.1); color: #8a6a20; border: 1px solid rgba(196,154,60,0.4); }
     .status-locked { background: rgba(45,106,79,0.1); color: #1a4a3a; border: 1px solid rgba(45,106,79,0.4); }
+
+    /* "How to read this plan" tutorial — collapsible panel at the top of the
+       plan, toggled by the "?" button on the status bar. Collapsed by default;
+       open/closed state persists in localStorage. */
+    .plan-tutorial-toggle {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--gold);
+      background: none;
+      border: 1px solid rgba(196,154,60,0.4);
+      border-radius: 50px;
+      padding: 4px 12px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: 'DM Sans', sans-serif;
+      white-space: nowrap;
+    }
+    .plan-tutorial-toggle:hover { background: rgba(196,154,60,0.08); border-color: var(--gold); }
+    .plan-tutorial {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    .plan-tutorial-header {
+      background: var(--navy);
+      border-left: 4px solid var(--gold);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .plan-tutorial-header h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin: 0;
+      letter-spacing: 0.01em;
+    }
+    .plan-tutorial-subtitle {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.78rem;
+      font-style: italic;
+      color: rgba(255,255,255,0.72);
+      margin-top: 4px;
+      line-height: 1.45;
+      max-width: 640px;
+    }
+    /* Accordion: animate max-height + padding for a smooth 200ms expand.
+       Collapsed by default; .is-open reveals it. */
+    .plan-tutorial-body {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      max-height: 0;
+      padding: 0 24px;
+      overflow: hidden;
+      transition: max-height 0.2s ease, padding 0.2s ease;
+    }
+    .plan-tutorial.is-open .plan-tutorial-body { max-height: 4000px; padding: 24px; }
+    .plan-tutorial-card {
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 16px 18px;
+    }
+    .plan-tutorial-card .card-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 6px;
+    }
+    .plan-tutorial-card .card-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--navy);
+      margin-bottom: 8px;
+      line-height: 1.2;
+    }
+    .plan-tutorial-card .card-simple {
+      font-size: 0.88rem;
+      color: var(--ink);
+      line-height: 1.55;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .plan-tutorial-card .card-depth {
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.5;
+      font-style: italic;
+    }
     .loader {
       text-align: center;
       padding: 60px 20px;
@@ -285,6 +390,50 @@
     return String(s).replace(/[&<>"']/g, function(c) {
       return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
     });
+  }
+
+  // "How to read this plan" tutorial — exact coach-facing copy (static, trusted;
+  // no user data, no HTML-special chars, so rendered as-is). Each card pairs a
+  // plain-language "simple" line anyone can grasp with an italic "depth" line
+  // for the clinically fluent. Backtick literals keep the apostrophes and
+  // double quotes in the copy intact.
+  const TUTORIAL_CARDS = [
+    { label: `Check first, every session`, title: `What's live in their world right now`, simple: `Think of it like a weather forecast. Before you go outside, you check the weather. Before you coach, you check this. These are the active situations happening in their life TODAY — not their history, not their background — that could affect how much capacity they bring to the session.`, depth: `Live vulnerabilities and behavioral loopholes rated by clinical risk level (high/medium). These are present-tense conditions that modulate capacity and create the context in which all commitments are tested.` },
+    { label: `Your current best theory`, title: `Why they do what they do`, simple: `Think of it like a detective's board. You're not accusing anyone — you're tracking patterns and updating your theory as evidence builds. "Strengthening" means the evidence keeps confirming it. "Testing" means you're still watching. Each hypothesis has a Slow version (the long-term pattern) and a Fast version (what it looks like in real time, mid-session).`, depth: `Pattern formulations derived from session evidence with strength ratings. Dual-speed signals differentiate structural patterns from in-session expressions — the slow-building disposition versus the fast, observable activation.` },
+    { label: `How to orient in the room`, title: `The lens you're coaching through`, simple: `Imagine you're a photographer choosing which lens to put on your camera. Same client, same session — but which angle tells you the most? Each frame gives you a different way to see what's happening. The primary tool is what to try first. The fallback paths are what to do when the client pushes back or the frame doesn't land.`, depth: `Coaching orientation lenses derived from session evidence, each with primary intervention tools and contingent fallback protocols. These are approaches, not techniques — they govern how the coach positions themselves, not just what they say.` },
+    { label: `What they're working on`, title: `The specific things to do between sessions`, simple: `The homework. Observable, trackable, concrete. Not feelings or intentions — actual actions. Did they do it or not? That question opens every relevant session.`, depth: `Behavioral commitments grounded in the pattern formulation, with frequency and context specifications that tie each target to the specific condition it addresses. Behavioral evidence is the primary signal that insight has transferred to real-world capacity.` },
+    { label: `The receipts`, title: `What they said they'd do — and what happened`, simple: `Every commitment they've ever made in a session, and whether they followed through. Open here before you open anything else. The gap between what someone commits to and what they actually do is not a failure — it IS the coaching material.`, depth: `Commitment tracking with status markers. Non-compliance is interpreted as state-dependent capacity data, not skill resistance — what conditions were active when the commitment broke down is more clinically useful than the fact that it did.` },
+    { label: `The journey in chapters`, title: `Where you are, and where this is going`, simple: `Think of it like a book you're reading together. You're in Chapter 1 right now. Chapter 2 builds on it. You don't skip to the end — you read the chapters in order, and each one prepares the client for the next. The stage you're in tells you what the work is RIGHT NOW.`, depth: `Stage-sequenced clinical approach ordered by developmental readiness and pattern stability. Stages are not rigid — they reflect the current evidence base and shift as the client's capacity and the hypotheses evolve.` },
+    { label: `What "working" looks like`, title: `The signs that the coaching is landing`, simple: `Not "they feel better." Not "they liked the session." These are specific, observable things you can actually see and hear — behaviors they do, words they use, moments where something shifts. When you see these, the coaching is working.`, depth: `Observable indicators specific to this client's pattern structure, differentiated by type: behavioral (what they do), internal (what they notice about themselves), and relational (how they move in relationship). Progress is pattern-level, not task-level.` },
+    { label: `Yellow flags`, title: `Early warning signs — and what to do when you see them`, simple: `Not emergencies. Early signals that something is drifting before it becomes a problem. Each one comes with a pre-built response so you're not improvising in the moment. Think of it like a pilot's checklist — you run it before you need it, not after.`, depth: `Pattern-specific risk indicators with clinically grounded response protocols, differentiated by source: session observation (behavioral patterns from transcripts), Coach DNA (the coach's own known biases), and Pattern Map (cross-session pattern signals). The response protocols are contingent — they account for whether the presenting behavior reflects capacity fluctuation or skill resistance.` },
+    { label: `The game plan`, title: `Where the next sessions are headed`, simple: `A hiking trail with known waypoints. You know the direction and the key landmarks — but the path adjusts to conditions. Session 1 (next) is specific. Session 2 is contingent on what happens in Session 1. Further sessions get progressively more directional as the work unfolds.`, depth: `Forward-session planning grounded in current trajectory, with contingent paths based on commitment resolution and emerging session evidence. The arc is not prescriptive — it is a working hypothesis about the most useful direction given what the pattern data currently shows.` },
+    { label: `Your half of the contract`, title: `What YOU committed to for this client`, simple: `The coaching is a two-person system. This is your side of it — what you promised yourself about how to show up for THIS specific person. It's derived from your coaching pattern (Coach DNA) and what this client actually needs from you, which may be different from what you naturally tend to do.`, depth: `Coach-specific commitment derived from Coach DNA and pattern formulation, targeting the coach's identified biases and growth edges in the context of this client's presentation. The commitment is not generic — it names the specific coach behavior most likely to either support or undermine this client's trajectory.` }
+  ];
+
+  function renderPlanTutorial(isOpen) {
+    const cards = TUTORIAL_CARDS.map(function(c) {
+      return '<div class="plan-tutorial-card">'
+        + '<div class="card-label">' + c.label + '</div>'
+        + '<div class="card-title">' + c.title + '</div>'
+        + '<div class="card-simple">' + c.simple + '</div>'
+        + '<div class="card-depth">' + c.depth + '</div>'
+        + '</div>';
+    }).join('');
+    return '<div class="plan-tutorial' + (isOpen ? ' is-open' : '') + '" id="plan-tutorial">'
+      + '<div class="plan-tutorial-header"><div>'
+      +   '<h2>How to read this plan</h2>'
+      +   '<div class="plan-tutorial-subtitle">This plan updates as sessions accumulate. Every section connects to the others — read it as a living document, not a one-time report.</div>'
+      + '</div></div>'
+      + '<div class="plan-tutorial-body">' + cards + '</div>'
+      + '</div>';
+  }
+
+  function togglePlanTutorial() {
+    const panel = document.getElementById('plan-tutorial');
+    if (!panel) return;
+    const open = !panel.classList.contains('is-open');
+    panel.classList.toggle('is-open', open);
+    try { localStorage.setItem('ip_tutorial_open', open ? 'true' : 'false'); } catch (e) { /* private mode */ }
   }
   // Hide synthetic internal emails generated when a coach manually adds a client
   // without an email (pattern: 'manual+...@local.ineedcoaching.org'). Returns ''
@@ -705,12 +854,20 @@
     const round = plan.generation_round || 0;
     const canRevise = isDraft && round < 2;
 
+    const tutorialOpen = (function() { try { return localStorage.getItem('ip_tutorial_open') === 'true'; } catch (e) { return false; } })();
+
     let html = '';
     html += '<div id="status-banner" class="' + (isDraft ? 'status-draft' : 'status-locked') + '">'
-      + (isDraft
+      + '<span>' + (isDraft
           ? 'Draft · round ' + round + ' of up to 2 revisions'
           : 'Locked · your commitment statement, prior commitment statuses, and per-section coach notes are editable. For larger changes, click Regenerate from latest sessions to create a new version.')
+      + '</span>'
+      + '<button type="button" id="plan-tutorial-toggle" class="plan-tutorial-toggle">? How to read this</button>'
       + '</div>';
+
+    // "How to read this plan" tutorial — between the status bar and the first
+    // section. Collapsed by default; state persisted in localStorage.
+    html += renderPlanTutorial(tutorialOpen);
 
     if (canRevise) {
       html += '<div class="revision-prompt">'
@@ -743,6 +900,10 @@
     }
 
     $('content').innerHTML = html;
+
+    // Wire the tutorial toggle (the DOM is rebuilt wholesale each render).
+    const tutorialToggleBtn = $('plan-tutorial-toggle');
+    if (tutorialToggleBtn) tutorialToggleBtn.onclick = togglePlanTutorial;
 
     if (canRevise || (isDraft && round === 2)) {
       const lockBtn = $('lock-btn');
