@@ -2477,6 +2477,11 @@ let currentToken = null;
 let currentUser = null;
 let coachProfile = null;
 var notesByBooking = {};
+// Per-booking intake + check-in lookups for the client detail view, keyed by
+// booking_id. Populated in openClientDetail and read by populatePreSessionPrep
+// so the Pre-Session Prep tab can show the data that feeds generation inline.
+var clientIntakeByBooking = {};
+var clientCheckinByBooking = {};
 
 // "Building your practice" widget — surfaces 6 most-recent coach articles on the Clients tab
 async function loadCoachArticlesWidget() {
@@ -7712,7 +7717,7 @@ async function openClientDetail(email) {
     var results = await Promise.all([
       supabaseGet('coach_goals?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&order=created_at.desc&select=*'),
       supabaseGet('coach_intake_responses?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&order=created_at.desc&select=*'),
-      supabaseGet('coach_checkin_responses?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&submitted_at=not.is.null&order=created_at.desc&select=*'),
+      supabaseGet('coach_checkin_responses?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&order=created_at.desc&select=*'),
       supabaseGet('coach_messages?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&order=created_at.asc&select=*'),
       supabaseGet('coach_session_notes?coach_id=eq.' + cid + '&client_email=eq.' + encodeURIComponent(email) + '&select=*'),
       supabaseGet('coach_intake_forms?coach_id=eq.' + cid + '&form_type=eq.checkin&select=id,name'),
@@ -7768,6 +7773,28 @@ async function openClientDetail(email) {
 
     notesByBooking = {};
     sessionNotes.forEach(function(n) { notesByBooking[n.booking_id] = n; });
+
+    // Per-booking lookups for inline Pre-Session Prep context. Intake is one
+    // row per booking. Check-ins: a row exists from send time (submitted_at
+    // null until the client responds); when multiple rows share a booking,
+    // prefer the submitted one. Resolve the form name from checkinForms now,
+    // while it's in scope.
+    var checkinFormName = {};
+    (checkinForms || []).forEach(function(f) { if (f && f.id) checkinFormName[f.id] = f.name; });
+    clientIntakeByBooking = {};
+    bookingIntake.forEach(function(r) { if (r && r.booking_id) clientIntakeByBooking[r.booking_id] = r; });
+    clientCheckinByBooking = {};
+    (checkinResponses || []).forEach(function(r) {
+      if (!r || !r.booking_id) return; // orphaned (unlinked) rows are not session-scoped
+      var existing = clientCheckinByBooking[r.booking_id];
+      if (!existing || (!existing.submitted_at && r.submitted_at)) {
+        clientCheckinByBooking[r.booking_id] = {
+          formName: checkinFormName[r.form_id] || 'Pre-session check-in',
+          submitted_at: r.submitted_at || null,
+          responses: r.responses
+        };
+      }
+    });
 
     renderClientDetail(client, goals, intakeFeed, checkinResponses, messages, notesByBooking, checkinForms, officialHomework);
   } catch(e) {
@@ -8035,50 +8062,13 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
     + '</div>'
     + '</div>';
 
-  // Section 2: Intake Responses (legacy custom forms + new per-booking
-  // intakes, merged & sorted newest first by the data-fetch step above).
-  html += '<div class="form-section" style="margin-bottom:24px;">'
-    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;">Intake Responses</h2>';
-  if (!intakeFeed.length) {
-    html += '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;">No intake form submitted yet</p>';
-  } else {
-    intakeFeed.forEach(function(entry) {
-      var dateStr = entry.date ? new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-      var srcLabel = entry.source === 'booking' ? 'Pre-session intake' : 'Custom intake form';
-      html += '<details style="background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px 20px;margin-bottom:8px;">'
-        + '<summary style="font-size:0.88rem;font-weight:700;color:var(--ink);cursor:pointer;">' + escapeHtml(srcLabel) + ' — ' + escapeHtml(dateStr) + ' <span style="font-size:0.78rem;color:var(--muted);font-weight:400;">(' + entry.items.length + ' answers)</span></summary>'
-        + '<div style="margin-top:12px;">';
-      entry.items.forEach(function(item) {
-        html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">'
-          + '<div style="font-weight:600;font-size:0.82rem;color:var(--ink);margin-bottom:2px;">' + escapeHtml(item.label) + '</div>'
-          + '<div style="font-size:0.88rem;color:var(--muted);">' + escapeHtml(String(item.value)) + '</div></div>';
-      });
-      html += '</div></details>';
-    });
-  }
-  html += '</div>';
-
-  // Section 3: Check-in History
-  html += '<div class="form-section" style="margin-bottom:24px;">'
-    + '<h2 class="form-section-title" style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;">Pre-Session Check-ins</h2>';
-  if (!checkinResponses.length) {
-    html += '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;">No check-ins yet</p>';
-  } else {
-    checkinResponses.forEach(function(r) {
-      var resps = Array.isArray(r.responses) ? r.responses : [];
-      var dateStr = (r.submitted_at || r.created_at) ? new Date(r.submitted_at || r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-      html += '<details style="background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px 20px;margin-bottom:8px;">'
-        + '<summary style="font-size:0.88rem;font-weight:700;color:var(--ink);cursor:pointer;">Check-in — ' + escapeHtml(dateStr) + ' <span style="font-size:0.78rem;color:var(--muted);font-weight:400;">(' + resps.length + ' answers)</span></summary>'
-        + '<div style="margin-top:12px;">';
-      resps.forEach(function(resp) {
-        html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">'
-          + '<div style="font-weight:600;font-size:0.82rem;color:var(--ink);margin-bottom:2px;">' + escapeHtml(resp.question || '') + '</div>'
-          + '<div style="font-size:0.88rem;color:var(--muted);">' + escapeHtml(String(resp.answer || '')) + '</div></div>';
-      });
-      html += '</div></details>';
-    });
-  }
-  html += '</div>';
+  // Intake Responses + Pre-Session Check-ins flat sections removed: the same
+  // per-booking intake and check-in data now surfaces inline inside each
+  // session's Pre-Session Prep tab (see populatePreSessionPrep), where it
+  // informs the generation decision. The old aggregate lists were redundant
+  // noise. Orphan audit before removal: 0 submitted check-ins and 0 intakes
+  // lack a booking_id, so nothing previously visible is hidden by removing
+  // these (the flat check-in list only ever showed submitted rows).
 
   // Section 4: Goals
   html += '<div class="form-section" style="margin-bottom:24px;">'
@@ -9862,6 +9852,80 @@ async function generatePreSessionBrief(clientEmail, bookingId, container) {
   }
 }
 
+// Pre-Session Prep context block. Surfaces the intake answers and check-in
+// responses linked to this booking inline, above the Generate button, so the
+// coach sees what feeds generation before deciding to run it. Reads the
+// per-booking lookups built in openClientDetail. Returns '' when neither
+// intake nor check-in exists for the booking (caller then shows only the
+// generate prompt + button, unchanged).
+function buildPreSessionContextHtml(bookingId) {
+  var intake = (typeof clientIntakeByBooking !== 'undefined' && clientIntakeByBooking) ? clientIntakeByBooking[bookingId] : null;
+  var checkin = (typeof clientCheckinByBooking !== 'undefined' && clientCheckinByBooking) ? clientCheckinByBooking[bookingId] : null;
+  if (!intake && !checkin) return '';
+
+  var dash = '&mdash;';
+  var labelStyle = "font-family:'DM Sans',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;";
+  var qStyle = "font-size:0.8rem;font-weight:600;color:var(--ink);margin:0 0 3px;";
+  var aBoxStyle = "background:var(--cream);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:0.86rem;color:var(--navy);line-height:1.5;white-space:pre-wrap;";
+  function answer(v) {
+    var s = (v == null) ? '' : String(v).trim();
+    return s ? escapeHtml(s) : dash;
+  }
+
+  var html = '<div style="text-align:left;margin:0 0 4px;">';
+
+  if (intake) {
+    html += '<div style="margin-bottom:20px;">'
+      + '<div style="' + labelStyle + '">Booking intake</div>'
+      + '<div style="border-top:1px solid var(--border);padding-top:14px;">';
+    [
+      ['What brings you to coaching now?', intake.brings_to_coaching],
+      ['What does success look like in 90 days?', intake.success_90_days],
+      ['What has gotten in your way before?', intake.gotten_in_way]
+    ].forEach(function(p) {
+      html += '<div style="margin-bottom:12px;"><div style="' + qStyle + '">' + escapeHtml(p[0]) + '</div>'
+        + '<div style="' + aBoxStyle + '">' + answer(p[1]) + '</div></div>';
+    });
+    var focus = (intake.focus_area == null || String(intake.focus_area).trim() === '') ? dash : escapeHtml(String(intake.focus_area));
+    var urgency = (intake.urgency_scale == null) ? dash : escapeHtml(String(intake.urgency_scale)) + ' / 10';
+    html += '<div style="font-size:0.82rem;color:var(--navy);margin-bottom:12px;">'
+      + '<strong style="color:var(--ink);">Focus area:</strong> ' + focus
+      + '<span style="display:inline-block;width:22px;"></span>'
+      + '<strong style="color:var(--ink);">Urgency:</strong> ' + urgency + '</div>';
+    html += '<div><div style="' + qStyle + '">Anything else your coach should know?</div>'
+      + '<div style="' + aBoxStyle + '">' + answer(intake.anything_else) + '</div></div>';
+    html += '</div></div>';
+  }
+
+  if (checkin) {
+    html += '<div style="margin-bottom:4px;">'
+      + '<div style="' + labelStyle + '">' + escapeHtml(checkin.formName || 'Pre-session check-in') + '</div>'
+      + '<div style="border-top:1px solid var(--border);padding-top:14px;">';
+    if (!checkin.submitted_at) {
+      html += '<div style="font-size:0.82rem;font-style:italic;color:var(--muted);">Awaiting client response</div>';
+    } else {
+      // responses may be an array of {question, answer} or an object map.
+      var resps = Array.isArray(checkin.responses)
+        ? checkin.responses
+        : (checkin.responses && typeof checkin.responses === 'object'
+            ? Object.keys(checkin.responses).map(function(k) { return { question: k, answer: checkin.responses[k] }; })
+            : []);
+      if (!resps.length) {
+        html += '<div style="font-size:0.82rem;font-style:italic;color:var(--muted);">Submitted &mdash; no answers recorded</div>';
+      } else {
+        resps.forEach(function(resp) {
+          html += '<div style="margin-bottom:12px;"><div style="' + qStyle + '">' + escapeHtml(resp.question || '') + '</div>'
+            + '<div style="' + aBoxStyle + '">' + answer(resp.answer) + '</div></div>';
+        });
+      }
+    }
+    html += '</div></div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
 // Pre-Session Prep tab populate. Renders the persisted brief if present,
 // otherwise an empty-state with a Generate button. Called from both the
 // session-expand handler (initial open) and the stab click handler (tab
@@ -9880,7 +9944,8 @@ function populatePreSessionPrep(sid, clientEmail) {
     return;
   }
   if (!container.innerHTML.trim()) {
-    container.innerHTML = '<div style="text-align:center;padding:36px 16px;">'
+    container.innerHTML = buildPreSessionContextHtml(sid)
+      + '<div style="text-align:center;padding:36px 16px;">'
       + '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:var(--muted);line-height:1.55;margin:0 auto 18px;max-width:420px;">Run Coach Clarity on this session’s context to surface patterns, strategy, and the opening question to walk in with.</p>'
       + '<button class="btn-primary gen-pre-session-tab-btn" data-sid="' + sid + '" data-client-email="' + escapeHtml(clientEmail || '') + '">Generate Pre-Session Intelligence</button>'
       + '</div>';
