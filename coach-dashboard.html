@@ -7919,6 +7919,7 @@ async function openClientDetail(email) {
       if (!existing || (!existing.submitted_at && r.submitted_at)) {
         clientCheckinByBooking[r.booking_id] = {
           formName: checkinFormName[r.form_id] || 'Pre-session check-in',
+          sent_at: r.created_at || null,
           submitted_at: r.submitted_at || null,
           responses: r.responses
         };
@@ -8376,17 +8377,47 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
 
   // Messages section moved up directly under the header card (Fix 5).
 
-  // Section 6: Send Check-in
+  // Section 6: Send Check-in. Session-aware — this sender attaches the check-in
+  // to the most recent confirmed/manual booking (the same one the handler uses),
+  // so we surface which session it targets and warn when a check-in already went
+  // out for that booking. The booking id is pinned to the button's dataset so the
+  // label the coach reads and the booking the handler sends to can't drift apart.
   if (checkinForms.length) {
-    html += clientPanelOpen('Send Check-in')
-      + '<div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">'
+    var ciTarget = client.sessions.find(function(s) { return s.status === 'confirmed' || s.status === 'manual'; }) || null;
+    var ciTargetLabel = '';
+    if (ciTarget && ciTarget.scheduled_at) {
+      var ciDt = new Date(ciTarget.scheduled_at);
+      if (!isNaN(ciDt.getTime())) {
+        ciTargetLabel = ciDt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+          + ' · ' + ciDt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      }
+    }
+    var ciExisting = (ciTarget && typeof clientCheckinByBooking !== 'undefined' && clientCheckinByBooking) ? clientCheckinByBooking[ciTarget.id] : null;
+    var ciSentLabel = '';
+    if (ciExisting && ciExisting.sent_at) {
+      var ciSd = new Date(ciExisting.sent_at);
+      if (!isNaN(ciSd.getTime())) ciSentLabel = ciSd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    html += clientPanelOpen('Send Check-in');
+    if (ciTarget) {
+      html += '<div style="font-size:0.82rem;color:var(--navy);margin-bottom:' + (ciExisting ? '8px' : '16px') + ';">'
+        + '<strong style="color:var(--ink);">Will send for:</strong> ' + escapeHtml(ciTargetLabel || 'most recent session') + '</div>';
+      if (ciExisting) {
+        html += '<div style="display:flex;align-items:flex-start;gap:6px;font-size:0.8rem;color:#8a6a25;background:rgba(196,154,60,0.12);border:1px solid rgba(196,154,60,0.35);border-radius:8px;padding:8px 12px;margin-bottom:16px;line-height:1.45;">'
+          + '<span>&#9888;</span><span>A check-in was already sent for this session' + (ciSentLabel ? ' on ' + escapeHtml(ciSentLabel) : '') + '. Sending again will create a second request.</span></div>';
+      }
+    } else {
+      html += '<div style="font-size:0.82rem;color:var(--muted);font-style:italic;margin-bottom:16px;">No confirmed session yet &mdash; this check-in won&rsquo;t be linked to a specific session.</div>';
+    }
+    html += '<div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">'
       + '<div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;"><label for="client-checkin-form">Check-in Form</label>'
       + '<select id="client-checkin-form"><option value="">Select a form...</option>';
     checkinForms.forEach(function(f) {
       html += '<option value="' + f.id + '">' + escapeHtml(f.name || 'Untitled') + '</option>';
     });
     html += '</select></div>'
-      + '<button class="save-btn" id="client-send-checkin-btn" data-client-email="' + escapeHtml(client.email) + '" data-client-name="' + escapeHtml(client.name) + '" style="padding:10px 20px;font-size:0.82rem;background:var(--gold);">Send Check-in</button>'
+      + '<button class="save-btn" id="client-send-checkin-btn" data-client-email="' + escapeHtml(client.email) + '" data-client-name="' + escapeHtml(client.name) + '" data-booking-id="' + escapeHtml(ciTarget ? String(ciTarget.id) : '') + '" style="padding:10px 20px;font-size:0.82rem;background:var(--gold);">Send Check-in</button>'
       + '</div>'
       + '<div id="client-checkin-msg" style="margin-top:8px;font-size:0.82rem;"></div>'
       + clientPanelClose();
@@ -9203,9 +9234,10 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
       if (!formId) { alert('Select a form first.'); return; }
       this.disabled = true;
       this.textContent = 'Sending...';
-      // Use most recent confirmed booking for bookingId
-      var latestBooking = client.sessions.find(function(s) { return s.status === 'confirmed' || s.status === 'manual'; });
-      var bookingId = latestBooking ? latestBooking.id : null;
+      // Booking id is pinned to the button's dataset at render time (the
+      // session shown in "Will send for:"), so the send targets exactly the
+      // booking the coach was shown. Empty dataset means no confirmed session.
+      var bookingId = this.dataset.bookingId ? this.dataset.bookingId : null;
       console.log('[ClientsTab] formId:', formId, 'bookingId:', bookingId, 'clientEmail:', client.email);
       try {
         var res = await fetch('/api/send-checkin', {
@@ -10022,6 +10054,11 @@ function buildPreSessionContextHtml(bookingId) {
     var s = (v == null) ? '' : String(v).trim();
     return s ? escapeHtml(s) : dash;
   }
+  function fmtDate(v) {
+    if (!v) return '';
+    var d = new Date(v);
+    return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
 
   var html = '<div style="text-align:left;margin:0 0 4px;">';
 
@@ -10049,12 +10086,19 @@ function buildPreSessionContextHtml(bookingId) {
   }
 
   if (checkin) {
+    var sentStr = fmtDate(checkin.sent_at);
     html += '<div style="margin-bottom:4px;">'
       + '<div style="' + labelStyle + '">' + escapeHtml(checkin.formName || 'Pre-session check-in') + '</div>'
       + '<div style="border-top:1px solid var(--border);padding-top:14px;">';
-    if (!checkin.submitted_at) {
-      html += '<div style="font-size:0.82rem;font-style:italic;color:var(--muted);">Awaiting client response</div>';
-    } else {
+    // Explicit "Check-in sent" status so the coach can see at a glance that one
+    // already went out for this booking and avoid sending a duplicate.
+    html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;">'
+      + '<span style="display:inline-flex;align-items:center;gap:5px;font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#2d6a4f;background:rgba(45,106,79,0.1);border:1px solid rgba(45,106,79,0.25);border-radius:50px;padding:3px 10px;">&#10003; Check-in sent' + (sentStr ? ' &middot; ' + escapeHtml(sentStr) : '') + '</span>'
+      + (checkin.submitted_at
+          ? '<span style="font-size:0.78rem;color:var(--muted);">Client responded ' + escapeHtml(fmtDate(checkin.submitted_at)) + '</span>'
+          : '<span style="font-size:0.78rem;font-style:italic;color:var(--muted);">Awaiting client response</span>')
+      + '</div>';
+    if (checkin.submitted_at) {
       // responses may be an array of {question, answer} or an object map.
       var resps = Array.isArray(checkin.responses)
         ? checkin.responses
