@@ -402,6 +402,7 @@ a { color: var(--navy); text-decoration: none; }
           <h2 id="welcome-heading">Welcome back</h2>
           <div class="prompt">Your coaching space — everything from your sessions in one place.</div>
           <div class="welcome-meta" id="welcome-meta"></div>
+          <div class="welcome-coach" id="coach-connection" style="margin-top:14px;font-size:0.88rem;"></div>
         </div>
 
         <!-- GROWTH HOST -->
@@ -857,6 +858,11 @@ async function init() {
     return;
   }
 
+  // Phase 5: if the visitor arrived from a coach profile's "Connect" button
+  // (or is a brand-new signup), attach them to that coach before the coach-
+  // dependent renders run, so the dashboard resolves the new coach immediately.
+  await handleConnectCoachParam();
+
   $('nav-email').textContent = currentEmail;
   $('sign-out').addEventListener('click', signOutHard);
   $('hamburger').addEventListener('click', function() { $('sidebar').classList.toggle('open'); });
@@ -865,6 +871,7 @@ async function init() {
   await loadClientProfile();
   await Promise.all([loadSessions(), loadSessionNotesCache()]);
   renderWelcome();
+  renderCoachConnection();
   renderGrowthCard();
   renderProgressAndContinuity();
   $('loading-main').style.display = 'none';
@@ -1134,6 +1141,65 @@ function setupSidebar() {
 /* ================================================
    WELCOME CARD
    ================================================ */
+// Phase 5: show the active coach (even with no bookings) + a switch/find link.
+async function renderCoachConnection() {
+  var el = $('coach-connection');
+  if (!el) return;
+  try {
+    var res = await fetch(SUPABASE_URL
+      + '/rest/v1/coach_clients?status=eq.active&limit=1&select=coach_profiles(display_name,full_name,slug)',
+      { headers: apiHeaders() });
+    var rows = res.ok ? await res.json().catch(function() { return []; }) : [];
+    var prof = rows && rows[0] && rows[0].coach_profiles;
+    if (prof) {
+      var nm = prof.display_name || prof.full_name || 'your coach';
+      el.innerHTML = '<span style="color:var(--muted);">Your coach:</span> <strong>' + escapeHtml(nm) + '</strong>'
+        + ' <a href="/coaches" style="margin-left:10px;color:var(--gold,#c49a3c);font-weight:600;text-decoration:none;">Switch coach</a>';
+    } else {
+      el.innerHTML = '<span style="color:var(--muted);">You’re not connected to a coach yet.</span>'
+        + ' <a href="/coaches" style="margin-left:8px;color:var(--gold,#c49a3c);font-weight:600;text-decoration:none;">Find your coach &rarr;</a>';
+    }
+  } catch (e) { el.innerHTML = ''; }
+}
+
+// Phase 5: arriving from a coach profile's "Connect" (or a fresh signup) carries
+// ?connect_coach=<id>; attach the now-signed-in client to that coach.
+async function handleConnectCoachParam() {
+  var params = new URLSearchParams(window.location.search);
+  var coachId = params.get('connect_coach');
+  if (!coachId) return;
+  params.delete('connect_coach'); // strip so a refresh doesn't re-fire
+  var qs = params.toString();
+  try { history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : '')); } catch (e) {}
+  try {
+    var res = await fetch('/api/connect-coach', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+      body: JSON.stringify({ coach_id: coachId })
+    });
+    var data = await res.json().catch(function() { return {}; });
+    assignedCoachEmailCache = undefined; // force re-resolve of the active coach
+    showConnectToast(
+      (data && data.ok)
+        ? (data.action === 'switched' ? 'You’ve switched coaches.'
+            : (data.action === 'already_active' ? 'This is already your coach.' : 'You’re connected with your coach.'))
+        : ((data && data.error) || 'Could not connect to that coach.')
+    );
+  } catch (e) {
+    showConnectToast('Could not connect to that coach.');
+  }
+}
+
+function showConnectToast(msg) {
+  try {
+    var t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1a3a52;color:#fff;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;padding:12px 22px;border-radius:50px;box-shadow:0 6px 20px rgba(0,0,0,0.18);z-index:1000;';
+    document.body.appendChild(t);
+    setTimeout(function() { t.style.transition = 'opacity 0.4s'; t.style.opacity = '0'; setTimeout(function() { t.remove(); }, 400); }, 3200);
+  } catch (e) {}
+}
+
 function renderWelcome() {
   const name = (clientProfile && (clientProfile.display_name || clientProfile.full_name || clientProfile.name)) || '';
   $('welcome-heading').textContent = 'Welcome back, ' + firstName(name || currentEmail);

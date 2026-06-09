@@ -294,6 +294,7 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 300; display: flex; a
       <div class="hero-specialties" id="hero-specialties"></div>
       <div class="hero-buttons">
         <a href="#booking" class="btn-gold" id="hero-book-btn">Book a Session</a>
+        <button type="button" class="btn-outline" id="hero-connect-btn">Connect with this coach</button>
         <a href="#services" class="btn-outline">View Services</a>
       </div>
     </div>
@@ -512,6 +513,13 @@ async function loadProfile() {
 
     renderProfile(coachData, services, testimonials, recommendations, courses, articles);
 
+    // Phase 5: wire "Connect with this coach". Connecting needs a signed-in
+    // client; this page runs on the anon key, so a logged-out visitor is handed
+    // to the client dashboard (which owns magic-link sign-in) and auto-connected
+    // on return via ?connect_coach=.
+    var connectBtn = document.getElementById('hero-connect-btn');
+    if (connectBtn) connectBtn.addEventListener('click', connectToCoach);
+
     // Update hero book button for calendly
     if (coachData.calendly_url && coachData.calendly_url.trim()) {
       const heroBtn = document.getElementById('hero-book-btn');
@@ -529,6 +537,45 @@ async function loadProfile() {
 function showError() {
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('error').classList.remove('hidden');
+}
+
+// Phase 5: attach the signed-in client to this coach (or switch them to it).
+function connectToCoach() {
+  if (!coachData || !coachData.id) return;
+  var btn = document.getElementById('hero-connect-btn');
+  var token = '';
+  try { token = localStorage.getItem('sb_access_token') || ''; } catch (e) {}
+  var handoff = '/client-dashboard?connect_coach=' + encodeURIComponent(coachData.id);
+  if (!token) { window.location.href = handoff; return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Connecting…'; }
+  fetch('/api/connect-coach', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ coach_id: coachData.id })
+  }).then(function(r) {
+    if (r.status === 401) { window.location.href = handoff; return null; } // stale token -> re-auth via dashboard
+    return r.json().catch(function() { return {}; });
+  }).then(function(data) {
+    if (!data) return;
+    if (data.ok) {
+      if (btn) { btn.textContent = data.action === 'already_active' ? 'Already your coach ✓' : 'Connected ✓'; }
+      var hero = document.querySelector('.hero-buttons');
+      if (hero && !document.getElementById('connect-confirm')) {
+        var div = document.createElement('div');
+        div.id = 'connect-confirm';
+        div.style.cssText = 'margin-top:14px;font-family:\'DM Sans\',sans-serif;font-size:0.92rem;color:#1a3a52;';
+        div.innerHTML = (data.action === 'switched' ? 'You’ve switched to this coach. ' : 'You’re connected with this coach. ')
+          + '<a href="/client-dashboard" style="color:#c49a3c;font-weight:600;text-decoration:none;">Open your coaching space &rarr;</a>';
+        hero.parentNode.insertBefore(div, hero.nextSibling);
+      }
+    } else {
+      if (btn) { btn.disabled = false; btn.textContent = 'Connect with this coach'; }
+      alert((data && data.error) || 'Could not connect. Please try again.');
+    }
+  }).catch(function() {
+    if (btn) { btn.disabled = false; btn.textContent = 'Connect with this coach'; }
+    alert('Could not connect. Please try again.');
+  });
 }
 
 function renderProfile(coach, services, testimonials, recommendations, courses, articles) {
