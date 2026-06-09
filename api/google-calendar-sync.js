@@ -44,7 +44,16 @@ function sbHeaders(extra) {
 // the coach when the credential itself is the problem.
 function isAuthDead(message) {
   const m = String(message || '');
-  return /\b401\b/.test(m) || /invalid_grant/i.test(m) || /No refresh token/i.test(m);
+  return (
+    /\b401\b/.test(m) ||
+    /invalid_grant/i.test(m) ||
+    /No refresh token/i.test(m) ||
+    // A refresh-grant rejection (the helper throws "refresh failed: ...") means
+    // the stored Google grant itself is dead — config errors are thrown earlier
+    // with a different message ("Google Calendar not configured"), so this only
+    // fires on an actual Google rejection of the refresh token.
+    /refresh failed/i.test(m)
+  );
 }
 
 async function patchBooking(bookingId, body) {
