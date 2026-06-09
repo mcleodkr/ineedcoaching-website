@@ -68,7 +68,7 @@ export default async function handler(req, res) {
     const coachName = coach.display_name || 'Your Coach';
     const serviceName = booking.service_name || 'Coaching Session';
     const sessionDate = booking.scheduled_at
-      ? new Date(booking.scheduled_at).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' })
+      ? new Date(booking.scheduled_at).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: coach.timezone || 'America/Chicago' })
       : 'TBD';
     const notes = booking.notes || 'None';
 

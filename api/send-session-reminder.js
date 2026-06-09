@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     const soon = new Date(now.getTime() + 25 * 60 * 60 * 1000);
 
     const bookingsRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/coach_bookings?status=eq.confirmed&scheduled_at=gte.${now.toISOString()}&scheduled_at=lte.${soon.toISOString()}&select=id,client_phone,client_email,scheduled_at,coach_id`,
+      `${SUPABASE_URL}/rest/v1/coach_bookings?status=eq.confirmed&scheduled_at=gte.${now.toISOString()}&scheduled_at=lte.${soon.toISOString()}&select=id,client_phone,client_email,scheduled_at,coach_id,coach_profiles(timezone)`,
       { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
     );
     const bookings = await bookingsRes.json();
@@ -35,8 +35,13 @@ export default async function handler(req, res) {
       // Send 24-hour reminder (between 23-25 hours)
       // Send 1-hour reminder (between 0.5-1.5 hours)
       let message = null;
+      // Render the session time in the coach's timezone (the timezone the slot
+      // was booked in); the Vercel runtime is UTC, so an unzoned format would be
+      // off by the offset. Client-local tz isn't stored, so coach-local is the
+      // correct, consistent reference — matching every other notification.
+      const tz = (booking.coach_profiles && booking.coach_profiles.timezone) || 'America/Chicago';
       if (hoursUntil >= 23 && hoursUntil <= 25) {
-        message = `Reminder: You have a coaching session tomorrow at ${sessionTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}. — ineedcoaching.org`;
+        message = `Reminder: You have a coaching session tomorrow at ${sessionTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: tz })}. — ineedcoaching.org`;
       } else if (hoursUntil >= 0.5 && hoursUntil <= 1.5) {
         message = `Your coaching session starts in about 1 hour. See you soon! — ineedcoaching.org`;
       }
