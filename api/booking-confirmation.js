@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     if (!booking_id) return res.status(400).json({ error: 'Missing booking_id' });
 
     const bRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/coach_bookings?id=eq.${booking_id}&select=*,coach_profiles(display_name,user_email,zoom_meeting_link,zoom_oauth_enabled,slug,timezone),coach_services(title,duration)`,
+      `${SUPABASE_URL}/rest/v1/coach_bookings?id=eq.${booking_id}&select=*,coach_profiles(display_name,user_email,zoom_meeting_link,zoom_oauth_enabled,slug,timezone,coach_phone,booking_sms_alerts_enabled),coach_services(title,duration)`,
       { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
     );
     const bookings = await bRes.json();
@@ -271,6 +271,39 @@ export default async function handler(req, res) {
     const coachResult = emailResults[1];
     if (coachResult.status === 'rejected') console.error('Coach email failed:', coachResult.reason);
 
+    // Best-effort: text the coach about the new booking when they've opted in
+    // (booking_sms_alerts_enabled + a destination coach_phone). Never blocks or
+    // fails the confirmation response — Twilio errors are logged only. Time is
+    // formatted in the coach's timezone (Vercel runtime is UTC).
+    try {
+      const TWILIO_SID = process.env.TWILIO_ACCOUNT_SID;
+      const TWILIO_AUTH = process.env.TWILIO_AUTH_TOKEN;
+      const TWILIO_PHONE = process.env.TWILIO_PHONE_NUMBER;
+      if (coach.booking_sms_alerts_enabled && coach.coach_phone && TWILIO_SID && TWILIO_AUTH && TWILIO_PHONE) {
+        const toPhone = toE164(coach.coach_phone);
+        if (!toPhone) {
+          console.warn('Coach booking SMS skipped: unparseable coach_phone for', coach.user_email);
+        } else {
+          const tz = coach.timezone || 'America/Chicago';
+          const when = booking.scheduled_at ? new Date(booking.scheduled_at) : null;
+          const smsDate = when ? when.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: tz }) : 'TBD';
+          const smsTime = when ? when.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: tz }) : '';
+          const smsBody = `New booking: ${clientName} — ${serviceName} on ${smsDate}${smsTime ? ` at ${smsTime}` : ''}. ineedcoaching.org/coach-dashboard`;
+          const twRes = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${TWILIO_SID}/Messages.json`, {
+            method: 'POST',
+            headers: {
+              Authorization: 'Basic ' + Buffer.from(`${TWILIO_SID}:${TWILIO_AUTH}`).toString('base64'),
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({ To: toPhone, From: TWILIO_PHONE, Body: smsBody })
+          });
+          if (!twRes.ok) console.error('Coach booking SMS failed:', twRes.status, await twRes.text().catch(() => ''));
+        }
+      }
+    } catch (smsErr) {
+      console.error('Coach booking SMS error:', smsErr.message);
+    }
+
     return res.status(200).json({
       sent: true,
       to: booking.client_email,
@@ -284,4 +317,17 @@ export default async function handler(req, res) {
     console.error('booking-confirmation error:', e);
     return res.status(500).json({ error: e.message });
   }
+}
+
+// Normalize a phone number to E.164 for Twilio. US 10-digit -> +1NXXNXXXXXX,
+// 11-digit leading 1 -> +1..., an existing '+' is trusted (non-digits stripped);
+// returns null when the number can't be coerced so the caller skips the send.
+function toE164(raw) {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  if (s.startsWith('+')) return s.replace(/[^\d+]/g, '');
+  const digits = s.replace(/\D/g, '');
+  if (digits.length === 10) return '+1' + digits;
+  if (digits.length === 11 && digits[0] === '1') return '+' + digits;
+  return null;
 }

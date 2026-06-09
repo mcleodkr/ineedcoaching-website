@@ -1782,6 +1782,26 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
           </select>
           <p style="font-size:0.78rem;color:var(--muted);margin-top:6px;">Clients can override this on a per-booking basis.</p>
         </div>
+
+        <!-- New booking alerts — texts the coach when a client confirms a
+             booking. Persisted via the same Save button below; columns
+             coach_phone + booking_sms_alerts_enabled on coach_profiles. -->
+        <div style="margin-top:24px;padding-top:18px;border-top:1px solid var(--border);">
+          <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:1.05rem;font-weight:700;color:var(--ink);margin-bottom:8px;">New booking alerts</div>
+          <p style="font-size:0.82rem;color:var(--muted);margin-bottom:14px;line-height:1.6;">Get a text the moment a client confirms a booking with you. Requires the platform Twilio account to be configured.</p>
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin-bottom:14px;">
+            <input type="checkbox" id="f-booking-sms-alerts-enabled" style="width:18px;height:18px;accent-color:var(--gold);margin-top:3px;flex-shrink:0;">
+            <div>
+              <div style="font-weight:700;font-size:0.92rem;color:var(--ink);">Text me on each new booking</div>
+              <div style="font-size:0.8rem;color:var(--muted);">Off by default.</div>
+            </div>
+          </label>
+          <div class="form-group" id="booking-sms-phone-row">
+            <label for="f-coach-phone">Your mobile number (for alerts)</label>
+            <input type="tel" id="f-coach-phone" placeholder="+1 832 555 0100" autocomplete="tel">
+            <p style="font-size:0.78rem;color:var(--muted);margin-top:6px;">Where alerts are sent — separate from any sending number. US numbers are accepted with or without the country code.</p>
+          </div>
+        </div>
         <button class="save-btn" id="save-reminder-settings-btn">Save Reminder Settings</button>
         <span class="save-msg" id="save-reminder-settings-msg">Saved</span>
 
@@ -4589,6 +4609,12 @@ function loadScheduling() {
     var defTiming = parseInt(p.sms_reminder_default_timing, 10);
     smsDefaultTimingEl.value = (defTiming === 15 || defTiming === 30) ? String(defTiming) : '30';
   }
+  // New booking alerts (coach_phone + booking_sms_alerts_enabled) seed from the
+  // same select=* coach profile and persist through saveReminderSettings.
+  var bookingSmsEl = $('f-booking-sms-alerts-enabled');
+  var coachPhoneEl = $('f-coach-phone');
+  if (bookingSmsEl) bookingSmsEl.checked = !!p.booking_sms_alerts_enabled;
+  if (coachPhoneEl) coachPhoneEl.value = p.coach_phone || '';
   var saveReminderBtn = $('save-reminder-settings-btn');
   if (saveReminderBtn) saveReminderBtn.onclick = saveReminderSettings;
 
@@ -5729,6 +5755,10 @@ async function saveReminderSettings() {
     var lcHours = Math.max(1, parseInt(($('f-late-cancel-hours') && $('f-late-cancel-hours').value) || '24', 10) || 24);
     var lcType = ($('f-late-cancel-type') && $('f-late-cancel-type').value) || 'percentage';
     var lcAmount = Math.max(0, parseFloat(($('f-late-cancel-amount') && $('f-late-cancel-amount').value) || '50') || 0);
+    // New booking alerts. Phone stored as entered (trimmed); the confirmation
+    // endpoint normalizes to E.164 at send time. Empty clears the number.
+    var bookingSmsEnabled = !!($('f-booking-sms-alerts-enabled') && $('f-booking-sms-alerts-enabled').checked);
+    var coachPhoneRaw = (($('f-coach-phone') && $('f-coach-phone').value) || '').trim();
     await supabasePatch('coach_profiles', { id: 'eq.' + coachProfile.id }, {
       sms_reminders_enabled: enabled,
       sms_reminder_default_timing: timing,
@@ -5736,9 +5766,13 @@ async function saveReminderSettings() {
       late_cancel_window_hours: lcHours,
       late_cancel_fee_type: lcType,
       late_cancel_fee_amount: lcAmount,
+      booking_sms_alerts_enabled: bookingSmsEnabled,
+      coach_phone: coachPhoneRaw || null,
     });
     coachProfile.sms_reminders_enabled = enabled;
     coachProfile.sms_reminder_default_timing = timing;
+    coachProfile.booking_sms_alerts_enabled = bookingSmsEnabled;
+    coachProfile.coach_phone = coachPhoneRaw || null;
     coachProfile.late_cancel_enabled = lcEnabled;
     coachProfile.late_cancel_window_hours = lcHours;
     coachProfile.late_cancel_fee_type = lcType;
