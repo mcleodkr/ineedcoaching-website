@@ -1142,6 +1142,8 @@ function setupSidebar() {
    WELCOME CARD
    ================================================ */
 // Phase 5: show the active coach (even with no bookings) + a switch/find link.
+var _coachPickerList = null; // cached published coaches for the inline picker
+
 async function renderCoachConnection() {
   var el = $('coach-connection');
   if (!el) return;
@@ -1154,12 +1156,95 @@ async function renderCoachConnection() {
     if (prof) {
       var nm = prof.display_name || prof.full_name || 'your coach';
       el.innerHTML = '<span style="color:var(--muted);">Your coach:</span> <strong>' + escapeHtml(nm) + '</strong>'
-        + ' <a href="/coaches" style="margin-left:10px;color:var(--gold,#c49a3c);font-weight:600;text-decoration:none;">Switch coach</a>';
+        + ' <button type="button" id="switch-coach-btn" style="margin-left:10px;background:none;border:none;color:var(--gold,#c49a3c);font-weight:600;cursor:pointer;font-size:0.88rem;padding:0;">Switch coach</button>';
+      var sb = $('switch-coach-btn');
+      if (sb) sb.addEventListener('click', function() { renderCoachPicker(true); });
     } else {
-      el.innerHTML = '<span style="color:var(--muted);">You’re not connected to a coach yet.</span>'
-        + ' <a href="/coaches" style="margin-left:8px;color:var(--gold,#c49a3c);font-weight:600;text-decoration:none;">Find your coach &rarr;</a>';
+      renderCoachPicker(false);
     }
   } catch (e) { el.innerHTML = ''; }
+}
+
+// Inline coach finder — search + connect without leaving the dashboard.
+async function renderCoachPicker(isSwitch) {
+  var el = $('coach-connection');
+  if (!el) return;
+  el.innerHTML =
+    '<div style="border:1px solid var(--border,#e8e4dc);border-radius:10px;padding:14px 16px;background:var(--cream-warm,#fff);">'
+    + '<div style="margin-bottom:8px;color:var(--muted);font-size:0.86rem;">'
+    +   (isSwitch ? 'Switch to a different coach:' : 'You’re not connected to a coach yet — find one:')
+    + '</div>'
+    + '<input type="text" id="coach-picker-search" placeholder="Search by name or focus…" autocomplete="off" '
+    +   'style="width:100%;padding:9px 14px;border:1px solid var(--border,#e8e4dc);border-radius:8px;font-family:inherit;font-size:0.88rem;box-sizing:border-box;">'
+    + '<div id="coach-picker-results" style="margin-top:10px;max-height:300px;overflow:auto;"></div>'
+    + (isSwitch ? '<button type="button" id="coach-picker-cancel" style="margin-top:10px;background:none;border:none;color:var(--muted);font-size:0.82rem;cursor:pointer;padding:0;">Cancel</button>' : '')
+    + '</div>';
+
+  if (!_coachPickerList) {
+    try {
+      var res = await fetch(SUPABASE_URL
+        + '/rest/v1/coach_profiles?is_published=eq.true&select=id,display_name,full_name,headline,specialties&order=display_name.asc',
+        { headers: apiHeaders() });
+      _coachPickerList = res.ok ? (await res.json().catch(function() { return []; })) : [];
+    } catch (e) { _coachPickerList = []; }
+  }
+
+  var input = $('coach-picker-search');
+  var results = $('coach-picker-results');
+  function draw(filter) {
+    filter = (filter || '').toLowerCase();
+    var list = (_coachPickerList || []).filter(function(c) {
+      if (!c || !c.id) return false;
+      if (!filter) return true;
+      var name = (c.display_name || c.full_name || '').toLowerCase();
+      var head = (c.headline || '').toLowerCase();
+      var specs = (Array.isArray(c.specialties) ? c.specialties.join(' ') : '').toLowerCase();
+      return name.indexOf(filter) !== -1 || head.indexOf(filter) !== -1 || specs.indexOf(filter) !== -1;
+    }).slice(0, 30);
+    if (!list.length) { results.innerHTML = '<div style="color:var(--muted);padding:8px 0;font-size:0.84rem;">No coaches found.</div>'; return; }
+    results.innerHTML = list.map(function(c) {
+      var nm = c.display_name || c.full_name || 'Coach';
+      return '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--border,#e8e4dc);">'
+        + '<div style="min-width:0;"><div style="font-weight:600;">' + escapeHtml(nm) + '</div>'
+        + (c.headline ? '<div style="font-size:0.76rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(c.headline) + '</div>' : '') + '</div>'
+        + '<button type="button" class="picker-connect" data-coach-id="' + escapeHtml(c.id) + '" '
+        +   'style="background:var(--gold,#c49a3c);color:#1a3a52;border:none;border-radius:50px;padding:6px 16px;font-weight:700;font-size:0.8rem;cursor:pointer;white-space:nowrap;">Connect</button>'
+        + '</div>';
+    }).join('');
+  }
+  draw('');
+  if (input) { input.addEventListener('input', function() { draw(this.value); }); input.focus(); }
+  if (results) results.addEventListener('click', function(e) {
+    var btn = e.target.closest ? e.target.closest('.picker-connect') : null;
+    if (btn) pickerConnect(btn.getAttribute('data-coach-id'), btn);
+  });
+  var cancel = $('coach-picker-cancel');
+  if (cancel) cancel.addEventListener('click', function() { renderCoachConnection(); });
+}
+
+async function pickerConnect(coachId, btn) {
+  if (!coachId) return;
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  try {
+    var res = await fetch('/api/connect-coach', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+      body: JSON.stringify({ coach_id: coachId })
+    });
+    var data = await res.json().catch(function() { return {}; });
+    if (data && data.ok) {
+      assignedCoachEmailCache = undefined; // force re-resolve of the active coach
+      showConnectToast(data.action === 'switched' ? 'You’ve switched coaches.'
+        : (data.action === 'already_active' ? 'Already your coach.' : 'You’re connected with your coach.'));
+      renderCoachConnection(); // collapse the picker back to the connected state
+    } else {
+      if (btn) { btn.disabled = false; btn.textContent = 'Connect'; }
+      showConnectToast((data && data.error) || 'Could not connect. Please try again.');
+    }
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Connect'; }
+    showConnectToast('Could not connect. Please try again.');
+  }
 }
 
 // Phase 5: arriving from a coach profile's "Connect" (or a fresh signup) carries
