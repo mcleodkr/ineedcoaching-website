@@ -1156,9 +1156,13 @@ async function renderCoachConnection() {
     if (prof) {
       var nm = prof.display_name || prof.full_name || 'your coach';
       el.innerHTML = '<span style="color:var(--muted);">Your coach:</span> <strong>' + escapeHtml(nm) + '</strong>'
-        + ' <button type="button" id="switch-coach-btn" style="margin-left:10px;background:none;border:none;color:var(--gold,#c49a3c);font-weight:600;cursor:pointer;font-size:0.88rem;padding:0;">Switch coach</button>';
+        + ' <button type="button" id="switch-coach-btn" style="margin-left:10px;background:none;border:none;color:var(--gold,#c49a3c);font-weight:600;cursor:pointer;font-size:0.88rem;padding:0;">Switch coach</button>'
+        + ' <span style="color:var(--border,#d8d4cc);">·</span>'
+        + ' <button type="button" id="disconnect-coach-btn" style="margin-left:4px;background:none;border:none;color:var(--muted);font-weight:600;cursor:pointer;font-size:0.88rem;padding:0;">Disconnect</button>';
       var sb = $('switch-coach-btn');
       if (sb) sb.addEventListener('click', function() { renderCoachPicker(true); });
+      var db = $('disconnect-coach-btn');
+      if (db) db.addEventListener('click', function() { disconnectCoach(nm); });
     } else {
       renderCoachPicker(false);
     }
@@ -1283,6 +1287,38 @@ function showConnectToast(msg) {
     document.body.appendChild(t);
     setTimeout(function() { t.style.transition = 'opacity 0.4s'; t.style.opacity = '0'; setTimeout(function() { t.remove(); }, 400); }, 3200);
   } catch (e) {}
+}
+
+// End the coaching relationship entirely (distinct from Switch, which replaces).
+async function disconnectCoach(coachName) {
+  if (!window.confirm('End coaching with ' + (coachName || 'your coach') + '? Your history stays in your space, and you can connect with a coach again anytime.')) return;
+  try {
+    var res = await fetch('/api/disconnect-coach', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+      body: '{}'
+    });
+    var data = await res.json().catch(function() { return {}; });
+    assignedCoachEmailCache = undefined; // force re-resolve
+    if (data && data.ok) {
+      showConnectToast('You’ve ended coaching' + (coachName ? ' with ' + coachName : '') + '.');
+      renderEndedState();
+    } else {
+      showConnectToast((data && data.error) || 'Could not disconnect. Please try again.');
+    }
+  } catch (e) {
+    showConnectToast('Could not disconnect. Please try again.');
+  }
+}
+
+// Calm post-disconnect state — no coach, no pushy picker. Opt back in on demand.
+function renderEndedState() {
+  var el = $('coach-connection');
+  if (!el) return;
+  el.innerHTML = '<span style="color:var(--muted);">You’re not currently working with a coach.</span>'
+    + ' <button type="button" id="find-coach-btn" style="margin-left:8px;background:none;border:none;color:var(--gold,#c49a3c);font-weight:600;cursor:pointer;font-size:0.88rem;padding:0;">Find a coach</button>';
+  var fb = $('find-coach-btn');
+  if (fb) fb.addEventListener('click', function() { renderCoachPicker(false); });
 }
 
 function renderWelcome() {
