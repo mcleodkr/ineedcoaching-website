@@ -52,9 +52,13 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Server not configured' });
   }
 
+  // Only calendar.events — the app creates/updates/deletes events on the
+  // coach's 'primary' calendar and never reads or lists calendars, so the
+  // (also sensitive) calendar.readonly scope was unused. Requesting one
+  // sensitive scope keeps the consent screen minimal and shrinks the Google
+  // verification surface to exactly what the app does.
   const scopes = [
     'https://www.googleapis.com/auth/calendar.events',
-    'https://www.googleapis.com/auth/calendar.readonly',
   ].join(' ');
 
   const url = 'https://accounts.google.com/o/oauth2/v2/auth?'
