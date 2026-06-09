@@ -7,8 +7,9 @@
 create table if not exists public.effectiveness_maps (
   id                        uuid primary key default gen_random_uuid(),
   session_id                uuid not null unique,
-  explorer_id               uuid,                          -- nullable: anonymous / non-auth sessions
-  client_email              text,                          -- nullable: derived from client JWT when authenticated; null for anonymous and crisis rows
+  coach_id                  uuid references public.coach_profiles(id) on delete set null,  -- generating coach (coach-initiated); drives the monthly limit + coach-read
+  explorer_id               uuid,                          -- nullable: optional client auth id (the coach may not have it)
+  client_email              text,                          -- the connected client, lowercased; null on crisis rows
   goal                      text,                          -- nullable: crisis rows store no explorer content
   phase                     text,                          -- nullable: crisis rows store no explorer content
   prompt_version            text not null,
@@ -24,13 +25,13 @@ create table if not exists public.effectiveness_maps (
 create index if not exists effectiveness_maps_client_email_idx on public.effectiveness_maps (lower(client_email));
 create index if not exists effectiveness_maps_explorer_id_idx  on public.effectiveness_maps (explorer_id);
 create index if not exists effectiveness_maps_session_idx      on public.effectiveness_maps (session_id);
+create index if not exists effectiveness_maps_coach_month_idx  on public.effectiveness_maps (coach_id, created_at);
 
 alter table public.effectiveness_maps enable row level security;
 
--- Explorer reads their own maps (authenticated, email-keyed — matches the platform's
--- 26 email-keyed tables and auth.jwt()->>'email' convention). Anonymous explorers
--- (client_email null) are NOT covered here; they are retrieved server-side via the
--- service-role key until the anonymous-session-token brief lands.
+-- Explorer (client) reads their own real maps, email-keyed — matches the platform's
+-- email-keyed tables and auth.jwt()->>'email' convention. Crisis rows (client_email
+-- null) are naturally excluded.
 drop policy if exists "emaps_explorer_self_read" on public.effectiveness_maps;
 create policy "emaps_explorer_self_read" on public.effectiveness_maps for select
   using (
@@ -38,21 +39,17 @@ create policy "emaps_explorer_self_read" on public.effectiveness_maps for select
     and lower(client_email) = lower(auth.jwt()->>'email')
   );
 
--- Coach reads maps for their actively-connected clients, scoped to the coaching product.
--- Mirrors the explorer_profiles coach-read policy but joins the first-class coach_clients
--- relationship (email-keyed) rather than coach_bookings. coach_profiles.id is matched by
--- user_email (no user_id column; id is not auth.uid()).
+-- Coach reads the maps they generated, scoped to the coaching product. Keyed on
+-- coach_id -> coach_profiles, matched by user_email (no user_id column; id is not
+-- auth.uid()). Crisis rows are excluded — they carry no map content.
 drop policy if exists "emaps_coach_read" on public.effectiveness_maps;
 create policy "emaps_coach_read" on public.effectiveness_maps for select
   using (
     product_context = 'coaching'
-    and client_email is not null
-    and lower(client_email) in (
-      select lower(cc.client_email)
-      from public.coach_clients cc
-      join public.coach_profiles cp on cp.id = cc.coach_id
+    and crisis_flag = false
+    and coach_id in (
+      select cp.id from public.coach_profiles cp
       where lower(cp.user_email) = lower(auth.jwt()->>'email')
-        and cc.status = 'active'
     )
   );
 
