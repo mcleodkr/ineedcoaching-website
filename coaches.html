@@ -54,6 +54,12 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .card-pill { font-size: 0.62rem; font-weight: 700; background: var(--gold-lt); color: var(--gold); padding: 3px 10px; border-radius: 20px; }
 .card-btn { display: block; width: 100%; text-align: center; background: var(--navy); color: var(--cream); padding: 11px; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; font-weight: 700; text-decoration: none; transition: background 0.2s; }
 .card-btn:hover { background: var(--gold); color: var(--navy); }
+.card-actions { display: flex; gap: 8px; margin-top: 14px; }
+.card-actions .card-btn { flex: 1; }
+.card-btn-connect { flex: 1; text-align: center; background: var(--gold); color: var(--navy); padding: 11px; border: none; border-radius: var(--r-sm); font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.card-btn-connect:hover { background: var(--navy); color: var(--cream); }
+.card-btn-connect:disabled { cursor: default; opacity: 0.85; }
+.card-btn-connect.connected { background: var(--gold-lt); color: var(--gold); }
 
 .empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 0.92rem; grid-column: 1 / -1; }
 .coach-count { font-size: 0.82rem; color: var(--muted); margin-bottom: 20px; }
@@ -363,7 +369,10 @@ function renderCoaches(coaches) {
       + (company ? '<div class="card-company">' + esc(company) + '</div>' : '')
       + '<div class="card-headline">' + esc(c.headline || '') + '</div>'
       + '<div class="card-pills">' + specs.map(function(s) { return '<span class="card-pill">' + esc(s) + '</span>'; }).join('') + '</div>'
-      + '<a href="/coach/' + esc(c.slug || '') + '" class="card-btn">View Profile</a>'
+      + '<div class="card-actions">'
+      +   '<button type="button" class="card-btn-connect" data-connect-coach="' + esc(c.id) + '">Connect</button>'
+      +   '<a href="/coach/' + esc(c.slug || '') + '" class="card-btn">View Profile</a>'
+      + '</div>'
       + '</div></div>';
   }).join('');
 
@@ -374,6 +383,62 @@ function renderCoaches(coaches) {
     });
   }, 50);
 }
+
+// Connect from the directory card: fire connect-coach directly for a signed-in
+// client (toast confirmation, no navigation). Logged-out visitors are handed to
+// the client dashboard, which owns magic-link sign-in and auto-connects on
+// return via ?connect_coach=. Delegated on the grid so it survives re-renders.
+function connectCoachFromCard(coachId, btn) {
+  if (!coachId) return;
+  var token = '';
+  try { token = localStorage.getItem('sb_access_token') || ''; } catch (e) {}
+  var handoff = '/client-dashboard?connect_coach=' + encodeURIComponent(coachId);
+  if (!token) { window.location.href = handoff; return; }
+  var orig = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Connecting…'; }
+  fetch('/api/connect-coach', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ coach_id: coachId })
+  }).then(function(r) {
+    if (r.status === 401) { window.location.href = handoff; return null; } // stale token -> re-auth
+    return r.json().catch(function() { return {}; });
+  }).then(function(data) {
+    if (!data) return;
+    if (data.ok) {
+      if (btn) { btn.textContent = (data.action === 'already_active') ? 'Your coach ✓' : 'Connected ✓'; btn.classList.add('connected'); }
+      showConnectToast(data.action === 'switched' ? 'You’ve switched coaches.'
+        : (data.action === 'already_active' ? 'Already your coach.' : 'Connected — find them in your coaching space.'));
+    } else {
+      if (btn) { btn.disabled = false; btn.textContent = orig || 'Connect'; }
+      showConnectToast((data && data.error) || 'Could not connect. Please try again.');
+    }
+  }).catch(function() {
+    if (btn) { btn.disabled = false; btn.textContent = orig || 'Connect'; }
+    showConnectToast('Could not connect. Please try again.');
+  });
+}
+
+function showConnectToast(msg) {
+  try {
+    var t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1a3a52;color:#fff;font-family:\'Cabinet Grotesk\',sans-serif;font-size:0.9rem;padding:12px 22px;border-radius:50px;box-shadow:0 6px 20px rgba(0,0,0,0.18);z-index:1000;';
+    document.body.appendChild(t);
+    setTimeout(function() { t.style.transition = 'opacity 0.4s'; t.style.opacity = '0'; setTimeout(function() { t.remove(); }, 400); }, 3200);
+  } catch (e) {}
+}
+
+(function() {
+  var grid = document.getElementById('coaches-grid');
+  if (!grid) return;
+  grid.addEventListener('click', function(e) {
+    var btn = e.target.closest ? e.target.closest('[data-connect-coach]') : null;
+    if (!btn) return;
+    e.preventDefault();
+    connectCoachFromCard(btn.getAttribute('data-connect-coach'), btn);
+  });
+})();
 
 loadCoaches();
 </script>
