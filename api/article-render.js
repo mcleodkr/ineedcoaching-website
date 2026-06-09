@@ -181,6 +181,7 @@ function buildArticleBody(article) {
   const toolbarHtml =
     '<div class="article-toolbar">' +
       '<button class="save-article-btn" id="save-btn" onclick="saveArticle(\'' + slugEsc + '\', \'' + titleEsc + '\')">Save</button>' +
+      '<a class="share-btn" style="text-decoration:none;" href="/api/article-docx?slug=' + encodeURIComponent(article.slug || '') + '">Download</a>' +
       '<div class="share-wrap"><button class="share-btn" onclick="toggleShare()">Share</button>' +
         '<div class="share-menu" id="share-menu">' +
           '<button onclick="copyLink()">Copy link</button>' +

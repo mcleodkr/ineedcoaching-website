@@ -6,7 +6,9 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.0.0",
+    "docx": "^9.7.1",
     "jsonrepair": "^3.14.0",
+    "node-html-parser": "^6.1.13",
     "stripe": "^14.0.0"
   }
 }
