@@ -7781,11 +7781,11 @@ function openEditClientModal(clientEmail) {
     modal.innerHTML = '<div style="background:var(--white);border-radius:var(--r);max-width:480px;width:90%;max-height:85vh;overflow-y:auto;padding:32px;position:relative;box-shadow:0 12px 40px rgba(0,0,0,0.15);">'
       + '<button id="edit-client-modal-close" style="position:absolute;top:14px;right:18px;background:none;border:none;font-size:1.4rem;color:var(--muted);cursor:pointer;">&times;</button>'
       + '<h2 style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:700;color:var(--ink);margin:0 0 6px 0;">Edit client info</h2>'
-      + '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:var(--muted);margin:0 0 22px 0;">Updates apply to every session this client has on your roster. Email is the stable identifier and can’t be changed here.</p>'
+      + '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:var(--muted);margin:0 0 22px 0;">Corrects this client’s contact details across every session they have on your roster. Fixing the email also moves their messages, notes, goals, check-ins and homework to the new address so nothing is left behind.</p>'
       + '<div style="margin-bottom:14px;"><label style="display:block;font-family:\'DM Sans\',sans-serif;font-size:0.8rem;font-weight:600;color:var(--ink);margin-bottom:6px;">Client name</label>'
       + '<input type="text" id="edit-client-name" placeholder="First Last" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--cream);"></div>'
       + '<div style="margin-bottom:14px;"><label style="display:block;font-family:\'DM Sans\',sans-serif;font-size:0.8rem;font-weight:600;color:var(--ink);margin-bottom:6px;">Email</label>'
-      + '<input type="email" id="edit-client-email-display" disabled style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--muted);background:#f3efe7;cursor:not-allowed;"></div>'
+      + '<input type="email" id="edit-client-email" placeholder="name@example.com" autocomplete="off" autocapitalize="off" spellcheck="false" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--cream);"></div>'
       + '<div style="margin-bottom:18px;"><label style="display:block;font-family:\'DM Sans\',sans-serif;font-size:0.8rem;font-weight:600;color:var(--ink);margin-bottom:6px;">Phone <span style="color:var(--muted);font-weight:400;">(optional)</span></label>'
       + '<input type="tel" id="edit-client-phone" placeholder="(555) 555-5555" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--cream);"></div>'
       + '<div id="edit-client-error" style="display:none;color:#b93a3a;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;margin-bottom:12px;"></div>'
@@ -7801,7 +7801,7 @@ function openEditClientModal(clientEmail) {
     $('edit-client-save').addEventListener('click', submitEditClient);
   }
   $('edit-client-name').value = client.name || '';
-  $('edit-client-email-display').value = client.email || '';
+  $('edit-client-email').value = client.email || '';
   $('edit-client-phone').value = client.phone || '';
   $('edit-client-error').style.display = 'none';
   $('edit-client-error').textContent = '';
@@ -7815,55 +7815,70 @@ function openEditClientModal(clientEmail) {
 
 async function submitEditClient() {
   var saveBtn = $('edit-client-save');
-  var email = saveBtn && saveBtn.dataset ? saveBtn.dataset.email : '';
-  var client = email ? clientsData.find(function(c) { return c.email === email; }) : null;
+  var oldEmail = saveBtn && saveBtn.dataset ? saveBtn.dataset.email : '';
+  var client = oldEmail ? clientsData.find(function(c) { return c.email === oldEmail; }) : null;
   if (!client) return;
   var name = $('edit-client-name').value.trim();
+  var newEmail = $('edit-client-email').value.trim().toLowerCase();
   var phone = $('edit-client-phone').value.trim();
   var errorEl = $('edit-client-error');
+  function showErr(m) { errorEl.textContent = m; errorEl.style.display = 'block'; }
   errorEl.style.display = 'none';
   errorEl.textContent = '';
 
-  if (name && name.length > 200) {
-    errorEl.textContent = 'Name is too long.';
-    errorEl.style.display = 'block';
-    return;
-  }
-  if (phone && phone.length > 60) {
-    errorEl.textContent = 'Phone is too long.';
-    errorEl.style.display = 'block';
-    return;
-  }
+  if (name && name.length > 200) { showErr('Name is too long.'); return; }
+  if (phone && phone.length > 60) { showErr('Phone is too long.'); return; }
+  if (!newEmail) { showErr('Email can’t be empty.'); return; }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(newEmail)) { showErr('Enter a valid email address.'); return; }
 
   saveBtn.disabled = true;
   saveBtn.textContent = 'Saving...';
   try {
-    var patch = { client_name: name || null, client_phone: phone || null };
-    var match = { client_email: 'eq.' + email, coach_id: 'eq.' + coachProfile.id };
-    var result = await supabasePatch('coach_bookings', match, patch);
-    if (result && result.code && result.message) {
-      throw new Error(result.message);
+    // Atomic server-side re-key: name/phone on coach_bookings, and (when the
+    // email changes) client_email cascaded across every coach-scoped table in
+    // one transaction. The coach is resolved from the JWT inside the function.
+    var res = await fetch(SUPABASE_URL + '/rest/v1/rpc/rekey_client', {
+      method: 'POST',
+      headers: apiHeaders(),
+      body: JSON.stringify({
+        p_old_email: oldEmail,
+        p_new_email: newEmail,
+        p_new_name: name || null,
+        p_new_phone: phone || null
+      })
+    });
+    var data = await res.json().catch(function() { return null; });
+    if (!res.ok) {
+      var code = (data && (data.message || data.code)) || '';
+      var msg = 'Could not save changes. Please try again.';
+      if (/email_in_use/.test(code)) msg = 'That email already belongs to another client on your roster — merging clients isn’t supported here.';
+      else if (/invalid_email/.test(code)) msg = 'Enter a valid email address.';
+      else if (/not_a_coach/.test(code)) msg = 'Your session has expired. Please sign in again.';
+      throw new Error(msg);
     }
-    // Mirror changes into local state so the list re-renders without a refetch.
+    var result = Array.isArray(data) ? data[0] : data;
+    var emailChanged = !!(result && result.email_changed);
+    var effectiveEmail = (result && result.new_email) || newEmail;
+
+    // Mirror into local state so the roster + detail re-render without a refetch.
     client.name = name;
     client.phone = phone;
+    if (emailChanged) client.email = effectiveEmail;
     var currentFilter = ($('clients-search') && $('clients-search').value) || '';
     renderClientsList(currentFilter);
-    // If the detail view is currently the visible surface, refresh it so its
-    // dark header reflects the new name/phone without a page reload.
     var detailView = $('clients-detail-view');
     if (detailView && !detailView.classList.contains('hidden')) {
-      openClientDetail(email);
+      // Re-open under the new key so the cascaded history loads from the DB.
+      openClientDetail(emailChanged ? effectiveEmail : oldEmail);
     }
     var modal = $('edit-client-modal');
     if (modal) modal.style.display = 'none';
   } catch (e) {
     console.error('[edit-client] failed:', e);
-    errorEl.textContent = 'Could not save: ' + (e.message || 'unknown error').slice(0, 200);
-    errorEl.style.display = 'block';
-    saveBtn.disabled = false;
-    saveBtn.textContent = 'Save changes';
+    showErr((e.message || 'Could not save changes.').slice(0, 200));
   }
+  saveBtn.disabled = false;
+  saveBtn.textContent = 'Save changes';
 }
 
 async function openClientDetail(email) {
