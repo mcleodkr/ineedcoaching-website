@@ -13,7 +13,10 @@ import { parse } from 'node-html-parser';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://qroizygknxdjsstkezsf.supabase.co';
 const ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
-const ALLOWED_AUDIENCES = new Set(['consumer', 'coach']);
+// ineedcoaching articles use these audience tags — coach-authored content is
+// 'coaching-consumer' / 'coaching_consumer', so the narrower {consumer,coach}
+// set (copied from article-render) 404'd every coach's own article on export.
+const ALLOWED_AUDIENCES = new Set(['consumer', 'coach', 'coaching-consumer', 'coaching_consumer']);
 const ALLOWED_SITES = new Set(['ineedcoaching']);
 
 // Brand palette (CLAUDE.md): navy primary, gold accent, muted body.
