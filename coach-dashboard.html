@@ -15546,6 +15546,7 @@ function renderArticleCard(a, isPublished) {
       + '<button class="action-btn action-decline" data-article-id="' + a.id + '" data-article-action="delete">Delete</button>';
   } else {
     actions = '<a href="/article.html?slug=' + encodeURIComponent(a.slug) + '" target="_blank" class="action-btn action-approve" style="text-decoration:none;">View Live</a>'
+      + '<a href="/api/article-docx?slug=' + encodeURIComponent(a.slug) + '" class="action-btn" style="text-decoration:none;">Download</a>'
       + '<button class="action-btn action-decline" data-article-id="' + a.id + '" data-article-action="unpublish">Unpublish</button>';
   }
 
