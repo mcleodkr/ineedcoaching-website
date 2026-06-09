@@ -199,6 +199,20 @@ export default async function handler(req, res) {
       }
     }
 
+    // Phase 3: keep the coach_clients relationship authoritative. A confirmed
+    // booking attaches the client to this coach when they have no active coach;
+    // if they're already active with a different coach it records an archived
+    // link rather than silently switching them. Best-effort — never blocks the
+    // confirmation email below.
+    if (booking.coach_id && booking.client_email) {
+      try {
+        const { attachOnBooking } = await import('../lib/coach-clients.js');
+        await attachOnBooking(booking.coach_id, booking.client_email);
+      } catch (linkErr) {
+        console.warn('[booking-confirmation] coach_clients attach skipped:', linkErr.message);
+      }
+    }
+
     // Client email
     const clientSubject = `Your session with ${coachName} is confirmed`;
     const clientHtml = `
