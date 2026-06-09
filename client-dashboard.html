@@ -687,10 +687,13 @@ let assignedCoachEmailCache; // undefined = unresolved, null = none, string = fo
 async function getAssignedCoachEmail() {
   if (assignedCoachEmailCache !== undefined) return assignedCoachEmailCache;
   try {
+    // Phase 4: resolve the coach from the active coach_clients relationship
+    // instead of deriving it from the most recent booking — so a client who
+    // connected without booking still sees their coach. RLS scopes
+    // coach_clients to this client's own rows.
     const url = SUPABASE_URL
-      + '/rest/v1/coach_bookings?client_email=eq.' + encodeURIComponent(currentEmail)
-      + '&status=in.(confirmed,manual)&order=scheduled_at.desc.nullslast,created_at.desc.nullslast'
-      + '&limit=1&select=coach_id,coach_profiles(user_email)';
+      + '/rest/v1/coach_clients?client_email=eq.' + encodeURIComponent(currentEmail)
+      + '&status=eq.active&limit=1&select=coach_id,coach_profiles(user_email)';
     const res = await fetch(url, { headers: apiHeaders() });
     if (!res.ok) { assignedCoachEmailCache = null; return null; }
     const rows = await res.json().catch(function() { return []; });

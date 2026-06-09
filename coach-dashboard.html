@@ -6967,13 +6967,36 @@ async function loadIntakeResponses() {
    CLIENTS TAB
    ================================================ */
 var clientsData = [];
+// Phase 4: clients who switched to another coach — rendered in a separate
+// "Past clients" section by renderClientsList. History stays intact.
+var archivedClientsData = [];
 
 async function loadClientsTab() {
   try {
-    var bookings = await supabaseGet(
-      'coach_bookings?coach_id=eq.' + coachProfile.id + '&status=in.(confirmed,manual)&order=scheduled_at.desc&select=id,client_email,client_name,client_phone,scheduled_at,notes,zoom_link,service_id,status'
-    );
-    if (!Array.isArray(bookings)) bookings = [];
+    // Phase 4: roster is sourced from the coach_clients relationship, not only
+    // from bookings — so self-connected clients (no booking yet) appear, and
+    // clients who switched away move to the archived "Past clients" section.
+    // Defensive: if the coach_clients fetch returns nothing, every booking
+    // client falls back to 'active', so behavior matches the pre-cutover roster.
+    var loaded = await Promise.all([
+      supabaseGet(
+        'coach_bookings?coach_id=eq.' + coachProfile.id + '&status=in.(confirmed,manual)&order=scheduled_at.desc&select=id,client_email,client_name,client_phone,scheduled_at,notes,zoom_link,service_id,status'
+      ),
+      supabaseGet(
+        'coach_clients?coach_id=eq.' + coachProfile.id + '&select=client_email,status,connected_at'
+      )
+    ]);
+    var bookings = Array.isArray(loaded[0]) ? loaded[0] : [];
+    var links = Array.isArray(loaded[1]) ? loaded[1] : [];
+
+    // status by normalized email; 'active' wins if both somehow present.
+    var statusByEmail = {};
+    links.forEach(function(l) {
+      if (!l || !l.client_email) return;
+      var lk = l.client_email.trim().toLowerCase();
+      if (!lk) return;
+      if (statusByEmail[lk] !== 'active') statusByEmail[lk] = l.status;
+    });
 
     // Build unique clients. Prefer the client_name column when present so the
     // edit-info flow persists across reloads; fall back to the legacy
@@ -7010,15 +7033,36 @@ async function loadClientsTab() {
       if (!clientMap[key].name) clientMap[key].name = deriveName(b);
     });
 
-    // Compute first/last session dates
+    // Add roster entries for connected clients who have no bookings yet, so a
+    // self-connected client still appears (with an empty session history).
+    links.forEach(function(l) {
+      if (!l || !l.client_email) return;
+      var key = l.client_email.trim().toLowerCase();
+      if (!key || clientMap[key]) return;
+      clientMap[key] = {
+        email: l.client_email.trim(),
+        name: '',
+        phone: '',
+        sessions: [],
+        firstSession: null,
+        lastSession: null
+      };
+      clientOrder.push(key);
+    });
+
+    // Compute first/last session dates + tag relationship status. Booking
+    // clients with no coach_clients row default to 'active' (no regression).
     clientOrder.forEach(function(email) {
       var c = clientMap[email];
       var dates = c.sessions.map(function(s) { return s.scheduled_at; }).filter(Boolean).sort();
       c.firstSession = dates[0] || null;
       c.lastSession = dates[dates.length - 1] || null;
+      c.status = statusByEmail[email] || 'active';
     });
 
-    clientsData = clientOrder.map(function(e) { return clientMap[e]; });
+    var allClients = clientOrder.map(function(e) { return clientMap[e]; });
+    clientsData = allClients.filter(function(c) { return c.status !== 'archived'; });
+    archivedClientsData = allClients.filter(function(c) { return c.status === 'archived'; });
 
     $('clients-loading').style.display = 'none';
     $('clients-list-view').classList.remove('hidden');
@@ -7215,6 +7259,37 @@ function renderClientsList(filter) {
     html += '</tbody></table></div>';
   }
   html += '</div>';
+
+  // Phase 4: archived "Past clients" — clients who switched to another coach.
+  // Their history stays intact; "View" opens the same email-keyed detail view.
+  var archived = archivedClientsData || [];
+  if (filter) {
+    archived = archived.filter(function(c) {
+      return ((c.name || '') + ' ' + (c.email || '')).toLowerCase().indexOf(filter) !== -1;
+    });
+  }
+  if (archived.length) {
+    archived = sortClients(archived, 'recent');
+    html += '<div class="form-section" style="margin-top:24px;">'
+      + '<div style="margin-bottom:12px;">'
+      + '<h2 class="form-section-title" style="margin-bottom:4px;font-family:\'Cormorant Garamond\',serif;color:var(--muted);">Past clients</h2>'
+      + '<span style="font-size:0.82rem;color:var(--muted);">' + archived.length + ' client' + (archived.length !== 1 ? 's' : '') + ' who moved to another coach &mdash; their history stays here.</span>'
+      + '</div>'
+      + '<div class="clients-table-wrap"><table class="clients-table"><thead><tr><th>Client</th><th>Contact</th><th>Sessions</th><th>Last session</th><th>Actions</th></tr></thead><tbody>';
+    archived.forEach(function(c) {
+      var emailShown = displayClientEmail(c.email) || '';
+      var nameText = c.name || emailShown || 'Unnamed client';
+      var lastStr = c.lastSession ? new Date(c.lastSession).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      html += '<tr>'
+        + '<td title="' + escapeHtml(nameText) + '"><div class="client-name-cell"><span class="client-name">' + escapeHtml(nameText) + '</span></div></td>'
+        + '<td>' + (emailShown ? '<span class="client-contact">' + escapeHtml(emailShown) + '</span>' : '<span class="client-contact-empty">No email</span>') + '</td>'
+        + '<td><span class="sessions-pill">' + c.sessions.length + '</span></td>'
+        + '<td>' + (lastStr ? '<span class="last-session-cell">' + escapeHtml(lastStr) + '</span>' : '<span class="last-session-cell empty">&mdash;</span>') + '</td>'
+        + '<td><div class="clients-table-actions"><button type="button" data-view-client="' + escapeHtml(c.email) + '">View</button></div></td>'
+        + '</tr>';
+    });
+    html += '</tbody></table></div></div>';
+  }
 
   $('clients-list-view').innerHTML = html;
 
