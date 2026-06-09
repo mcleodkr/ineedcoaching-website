@@ -22,7 +22,10 @@ const SITE_BASE = 'https://www.ineedcoaching.org';
 
 // Audiences this site is allowed to render. Anything else (recovery,
 // therapy_consumer, future values) 404s — keeps content scoped to ineedcoaching.
-const ALLOWED_AUDIENCES = new Set(['consumer', 'coach']);
+// Coach-authored ineedcoaching articles are tagged 'coaching-consumer' /
+// 'coaching_consumer'; the narrower {consumer,coach} set 404'd ~123 published
+// articles on the public reader (broken SEO + broken coach-profile article links).
+const ALLOWED_AUDIENCES = new Set(['consumer', 'coach', 'coaching-consumer', 'coaching_consumer']);
 
 // Sites whose articles this deploy may render. The articles table is shared
 // across ineedtherapy and ineedcoaching; the site column gates which surface
