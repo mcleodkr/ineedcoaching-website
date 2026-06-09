@@ -242,6 +242,13 @@ var _currentPriceFilter = '';
 // the coach_profiles.services JSONB is retired).
 var _priceByCoach = {};
 
+// Connect-button gating: "Connect" on a directory card is only shown to a
+// signed-in CLIENT who has no active coach. Everyone else — logged-out
+// visitors, coaches, and clients already connected to a coach — sees the card
+// without it. Defaults false and fails closed on any auth/lookup error, so the
+// button is never shown to an ineligible viewer.
+var _viewerCanConnect = false;
+
 function esc(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
 async function loadCoaches() {
@@ -370,7 +377,7 @@ function renderCoaches(coaches) {
       + '<div class="card-headline">' + esc(c.headline || '') + '</div>'
       + '<div class="card-pills">' + specs.map(function(s) { return '<span class="card-pill">' + esc(s) + '</span>'; }).join('') + '</div>'
       + '<div class="card-actions">'
-      +   '<button type="button" class="card-btn-connect" data-connect-coach="' + esc(c.id) + '">Connect</button>'
+      +   (_viewerCanConnect ? '<button type="button" class="card-btn-connect" data-connect-coach="' + esc(c.id) + '">Connect</button>' : '')
       +   '<a href="/coach/' + esc(c.slug || '') + '" class="card-btn">View Profile</a>'
       + '</div>'
       + '</div></div>';
@@ -440,7 +447,77 @@ function showConnectToast(msg) {
   });
 })();
 
-loadCoaches();
+// Decide whether the viewer may see "Connect": signed-in client, not a coach,
+// with no active coach. Resolved before the first render so cards paint with
+// the correct action set. Any failure leaves _viewerCanConnect false (hidden).
+async function resolveViewerState() {
+  var token = '';
+  try { token = localStorage.getItem('sb_access_token') || ''; } catch (e) { token = ''; }
+  if (!token) return; // logged out → button stays hidden
+
+  function getUser(tok) {
+    return fetch(SUPABASE_URL + '/auth/v1/user', {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + tok }
+    });
+  }
+
+  try {
+    var res = await getUser(token);
+    if (!res.ok) {
+      // One refresh attempt, mirroring client-dashboard's auth flow.
+      var refreshToken = '';
+      try { refreshToken = localStorage.getItem('sb_refresh_token') || ''; } catch (e) {}
+      if (!refreshToken) return;
+      var rr = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
+        method: 'POST',
+        headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken })
+      });
+      if (!rr.ok) return;
+      var rd = await rr.json();
+      token = rd.access_token;
+      try {
+        localStorage.setItem('sb_access_token', token);
+        if (rd.refresh_token) localStorage.setItem('sb_refresh_token', rd.refresh_token);
+      } catch (e) {}
+      res = await getUser(token);
+      if (!res.ok) return;
+    }
+    var user = await res.json();
+    var email = (user && user.email ? String(user.email) : '').toLowerCase();
+    if (!email) return;
+
+    var authHeaders = { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + token };
+
+    // A coach is not a "client": if this user owns a coach profile, hide.
+    var coachRes = await fetch(
+      SUPABASE_URL + '/rest/v1/coach_profiles?user_email=eq.' + encodeURIComponent(email) + '&select=id&limit=1',
+      { headers: authHeaders }
+    );
+    if (coachRes.ok) {
+      var coachRows = await coachRes.json().catch(function() { return []; });
+      if (Array.isArray(coachRows) && coachRows.length) return; // viewer is a coach
+    }
+
+    // Already connected to a coach → hide. RLS scopes coach_clients to own rows.
+    var linkRes = await fetch(
+      SUPABASE_URL + '/rest/v1/coach_clients?client_email=eq.' + encodeURIComponent(email) + '&status=eq.active&select=coach_id&limit=1',
+      { headers: authHeaders }
+    );
+    if (!linkRes.ok) return; // can't verify → fail closed
+    var linkRows = await linkRes.json().catch(function() { return []; });
+    if (Array.isArray(linkRows) && linkRows.length) return; // has an active coach
+
+    _viewerCanConnect = true; // signed-in client, not a coach, no active coach
+  } catch (e) {
+    _viewerCanConnect = false; // fail closed
+  }
+}
+
+(async function init() {
+  try { await resolveViewerState(); } catch (e) {}
+  loadCoaches();
+})();
 </script>
 <script data-MOBILE_NAV_HAMBURGER_v1>
 (function() {
