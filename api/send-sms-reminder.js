@@ -11,6 +11,21 @@
 // legacy api/send-session-reminder.js scaffold so we keep the dependency
 // surface minimal.
 
+// Twilio requires E.164 (+<country><number>). Client phones are captured in
+// assorted shapes ("12818460627", "2818460627", "(281) 846-0627"), so normalize
+// before sending. US-only: 10 digits → +1XXXXXXXXXX, 11 digits starting with 1
+// → +1XXXXXXXXXX. An already-"+"-prefixed value is trusted as-is. Returns '' for
+// anything that can't be coerced into a plausible number so the caller can skip.
+function toE164(raw) {
+  if (!raw) return '';
+  const s = String(raw).trim();
+  if (s.startsWith('+')) return s;
+  const digits = s.replace(/\D/g, '');
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+  return '';
+}
+
 function formatTimeLabel(utcIso, tz) {
   if (!utcIso) return 'soon';
   const d = new Date(utcIso);
@@ -65,6 +80,9 @@ export default async function handler(req, res) {
     if (!booking.client_phone) return res.status(200).json({ skipped: true, reason: 'no_phone' });
     if (!booking.sms_opt_in) return res.status(200).json({ skipped: true, reason: 'not_opted_in' });
 
+    const toNumber = toE164(booking.client_phone);
+    if (!toNumber) return res.status(200).json({ skipped: true, reason: 'unparseable_phone' });
+
     const coach = booking.coach_profiles || {};
     if (!coach.sms_reminders_enabled) {
       return res.status(200).json({ skipped: true, reason: 'coach_sms_disabled' });
@@ -90,7 +108,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams({
-        To: booking.client_phone,
+        To: toNumber,
         From: fromNumber,
         Body: messageBody,
       }),
