@@ -3854,8 +3854,8 @@ async function loadBookings() {
       var statusClass = 'status-' + status;
       var statusText = status.charAt(0).toUpperCase() + status.slice(1);
       var dt = b.scheduled_at ? new Date(b.scheduled_at) : null;
-      var dateStr = dt ? dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-      var timeStr = dt ? dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+      var dateStr = dt ? dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: coachTzName() }) : '';
+      var timeStr = dt ? dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: coachTzName() }) : '';
       var clientName = extractClientName(b.notes);
       var serviceName = extractServiceName(b.notes);
       var actions = buildActionsHtml(b, status, clientName, isPast);
@@ -7836,7 +7836,7 @@ function openDeleteBookingConfirm(booking, onDeleted) {
     $('delete-booking-cancel').addEventListener('click', function() { modal.style.display = 'none'; });
   }
   var clientName = extractClientName(booking.notes) || booking.client_email || 'this booking';
-  var dateStr = booking.scheduled_at ? new Date(booking.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+  var dateStr = booking.scheduled_at ? new Date(booking.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: coachTzName() }) : '';
   $('delete-booking-details').textContent = clientName + (dateStr ? ' — ' + dateStr : '');
   var errorEl = $('delete-booking-error');
   errorEl.style.display = 'none';
@@ -8469,7 +8469,7 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
     // the Sessions list renders from). Date always shows; service name only
     // when joinable from the booking notes.
     var hwSess = (client.sessions || []).find(function(s) { return s.id === p.booking_id; });
-    var hwSessDate = (hwSess && hwSess.scheduled_at) ? new Date(hwSess.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    var hwSessDate = (hwSess && hwSess.scheduled_at) ? new Date(hwSess.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: coachTzName() }) : '';
     var hwSvcMatch = hwSess ? (hwSess.notes || '').match(/^Service:\s*(.+)/m) : null;
     var hwSvcName = hwSvcMatch ? hwSvcMatch[1].trim() : '';
     var hwAttrib = hwSessDate
