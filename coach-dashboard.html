@@ -7545,7 +7545,12 @@ async function submitAddClient() {
   }
   var scheduledIso;
   try {
-    scheduledIso = new Date(datetimeVal).toISOString();
+    // The datetime-local picker yields a naive "YYYY-MM-DDTHH:mm" with no zone.
+    // Interpret it as the coach's wall-clock time (not the browser's) so the
+    // stored UTC instant matches what the coach typed regardless of their device tz.
+    var dtParts = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(datetimeVal);
+    if (!dtParts) throw new Error('Invalid session date & time.');
+    scheduledIso = coachWallToUtc(+dtParts[1], +dtParts[2], +dtParts[3], +dtParts[4], +dtParts[5]).toISOString();
   } catch (e) {
     errorEl.textContent = 'Invalid session date & time.';
     errorEl.style.display = 'block';
@@ -7658,10 +7663,9 @@ function openEditSessionModal(booking, onSaved) {
   var errorEl = $('edit-session-error');
   var saveBtn = $('edit-session-save');
   if (booking.scheduled_at) {
-    var d = new Date(booking.scheduled_at);
-    var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
-    dtInput.value = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
-      + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    // Seed the picker with the coach's wall-clock time, not the browser's, so a
+    // coach in a different tz than their device edits the time they actually see.
+    dtInput.value = utcIsoToCoachNaive(booking.scheduled_at).slice(0, 16);
   } else {
     dtInput.value = '';
   }
@@ -7744,7 +7748,11 @@ function openEditSessionModal(booking, onSaved) {
     }
     var iso;
     try {
-      iso = new Date(dtVal).toISOString();
+      // Interpret the picker value as the coach's wall-clock time, not the
+      // browser's, mirroring the seed above (utcIsoToCoachNaive).
+      var ep = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(dtVal);
+      if (!ep) throw new Error('Invalid date/time.');
+      iso = coachWallToUtc(+ep[1], +ep[2], +ep[3], +ep[4], +ep[5]).toISOString();
     } catch (e) {
       errorEl.textContent = 'Invalid date/time.';
       errorEl.style.display = 'block';
@@ -8143,8 +8151,8 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
     });
     client.sessions.forEach(function(s) {
       var dt = s.scheduled_at ? new Date(s.scheduled_at) : null;
-      var dateStr = dt ? dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-      var timeStr = dt ? dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+      var dateStr = dt ? dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: coachTzName() }) : '';
+      var timeStr = dt ? dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: coachTzName() }) : '';
       var isNextUpcoming = s.id === nextUpcomingId;
       var svcMatch = (s.notes || '').match(/^Service:\s*(.+)/m);
       var svcName = svcMatch ? svcMatch[1].trim() : '';
@@ -8524,8 +8532,8 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
     if (ciTarget && ciTarget.scheduled_at) {
       var ciDt = new Date(ciTarget.scheduled_at);
       if (!isNaN(ciDt.getTime())) {
-        ciTargetLabel = ciDt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
-          + ' · ' + ciDt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        ciTargetLabel = ciDt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: coachTzName() })
+          + ' · ' + ciDt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: coachTzName() });
       }
     }
     var ciExisting = (ciTarget && typeof clientCheckinByBooking !== 'undefined' && clientCheckinByBooking) ? clientCheckinByBooking[ciTarget.id] : null;
