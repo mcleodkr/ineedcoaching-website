@@ -579,7 +579,10 @@ ${goalsContext}
 EVIDENCE: ${JSON.stringify(extractionOutput)}
 CORE: ${JSON.stringify(coreOutput)}
 
-goals: You MUST generate 1-2 suggested goals based on what emerged in this session. Look at: commitments made, patterns surfaced, insights reached, behavioral intentions stated. Every session has something worth tracking. Suggested goals should be actionable and specific to this client. Format: { "existing": [], "suggested": [{ "title": "short actionable goal title", "description": "1 sentence explaining the goal" }] }
+goals vs between_session — keep these strictly distinct:
+- A GOAL is a longer-arc OUTCOME the client is working toward across multiple sessions, worth tracking over weeks (e.g. "Speak up in leadership meetings without over-preparing"). It names a change or destination, not a single task.
+- A BETWEEN-SESSION PRACTICE is one specific action, experiment, reflection, or piece of homework to carry into the coming week (e.g. "Journal for five minutes each morning"). Practices belong ONLY in between_session — never surface a practice as a goal.
+goals: Generate 1-2 suggested goals that name a trackable OUTCOME from this session. Look at patterns surfaced, insights reached, and the underlying change behind any commitment — not the one-off task itself. Do not restate a between_session practice as a goal. If this session produced no outcome worth tracking across sessions, return an empty suggested array rather than promoting a weekly practice into a goal. Suggested goals should be actionable and specific to this client. Format: { "existing": [], "suggested": [{ "title": "short actionable goal title", "description": "1 sentence explaining the goal" }] }
 
 Return ONLY:
 {"patterns_and_your_role":[{"pattern_name":"","what_client_did":"","status":"surfaced|interrupted|reinforced|stabilizing","what_this_means":"","your_role":"You..."}],"what_this_session_revealed":[{"coach_pattern":"","what_you_tend_to_do":"You...","why_this_is_effective":"","where_to_stay_curious":""}],"goals":{"existing":[{"title":"","status":"","session_relevance":""}],"suggested":[{"title":"","description":""}]},"between_session":[{"title":"","invitation":"","why_it_matters":""}],"frameworks":[{"name":"","presence_level":"","what_was_observed":""}]}`,
@@ -916,7 +919,7 @@ Limit to 2 suggestions max. If no strong fit exists return empty array.`,
           buildSystem(
             sharedPrefix,
             `You are Coach Clarity. Propose pending-review goal items for the coach. Two channels:
-1. goal_proposals — net-new goal candidates surfaced by THIS session's evidence (commitments, breakthroughs, behavioral intentions). Only propose goals with clear session-grounded justification.
+1. goal_proposals — net-new GOAL candidates: longer-arc OUTCOMES the client is working toward across multiple sessions, surfaced by THIS session's evidence (breakthroughs, patterns, the change behind a stated intention). A goal names a trackable outcome over weeks — it is NOT a single between-session task, practice, experiment, reflection, or piece of homework. Never propose a one-off weekly practice as a goal. Only propose goals with clear session-grounded justification; return [] if this session produced only this-week practices and no outcome worth tracking across sessions.
 2. goal_status_updates — suggested status flips on existing active goals based on this session's evidence. Only suggest a flip when evidence is concrete.
 Allowed status values: proposed, active, progressing, stalled, blocked, revised, completed, archived.
 Coaching tone — never directive. Use "you might". No clinical labels. Return ONLY raw JSON.`
