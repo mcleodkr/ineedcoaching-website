@@ -5298,6 +5298,12 @@ async function initCalendar() {
   calendar = new FullCalendar.Calendar(calEl, {
     initialView: 'timeGridWeek',
     headerToolbar: false, // we render our own controls
+    // Render in the coach's timezone, not the browser's: events are fed as
+    // coach-local wall-clock naive times (see buildCalendarEvents), so running
+    // FullCalendar in UTC paints the grid in coach-local time on any device.
+    // `now` is shifted the same way so the current-time indicator lines up.
+    timeZone: 'UTC',
+    now: function () { return utcIsoToCoachNaive(new Date().toISOString()); },
     events: function (fetchInfo, success) { success(buildCalendarEvents()); },
     eventClick: handleCalendarEventClick,
     // PR 3.A: drag-to-reschedule. eventStartEditable lets the coach drag
@@ -5459,7 +5465,9 @@ function buildCalendarEvents() {
     return {
       id: b.id,
       title: serviceLabel + ' — ' + clientLabel,
-      start: b.scheduled_at,
+      // Coach-local wall clock (naive) so the UTC-configured grid shows the
+      // coach's time regardless of the browser's timezone.
+      start: utcIsoToCoachNaive(b.scheduled_at),
       end: endIso,
       extendedProps: {
         bookingId: b.id,
@@ -5482,7 +5490,8 @@ function calendarEventEnd(startIso, durationText) {
   if (Number.isNaN(d.getTime())) return startIso;
   var mins = parseCalendarDurationMinutes(durationText);
   d.setMinutes(d.getMinutes() + mins);
-  return d.toISOString();
+  // Return coach-local wall clock to match the start fed to the UTC grid.
+  return utcIsoToCoachNaive(d.toISOString());
 }
 
 // Mirrors api/availability-slots.js / book.html / api/booking-reminder.js.
@@ -5511,7 +5520,9 @@ function hashServiceIdToBucket(id) {
 function handleCalendarEventClick(info) {
   var props = info.event.extendedProps || {};
   var startDate = info.event.start;
-  var whenLabel = startDate ? startDate.toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'TBD';
+  // event.start is a UTC-labeled coach-wall time (calendar runs in UTC), so
+  // format with timeZone:'UTC' to show the coach-local clock.
+  var whenLabel = startDate ? startDate.toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'UTC' }) : 'TBD';
   $('event-title').textContent = info.event.title;
   var detailHtml = ''
     + '<p><strong>When:</strong> ' + escapeHtml(whenLabel) + '</p>'
@@ -5601,13 +5612,17 @@ async function handleCalendarEventDrop(info) {
   var bookingId = info.event.extendedProps && info.event.extendedProps.bookingId;
   var newStart = info.event.start;
   if (!bookingId || !newStart) { info.revert(); return; }
-  var label = newStart.toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  // The grid runs in UTC over coach-local wall times, so newStart's UTC fields
+  // are the coach-local clock the event was dropped on. Convert that explicitly
+  // to a true UTC instant via the coach tz (never the browser's).
+  var newUtc = coachWallToUtc(newStart.getUTCFullYear(), newStart.getUTCMonth() + 1, newStart.getUTCDate(), newStart.getUTCHours(), newStart.getUTCMinutes());
+  var label = newStart.toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'UTC' });
   if (!confirm('Reschedule this session to ' + label + '? The client will be emailed.')) {
     info.revert();
     return;
   }
   try {
-    await supabasePatch('coach_bookings', { id: 'eq.' + bookingId }, { scheduled_at: newStart.toISOString() });
+    await supabasePatch('coach_bookings', { id: 'eq.' + bookingId }, { scheduled_at: newUtc.toISOString() });
     try {
       await fetch('/api/booking-rescheduled', {
         method: 'POST',
@@ -5644,14 +5659,17 @@ async function markNoShow(bookingId) {
 function showRescheduleModal(bookingId, currentStart) {
   rescheduleContext = { bookingId: bookingId, currentTime: currentStart };
   var d = currentStart instanceof Date ? currentStart : new Date(currentStart);
+  // currentStart is the calendar event's start — a UTC-labeled coach-wall time
+  // — so read/display it in the coach tz (timeZone:'UTC' + getUTC* fields),
+  // never browser-local.
   $('reschedule-current-time').textContent = isFiniteDate(d)
-    ? d.toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+    ? d.toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'UTC' })
     : 'Unknown';
-  // Seed inputs with the existing browser-local date/time so the coach
-  // typically only needs to change one field.
+  // Seed inputs with the existing coach-local date/time so the coach typically
+  // only needs to change one field.
   if (isFiniteDate(d)) {
-    $('reschedule-date').value = formatDateForInput(d);
-    $('reschedule-time').value = formatTimeForInput(d);
+    $('reschedule-date').value = formatDateInputCoach(d);
+    $('reschedule-time').value = formatTimeInputCoach(d);
   } else {
     $('reschedule-date').value = '';
     $('reschedule-time').value = '';
@@ -5675,7 +5693,13 @@ async function confirmReschedule() {
     errEl.style.display = 'block';
     return;
   }
-  var newDt = new Date(dateVal + 'T' + timeVal);
+  // The inputs are a coach-local wall clock; convert to a true UTC instant via
+  // the coach tz (not the browser's) before saving.
+  var dp = dateVal.split('-');
+  var tp = timeVal.split(':');
+  var newDt = (dp.length === 3 && tp.length >= 2)
+    ? coachWallToUtc(+dp[0], +dp[1], +dp[2], +tp[0], +tp[1])
+    : new Date(NaN);
   if (!isFiniteDate(newDt)) {
     errEl.textContent = 'That date/time is invalid.';
     errEl.style.display = 'block';
@@ -5718,6 +5742,52 @@ function isFiniteDate(d) { return d instanceof Date && !Number.isNaN(d.getTime()
 function pad2(n) { return n < 10 ? '0' + n : '' + n; }
 function formatDateForInput(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
 function formatTimeForInput(d) { return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+
+// ── Coach-timezone helpers ──────────────────────────────────────────────────
+// The Scheduling calendar and its reschedule paths anchor on the COACH's
+// timezone, never the browser's. The calendar runs FullCalendar with
+// timeZone:'UTC' and is fed coach-local wall-clock times (as naive ISO), so the
+// grid shows coach-local time on any device; writes convert those wall-clock
+// values back to a true UTC instant explicitly. This removes the browser-tz
+// dependence that could shift a stored time by the UTC offset.
+function coachTzName() {
+  return (typeof coachProfile !== 'undefined' && coachProfile && coachProfile.timezone) || 'America/Chicago';
+}
+// Offset (ms) of the coach tz at a given UTC instant: (coach-local wall) − utc.
+function coachTzOffsetMs(utcMs) {
+  var dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone: coachTzName(), hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit'
+  });
+  var p = {};
+  dtf.formatToParts(new Date(utcMs)).forEach(function (x) { p[x.type] = x.value; });
+  var h = p.hour === '24' ? 0 : parseInt(p.hour, 10);
+  var asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, h, +p.minute, +p.second);
+  return asUtc - utcMs;
+}
+// True-UTC ISO → naive "YYYY-MM-DDTHH:mm:ss" wall clock in the coach tz, for
+// feeding FullCalendar (configured timeZone:'UTC').
+function utcIsoToCoachNaive(utcIso) {
+  var d = new Date(utcIso);
+  if (Number.isNaN(d.getTime())) return utcIso;
+  var s = new Date(d.getTime() + coachTzOffsetMs(d.getTime()));
+  return s.getUTCFullYear() + '-' + pad2(s.getUTCMonth() + 1) + '-' + pad2(s.getUTCDate())
+    + 'T' + pad2(s.getUTCHours()) + ':' + pad2(s.getUTCMinutes()) + ':' + pad2(s.getUTCSeconds());
+}
+// Coach-local wall-clock components → true UTC Date (iterates to settle DST).
+function coachWallToUtc(y, mo, d, h, mi) {
+  var guess = Date.UTC(y, mo - 1, d, h, mi, 0);
+  var off = coachTzOffsetMs(guess);
+  var utc = guess - off;
+  off = coachTzOffsetMs(utc);
+  utc = guess - off;
+  return new Date(utc);
+}
+// Read a UTC-labeled coach-wall Date (FullCalendar event.start under
+// timeZone:'UTC') into date/time input values.
+function formatDateInputCoach(d) { return d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1) + '-' + pad2(d.getUTCDate()); }
+function formatTimeInputCoach(d) { return pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes()); }
 
 function openRescheduleModal() {
   var m = $('reschedule-modal');
