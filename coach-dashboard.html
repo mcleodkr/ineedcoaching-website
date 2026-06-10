@@ -2616,14 +2616,31 @@ var dnaTagDefinitions = {
   'suppressed conviction': 'Client holds a clear internal position but does not express it',
   'behavioral leverage': 'A specific behavior is being used to create meaningful change',
   'reframe': 'The meaning of a situation or belief was shifted to open new possibilities',
-  'insight-to-action bridge': 'Insight from the session is being connected to a specific next action'
+  'insight-to-action bridge': 'Insight from the session is being connected to a specific next action',
+  // Identity & self-concept tags surfaced by Session Insights but not yet in the
+  // canonical taxonomy — defined here so the Mirror pills stop falling back to the
+  // generic line. Client behavioral pattern, coaching language only.
+  'identity': 'Client is examining or renegotiating who they understand themselves to be',
+  'identity safety': 'Client needs their core sense of self to feel secure before taking a risk',
+  'identity pattern': 'A recurring way the client defines themselves is shaping their choices',
+  'identity as anchor': 'Client steadies themselves by returning to a stable sense of who they are',
+  'role identity': 'Client\'s sense of self is tied closely to a particular role or title',
+  'role identity fusion': 'Client treats a role or title as the whole of who they are, leaving little room outside it',
+  'self-worth': 'Client\'s sense of their own value is in question or being rebuilt',
+  'self-reliance': 'Client leans on their own judgment and resources rather than waiting for others',
+  'strengths integration': 'Client is bringing a known strength into a situation where they had been holding it back',
+  'transition': 'Client is moving between life or role stages and renegotiating what fits now',
+  'accountability structure': 'Client is building external structure to help themselves follow through on what matters'
 };
 function lookupDnaTagDef(tag) {
   if (!tag) return null;
   // Try exact match first
   if (dnaTagDefinitions[tag]) return dnaTagDefinitions[tag];
-  // Try lowercase exact
-  var lower = tag.toLowerCase();
+  // Normalize the way the canonicalizer does: lowercase, underscores -> spaces,
+  // collapse whitespace. Stored tags are inconsistent (e.g. "identity_pattern"
+  // vs "identity safety"), so underscores must fold to spaces or those tags
+  // would skip the glossary and fall back to the generic line.
+  var lower = String(tag).toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
   if (dnaTagDefinitions[lower]) return dnaTagDefinitions[lower];
   // Try hyphenated
   var hyphen = lower.replace(/\s+/g, '-');
