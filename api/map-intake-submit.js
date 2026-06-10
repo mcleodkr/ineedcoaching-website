@@ -41,8 +41,15 @@ const DOMAIN_SCREENS = [
 const FAIL_MSG = 'Something went wrong. Your answers have been saved — try again or ask your coach to resend the link.';
 const INACTIVE_MSG = 'This link is no longer active. Ask your coach to send a new one.';
 
+// Pinned origin for the internal edge-function call and for CORS. NEVER derive
+// the self-call target from req.headers.host: that header is attacker-controllable,
+// and the call carries the minted coach JWT + VERCEL_AUTOMATION_BYPASS_SECRET, so a
+// spoofed Host would be a credential-exfiltration SSRF. Hardcoded prod domain
+// (house convention — see CLAUDE.md), overridable via SITE_URL.
+const SITE_ORIGIN = process.env.SITE_URL || 'https://ineedcoaching.org';
+
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', SITE_ORIGIN);
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -113,8 +120,8 @@ export default async function handler(req, res) {
     if (!coachJwt) return res.status(200).json({ ok: false, error: FAIL_MSG });
 
     // --- POST to the live edge function AS the coach (edge fn untouched) ---
-    const proto = String(req.headers['x-forwarded-proto'] || 'https').split(',')[0];
-    const base = `${proto}://${req.headers.host}`;
+    // Target is the pinned SITE_ORIGIN, never req.headers.host (SSRF — see above).
+    const base = SITE_ORIGIN;
     const genHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${coachJwt}` };
     if (process.env.VERCEL_AUTOMATION_BYPASS_SECRET) {
       genHeaders['x-vercel-protection-bypass'] = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
