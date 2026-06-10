@@ -266,7 +266,7 @@
       ] },
       { name: 'Environmental', questions: [
         { key: 'environmental_1', text: "Look around at the spaces, people, and conditions that make up your daily life. What do you notice about how they relate to this goal?" },
-        { key: 'environmental_2', text: "Does your environment reflect where you’re going or where you’ve been — and is there anything from where you’ve been that belongs in where you’re going?" },
+        { key: 'environmental_2', text: "How does your environment reflect where you’re going or where you’ve been — and is there anything from where you’ve been that belongs in where you’re going?" },
       ] },
       { name: 'Social', questions: [
         { key: 'social_1', text: "Who is in the room with this goal — meaning who actually knows what you’re building and shows up for it?" },
@@ -392,12 +392,71 @@
       return renderReview();
     }
 
-    function onSubmit() {
+    async function onSubmit() {
       captureInputs();
-      // STEP 3 seam: mint a coach session from the token server-side, POST to
-      // /api/generate-effectiveness-map, then redirect to /map/results. Until
-      // Step 3 lands, this shows the brief's submit state.
       app.innerHTML = '<section class="surface state"><div class="spinner" role="status" aria-label="Building"></div><p>Building your Map…</p></section>';
+      try {
+        await saveDraft(); // final authoritative save — the server reads answers from the draft
+        const r = await fetch('/api/map-intake-submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: TOKEN }),
+        });
+        const data = await r.json().catch(() => ({}));
+
+        if (data && data.ok && data.status === 'completed') return renderMapReady();
+        if (data && data.ok && data.status === 'crisis') return renderCrisis();
+        if (data && data.incomplete) {
+          return bounceTo(Number.isInteger(data.screen) ? data.screen : 0,
+                          'Please answer every question before submitting.');
+        }
+        // Dead link (consumed / expired / invalid) — terminal, nothing to retry.
+        if (data && data.error === INACTIVE_MSG) return renderError(data.error);
+        // Generation failure — back to review with the message; retry available.
+        renderReview();
+        injectBanner((data && data.error) || 'Something went wrong. Please try again.');
+      } catch (e) {
+        renderReview();
+        injectBanner('Something went wrong. Your answers have been saved — please try again.');
+      }
+    }
+
+    // Prepend an inline alert to the current surface (reuses the .field-error style).
+    function injectBanner(msg) {
+      const surface = app.querySelector('.surface');
+      if (!surface) return;
+      const b = document.createElement('p');
+      b.className = 'field-error';
+      b.setAttribute('role', 'alert');
+      b.style.margin = '0 0 1rem';
+      b.textContent = msg;
+      surface.insertBefore(b, surface.firstChild);
+    }
+
+    function bounceTo(screen, msg) {
+      currentScreen = Math.max(0, Math.min(5, screen));
+      renderScreen();
+      injectBanner(msg);
+    }
+
+    function renderMapReady() {
+      app.innerHTML =
+        '<section class="surface state">' +
+          '<h2>Your Map is ready</h2>' +
+          '<p>Thank you for completing your Effectiveness Map. Your coach will walk through it with you.</p>' +
+        '</section>';
+    }
+
+    function renderCrisis() {
+      app.innerHTML =
+        '<section class="surface state">' +
+          '<h2>Thank you for sharing</h2>' +
+          '<p>Some of what you wrote suggests you may be carrying something heavy right now. ' +
+          'If you’re in crisis or thinking about harming yourself, you deserve immediate support — ' +
+          'in the U.S. you can call or text <strong>988</strong> (the Suicide &amp; Crisis Lifeline), any time. ' +
+          'If you are outside the US, please contact your local emergency services or a trusted person in your life.</p>' +
+          '<p>Your coach will also reach out.</p>' +
+        '</section>';
     }
 
     async function saveDraft() {
