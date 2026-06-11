@@ -45,8 +45,10 @@ const INACTIVE_MSG = 'This link is no longer active. Ask your coach to send a ne
 // the self-call target from req.headers.host: that header is attacker-controllable,
 // and the call carries the minted coach JWT + VERCEL_AUTOMATION_BYPASS_SECRET, so a
 // spoofed Host would be a credential-exfiltration SSRF. Hardcoded prod domain
-// (house convention — see CLAUDE.md), overridable via SITE_URL.
-const SITE_ORIGIN = process.env.SITE_URL || 'https://ineedcoaching.org';
+// (house convention — see CLAUDE.md), overridable via SITE_URL. Use the canonical
+// www host: the apex 308-redirects to www, and fetch drops the Authorization
+// bearer across that host change → the coach JWT is lost and gen returns 401.
+const SITE_ORIGIN = process.env.SITE_URL || 'https://www.ineedcoaching.org';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', SITE_ORIGIN);
@@ -132,6 +134,7 @@ export default async function handler(req, res) {
     try {
       gen = await fetch(`${base}/api/generate-effectiveness-map`, {
         method: 'POST',
+        redirect: 'error', // never follow a redirect: a cross-host hop (apex→www) strips the bearer → silent 401. Fail loud; the catch below keeps the link usable.
         headers: genHeaders,
         body: JSON.stringify({
           goal: String(answers.goal),
