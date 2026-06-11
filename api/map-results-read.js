@@ -58,10 +58,33 @@ export default async function handler(req, res) {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
     const token = typeof body.token === 'string' ? body.token : '';
 
-    // 1. Cryptographic gate — runs before any DB read.
-    const decoded = verifyMapLink(token);
+    // 1. Cryptographic gate — runs before any DB read. Allow an expired token
+    //    through the HMAC check so a COMPLETED Map stays readable past the 14-day
+    //    window (M1); an unfinished expired link is rejected in 1a. The signature
+    //    is always verified — allowExpired only skips the wall-clock check.
+    const decoded = verifyMapLink(token, { allowExpired: true });
     if (!decoded) return res.status(200).json({ ok: false, error: INACTIVE_MSG });
     const sessionId = decoded.sessionId;
+
+    // 1a. Past expiry → honored ONLY once the assignment is 'completed' (a finished
+    //     Map is permanently viewable); pending/in_progress/expired stays a dead
+    //     link. Unexpired tokens skip this read and take the original happy path.
+    if (Date.now() > decoded.expiresAt) {
+      const aRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/effectiveness_map_assignments?session_id=eq.${encodeURIComponent(sessionId)}&select=status&limit=1`,
+        { headers: READ_HEADERS }
+      );
+      if (!aRes.ok) {
+        const t = await aRes.text().catch(() => '');
+        console.error('[map-results-read] assignment read failed', aRes.status, t.slice(0, 200));
+        return res.status(200).json({ ok: false, error: INACTIVE_MSG });
+      }
+      const aRows = await aRes.json().catch(() => []);
+      const assignment = Array.isArray(aRows) ? aRows[0] : null;
+      if (!assignment || assignment.status !== 'completed') {
+        return res.status(200).json({ ok: false, error: INACTIVE_MSG });
+      }
+    }
 
     // 2. The map row, by session_id (unique). Explorer-safe columns only.
     const r = await fetch(
