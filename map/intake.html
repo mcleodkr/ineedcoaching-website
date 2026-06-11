@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Your Effectiveness Map · ineedcoaching</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --navy: #1a3a52;
+      --gold: #c49a3c;
+      --gold-tint: rgba(196, 154, 60, 0.10);
+      --cream: #f7f5f1;
+      --card: #ffffff;
+      --border: #e8e4dc;
+      --text: #1a3a52;
+      --muted: #6b6256;
+
+      --text-body: 1.0625rem;
+      --text-h1: clamp(1.9rem, 1.3rem + 2.4vw, 2.6rem);
+      --text-q: 1.15rem;
+
+      --space-page: clamp(1.25rem, 0.5rem + 3vw, 3rem);
+      --radius: 12px;
+      --shadow: 0 1px 2px rgba(26, 58, 82, 0.05), 0 8px 28px rgba(26, 58, 82, 0.06);
+      --duration: 180ms;
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      background: var(--cream);
+      color: var(--text);
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: var(--text-body);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .site-header {
+      padding: var(--space-page);
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .wordmark {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 600;
+      font-size: 1.5rem;
+      letter-spacing: 0.01em;
+      color: var(--navy);
+    }
+    .wordmark span { color: var(--gold); }
+
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 var(--space-page) clamp(3rem, 6vw, 6rem);
+    }
+
+    .surface {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: clamp(1.5rem, 1rem + 3vw, 3rem);
+    }
+
+    /* Intro */
+    .eyebrow {
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin: 0 0 0.75rem;
+    }
+    h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 700;
+      font-size: var(--text-h1);
+      line-height: 1.1;
+      margin: 0 0 1rem;
+      color: var(--navy);
+    }
+    .intro-copy {
+      color: var(--muted);
+      max-width: 56ch;
+      margin: 0 0 2rem;
+    }
+
+    /* Questions */
+    .field { margin: 0 0 2rem; }
+    .field:last-of-type { margin-bottom: 0; }
+    .question {
+      display: block;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: var(--text-q);
+      font-weight: 600;
+      color: var(--navy);
+      margin: 0 0 0.85rem;
+    }
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      resize: vertical;
+      font-family: inherit;
+      font-size: 1rem;
+      line-height: 1.55;
+      color: var(--text);
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.9rem 1rem;
+      transition: border-color var(--duration) var(--ease), box-shadow var(--duration) var(--ease);
+    }
+    textarea:focus-visible {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px var(--gold-tint);
+    }
+
+    /* Phase options as accessible radio cards */
+    fieldset { border: 0; margin: 0; padding: 0; }
+    .options { display: grid; gap: 0.6rem; }
+    .option {
+      position: relative;
+      display: block;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.9rem 1rem 0.9rem 2.85rem;
+      cursor: pointer;
+      transition: border-color var(--duration) var(--ease),
+                  background-color var(--duration) var(--ease),
+                  transform var(--duration) var(--ease);
+    }
+    .option:hover { border-color: var(--gold); transform: translateY(-1px); }
+    .option input {
+      position: absolute;
+      top: 1.05rem; left: 1rem;
+      width: 1.15rem; height: 1.15rem;
+      margin: 0;
+      accent-color: var(--gold);
+      cursor: pointer;
+    }
+    .option .opt-label { font-weight: 600; color: var(--navy); }
+    .option .opt-desc { color: var(--muted); }
+    .option:has(input:checked) {
+      border-color: var(--gold);
+      background: var(--gold-tint);
+      box-shadow: inset 3px 0 0 var(--gold);
+    }
+    .option:has(input:focus-visible) {
+      box-shadow: 0 0 0 3px var(--gold-tint);
+    }
+
+    /* Actions */
+    .actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 2.25rem; }
+    .actions.split { justify-content: space-between; }
+    .btn {
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 0.7rem 1.6rem;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: background-color var(--duration) var(--ease),
+                  border-color var(--duration) var(--ease),
+                  transform var(--duration) var(--ease);
+    }
+    .btn-primary { background: var(--gold); color: #fff; }
+    .btn-primary:hover { background: #b2862f; transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-secondary { background: transparent; color: var(--navy); border-color: var(--border); }
+    .btn-secondary:hover { border-color: var(--navy); transform: translateY(-1px); }
+    .btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--gold-tint); }
+
+    /* Domain progress + review summary */
+    .progress {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 0 0 1rem;
+    }
+    .summary-label { font-family: 'Cormorant Garamond', serif; font-size: var(--text-q); font-weight: 600; color: var(--navy); margin: 0 0 0.35rem; }
+    .summary-value { color: var(--muted); margin: 0; }
+
+    .field-error {
+      color: #9a2b2b;
+      font-size: 0.9rem;
+      margin: 0.5rem 0 0;
+      min-height: 1.2em;
+    }
+
+    /* Loading + error states */
+    .state {
+      text-align: center;
+      padding: clamp(2.5rem, 6vw, 5rem) 1.5rem;
+      color: var(--muted);
+    }
+    .state h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 600;
+      color: var(--navy);
+      font-size: 1.6rem;
+      margin: 0 0 0.5rem;
+    }
+    .spinner {
+      width: 28px; height: 28px;
+      margin: 0 auto 1rem;
+      border: 2px solid var(--border);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .screen { animation: rise var(--duration) var(--ease); }
+    @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, .screen { animation: none !important; transition: none !important; }
+      .option:hover, .btn-primary:hover, .btn-secondary:hover { transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wordmark">ineed<span>coaching</span></div>
+  </header>
+  <main id="app" aria-live="polite">
+    <!-- views render here -->
+  </main>
+
+  <script>
+    const INACTIVE_MSG = 'This link is no longer active. Ask your coach to send a new one.';
+    const TOKEN = new URLSearchParams(location.search).get('token') || '';
+
+    const PHASES = [
+      { value: 'Dreaming',   desc: 'You’re imagining what’s possible and getting clear on what you want.' },
+      { value: 'Building',   desc: 'You’re actively putting the pieces in place and doing the work.' },
+      { value: 'Refining',   desc: 'You’re adjusting and improving something that’s already in motion.' },
+      { value: 'Releasing',  desc: 'You’re letting go of what’s no longer serving the goal.' },
+      { value: 'Sustaining', desc: 'You’re keeping what works alive and steady over time.' },
+    ];
+
+    // Canonical P.I.P.E.S. intake questions — wired verbatim (framework owner).
+    const DOMAINS = [
+      { name: 'Physical', questions: [
+        { key: 'physical_1', text: "When you’re in the middle of working toward this goal, what do you notice in your body?" },
+        { key: 'physical_2', text: "Is that typical for you, or has it changed since you started pursuing this goal?" },
+      ] },
+      { name: 'Intellectual', questions: [
+        { key: 'intellectual_1', text: "When you’re working toward this goal, how would you describe your thinking — is it available to you, or does it feel harder to access than usual?" },
+        { key: 'intellectual_2', text: "What does your inner mental chatter sound like around this goal?" },
+      ] },
+      { name: 'Psychological', questions: [
+        { key: 'psychological_1', text: "When you think about achieving this goal, what’s the first thing that happens inside you?" },
+        { key: 'psychological_2', text: "Picture the moment it’s real. You’re standing in it. What do you say to yourself?" },
+      ] },
+      { name: 'Environmental', questions: [
+        { key: 'environmental_1', text: "Look around at the spaces, people, and conditions that make up your daily life. What do you notice about how they relate to this goal?" },
+        { key: 'environmental_2', text: "How does your environment reflect where you’re going or where you’ve been — and is there anything from where you’ve been that belongs in where you’re going?" },
+      ] },
+      { name: 'Social', questions: [
+        { key: 'social_1', text: "Who is in the room with this goal — meaning who actually knows what you’re building and shows up for it?" },
+        { key: 'social_2', text: "What have you had to sacrifice, compromise, or negotiate in order to keep building toward this goal?" },
+      ] },
+    ];
+
+    let answers = {};        // { goal, phase, physical_1 … social_2 }
+    let currentScreen = 0;   // 0 = goal/phase · 1–5 = domains · 6 = review
+
+    const app = document.getElementById('app');
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    function renderLoading() {
+      app.innerHTML = '<section class="surface state"><div class="spinner" role="status" aria-label="Loading"></div><p>Checking your link…</p></section>';
+    }
+    function renderError(msg) {
+      app.innerHTML = '<section class="surface state"><h2>Link unavailable</h2><p>' + esc(msg || INACTIVE_MSG) + '</p></section>';
+    }
+
+    function renderGoalPhase() {
+      const opts = PHASES.map((p) => (
+        '<label class="option">' +
+          '<input type="radio" name="phase" value="' + esc(p.value) + '"' + (answers.phase === p.value ? ' checked' : '') + ' />' +
+          '<span class="opt-label">' + esc(p.value) + ':</span> ' +
+          '<span class="opt-desc">' + esc(p.desc) + '</span>' +
+        '</label>'
+      )).join('');
+      app.innerHTML =
+        '<section class="surface screen">' +
+          '<p class="eyebrow">Your Effectiveness Map</p>' +
+          '<h1>Let’s start with your goal</h1>' +
+          '<p class="intro-copy">Your coach has invited you to complete your Effectiveness Map — a reflection on how your whole system is showing up in service of your goal right now. There are no right or wrong answers. Just answer honestly in your own words.</p>' +
+          '<div class="field">' +
+            '<label class="question" for="goal">What goal are you working toward right now?</label>' +
+            '<textarea id="goal" rows="4">' + esc(answers.goal || '') + '</textarea>' +
+            '<p class="field-error" id="goal-error" aria-live="polite"></p>' +
+          '</div>' +
+          '<div class="field"><fieldset>' +
+            '<legend class="question">Which of these best describes where you are with this goal?</legend>' +
+            '<div class="options">' + opts + '</div>' +
+            '<p class="field-error" id="phase-error" aria-live="polite"></p>' +
+          '</fieldset></div>' +
+          '<div class="actions"><button type="button" class="btn btn-primary" id="continue">Continue</button></div>' +
+        '</section>';
+      document.getElementById('continue').addEventListener('click', onGoalContinue);
+    }
+
+    function onGoalContinue() {
+      const goalEl = document.getElementById('goal');
+      const goalErr = document.getElementById('goal-error');
+      const phaseErr = document.getElementById('phase-error');
+      const goal = goalEl.value.trim();
+      const phase = (document.querySelector('input[name="phase"]:checked') || {}).value || '';
+      goalErr.textContent = '';
+      phaseErr.textContent = '';
+      if (!goal) { goalErr.textContent = 'Please share the goal you’re working toward.'; goalEl.focus(); return; }
+      if (!phase) { phaseErr.textContent = 'Please choose where you are with this goal.'; return; }
+      answers.goal = goal;
+      answers.phase = phase;
+      navigate(1);
+    }
+
+    function renderDomain() {
+      const domain = DOMAINS[currentScreen - 1];
+      const qs = domain.questions.map((q) =>
+        '<div class="field">' +
+          '<label class="question" for="' + esc(q.key) + '">' + esc(q.text) + '</label>' +
+          '<textarea id="' + esc(q.key) + '" rows="4">' + esc(answers[q.key] || '') + '</textarea>' +
+        '</div>'
+      ).join('');
+      app.innerHTML =
+        '<section class="surface screen">' +
+          '<p class="progress">' + currentScreen + ' of 5</p>' +
+          '<h1>' + esc(domain.name) + '</h1>' +
+          qs +
+          '<div class="actions split">' +
+            '<button type="button" class="btn btn-secondary" id="back">Back</button>' +
+            '<button type="button" class="btn btn-primary" id="next">Continue</button>' +
+          '</div>' +
+        '</section>';
+      document.getElementById('back').addEventListener('click', () => navigate(currentScreen - 1));
+      document.getElementById('next').addEventListener('click', () => navigate(currentScreen + 1));
+    }
+
+    function renderReview() {
+      app.innerHTML =
+        '<section class="surface screen">' +
+          '<p class="eyebrow">Almost there</p>' +
+          '<h1>Ready to see your Map</h1>' +
+          '<div class="field"><p class="summary-label">Your goal</p><p class="summary-value">' + esc(answers.goal || '') + '</p></div>' +
+          '<div class="field"><p class="summary-label">Where you are</p><p class="summary-value">' + esc(answers.phase || '') + '</p></div>' +
+          '<div class="actions split">' +
+            '<button type="button" class="btn btn-secondary" id="back">Back</button>' +
+            '<button type="button" class="btn btn-primary" id="submit">See My Map</button>' +
+          '</div>' +
+        '</section>';
+      document.getElementById('back').addEventListener('click', () => navigate(5));
+      document.getElementById('submit').addEventListener('click', onSubmit);
+    }
+
+    // Capture the visible screen's textareas into `answers` before navigating away.
+    function captureInputs() {
+      if (currentScreen >= 1 && currentScreen <= 5) {
+        DOMAINS[currentScreen - 1].questions.forEach((q) => {
+          const el = document.getElementById(q.key);
+          if (el) answers[q.key] = el.value;
+        });
+      }
+    }
+
+    function navigate(target) {
+      captureInputs();
+      currentScreen = Math.max(0, Math.min(6, target));
+      renderScreen();
+      saveDraft(); // optimistic: UI advances now, draft persists in the background
+    }
+
+    function renderScreen() {
+      if (currentScreen <= 0) return renderGoalPhase();
+      if (currentScreen <= 5) return renderDomain();
+      return renderReview();
+    }
+
+    async function onSubmit() {
+      captureInputs();
+      app.innerHTML = '<section class="surface state"><div class="spinner" role="status" aria-label="Building"></div><p>Building your Map…</p></section>';
+      try {
+        await saveDraft(); // final authoritative save — the server reads answers from the draft
+        const r = await fetch('/api/map-intake-submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: TOKEN }),
+        });
+        const data = await r.json().catch(() => ({}));
+
+        if (data && data.ok && data.status === 'completed') return renderMapReady();
+        if (data && data.ok && data.status === 'crisis') return renderCrisis();
+        if (data && data.incomplete) {
+          return bounceTo(Number.isInteger(data.screen) ? data.screen : 0,
+                          'Please answer every question before submitting.');
+        }
+        // Dead link (consumed / expired / invalid) — terminal, nothing to retry.
+        if (data && data.error === INACTIVE_MSG) return renderError(data.error);
+        // Generation failure — back to review with the message; retry available.
+        renderReview();
+        injectBanner((data && data.error) || 'Something went wrong. Please try again.');
+      } catch (e) {
+        renderReview();
+        injectBanner('Something went wrong. Your answers have been saved — please try again.');
+      }
+    }
+
+    // Prepend an inline alert to the current surface (reuses the .field-error style).
+    function injectBanner(msg) {
+      const surface = app.querySelector('.surface');
+      if (!surface) return;
+      const b = document.createElement('p');
+      b.className = 'field-error';
+      b.setAttribute('role', 'alert');
+      b.style.margin = '0 0 1rem';
+      b.textContent = msg;
+      surface.insertBefore(b, surface.firstChild);
+    }
+
+    function bounceTo(screen, msg) {
+      currentScreen = Math.max(0, Math.min(5, screen));
+      renderScreen();
+      injectBanner(msg);
+    }
+
+    function renderMapReady() {
+      app.innerHTML =
+        '<section class="surface state">' +
+          '<h2>Your Map is ready</h2>' +
+          '<p>Thank you for completing your Effectiveness Map. Your coach will walk through it with you.</p>' +
+        '</section>';
+    }
+
+    function renderCrisis() {
+      app.innerHTML =
+        '<section class="surface state">' +
+          '<h2>Thank you for sharing</h2>' +
+          '<p>Some of what you wrote suggests you may be carrying something heavy right now. ' +
+          'If you’re in crisis or thinking about harming yourself, you deserve immediate support — ' +
+          'in the U.S. you can call or text <strong>988</strong> (the Suicide &amp; Crisis Lifeline), any time. ' +
+          'If you are outside the US, please contact your local emergency services or a trusted person in your life.</p>' +
+          '<p>Your coach will also reach out.</p>' +
+        '</section>';
+    }
+
+    async function saveDraft() {
+      try {
+        await fetch('/api/map-intake-save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: TOKEN, answers, current_screen: currentScreen }),
+        });
+      } catch (e) {
+        console.error('[intake] draft save failed', e && e.message);
+      }
+    }
+
+    async function init() {
+      if (!TOKEN) { renderError(INACTIVE_MSG); return; }
+      renderLoading();
+      try {
+        const r = await fetch('/api/map-intake-validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: TOKEN }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!data || !data.ok) { renderError(data && data.error); return; }
+        if (data.status === 'completed') { location.replace('/map/results?token=' + encodeURIComponent(TOKEN)); return; }
+        if (data.draft && data.draft.answers && typeof data.draft.answers === 'object') answers = { ...data.draft.answers };
+        currentScreen = (data.draft && Number.isInteger(data.draft.current_screen)) ? data.draft.current_screen : 0;
+        renderScreen();
+      } catch (e) {
+        renderError(INACTIVE_MSG);
+      }
+    }
+    init();
+  </script>
+</body>
+</html>

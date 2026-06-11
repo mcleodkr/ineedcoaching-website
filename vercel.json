@@ -39,6 +39,9 @@
     "api/cron-interventions.js": {
       "maxDuration": 300
     },
+    "api/map-intake-submit.js": {
+      "maxDuration": 180
+    },
     "api/*.js": {
       "maxDuration": 30
     }
