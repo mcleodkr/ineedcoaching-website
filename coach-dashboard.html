@@ -8139,9 +8139,16 @@ function effmapDate(iso) {
 // No-map state: Assign button + subtext. Wired by wireEffmapAssignment (Step 6) —
 // clicking it creates a pending assignment and mints the intake link.
 function effmapEmptyHtml(email) {
-  return '<div style="text-align:center;padding:8px 0 4px;">'
-    + '<button class="save-btn" id="effmap-assign-btn" data-client-email="' + escapeHtml(email) + '" style="padding:10px 22px;font-size:0.82rem;background:var(--gold);">Assign Effectiveness Map</button>'
-    + '<p style="margin:12px 0 0;font-size:0.85rem;color:var(--muted);">Send your client a link to complete their P.I.P.E.S. system assessment.</p>'
+  return '<div style="padding:4px 0;">'
+    + '<div style="font-size:0.9rem;line-height:1.65;color:var(--ink);text-align:left;margin-bottom:20px;">'
+    +   '<p style="margin:0 0 14px;">Most inventories tell you who your client is. The Effectiveness Map tells you how they are showing up right now, toward a specific goal they are actively working on.</p>'
+    +   '<p style="margin:0 0 14px;">It reads across five domains (Physical, Intellectual, Psychological, Environmental, and Social) and surfaces which ones are fueling the work, which are quietly creating drag, and where there is capacity that has not yet been recruited into the goal. Think of it as precision instrumentation, the kind that helps you do what you already do, with more accuracy and less guesswork.</p>'
+    +   '<p style="margin:0 0 14px;">Your client answers ten open-ended questions and receives the same structured read you do: their system mapped against their goal, in plain language. You both arrive at the next session with the same forensic picture of where they are and what is available.</p>'
+    +   '<p style="margin:0;">Use it when a client starts a new goal, when momentum stalls, or when something feels off but you cannot locate it yet. It works as many times as the work calls for it.</p>'
+    + '</div>'
+    + '<div style="text-align:center;">'
+    +   '<button class="save-btn" id="effmap-assign-btn" data-client-email="' + escapeHtml(email) + '" style="padding:10px 22px;font-size:0.82rem;background:var(--gold);">Assign Effectiveness Map</button>'
+    + '</div>'
     + '</div>';
 }
 
@@ -8371,7 +8378,13 @@ async function effmapAssign(btn, email) {
     var data = await res.json().catch(function() { return null; });
     if (!res.ok || !data || !data.ok) {
       btn.disabled = false; btn.textContent = orig;
-      effmapSetMsg(body, (data && data.error) || 'Could not create the link. Please try again.', true);
+      if (data && data.code === 'SUBSCRIPTION_INACTIVE') {
+        // Quiet informational note, not an error — an absent/lapsed subscription is
+        // an account state, not something the coach did wrong.
+        effmapSetMsg(body, 'A subscription is required to assign Maps. Visit your account settings to activate or renew.', false);
+      } else {
+        effmapSetMsg(body, (data && data.error) || 'Could not create the link. Please try again.', true);
+      }
       return;
     }
     var active = { session_id: data.session_id, status: data.status || 'pending', assigned_at: data.assigned_at, expires_at: data.expires_at };
@@ -8709,6 +8722,13 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
     +     '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;font-weight:600;">Open Coaching Strategy</span>'
     +     '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.74rem;color:rgba(255,255,255,0.85);line-height:1.45;">Longitudinal game plan \u2014 what\u2019s working, what\u2019s not, when to pivot.</span>'
     +   '</a>'
+    +   '<div id="effmap-card" role="button" tabindex="0" aria-expanded="false" aria-controls="effmap-panel" style="display:flex;flex-direction:column;gap:4px;background:#2f6168;color:#ffffff;border-radius:6px;padding:14px 18px;cursor:pointer;transition:background 0.12s ease;">'
+    +     '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px;">Open Effectiveness Map <span class="effmap-card-caret" style="font-size:0.78rem;font-weight:400;">\u25be</span></span>'
+    +     '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.74rem;color:rgba(255,255,255,0.85);line-height:1.45;">Goal-specific system read across five domains: see what is fueling the work and what is creating drag.</span>'
+    +   '</div>'
+    + '</div>'
+    + '<div id="effmap-panel" style="display:none;margin-top:14px;">'
+    +   '<div id="effmap-body"><div class="loading-state" style="min-height:80px;"><div class="loading-spinner"></div></div></div>'
     + '</div>'
     + clientPanelClose();
 
@@ -8926,16 +8946,29 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
     + '<span id="client-testimonial-msg" style="font-size:0.82rem;"></span>'
     + '</div>' + clientPanelClose();
 
-  // Effectiveness Map (Step 5) — empty container, filled async by loadClientMap
-  // (same render-then-fill pattern as Daily Check-ins below).
-  html += clientPanelOpen('Effectiveness Map')
-    + '<div id="effmap-body"><div class="loading-state" style="min-height:80px;"><div class="loading-spinner"></div></div></div>'
-    + clientPanelClose();
-
   $('clients-detail-view').innerHTML = html;
 
-  // Effectiveness Map — async, best-effort; renders its own states.
-  try { loadClientMap(client.email); } catch (e) { /* non-fatal */ }
+  // Effectiveness Map launcher (Coach Intelligence card) — expand the panel inline
+  // and lazy-load it on first open (the sibling cards navigate to standalone pages;
+  // the Map has no standalone page, so it expands in place).
+  (function() {
+    var card = document.getElementById('effmap-card');
+    var panel = document.getElementById('effmap-panel');
+    if (!card || !panel) return;
+    var loaded = false;
+    var toggle = function() {
+      var open = panel.style.display !== 'none';
+      panel.style.display = open ? 'none' : 'block';
+      card.setAttribute('aria-expanded', open ? 'false' : 'true');
+      var caret = card.querySelector('.effmap-card-caret');
+      if (caret) caret.textContent = open ? '▾' : '▴';
+      if (!open && !loaded) { loaded = true; loadClientMap(client.email); }
+    };
+    card.addEventListener('click', toggle);
+    card.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+    });
+  })();
 
   // Fix 6: auto-load Daily Check-ins so the computed summary shows immediately
   // (detail stays collapsed behind a toggle inside loadDailyCheckins). Async,
