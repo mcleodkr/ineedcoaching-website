@@ -8086,6 +8086,184 @@ function clientPanelClose() {
   return '</div></div>';
 }
 
+/* ============================================================
+   Effectiveness Map (Step 5) — coach-side display inside client detail.
+   Filled into #effmap-body by loadClientMap after the detail view paints.
+   Reads via /api/map-coach-read (coach JWT). No-map -> Assign button; map ->
+   full reading-order Map + collapsible Previous Maps + coach-only Intelligence
+   Notes. All dynamic text escaped via escapeHtml.
+   ============================================================ */
+var EFFMAP_DOMAINS = [
+  ['physical', 'Physical'], ['intellectual', 'Intellectual'],
+  ['psychological', 'Psychological'], ['environmental', 'Environmental'],
+  ['social', 'Social']
+];
+
+async function loadClientMap(email) {
+  var body = document.getElementById('effmap-body');
+  if (!body) return;
+  try {
+    var res = await fetch('/api/map-coach-read', {
+      method: 'POST',
+      headers: apiHeaders(),
+      body: JSON.stringify({ client_email: email })
+    });
+    var data = await res.json().catch(function() { return null; });
+    if (!res.ok || !data || !data.ok) { body.innerHTML = effmapMessage('Could not load the Effectiveness Map right now.'); return; }
+    var maps = Array.isArray(data.maps) ? data.maps : [];
+    if (!maps.length) { body.innerHTML = effmapEmptyHtml(email); return; }
+    body.innerHTML = effmapMapsHtml(maps);
+    wireEffmapToggles(body);
+  } catch (e) {
+    body.innerHTML = effmapMessage('Could not load the Effectiveness Map right now.');
+  }
+}
+
+function effmapMessage(msg) {
+  return '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;margin:0;">' + escapeHtml(msg) + '</p>';
+}
+
+function effmapDate(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// No-map state: Assign button + subtext. NOTE: the button's click is intentionally
+// NOT wired here — assigning a Map is the separate "assign endpoint + coach button"
+// brief. Rendered per spec; wiring lands with that brief.
+function effmapEmptyHtml(email) {
+  return '<div style="text-align:center;padding:8px 0 4px;">'
+    + '<button class="save-btn" id="effmap-assign-btn" data-client-email="' + escapeHtml(email) + '" style="padding:10px 22px;font-size:0.82rem;background:var(--gold);">Assign Effectiveness Map</button>'
+    + '<p style="margin:12px 0 0;font-size:0.85rem;color:var(--muted);">Send your client a link to complete their P.I.P.E.S. system assessment.</p>'
+    + '</div>';
+}
+
+function effmapMapsHtml(maps) {
+  var current = maps[0];
+  var previous = maps.slice(1);
+  var html = effmapHeaderHtml(current) + effmapReadingOrderHtml(current);
+  html += effmapCollapsible('effmap-intel', 'Intelligence Notes (coach only)', effmapIntelHtml(current));
+  if (previous.length) {
+    var inner = '';
+    previous.forEach(function(m, i) {
+      var pid = 'effmap-prev-' + i;
+      inner += '<div style="border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:10px;overflow:hidden;">'
+        + '<button type="button" data-effmap-toggle="' + pid + '" style="width:100%;text-align:left;background:var(--cream);border:none;cursor:pointer;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;">'
+        +   '<span style="font-size:0.85rem;color:var(--ink);font-weight:600;">' + escapeHtml(m.goal || 'Untitled goal') + '</span>'
+        +   '<span style="font-size:0.78rem;color:var(--muted);white-space:nowrap;">' + escapeHtml(effmapDate(m.created_at)) + ' <span class="effmap-caret">▾</span></span>'
+        + '</button>'
+        + '<div id="' + pid + '" style="display:none;padding:14px 16px;border-top:1px solid var(--border);">'
+        +   effmapReadingOrderHtml(m)
+        +   effmapCollapsible('effmap-intel-' + i, 'Intelligence Notes (coach only)', effmapIntelHtml(m))
+        + '</div>'
+        + '</div>';
+    });
+    html += effmapCollapsible('effmap-previous', 'Previous Maps (' + previous.length + ')', inner);
+  }
+  return html;
+}
+
+function effmapHeaderHtml(m) {
+  return '<div style="margin-bottom:18px;">'
+    + '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">Current Map &bull; ' + escapeHtml(effmapDate(m.created_at)) + (m.phase ? ' &bull; ' + escapeHtml(m.phase) : '') + '</div>'
+    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.25rem;font-weight:600;color:var(--navy);line-height:1.2;">' + escapeHtml(m.goal || 'Untitled goal') + '</div>'
+    + '</div>';
+}
+
+// Reading order: Domain Snapshot -> System Picture -> Cross-Domain Tax ->
+// Release Question -> Domain Status Row. Built from explorer_facing_output.
+function effmapReadingOrderHtml(m) {
+  var efo = (m && m.explorer_facing_output && typeof m.explorer_facing_output === 'object') ? m.explorer_facing_output : {};
+  var ds = (efo.domain_statuses && typeof efo.domain_statuses === 'object') ? efo.domain_statuses : {};
+  var out = '';
+
+  var snaps = '';
+  EFFMAP_DOMAINS.forEach(function(d) {
+    var p = ds[d[0]] && ds[d[0]].snapshot_paragraph;
+    if (p && String(p).trim()) snaps += '<p style="margin:0 0 14px;font-size:0.9rem;line-height:1.6;color:var(--ink);">' + escapeHtml(p) + '</p>';
+  });
+  if (snaps) out += '<div style="margin-bottom:20px;">' + snaps + '</div>';
+
+  var sp = efo.system_picture && efo.system_picture.narrative;
+  if (sp && String(sp).trim()) out += '<p style="margin:0 0 20px;font-size:0.95rem;line-height:1.65;color:var(--ink);">' + escapeHtml(sp) + '</p>';
+
+  var tax = efo.cross_domain_tax;
+  if (tax && tax.narrative && String(tax.narrative).trim()) {
+    out += '<div style="margin:0 0 20px;">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:600;color:var(--gold);margin-bottom:6px;">Where the load is moving</div>'
+      + '<p style="margin:0;font-size:0.9rem;line-height:1.6;color:var(--ink);">' + escapeHtml(tax.narrative) + '</p>'
+      + '</div>';
+  }
+
+  var rq = efo.release_question && efo.release_question.question;
+  if (rq && String(rq).trim()) {
+    out += '<div style="margin:0 0 22px;padding:16px 18px;background:rgba(196,154,60,0.10);border-radius:var(--r-sm);">'
+      + '<div style="font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">A question to sit with</div>'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:var(--navy);line-height:1.3;">' + escapeHtml(rq) + '</div>'
+      + '</div>';
+  }
+
+  var cells = '';
+  EFFMAP_DOMAINS.forEach(function(d) {
+    var v = ds[d[0]] && ds[d[0]].primary_status;
+    var has = v && String(v).trim();
+    cells += '<div style="flex:1;min-width:90px;text-align:center;">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;font-weight:600;color:var(--navy);">' + escapeHtml(d[1]) + '</div>'
+      + '<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:' + (has ? 'var(--gold)' : 'var(--muted)') + ';margin-top:3px;">' + escapeHtml(has ? v : '—') + '</div>'
+      + '</div>';
+  });
+  out += '<div style="display:flex;flex-wrap:wrap;gap:12px;padding-top:16px;border-top:1px solid var(--border);">' + cells + '</div>';
+
+  return out || effmapMessage('This Map has no displayable content.');
+}
+
+// Coach-only: dominant pattern, per-domain evidence + interpretation confidence,
+// overall evidence, prompt version. Sourced from raw_output + top-level columns.
+function effmapIntelHtml(m) {
+  var raw = (m && m.raw_output && typeof m.raw_output === 'object') ? m.raw_output : {};
+  var ds = (raw.domain_statuses && typeof raw.domain_statuses === 'object') ? raw.domain_statuses : {};
+  var rows = '';
+  EFFMAP_DOMAINS.forEach(function(d) {
+    var info = ds[d[0]] || {};
+    rows += '<tr>'
+      + '<td style="padding:6px 10px;font-size:0.82rem;color:var(--ink);border-bottom:1px solid var(--border);">' + escapeHtml(d[1]) + '</td>'
+      + '<td style="padding:6px 10px;font-size:0.82rem;color:var(--muted);border-bottom:1px solid var(--border);">' + escapeHtml(info.evidence_strength || '—') + '</td>'
+      + '<td style="padding:6px 10px;font-size:0.82rem;color:var(--muted);border-bottom:1px solid var(--border);">' + escapeHtml(info.interpretation_confidence || '—') + '</td>'
+      + '</tr>';
+  });
+  return '<div style="font-size:0.85rem;color:var(--ink);margin-bottom:12px;"><strong style="font-weight:600;">Dominant pattern:</strong> ' + escapeHtml(m.dominant_pattern_label || '—') + '</div>'
+    + '<table style="width:100%;border-collapse:collapse;margin-bottom:12px;"><thead><tr>'
+    +   '<th style="text-align:left;padding:6px 10px;font-size:0.7rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);">Domain</th>'
+    +   '<th style="text-align:left;padding:6px 10px;font-size:0.7rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);">Evidence</th>'
+    +   '<th style="text-align:left;padding:6px 10px;font-size:0.7rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);">Confidence</th>'
+    + '</tr></thead><tbody>' + rows + '</tbody></table>'
+    + '<div style="font-size:0.78rem;color:var(--muted);">Overall evidence: ' + escapeHtml(m.overall_evidence_strength || '—') + ' &bull; Prompt version: ' + escapeHtml(m.prompt_version || '—') + '</div>';
+}
+
+function effmapCollapsible(id, title, innerHtml) {
+  return '<div style="border:1px solid var(--border);border-radius:var(--r-sm);margin-top:16px;overflow:hidden;">'
+    + '<button type="button" data-effmap-toggle="' + id + '" style="width:100%;text-align:left;background:var(--cream);border:none;cursor:pointer;padding:11px 16px;display:flex;justify-content:space-between;align-items:center;font-family:\'Cormorant Garamond\',serif;font-size:0.98rem;font-weight:600;color:var(--navy);">'
+    +   '<span>' + escapeHtml(title) + '</span><span class="effmap-caret">▾</span>'
+    + '</button>'
+    + '<div id="' + escapeHtml(id) + '" style="display:none;padding:16px;border-top:1px solid var(--border);">' + innerHtml + '</div>'
+    + '</div>';
+}
+
+function wireEffmapToggles(container) {
+  container.querySelectorAll('[data-effmap-toggle]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var target = document.getElementById(btn.getAttribute('data-effmap-toggle'));
+      if (!target) return;
+      var open = target.style.display !== 'none';
+      target.style.display = open ? 'none' : 'block';
+      var caret = btn.querySelector('.effmap-caret');
+      if (caret) caret.textContent = open ? '▾' : '▴';
+    });
+  });
+}
+
 function renderClientDetail(client, goals, intakeFeed, checkinResponses, messages, notesByBooking, checkinForms, officialHomework) {
   var statusLabels = { not_started: 'Not Started', in_progress: 'In Progress', proposed: 'Proposed', active: 'Active', progressing: 'Progressing', stalled: 'Stalled', blocked: 'Blocked', revised: 'Revised', completed: 'Completed', archived: 'Archived' };
   var statusColors = { not_started: 'background:rgba(107,107,96,0.15);color:var(--muted)', in_progress: 'background:#c49a3c;color:#fff', proposed: 'background:rgba(107,107,96,0.15);color:var(--muted)', active: 'background:rgba(26,58,82,0.12);color:var(--ink)', progressing: 'background:#c49a3c;color:#fff', stalled: 'background:#b8860b;color:#fff', blocked: 'background:#c44;color:#fff', revised: 'background:#7b5ea7;color:#fff', completed: 'background:#2d6a4f;color:#fff', archived: 'background:rgba(107,107,96,0.25);color:var(--muted)' };
@@ -8575,7 +8753,16 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
     + '<span id="client-testimonial-msg" style="font-size:0.82rem;"></span>'
     + '</div>' + clientPanelClose();
 
+  // Effectiveness Map (Step 5) — empty container, filled async by loadClientMap
+  // (same render-then-fill pattern as Daily Check-ins below).
+  html += clientPanelOpen('Effectiveness Map')
+    + '<div id="effmap-body"><div class="loading-state" style="min-height:80px;"><div class="loading-spinner"></div></div></div>'
+    + clientPanelClose();
+
   $('clients-detail-view').innerHTML = html;
+
+  // Effectiveness Map — async, best-effort; renders its own states.
+  try { loadClientMap(client.email); } catch (e) { /* non-fatal */ }
 
   // Fix 6: auto-load Daily Check-ins so the computed summary shows immediately
   // (detail stays collapsed behind a toggle inside loadDailyCheckins). Async,
