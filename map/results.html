@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Your Effectiveness Map · ineedcoaching</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --navy: #1a3a52;
+      --gold: #c49a3c;
+      --gold-tint: rgba(196, 154, 60, 0.10);
+      --cream: #f7f5f1;
+      --card: #ffffff;
+      --border: #e8e4dc;
+      --text: #1a3a52;
+      --muted: #6b6256;
+
+      --text-body: 1.0625rem;
+      --text-h1: clamp(1.9rem, 1.3rem + 2.4vw, 2.6rem);
+      --text-lead: clamp(1.15rem, 0.95rem + 1vw, 1.4rem);
+      --text-question: clamp(1.5rem, 1rem + 2.4vw, 2.2rem);
+
+      --space-page: clamp(1.25rem, 0.5rem + 3vw, 3rem);
+      --radius: 12px;
+      --shadow: 0 1px 2px rgba(26, 58, 82, 0.05), 0 8px 28px rgba(26, 58, 82, 0.06);
+      --duration: 180ms;
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      background: var(--cream);
+      color: var(--text);
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: var(--text-body);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .site-header {
+      padding: var(--space-page);
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .wordmark {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 600;
+      font-size: 1.5rem;
+      letter-spacing: 0.01em;
+      color: var(--navy);
+    }
+    .wordmark span { color: var(--gold); }
+
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 var(--space-page) clamp(3rem, 6vw, 6rem);
+    }
+
+    .surface {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: clamp(1.75rem, 1rem + 4vw, 3.5rem);
+    }
+
+    /* Opening line + goal */
+    .opening {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 600;
+      font-size: var(--text-lead);
+      line-height: 1.3;
+      color: var(--navy);
+      margin: 0 0 1.1rem;
+    }
+    .goal {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-weight: 600;
+      font-size: var(--text-h1);
+      line-height: 1.15;
+      color: var(--navy);
+      margin: 0;
+      padding: 0 0 0 1.1rem;
+      border-left: 3px solid var(--gold);
+    }
+
+    /* Domain Snapshot — five paragraphs, no headers, continuous with spacing */
+    .snapshot { margin: clamp(2.5rem, 5vw, 3.5rem) 0 0; }
+    .snapshot-para { margin: 0 0 1.5rem; }
+    .snapshot-para:last-child { margin-bottom: 0; }
+
+    /* System Picture — extra whitespace above, no label */
+    .system-picture {
+      margin: clamp(3rem, 6vw, 4.5rem) 0 0;
+      font-size: 1.12rem;
+      line-height: 1.7;
+      color: var(--text);
+    }
+    .system-picture p { margin: 0; }
+
+    /* Section label (Cross-Domain Tax) */
+    .section-label {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 600;
+      font-size: 1.25rem;
+      color: var(--gold);
+      margin: 0 0 0.75rem;
+    }
+    .cross-tax { margin: clamp(2.75rem, 5vw, 4rem) 0 0; }
+    .cross-tax p { margin: 0; }
+
+    /* Release Question — the hero. Large, centered, set apart. */
+    .release {
+      margin: clamp(3rem, 6vw, 4.5rem) 0 0;
+      padding: clamp(2rem, 4vw, 3rem) clamp(1rem, 3vw, 2rem);
+      text-align: center;
+      background: var(--gold-tint);
+      border-radius: var(--radius);
+    }
+    .release-eyebrow {
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin: 0 0 1.25rem;
+    }
+    .release-question {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 600;
+      font-size: var(--text-question);
+      line-height: 1.25;
+      color: var(--navy);
+      margin: 0 auto;
+      max-width: 22ch;
+    }
+
+    /* Domain Status Row */
+    .status-row {
+      margin: clamp(2.75rem, 5vw, 4rem) 0 0;
+      padding-top: clamp(2rem, 4vw, 2.5rem);
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 1rem 0.5rem;
+      text-align: center;
+    }
+    .status-cell { display: flex; flex-direction: column; gap: 0.4rem; }
+    .status-domain {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--navy);
+      line-height: 1.2;
+    }
+    .status-value {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+    .status-value.is-empty { color: var(--muted); }
+    @media (max-width: 540px) {
+      .status-row { grid-template-columns: repeat(2, 1fr); gap: 1.5rem 1rem; }
+    }
+
+    /* Account creation prompt */
+    .keep {
+      margin: clamp(2.5rem, 5vw, 3.5rem) 0 0;
+      padding-top: clamp(2rem, 4vw, 2.5rem);
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+    .keep h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 700;
+      font-size: 1.6rem;
+      color: var(--navy);
+      margin: 0 0 0.5rem;
+    }
+    .keep p { color: var(--muted); margin: 0 0 1.5rem; max-width: 46ch; margin-inline: auto; }
+    .btn {
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 0.7rem 1.6rem;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: background-color var(--duration) var(--ease), transform var(--duration) var(--ease);
+    }
+    .btn-primary { background: var(--gold); color: #fff; }
+    .btn-primary:hover { background: #b2862f; transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--gold-tint); }
+
+    /* Loading + error + crisis states (shared with intake) */
+    .state { text-align: center; padding: clamp(2.5rem, 6vw, 5rem) 1.5rem; color: var(--muted); }
+    .state h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 600;
+      color: var(--navy);
+      font-size: 1.6rem;
+      margin: 0 0 0.5rem;
+    }
+    .spinner {
+      width: 28px; height: 28px;
+      margin: 0 auto 1rem;
+      border: 2px solid var(--border);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .screen { animation: rise var(--duration) var(--ease); }
+    @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, .screen { animation: none !important; transition: none !important; }
+      .btn-primary:hover { transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wordmark">ineed<span>coaching</span></div>
+  </header>
+  <main id="app" aria-live="polite">
+    <!-- result renders here -->
+  </main>
+
+  <script>
+    const INACTIVE_MSG = 'This link is no longer active. Ask your coach to send a new one.';
+    const TOKEN = new URLSearchParams(location.search).get('token') || '';
+    const LOGGED_IN = !!localStorage.getItem('sb_access_token'); // house convention (client-dashboard.html)
+
+    // Domains in canonical P.I.P.E.S. display order.
+    const DOMAINS = [
+      { key: 'physical',      label: 'Physical' },
+      { key: 'intellectual',  label: 'Intellectual' },
+      { key: 'psychological', label: 'Psychological' },
+      { key: 'environmental', label: 'Environmental' },
+      { key: 'social',        label: 'Social' },
+    ];
+
+    const app = document.getElementById('app');
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    function renderLoading() {
+      app.innerHTML = '<section class="surface state"><div class="spinner" role="status" aria-label="Loading"></div><p>Opening your Map…</p></section>';
+    }
+    function renderError(msg) {
+      app.innerHTML = '<section class="surface state"><h2>Map unavailable</h2><p>' + esc(msg || INACTIVE_MSG) + '</p></section>';
+    }
+
+    // Crisis copy mirrors map/intake.html verbatim — same safety language.
+    function renderCrisis() {
+      app.innerHTML =
+        '<section class="surface state">' +
+          '<h2>Thank you for sharing</h2>' +
+          '<p>Some of what you wrote suggests you may be carrying something heavy right now. ' +
+          'If you’re in crisis or thinking about harming yourself, you deserve immediate support — ' +
+          'in the U.S. you can call or text <strong>988</strong> (the Suicide &amp; Crisis Lifeline), any time. ' +
+          'If you are outside the US, please contact your local emergency services or a trusted person in your life.</p>' +
+          '<p>Your coach will also reach out.</p>' +
+        '</section>';
+    }
+
+    function renderResults(data) {
+      const goal = data.goal || '';
+      const efo = (data.explorer_facing_output && typeof data.explorer_facing_output === 'object') ? data.explorer_facing_output : {};
+      const ds = (efo.domain_statuses && typeof efo.domain_statuses === 'object') ? efo.domain_statuses : {};
+
+      // (1) Domain Snapshot — five paragraphs, no headers, in domain order.
+      const snapshots = DOMAINS
+        .map((d) => ds[d.key] && ds[d.key].snapshot_paragraph)
+        .filter((p) => p && String(p).trim())
+        .map((p) => '<p class="snapshot-para">' + esc(p) + '</p>')
+        .join('');
+
+      // (2) System Picture — no label, extra whitespace above.
+      const sp = efo.system_picture && efo.system_picture.narrative;
+      const systemPicture = sp && String(sp).trim()
+        ? '<div class="system-picture"><p>' + esc(sp) + '</p></div>' : '';
+
+      // (3) Cross-Domain Tax — only when present.
+      const tax = efo.cross_domain_tax;
+      const taxText = tax && tax.narrative && String(tax.narrative).trim() ? tax.narrative : '';
+      const crossTax = taxText
+        ? '<div class="cross-tax"><p class="section-label">Where the load is moving</p><p>' + esc(taxText) + '</p></div>' : '';
+
+      // (4) Release Question — the hero element.
+      const rq = efo.release_question && efo.release_question.question;
+      const release = rq && String(rq).trim()
+        ? '<div class="release">' +
+            '<p class="release-eyebrow">A question to sit with</p>' +
+            '<p class="release-question">' + esc(rq) + '</p>' +
+          '</div>' : '';
+
+      // (5) Domain Status Row — primary status under each domain name.
+      const statusCells = DOMAINS.map((d) => {
+        const v = ds[d.key] && ds[d.key].primary_status;
+        const has = v && String(v).trim();
+        return '<div class="status-cell">' +
+          '<span class="status-domain">' + esc(d.label) + '</span>' +
+          '<span class="status-value' + (has ? '' : ' is-empty') + '">' + esc(has ? v : '—') + '</span>' +
+        '</div>';
+      }).join('');
+      const statusRow = '<div class="status-row">' + statusCells + '</div>';
+
+      // Account prompt — skipped entirely when the explorer is already logged in.
+      const keep = LOGGED_IN ? '' :
+        '<div class="keep">' +
+          '<h2>Keep your Map.</h2>' +
+          '<p>Create a free account to save this and track how your system changes over time.</p>' +
+          '<a class="btn btn-primary" href="/signup.html">Create a free account</a>' +
+        '</div>';
+
+      app.innerHTML =
+        '<section class="surface screen">' +
+          '<p class="opening">Here is what your system is showing right now, in service of your goal.</p>' +
+          (goal ? '<p class="goal">' + esc(goal) + '</p>' : '') +
+          '<div class="snapshot">' + snapshots + '</div>' +
+          systemPicture +
+          crossTax +
+          release +
+          statusRow +
+          keep +
+        '</section>';
+    }
+
+    async function init() {
+      if (!TOKEN) { renderError(INACTIVE_MSG); return; }
+      renderLoading();
+      try {
+        const r = await fetch('/api/map-results-read', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: TOKEN }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!data || !data.ok) { renderError(data && data.error); return; }
+        if (data.status === 'crisis') { renderCrisis(); return; }
+        renderResults(data);
+      } catch (e) {
+        renderError(INACTIVE_MSG);
+      }
+    }
+    init();
+  </script>
+</body>
+</html>
