@@ -4663,9 +4663,9 @@ function loadScheduling() {
 
   // PR 5.B: Zoom user-OAuth UI. Same pattern as Google Calendar — JWT-protected
   // /api/zoom-oauth-* endpoints, HMAC-signed state, server-side disconnect with
-  // Zoom /oauth/revoke. The token columns are REVOKEd from anon/authenticated
-  // at the DB level, so coachProfile.zoom_oauth_access_token is silently
-  // omitted by PostgREST even with select=*.
+  // Zoom /oauth/revoke. The access/refresh tokens live in the service-role-only
+  // coach_oauth_tokens table (not on coach_profiles), so select=* here can only
+  // ever return the non-secret zoom_oauth_enabled flag.
   renderZoomOAuthStatus();
   $('zoom-oauth-connect-btn').onclick = connectZoomOAuth;
   $('zoom-oauth-disconnect-btn').onclick = disconnectZoomOAuth;
@@ -5174,8 +5174,8 @@ async function disconnectGoogleCalendar() {
 // Mirror of the Google Calendar handlers above. The auth-url and disconnect
 // endpoints both verify the Supabase session via Bearer token. The callback
 // verifies an HMAC-signed state minted by auth-url. The browser never sees
-// the Zoom access or refresh tokens — they're REVOKEd from anon/authenticated
-// at the database level so PostgREST silently omits them.
+// the Zoom access or refresh tokens — they live in the service-role-only
+// coach_oauth_tokens table, unreachable from the anon/authenticated client.
 
 function renderZoomOAuthStatus() {
   var enabled = !!(coachProfile && coachProfile.zoom_oauth_enabled);

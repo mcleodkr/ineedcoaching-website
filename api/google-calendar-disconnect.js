@@ -42,12 +42,13 @@ export default async function handler(req, res) {
   if (!coach) return res.status(401).json({ error: 'Not signed in as a coach' });
 
   // Pull the refresh token directly so we can revoke at Google. Service-role
-  // read — RLS would otherwise hide token columns from anon clients.
+  // read against the token vault — these columns moved off coach_profiles into
+  // coach_oauth_tokens, which RLS keeps invisible to anon/authenticated.
   let refreshToken = null;
   let accessToken = null;
   try {
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/coach_profiles?id=eq.${encodeURIComponent(coach.id)}&select=google_refresh_token,google_access_token&limit=1`,
+      `${SUPABASE_URL}/rest/v1/coach_oauth_tokens?coach_id=eq.${encodeURIComponent(coach.id)}&select=google_refresh_token,google_access_token&limit=1`,
       { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
     );
     if (r.ok) {
