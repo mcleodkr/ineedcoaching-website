@@ -8103,17 +8103,23 @@ async function loadClientMap(email) {
   var body = document.getElementById('effmap-body');
   if (!body) return;
   try {
-    var res = await fetch('/api/map-coach-read', {
-      method: 'POST',
-      headers: apiHeaders(),
-      body: JSON.stringify({ client_email: email })
-    });
-    var data = await res.json().catch(function() { return null; });
-    if (!res.ok || !data || !data.ok) { body.innerHTML = effmapMessage('Could not load the Effectiveness Map right now.'); return; }
-    var maps = Array.isArray(data.maps) ? data.maps : [];
-    if (!maps.length) { body.innerHTML = effmapEmptyHtml(email); return; }
-    body.innerHTML = effmapMapsHtml(maps);
+    // Maps (custom endpoint) + assignment rows (coach-readable via RLS) in parallel.
+    var mapsP = fetch('/api/map-coach-read', {
+      method: 'POST', headers: apiHeaders(), body: JSON.stringify({ client_email: email })
+    }).then(function(r) { return r.json(); }).catch(function() { return null; });
+    var asgP = supabaseGet('effectiveness_map_assignments?coach_id=eq.' + coachProfile.id
+      + '&client_email=eq.' + encodeURIComponent(String(email).toLowerCase())
+      + '&product_context=eq.coaching&order=assigned_at.desc'
+      + '&select=session_id,status,assigned_at,expires_at,completed_at').catch(function() { return []; });
+
+    var results = await Promise.all([mapsP, asgP]);
+    var mapsData = results[0];
+    var assignments = Array.isArray(results[1]) ? results[1] : [];
+    var maps = (mapsData && mapsData.ok && Array.isArray(mapsData.maps)) ? mapsData.maps : [];
+
+    body.innerHTML = effmapPanelHtml(email, maps, assignments);
     wireEffmapToggles(body);
+    wireEffmapAssignment(body, email);
   } catch (e) {
     body.innerHTML = effmapMessage('Could not load the Effectiveness Map right now.');
   }
@@ -8130,9 +8136,8 @@ function effmapDate(iso) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-// No-map state: Assign button + subtext. NOTE: the button's click is intentionally
-// NOT wired here — assigning a Map is the separate "assign endpoint + coach button"
-// brief. Rendered per spec; wiring lands with that brief.
+// No-map state: Assign button + subtext. Wired by wireEffmapAssignment (Step 6) —
+// clicking it creates a pending assignment and mints the intake link.
 function effmapEmptyHtml(email) {
   return '<div style="text-align:center;padding:8px 0 4px;">'
     + '<button class="save-btn" id="effmap-assign-btn" data-client-email="' + escapeHtml(email) + '" style="padding:10px 22px;font-size:0.82rem;background:var(--gold);">Assign Effectiveness Map</button>'
@@ -8262,6 +8267,174 @@ function wireEffmapToggles(container) {
       if (caret) caret.textContent = open ? '▾' : '▴';
     });
   });
+}
+
+/* --- Step 6: assignment status + create/resend/cancel actions --- */
+
+function effmapIsExpired(a) {
+  var t = new Date(a.expires_at).getTime();
+  return isFinite(t) && Date.now() > t;
+}
+
+function effmapActiveAssignment(list) {
+  for (var i = 0; i < list.length; i++) {
+    var a = list[i];
+    if (a && (a.status === 'pending' || a.status === 'in_progress') && !effmapIsExpired(a)) return a;
+  }
+  return null;
+}
+
+function effmapPanelHtml(email, maps, assignments) {
+  var active = effmapActiveAssignment(assignments);
+  var html = '';
+  if (active) html += effmapStatusCardHtml(active, null);
+  if (maps.length) html += effmapMapsHtml(maps);
+  if (!active) {
+    if (!maps.length) {
+      var latest = assignments[0] || null;
+      if (latest && (latest.status === 'expired' || effmapIsExpired(latest))) {
+        html += '<p style="font-size:0.82rem;color:var(--muted);font-style:italic;margin:0 0 12px;">A previous link expired on ' + escapeHtml(effmapDate(latest.expires_at)) + '.</p>';
+      }
+      html += effmapEmptyHtml(email);
+    } else {
+      // A Map exists but nothing is in flight — let the coach send a fresh one
+      // (Maps are designed to be re-taken over time; see Previous Maps).
+      html += '<div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);text-align:center;">'
+        + '<button type="button" class="save-btn" id="effmap-assign-btn" data-client-email="' + escapeHtml(email) + '" style="padding:9px 20px;font-size:0.8rem;background:var(--gold);">Assign a new Effectiveness Map</button>'
+        + '</div>';
+    }
+  }
+  return html || effmapEmptyHtml(email);
+}
+
+// Status card for an active (pending/in_progress) assignment. `link` is passed in
+// right after create (we have it); otherwise the field is filled on demand by a
+// resend call when the coach clicks Copy/Resend.
+function effmapStatusCardHtml(a, link) {
+  var statusLabel = a.status === 'in_progress' ? 'In progress' : 'Pending';
+  return '<div style="border:1px solid var(--border);border-radius:var(--r-sm);padding:16px 18px;margin-bottom:18px;background:var(--cream);">'
+    + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;">'
+    +   '<span style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#fff;background:var(--gold);border-radius:999px;padding:3px 10px;">' + escapeHtml(statusLabel) + '</span>'
+    +   '<span style="font-size:0.82rem;color:var(--muted);">Sent ' + escapeHtml(effmapDate(a.assigned_at)) + '</span>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">'
+    +   '<input type="text" readonly id="effmap-link-input" value="' + escapeHtml(link || '') + '" placeholder="Click Copy link to generate the link" style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:0.8rem;color:var(--ink);background:var(--white);">'
+    +   '<button type="button" class="save-btn" data-effmap-copy data-session-id="' + escapeHtml(a.session_id) + '" style="padding:8px 16px;font-size:0.8rem;background:var(--gold);white-space:nowrap;">Copy link</button>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;">'
+    +   '<button type="button" data-effmap-resend data-session-id="' + escapeHtml(a.session_id) + '" style="padding:7px 14px;font-size:0.8rem;background:none;border:1px solid var(--gold);color:var(--gold);border-radius:999px;cursor:pointer;">Resend</button>'
+    +   '<button type="button" data-effmap-cancel data-session-id="' + escapeHtml(a.session_id) + '" style="padding:7px 14px;font-size:0.8rem;background:none;border:1px solid var(--border);color:var(--muted);border-radius:999px;cursor:pointer;">Cancel</button>'
+    + '</div>'
+    + '<div data-effmap-msg style="font-size:0.78rem;color:var(--muted);margin-top:8px;min-height:1em;"></div>'
+    + '</div>';
+}
+
+function wireEffmapAssignment(container, email) {
+  var assignBtn = container.querySelector('#effmap-assign-btn');
+  if (assignBtn) assignBtn.addEventListener('click', function() { effmapAssign(assignBtn, email); });
+  var copyBtn = container.querySelector('[data-effmap-copy]');
+  if (copyBtn) copyBtn.addEventListener('click', function() { effmapCopy(container, email, copyBtn.getAttribute('data-session-id')); });
+  var resendBtn = container.querySelector('[data-effmap-resend]');
+  if (resendBtn) resendBtn.addEventListener('click', function() { effmapResend(container, email, resendBtn.getAttribute('data-session-id')); });
+  var cancelBtn = container.querySelector('[data-effmap-cancel]');
+  if (cancelBtn) cancelBtn.addEventListener('click', function() { effmapCancel(container, email, cancelBtn.getAttribute('data-session-id')); });
+}
+
+function effmapSetMsg(container, msg, isError) {
+  var el = container.querySelector('[data-effmap-msg]');
+  if (!el) {
+    el = container.querySelector('#effmap-flash');
+    if (!el) {
+      el = document.createElement('p');
+      el.id = 'effmap-flash';
+      el.style.cssText = 'font-size:0.8rem;margin:10px 0 0;';
+      container.appendChild(el);
+    }
+  }
+  el.textContent = msg || '';
+  el.style.color = isError ? '#9a2b2b' : 'var(--muted)';
+}
+
+async function effmapClipboard(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch (e) { return false; }
+}
+
+async function effmapAssign(btn, email) {
+  var body = document.getElementById('effmap-body');
+  btn.disabled = true;
+  var orig = btn.textContent;
+  btn.textContent = 'Creating link…';
+  try {
+    var res = await fetch('/api/assign-effectiveness-map', {
+      method: 'POST', headers: apiHeaders(), body: JSON.stringify({ client_email: email })
+    });
+    var data = await res.json().catch(function() { return null; });
+    if (!res.ok || !data || !data.ok) {
+      btn.disabled = false; btn.textContent = orig;
+      effmapSetMsg(body, (data && data.error) || 'Could not create the link. Please try again.', true);
+      return;
+    }
+    var active = { session_id: data.session_id, status: data.status || 'pending', assigned_at: data.assigned_at, expires_at: data.expires_at };
+    body.innerHTML = effmapStatusCardHtml(active, data.link);
+    wireEffmapAssignment(body, email);
+    effmapSetMsg(body, 'Link created. Copy it and send it to your client.', false);
+  } catch (e) {
+    btn.disabled = false; btn.textContent = orig;
+    effmapSetMsg(body, 'Could not create the link. Please try again.', true);
+  }
+}
+
+// Resend re-mints the SAME token for the existing assignment (server side).
+async function effmapFetchLink(email, sessionId) {
+  try {
+    var res = await fetch('/api/assign-effectiveness-map', {
+      method: 'POST', headers: apiHeaders(),
+      body: JSON.stringify({ client_email: email, action: 'resend', session_id: sessionId })
+    });
+    var data = await res.json().catch(function() { return null; });
+    return (res.ok && data && data.ok && data.link) ? data.link : '';
+  } catch (e) { return ''; }
+}
+
+async function effmapCopy(container, email, sessionId) {
+  var input = container.querySelector('#effmap-link-input');
+  var link = input && input.value ? input.value : '';
+  if (!link) {
+    link = await effmapFetchLink(email, sessionId);
+    if (!link) { effmapSetMsg(container, 'Could not generate the link. Try Resend.', true); return; }
+    if (input) input.value = link;
+  }
+  var ok = await effmapClipboard(link);
+  effmapSetMsg(container, ok ? 'Link copied to clipboard.' : 'Copy failed — select the link above and copy manually.', !ok);
+}
+
+async function effmapResend(container, email, sessionId) {
+  effmapSetMsg(container, 'Refreshing link…', false);
+  var link = await effmapFetchLink(email, sessionId);
+  if (!link) { effmapSetMsg(container, 'Could not refresh the link. If it has expired, assign a new one.', true); return; }
+  var input = container.querySelector('#effmap-link-input');
+  if (input) input.value = link;
+  var ok = await effmapClipboard(link);
+  effmapSetMsg(container, ok ? 'Link copied — paste it to your client.' : 'Link ready — copy it from the field above.', false);
+}
+
+async function effmapCancel(container, email, sessionId) {
+  if (!window.confirm('Cancel this Effectiveness Map link? Your client will no longer be able to use it.')) return;
+  effmapSetMsg(container, 'Cancelling…', false);
+  try {
+    var res = await fetch('/api/assign-effectiveness-map', {
+      method: 'POST', headers: apiHeaders(),
+      body: JSON.stringify({ client_email: email, action: 'cancel', session_id: sessionId })
+    });
+    var data = await res.json().catch(function() { return null; });
+    if (!res.ok || !data || !data.ok) {
+      effmapSetMsg(container, (data && data.error) || 'Could not cancel. Please try again.', true);
+      return;
+    }
+    loadClientMap(email); // refresh → back to the Assign state
+  } catch (e) {
+    effmapSetMsg(container, 'Could not cancel. Please try again.', true);
+  }
 }
 
 function renderClientDetail(client, goals, intakeFeed, checkinResponses, messages, notesByBooking, checkinForms, officialHomework) {
