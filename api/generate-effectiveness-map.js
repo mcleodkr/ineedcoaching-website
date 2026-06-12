@@ -33,9 +33,9 @@ import { logAIUsage } from '../lib/ai-usage.js';
 import { jsonrepair } from 'jsonrepair';
 
 const require = createRequire(import.meta.url);
-const SYNTH = require('./prompts/effectiveness-map-synthesis-v1.5.json');
+const SYNTH = require('./prompts/effectiveness-map-synthesis-v1.7.2.json');
 const SYNTHESIS_PROMPT = SYNTH.prompt;
-const PROMPT_VERSION = SYNTH.version; // '1.5'
+const PROMPT_VERSION = SYNTH.version; // '1.7.2'
 
 const MODEL = 'claude-sonnet-4-6';
 const MAX_TOKENS = 4000;
@@ -128,36 +128,54 @@ async function monthlyMapCount(coachId) {
 
 // --- synthesis (unchanged from explorer-initiated build) ---------------------
 
+// Normalize v1.7 `explorer_facing` into the stored explorer_facing_output shape.
+// Field names stay aligned with what map/results.html and coach-dashboard.html
+// read (primary_status / snapshot_paragraph / system_picture.narrative), so
+// v1.5 through v1.7 rows render through one code path. The stored key stays
+// `system_picture` for that compatibility — the model field is `whole_picture`
+// and the frontend label is "The Whole Picture"; the explorer never sees the
+// key. v1.7 additions: opener, status_legend, closing_summary.
 function collectExplorerFacing(map) {
+  const ef = (map.explorer_facing && typeof map.explorer_facing === 'object') ? map.explorer_facing : {};
   const out = {};
-  if (map.domain_statuses && typeof map.domain_statuses === 'object') {
+  out.opener = ef.opener ?? null;
+  out.status_legend = map.status_legend ?? null;
+  if (ef.domains && typeof ef.domains === 'object') {
     out.domain_statuses = {};
-    for (const [domain, d] of Object.entries(map.domain_statuses)) {
+    for (const [domain, d] of Object.entries(ef.domains)) {
       if (!d || typeof d !== 'object') continue;
       out.domain_statuses[domain] = {
-        primary_status: d.primary_status ?? null,
-        secondary_status: d.secondary_status ?? null,
-        one_line_read: d.one_line_read ?? null,
-        snapshot_paragraph: d.snapshot_paragraph ?? null,
+        primary_status: d.status_label ?? null,
+        secondary_status: d.secondary_label ?? null,
+        snapshot_paragraph: d.paragraph ?? null,
       };
     }
   }
-  out.system_picture = map.system_picture ?? null;
-  out.cross_domain_tax = map.cross_domain_tax ?? null;
-  out.release_question = map.release_question ?? null;
+  out.system_picture = ef.whole_picture != null ? { narrative: ef.whole_picture } : null;
+  out.how_this_shows_up = ef.how_this_shows_up ?? null;
+  out.closing_summary = (ef.closing_summary && typeof ef.closing_summary === 'object') ? ef.closing_summary : null;
+  out.release_question = ef.release_question ?? null;
   return out;
 }
 
+// Generated explorer-facing words only — the fixed opener and status legend are
+// returned copy, not narrative, and don't count against the 700-1100 target.
 function wordCount(map) {
+  const ef = (map.explorer_facing && typeof map.explorer_facing === 'object') ? map.explorer_facing : {};
   const parts = [];
-  if (map.domain_statuses && typeof map.domain_statuses === 'object') {
-    for (const d of Object.values(map.domain_statuses)) {
-      if (d && d.snapshot_paragraph) parts.push(d.snapshot_paragraph);
+  if (ef.domains && typeof ef.domains === 'object') {
+    for (const d of Object.values(ef.domains)) {
+      if (d && d.paragraph) parts.push(d.paragraph);
     }
   }
-  if (map.system_picture && map.system_picture.narrative) parts.push(map.system_picture.narrative);
-  if (map.cross_domain_tax && map.cross_domain_tax.narrative) parts.push(map.cross_domain_tax.narrative);
-  if (map.release_question && map.release_question.question) parts.push(map.release_question.question);
+  if (ef.whole_picture) parts.push(ef.whole_picture);
+  if (ef.how_this_shows_up) parts.push(ef.how_this_shows_up);
+  if (ef.closing_summary && typeof ef.closing_summary === 'object') {
+    for (const c of Object.values(ef.closing_summary)) {
+      if (c && c.plain) parts.push(c.plain);
+    }
+  }
+  if (ef.release_question && ef.release_question.question) parts.push(ef.release_question.question);
   const text = parts.filter(Boolean).join(' ').trim();
   return text ? text.split(/\s+/).length : 0;
 }
@@ -236,6 +254,53 @@ function parseMap(text) {
   try { return JSON.parse(t); } catch { /* fall through */ }
   try { return JSON.parse(jsonrepair(t)); } catch { /* fall through */ }
   return null;
+}
+
+// --- v1.7.2: log-only banned-vocabulary scan -------------------------------
+// Mirrors the prompt's TWO VOICES bans (incl. the anatomical "nervous system"
+// exception). Logs leak frequency for production monitoring; NEVER blocks or
+// alters generation. Logged tokens are banned vocabulary words only — no
+// client content.
+const EXPLORER_BANNED_RES = [
+  /(?<!nervous\s)\bsystems?\b/i, // anatomical "nervous system" is allowed
+  /\bcapacity\b/i, /\brecruited\b/i, /\bresourcing\b/i, /\bdraining\b/i,
+  /\bdominating\b/i, /\bunreleased\b/i, /\bpacing\s+function\b/i, /\bbandwidth\b/i,
+  /\bactivated\b/i, /\bdeployed\b/i, /\boperating\b/i, /\bfunctioning\b/i,
+  /\binputs?\b/i, /\bdomains?\b/i,
+];
+const COACH_BANNED_RES = [
+  /\bpathological\b/i, /\bpathology\b/i, /\bsomatic\b/i, /\bcharacteristically\b/i,
+  /\bclinical\b/i, /\bcompartmentalization\b/i, /\bmodality\b/i, /\betiology\b/i,
+  /\btax(ing|ed)?\s+(domain|area)\b/i, /\bpaying\s+(domain|area)\b/i,
+];
+
+function scanBannedVocabulary(map, sessionId) {
+  try {
+    const ef = (map.explorer_facing && typeof map.explorer_facing === 'object') ? map.explorer_facing : {};
+    const cf = (map.coach_facing && typeof map.coach_facing === 'object') ? map.coach_facing : {};
+    const exParts = [];
+    for (const d of Object.values(ef.domains || {})) if (d && d.paragraph) exParts.push(d.paragraph);
+    if (ef.whole_picture) exParts.push(ef.whole_picture);
+    if (ef.how_this_shows_up) exParts.push(ef.how_this_shows_up);
+    for (const c of Object.values(ef.closing_summary || {})) if (c && c.plain) exParts.push(c.plain);
+    if (ef.release_question && ef.release_question.question) exParts.push(ef.release_question.question);
+    const coParts = [cf.coach_synthesis];
+    if (cf.dominant_pattern) coParts.push(cf.dominant_pattern.narrative);
+    if (cf.cross_domain_tax) coParts.push(cf.cross_domain_tax.narrative);
+    if (cf.domain_phase_misfit) coParts.push(cf.domain_phase_misfit.narrative);
+    if (map.lead_domains) coParts.push(map.lead_domains.alignment);
+    const exText = exParts.filter(Boolean).join('\n');
+    const coText = coParts.filter(Boolean).join('\n');
+    const hit = (res, text) => [...new Set(res.map((re) => (text.match(re) || [])[0]).filter(Boolean))];
+    const exHits = hit(EXPLORER_BANNED_RES, exText);
+    const coHits = hit(COACH_BANNED_RES, coText);
+    if (exHits.length || coHits.length) {
+      console.warn(`[effectiveness-map] vocab_leak session_id=${sessionId} explorer=[${exHits.join(',')}] coach=[${coHits.join(',')}]`);
+    }
+  } catch (e) {
+    // Telemetry only — never let the scan break a request.
+    console.warn('[effectiveness-map] vocab scan failed (non-fatal):', e && e.message);
+  }
 }
 
 async function getExisting(sessionId) {
@@ -378,6 +443,7 @@ export default async function handler(req, res) {
         overall_evidence_strength: null,
         raw_output: map, // crisis JSON is content-free (flags only)
         explorer_facing_output: null,
+        answers: null, // crisis rows stay content-free — never store answers
         product_context: productContext,
       };
       try { await storeRow(crisisRow); }
@@ -399,7 +465,9 @@ export default async function handler(req, res) {
     if (words < 200 && overallStrength && overallStrength !== 'thin') {
       console.warn(`[effectiveness-map] thin output (${words} words) but evidence='${overallStrength}' (session ${sessionId})`);
     }
+    scanBannedVocabulary(map, sessionId); // v1.7.2: log-only leak monitoring
 
+    const coachFacing = (map.coach_facing && typeof map.coach_facing === 'object') ? map.coach_facing : {};
     const row = {
       session_id: sessionId,
       coach_id: coach.id,
@@ -409,10 +477,14 @@ export default async function handler(req, res) {
       phase,
       prompt_version: reportedVersion || PROMPT_VERSION,
       crisis_flag: false,
-      dominant_pattern_label: (map.dominant_pattern && map.dominant_pattern.label) || null,
+      dominant_pattern_label: (coachFacing.dominant_pattern && coachFacing.dominant_pattern.label) || null,
       overall_evidence_strength: overallStrength,
       raw_output: map,
       explorer_facing_output: collectExplorerFacing(map),
+      // v1.6 brief: preserve the raw intake answers on the Map row (non-crisis only)
+      // so a Map's claims can always be audited against what was actually submitted.
+      // Only the ten canonical keys — never arbitrary body content.
+      answers: Object.fromEntries(ANSWER_KEYS.map((k) => [k, String(answers[k])])),
       product_context: productContext,
     };
 
