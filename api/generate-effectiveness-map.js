@@ -33,9 +33,9 @@ import { logAIUsage } from '../lib/ai-usage.js';
 import { jsonrepair } from 'jsonrepair';
 
 const require = createRequire(import.meta.url);
-const SYNTH = require('./prompts/effectiveness-map-synthesis-v1.7.json');
+const SYNTH = require('./prompts/effectiveness-map-synthesis-v1.7.1.json');
 const SYNTHESIS_PROMPT = SYNTH.prompt;
-const PROMPT_VERSION = SYNTH.version; // '1.7'
+const PROMPT_VERSION = SYNTH.version; // '1.7.1'
 
 const MODEL = 'claude-sonnet-4-6';
 const MAX_TOKENS = 4000;

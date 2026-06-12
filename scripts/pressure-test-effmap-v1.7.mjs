@@ -11,9 +11,10 @@
 
 import { readFileSync } from 'fs';
 import { createRequire } from 'module';
+import { jsonrepair } from 'jsonrepair';
 
 const require = createRequire(import.meta.url);
-const SYNTH = require('../api/prompts/effectiveness-map-synthesis-v1.7.json');
+const SYNTH = require('../api/prompts/effectiveness-map-synthesis-v1.7.1.json');
 
 const MODEL = 'claude-sonnet-4-6';
 const MAX_TOKENS = 4000;
@@ -117,11 +118,14 @@ async function callClaude(userMessage) {
   return data.content[0].text;
 }
 
+// Mirrors parseMap in api/generate-effectiveness-map.js: strict parse, then
+// jsonrepair rescue (production tolerates e.g. literal newlines in strings).
 function parseMap(text) {
   let t = String(text).trim();
   const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fence) t = fence[1].trim();
-  return JSON.parse(t);
+  try { return JSON.parse(t); } catch { /* fall through */ }
+  return JSON.parse(jsonrepair(t));
 }
 
 // --- vocabulary scans -------------------------------------------------------
@@ -199,7 +203,7 @@ function runChecks(label, map) {
     fails += check('crisis_flag true', map.crisis_flag === true);
     fails += check('crisis object only (no explorer_facing/coach_facing)', !map.explorer_facing && !map.coach_facing && !map.intake);
     fails += check('frontend_action present', !!(map.crisis_response && map.crisis_response.frontend_action === 'show_safety_resources'));
-    fails += check('crisis prompt_version 1.7', !!(map.metadata && map.metadata.prompt_version === '1.7'));
+    fails += check('crisis prompt_version 1.7.1', !!(map.metadata && map.metadata.prompt_version === '1.7.1'));
     return fails;
   }
   const ef = map.explorer_facing || {};
@@ -209,7 +213,7 @@ function runChecks(label, map) {
   const words = exText.split(/\s+/).filter(Boolean).length;
 
   fails += check('crisis_flag false', map.crisis_flag === false);
-  fails += check('prompt_version 1.7', map.metadata && map.metadata.prompt_version === '1.7');
+  fails += check('prompt_version 1.7.1', map.metadata && map.metadata.prompt_version === '1.7.1');
   const DOMAINS = ['physical', 'intellectual', 'psychological', 'environmental', 'social'];
   fails += check('5 domains with status_label + paragraph',
     DOMAINS.every((k) => ef.domains && ef.domains[k] && ef.domains[k].status_label && ef.domains[k].paragraph));
