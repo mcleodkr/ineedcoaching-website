@@ -33,9 +33,9 @@ import { logAIUsage } from '../lib/ai-usage.js';
 import { jsonrepair } from 'jsonrepair';
 
 const require = createRequire(import.meta.url);
-const SYNTH = require('./prompts/effectiveness-map-synthesis-v1.6.json');
+const SYNTH = require('./prompts/effectiveness-map-synthesis-v1.7.json');
 const SYNTHESIS_PROMPT = SYNTH.prompt;
-const PROMPT_VERSION = SYNTH.version; // '1.6'
+const PROMPT_VERSION = SYNTH.version; // '1.7'
 
 const MODEL = 'claude-sonnet-4-6';
 const MAX_TOKENS = 4000;
@@ -128,15 +128,18 @@ async function monthlyMapCount(coachId) {
 
 // --- synthesis (unchanged from explorer-initiated build) ---------------------
 
-// Normalize v1.6 `explorer_facing` into the stored explorer_facing_output shape.
+// Normalize v1.7 `explorer_facing` into the stored explorer_facing_output shape.
 // Field names stay aligned with what map/results.html and coach-dashboard.html
-// read (primary_status / snapshot_paragraph / system_picture.narrative), so old
-// v1.5 rows and new v1.6 rows render through one code path. v1.6 additions:
-// how_this_shows_up; v1.6 removals: one_line_read, cross_domain_tax (the tax is
-// coach-facing now and intentionally absent here).
+// read (primary_status / snapshot_paragraph / system_picture.narrative), so
+// v1.5 through v1.7 rows render through one code path. The stored key stays
+// `system_picture` for that compatibility — the model field is `whole_picture`
+// and the frontend label is "The Whole Picture"; the explorer never sees the
+// key. v1.7 additions: opener, status_legend, closing_summary.
 function collectExplorerFacing(map) {
   const ef = (map.explorer_facing && typeof map.explorer_facing === 'object') ? map.explorer_facing : {};
   const out = {};
+  out.opener = ef.opener ?? null;
+  out.status_legend = map.status_legend ?? null;
   if (ef.domains && typeof ef.domains === 'object') {
     out.domain_statuses = {};
     for (const [domain, d] of Object.entries(ef.domains)) {
@@ -148,12 +151,15 @@ function collectExplorerFacing(map) {
       };
     }
   }
-  out.system_picture = ef.system_picture != null ? { narrative: ef.system_picture } : null;
+  out.system_picture = ef.whole_picture != null ? { narrative: ef.whole_picture } : null;
   out.how_this_shows_up = ef.how_this_shows_up ?? null;
+  out.closing_summary = (ef.closing_summary && typeof ef.closing_summary === 'object') ? ef.closing_summary : null;
   out.release_question = ef.release_question ?? null;
   return out;
 }
 
+// Generated explorer-facing words only — the fixed opener and status legend are
+// returned copy, not narrative, and don't count against the 700-1100 target.
 function wordCount(map) {
   const ef = (map.explorer_facing && typeof map.explorer_facing === 'object') ? map.explorer_facing : {};
   const parts = [];
@@ -162,8 +168,13 @@ function wordCount(map) {
       if (d && d.paragraph) parts.push(d.paragraph);
     }
   }
-  if (ef.system_picture) parts.push(ef.system_picture);
+  if (ef.whole_picture) parts.push(ef.whole_picture);
   if (ef.how_this_shows_up) parts.push(ef.how_this_shows_up);
+  if (ef.closing_summary && typeof ef.closing_summary === 'object') {
+    for (const c of Object.values(ef.closing_summary)) {
+      if (c && c.plain) parts.push(c.plain);
+    }
+  }
   if (ef.release_question && ef.release_question.question) parts.push(ef.release_question.question);
   const text = parts.filter(Boolean).join(' ').trim();
   return text ? text.split(/\s+/).length : 0;
