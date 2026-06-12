@@ -8199,7 +8199,12 @@ function effmapReadingOrderHtml(m) {
   if (snaps) out += '<div style="margin-bottom:20px;">' + snaps + '</div>';
 
   var sp = efo.system_picture && efo.system_picture.narrative;
-  if (sp && String(sp).trim()) out += '<div style="margin:0 0 20px;">' + effmapParas(sp, 'margin:0 0 14px;font-size:0.95rem;line-height:1.65;color:var(--ink);') + '</div>';
+  if (sp && String(sp).trim()) {
+    out += '<div style="margin:0 0 20px;">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:600;color:var(--gold);margin-bottom:6px;">The Whole Picture</div>'
+      + effmapParas(sp, 'margin:0 0 14px;font-size:0.95rem;line-height:1.65;color:var(--ink);')
+      + '</div>';
+  }
 
   // v1.6: How this shows up for you — absent on pre-v1.6 Maps.
   var hts = efo.how_this_shows_up;
@@ -8217,6 +8222,27 @@ function effmapReadingOrderHtml(m) {
       + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:600;color:var(--gold);margin-bottom:6px;">Where the load is moving</div>'
       + '<p style="margin:0;font-size:0.9rem;line-height:1.6;color:var(--ink);">' + escapeHtml(tax.narrative) + '</p>'
       + '</div>';
+  }
+
+  // v1.7: closing summary — for/against per area; absent on older Maps.
+  var cs = efo.closing_summary;
+  if (cs && typeof cs === 'object') {
+    var DIR_LABELS = { 'for': 'Working for the goal', against: 'Working against it', both: 'Cuts both ways', neutral: '—' };
+    var csRows = '';
+    EFFMAP_DOMAINS.forEach(function(d) {
+      var c = cs[d[0]];
+      if (!c || typeof c !== 'object') return;
+      csRows += '<div style="display:flex;gap:10px;align-items:baseline;margin:0 0 8px;">'
+        + '<span style="flex:0 0 100px;font-family:\'Cormorant Garamond\',serif;font-size:0.92rem;font-weight:600;color:var(--navy);">' + escapeHtml(d[1]) + '</span>'
+        + '<span style="flex:0 0 auto;font-size:0.62rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--gold);white-space:nowrap;">' + escapeHtml(DIR_LABELS[c.direction] || '—') + '</span>'
+        + (c.plain && String(c.plain).trim() ? '<span style="font-size:0.85rem;line-height:1.5;color:var(--ink);">' + escapeHtml(c.plain) + '</span>' : '')
+        + '</div>';
+    });
+    if (csRows) {
+      out += '<div style="margin:0 0 20px;">'
+        + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:600;color:var(--gold);margin-bottom:8px;">In short</div>'
+        + csRows + '</div>';
+    }
   }
 
   var rq = efo.release_question && efo.release_question.question;
@@ -8237,6 +8263,20 @@ function effmapReadingOrderHtml(m) {
       + '</div>';
   });
   out += '<div style="display:flex;flex-wrap:wrap;gap:12px;padding-top:16px;border-top:1px solid var(--border);">' + cells + '</div>';
+
+  // v1.7: status legend under the chips (shown to both audiences).
+  if (efo.status_legend && String(efo.status_legend).trim()) {
+    var legendItems = String(efo.status_legend).split(/\n+/)
+      .map(function(l) { return l.replace(/^[-*\s]+/, '').replace(/\*\*/g, '').trim(); })
+      .filter(function(l) { return l; })
+      .map(function(l) {
+        var lm = l.match(/^(\w+)\s*[—–-]\s*(.+)$/);
+        return '<p style="margin:0 0 6px;font-size:0.78rem;line-height:1.5;color:var(--muted);">'
+          + (lm ? '<strong style="color:var(--navy);font-weight:600;">' + escapeHtml(lm[1]) + '</strong> — ' + escapeHtml(lm[2]) : escapeHtml(l))
+          + '</p>';
+      }).join('');
+    if (legendItems) out += '<div style="margin-top:12px;">' + legendItems + '</div>';
+  }
 
   return out || effmapMessage('This Map has no displayable content.');
 }
@@ -8263,6 +8303,12 @@ function effmapIntelHtml(m) {
   var ds = (raw.domain_statuses && typeof raw.domain_statuses === 'object') ? raw.domain_statuses
     : ((ef.domains && typeof ef.domains === 'object') ? ef.domains : {});
   var head = '';
+  // v1.7: coach opener ("How this Map works") — fixed copy, top of the coach view.
+  if (cf.opener && String(cf.opener).trim()) {
+    head += '<div style="margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);">'
+      + effmapParas(cf.opener, 'margin:0 0 8px;font-size:0.82rem;line-height:1.55;color:var(--muted);')
+      + '</div>';
+  }
   if (cf.coach_synthesis && String(cf.coach_synthesis).trim()) {
     head += '<div style="margin-bottom:14px;">'
       + '<div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">Coach synthesis</div>'

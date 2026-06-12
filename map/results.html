@@ -112,6 +112,43 @@
     .shows-up p:last-child { margin-bottom: 0; }
     .shows-up .section-label { margin-bottom: 0.75rem; }
 
+    /* Opener (v1.7) — "Why this is different", shown before everything else */
+    .opener {
+      margin: 0 0 clamp(2.5rem, 5vw, 3.5rem);
+      padding-bottom: clamp(1.75rem, 3vw, 2.5rem);
+      border-bottom: 1px solid var(--border, #e8e4dc);
+    }
+    .opener h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 600;
+      font-size: 1.6rem;
+      color: var(--navy, #1a3a52);
+      margin: 0 0 1rem;
+    }
+    .opener p { margin: 0 0 0.85rem; font-size: 1.02rem; line-height: 1.65; }
+    .opener p:last-child { margin-bottom: 0; }
+
+    /* Closing summary (v1.7) — for/against across the five areas */
+    .closing { margin: clamp(2.75rem, 5vw, 4rem) 0 0; }
+    .closing-row { display: flex; gap: 0.75rem; align-items: baseline; margin: 0 0 0.85rem; }
+    .closing-domain {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 600; font-size: 1.05rem; color: var(--navy, #1a3a52);
+      flex: 0 0 7.5rem;
+    }
+    .closing-dir {
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--gold, #c49a3c);
+      flex: 0 0 auto; white-space: nowrap;
+    }
+    .closing-plain { font-size: 0.95rem; line-height: 1.5; }
+
+    /* Status legend (v1.7) — plain meaning for each status chip */
+    .legend { margin: 1.5rem 0 0; }
+    .legend p { margin: 0 0 0.5rem; font-size: 0.85rem; line-height: 1.5; color: var(--muted, #6b6b6b); }
+    .legend p:last-child { margin-bottom: 0; }
+    .legend strong { color: var(--navy, #1a3a52); font-weight: 600; }
+
     /* Section label (Cross-Domain Tax) */
     .section-label {
       font-family: 'Cormorant Garamond', serif;
@@ -304,10 +341,20 @@
         .map((p) => '<p class="snapshot-para">' + esc(p) + '</p>')
         .join('');
 
-      // (2) System Picture — no label, extra whitespace above.
+      // (1b) Opener — v1.7 fixed copy ("Why this is different"). First line is
+      // the heading, the rest are paragraphs. Absent on pre-v1.7 Maps.
+      let opener = '';
+      if (efo.opener && String(efo.opener).trim()) {
+        const lines = String(efo.opener).split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+        const head = lines.length > 1 && lines[0].length < 60 ? lines.shift() : 'Why this is different';
+        opener = '<div class="opener"><h2>' + esc(head) + '</h2>' +
+          lines.map((p) => '<p>' + esc(p) + '</p>').join('') + '</div>';
+      }
+
+      // (2) The Whole Picture (stored key stays system_picture for v1.5-v1.7 compat).
       const sp = efo.system_picture && efo.system_picture.narrative;
       const systemPicture = sp && String(sp).trim()
-        ? '<div class="system-picture">' + paras(sp) + '</div>' : '';
+        ? '<div class="system-picture"><p class="section-label">The Whole Picture</p>' + paras(sp) + '</div>' : '';
 
       // (2b) How this shows up for you — v1.6 translation layer. Absent on
       // pre-v1.6 Maps; renders nothing in that case.
@@ -321,6 +368,25 @@
       const taxText = tax && tax.narrative && String(tax.narrative).trim() ? tax.narrative : '';
       const crossTax = taxText
         ? '<div class="cross-tax"><p class="section-label">Where the load is moving</p><p>' + esc(taxText) + '</p></div>' : '';
+
+      // (3b) Closing summary — v1.7: what is working for / against the goal,
+      // per area. Absent on pre-v1.7 Maps. Neutral areas render an em-dash.
+      const DIR_LABELS = { for: 'Working for you', against: 'Working against you', both: 'Cuts both ways', neutral: '—' };
+      let closing = '';
+      if (efo.closing_summary && typeof efo.closing_summary === 'object') {
+        const rows = DOMAINS.map((d) => {
+          const c = efo.closing_summary[d.key];
+          if (!c || typeof c !== 'object') return '';
+          const dir = DIR_LABELS[c.direction] || '—';
+          const plain = c.plain && String(c.plain).trim() ? esc(c.plain) : '';
+          return '<div class="closing-row">' +
+            '<span class="closing-domain">' + esc(d.label) + '</span>' +
+            '<span class="closing-dir">' + esc(dir) + '</span>' +
+            (plain ? '<span class="closing-plain">' + plain + '</span>' : '') +
+          '</div>';
+        }).join('');
+        if (rows) closing = '<div class="closing"><p class="section-label">In short</p>' + rows + '</div>';
+      }
 
       // (4) Release Question — the hero element.
       const rq = efo.release_question && efo.release_question.question;
@@ -341,24 +407,47 @@
       }).join('');
       const statusRow = '<div class="status-row">' + statusCells + '</div>';
 
+      // (5b) Status legend — v1.7 fixed copy, shown under the chips. The model
+      // returns markdown-ish bullet lines; strip list/bold markers and render
+      // "Word — meaning" with the word emphasized.
+      let legend = '';
+      if (efo.status_legend && String(efo.status_legend).trim()) {
+        const items = String(efo.status_legend).split(/\n+/)
+          .map((l) => l.replace(/^[-*\s]+/, '').replace(/\*\*/g, '').trim())
+          .filter(Boolean)
+          .map((l) => {
+            const m = l.match(/^(\w+)\s*[—–-]\s*(.+)$/);
+            return m ? '<p><strong>' + esc(m[1]) + '</strong> — ' + esc(m[2]) + '</p>' : '<p>' + esc(l) + '</p>';
+          }).join('');
+        if (items) legend = '<div class="legend">' + items + '</div>';
+      }
+
       // Account prompt — skipped entirely when the explorer is already logged in.
       const keep = LOGGED_IN ? '' :
         '<div class="keep">' +
           '<h2>Keep your Map.</h2>' +
-          '<p>Create a free account to save this and track how your system changes over time.</p>' +
+          '<p>Create a free account to save this and track how your Map changes over time.</p>' +
           '<a class="btn btn-primary" href="/signup.html">Create a free account</a>' +
         '</div>';
 
+      // v1.7 Maps lead with the opener; older Maps keep a one-line opening
+      // ("system" is banned from the explorer surface — see prompt v1.7).
+      const opening = opener ? '' :
+        '<p class="opening">Here is what your Map is showing right now, in service of your goal.</p>';
+
       app.innerHTML =
         '<section class="surface screen">' +
-          '<p class="opening">Here is what your system is showing right now, in service of your goal.</p>' +
+          opener +
+          opening +
           (goal ? '<p class="goal">' + esc(goal) + '</p>' : '') +
           '<div class="snapshot">' + snapshots + '</div>' +
           systemPicture +
           showsUp +
           crossTax +
+          closing +
           release +
           statusRow +
+          legend +
           keep +
         '</section>';
     }
