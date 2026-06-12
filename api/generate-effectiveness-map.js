@@ -33,9 +33,9 @@ import { logAIUsage } from '../lib/ai-usage.js';
 import { jsonrepair } from 'jsonrepair';
 
 const require = createRequire(import.meta.url);
-const SYNTH = require('./prompts/effectiveness-map-synthesis-v1.7.1.json');
+const SYNTH = require('./prompts/effectiveness-map-synthesis-v1.7.2.json');
 const SYNTHESIS_PROMPT = SYNTH.prompt;
-const PROMPT_VERSION = SYNTH.version; // '1.7.1'
+const PROMPT_VERSION = SYNTH.version; // '1.7.2'
 
 const MODEL = 'claude-sonnet-4-6';
 const MAX_TOKENS = 4000;
@@ -256,6 +256,53 @@ function parseMap(text) {
   return null;
 }
 
+// --- v1.7.2: log-only banned-vocabulary scan -------------------------------
+// Mirrors the prompt's TWO VOICES bans (incl. the anatomical "nervous system"
+// exception). Logs leak frequency for production monitoring; NEVER blocks or
+// alters generation. Logged tokens are banned vocabulary words only — no
+// client content.
+const EXPLORER_BANNED_RES = [
+  /(?<!nervous\s)\bsystems?\b/i, // anatomical "nervous system" is allowed
+  /\bcapacity\b/i, /\brecruited\b/i, /\bresourcing\b/i, /\bdraining\b/i,
+  /\bdominating\b/i, /\bunreleased\b/i, /\bpacing\s+function\b/i, /\bbandwidth\b/i,
+  /\bactivated\b/i, /\bdeployed\b/i, /\boperating\b/i, /\bfunctioning\b/i,
+  /\binputs?\b/i, /\bdomains?\b/i,
+];
+const COACH_BANNED_RES = [
+  /\bpathological\b/i, /\bpathology\b/i, /\bsomatic\b/i, /\bcharacteristically\b/i,
+  /\bclinical\b/i, /\bcompartmentalization\b/i, /\bmodality\b/i, /\betiology\b/i,
+  /\btax(ing|ed)?\s+(domain|area)\b/i, /\bpaying\s+(domain|area)\b/i,
+];
+
+function scanBannedVocabulary(map, sessionId) {
+  try {
+    const ef = (map.explorer_facing && typeof map.explorer_facing === 'object') ? map.explorer_facing : {};
+    const cf = (map.coach_facing && typeof map.coach_facing === 'object') ? map.coach_facing : {};
+    const exParts = [];
+    for (const d of Object.values(ef.domains || {})) if (d && d.paragraph) exParts.push(d.paragraph);
+    if (ef.whole_picture) exParts.push(ef.whole_picture);
+    if (ef.how_this_shows_up) exParts.push(ef.how_this_shows_up);
+    for (const c of Object.values(ef.closing_summary || {})) if (c && c.plain) exParts.push(c.plain);
+    if (ef.release_question && ef.release_question.question) exParts.push(ef.release_question.question);
+    const coParts = [cf.coach_synthesis];
+    if (cf.dominant_pattern) coParts.push(cf.dominant_pattern.narrative);
+    if (cf.cross_domain_tax) coParts.push(cf.cross_domain_tax.narrative);
+    if (cf.domain_phase_misfit) coParts.push(cf.domain_phase_misfit.narrative);
+    if (map.lead_domains) coParts.push(map.lead_domains.alignment);
+    const exText = exParts.filter(Boolean).join('\n');
+    const coText = coParts.filter(Boolean).join('\n');
+    const hit = (res, text) => [...new Set(res.map((re) => (text.match(re) || [])[0]).filter(Boolean))];
+    const exHits = hit(EXPLORER_BANNED_RES, exText);
+    const coHits = hit(COACH_BANNED_RES, coText);
+    if (exHits.length || coHits.length) {
+      console.warn(`[effectiveness-map] vocab_leak session_id=${sessionId} explorer=[${exHits.join(',')}] coach=[${coHits.join(',')}]`);
+    }
+  } catch (e) {
+    // Telemetry only — never let the scan break a request.
+    console.warn('[effectiveness-map] vocab scan failed (non-fatal):', e && e.message);
+  }
+}
+
 async function getExisting(sessionId) {
   try {
     const url = `${SUPABASE_URL}/rest/v1/effectiveness_maps?session_id=eq.${encodeURIComponent(sessionId)}&select=crisis_flag,raw_output&limit=1`;
@@ -418,6 +465,7 @@ export default async function handler(req, res) {
     if (words < 200 && overallStrength && overallStrength !== 'thin') {
       console.warn(`[effectiveness-map] thin output (${words} words) but evidence='${overallStrength}' (session ${sessionId})`);
     }
+    scanBannedVocabulary(map, sessionId); // v1.7.2: log-only leak monitoring
 
     const coachFacing = (map.coach_facing && typeof map.coach_facing === 'object') ? map.coach_facing : {};
     const row = {

@@ -14,7 +14,7 @@ import { createRequire } from 'module';
 import { jsonrepair } from 'jsonrepair';
 
 const require = createRequire(import.meta.url);
-const SYNTH = require('../api/prompts/effectiveness-map-synthesis-v1.7.1.json');
+const SYNTH = require('../api/prompts/effectiveness-map-synthesis-v1.7.2.json');
 
 const MODEL = 'claude-sonnet-4-6';
 const MAX_TOKENS = 4000;
@@ -132,10 +132,12 @@ function parseMap(text) {
 
 // Explorer-facing banned machinery words (generated narrative only — the fixed
 // legend legitimately contains the four status words and is excluded).
-const EXPLORER_BANNED = ['system', 'capacity', 'recruited', 'resourcing', 'draining', 'dominating',
+const EXPLORER_BANNED = ['capacity', 'recruited', 'resourcing', 'draining', 'dominating',
   'unreleased', 'pacing function', 'bandwidth', 'activated', 'deployed', 'operating', 'functioning'];
 const EXPLORER_BANNED_RE = EXPLORER_BANNED.map((w) => new RegExp(`\\b${w.replace(' ', '\\s+')}\\b`, 'i'))
-  .concat([/\binputs?\b/i, /\bdomains?\b/i]);
+  // anatomical "nervous system" allowed (framework-owner ruling 2026-06-12);
+  // "system" as person-stand-in or engineering-speak stays banned
+  .concat([/(?<!nervous\s)\bsystems?\b/i, /\binputs?\b/i, /\bdomains?\b/i]);
 
 // Coach-facing banned clinical vocabulary + mechanical tax framing.
 const COACH_BANNED_RE = ['pathological', 'pathology', 'somatic', 'characteristically', 'clinical',
@@ -203,7 +205,7 @@ function runChecks(label, map) {
     fails += check('crisis_flag true', map.crisis_flag === true);
     fails += check('crisis object only (no explorer_facing/coach_facing)', !map.explorer_facing && !map.coach_facing && !map.intake);
     fails += check('frontend_action present', !!(map.crisis_response && map.crisis_response.frontend_action === 'show_safety_resources'));
-    fails += check('crisis prompt_version 1.7.1', !!(map.metadata && map.metadata.prompt_version === '1.7.1'));
+    fails += check('crisis prompt_version 1.7.2', !!(map.metadata && map.metadata.prompt_version === '1.7.2'));
     return fails;
   }
   const ef = map.explorer_facing || {};
@@ -213,7 +215,7 @@ function runChecks(label, map) {
   const words = exText.split(/\s+/).filter(Boolean).length;
 
   fails += check('crisis_flag false', map.crisis_flag === false);
-  fails += check('prompt_version 1.7.1', map.metadata && map.metadata.prompt_version === '1.7.1');
+  fails += check('prompt_version 1.7.2', map.metadata && map.metadata.prompt_version === '1.7.2');
   const DOMAINS = ['physical', 'intellectual', 'psychological', 'environmental', 'social'];
   fails += check('5 domains with status_label + paragraph',
     DOMAINS.every((k) => ef.domains && ef.domains[k] && ef.domains[k].status_label && ef.domains[k].paragraph));
