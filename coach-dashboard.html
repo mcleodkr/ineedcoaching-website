@@ -8199,8 +8199,18 @@ function effmapReadingOrderHtml(m) {
   if (snaps) out += '<div style="margin-bottom:20px;">' + snaps + '</div>';
 
   var sp = efo.system_picture && efo.system_picture.narrative;
-  if (sp && String(sp).trim()) out += '<p style="margin:0 0 20px;font-size:0.95rem;line-height:1.65;color:var(--ink);">' + escapeHtml(sp) + '</p>';
+  if (sp && String(sp).trim()) out += '<div style="margin:0 0 20px;">' + effmapParas(sp, 'margin:0 0 14px;font-size:0.95rem;line-height:1.65;color:var(--ink);') + '</div>';
 
+  // v1.6: How this shows up for you — absent on pre-v1.6 Maps.
+  var hts = efo.how_this_shows_up;
+  if (hts && String(hts).trim()) {
+    out += '<div style="margin:0 0 20px;">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:600;color:var(--gold);margin-bottom:6px;">How this shows up for you</div>'
+      + effmapParas(hts, 'margin:0 0 14px;font-size:0.9rem;line-height:1.6;color:var(--ink);')
+      + '</div>';
+  }
+
+  // Explorer-facing through v1.5; coach-only from v1.6 (see Intelligence Notes).
   var tax = efo.cross_domain_tax;
   if (tax && tax.narrative && String(tax.narrative).trim()) {
     out += '<div style="margin:0 0 20px;">'
@@ -8231,11 +8241,41 @@ function effmapReadingOrderHtml(m) {
   return out || effmapMessage('This Map has no displayable content.');
 }
 
-// Coach-only: dominant pattern, per-domain evidence + interpretation confidence,
-// overall evidence, prompt version. Sourced from raw_output + top-level columns.
+// Multi-paragraph narrative string (v1.6 fields hold 2-3 paragraphs separated
+// by blank lines) -> one <p> per paragraph, each carrying the same style.
+function effmapParas(s, style) {
+  return String(s == null ? '' : s).split(/\n\s*\n/)
+    .map(function(p) { return p.trim(); })
+    .filter(function(p) { return p; })
+    .map(function(p) { return '<p style="' + style + '">' + escapeHtml(p) + '</p>'; })
+    .join('');
+}
+
+// Coach-only: coach synthesis (v1.6), dominant pattern, per-domain evidence +
+// interpretation confidence, cross-domain tax (coach-facing from v1.6), overall
+// evidence, prompt version. Sourced from raw_output + top-level columns.
+// Domain table reads both shapes: v1.5 raw.domain_statuses, v1.6
+// raw.explorer_facing.domains (same evidence/confidence field names).
 function effmapIntelHtml(m) {
   var raw = (m && m.raw_output && typeof m.raw_output === 'object') ? m.raw_output : {};
-  var ds = (raw.domain_statuses && typeof raw.domain_statuses === 'object') ? raw.domain_statuses : {};
+  var ef = (raw.explorer_facing && typeof raw.explorer_facing === 'object') ? raw.explorer_facing : {};
+  var cf = (raw.coach_facing && typeof raw.coach_facing === 'object') ? raw.coach_facing : {};
+  var ds = (raw.domain_statuses && typeof raw.domain_statuses === 'object') ? raw.domain_statuses
+    : ((ef.domains && typeof ef.domains === 'object') ? ef.domains : {});
+  var head = '';
+  if (cf.coach_synthesis && String(cf.coach_synthesis).trim()) {
+    head += '<div style="margin-bottom:14px;">'
+      + '<div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">Coach synthesis</div>'
+      + effmapParas(cf.coach_synthesis, 'margin:0 0 12px;font-size:0.88rem;line-height:1.6;color:var(--ink);')
+      + '</div>';
+  }
+  var cfTax = cf.cross_domain_tax;
+  if (cfTax && cfTax.narrative && String(cfTax.narrative).trim()) {
+    head += '<div style="margin-bottom:14px;">'
+      + '<div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">Cross-domain tax</div>'
+      + '<p style="margin:0;font-size:0.88rem;line-height:1.6;color:var(--ink);">' + escapeHtml(cfTax.narrative) + '</p>'
+      + '</div>';
+  }
   var rows = '';
   EFFMAP_DOMAINS.forEach(function(d) {
     var info = ds[d[0]] || {};
@@ -8245,7 +8285,8 @@ function effmapIntelHtml(m) {
       + '<td style="padding:6px 10px;font-size:0.82rem;color:var(--muted);border-bottom:1px solid var(--border);">' + escapeHtml(info.interpretation_confidence || '—') + '</td>'
       + '</tr>';
   });
-  return '<div style="font-size:0.85rem;color:var(--ink);margin-bottom:12px;"><strong style="font-weight:600;">Dominant pattern:</strong> ' + escapeHtml(m.dominant_pattern_label || '—') + '</div>'
+  return head
+    + '<div style="font-size:0.85rem;color:var(--ink);margin-bottom:12px;"><strong style="font-weight:600;">Dominant pattern:</strong> ' + escapeHtml(m.dominant_pattern_label || '—') + '</div>'
     + '<table style="width:100%;border-collapse:collapse;margin-bottom:12px;"><thead><tr>'
     +   '<th style="text-align:left;padding:6px 10px;font-size:0.7rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);">Domain</th>'
     +   '<th style="text-align:left;padding:6px 10px;font-size:0.7rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);">Evidence</th>'

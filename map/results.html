@@ -103,7 +103,14 @@
       line-height: 1.7;
       color: var(--text);
     }
-    .system-picture p { margin: 0; }
+    .system-picture p { margin: 0 0 1.25rem; }
+    .system-picture p:last-child { margin-bottom: 0; }
+
+    /* How this shows up for you (v1.6) — labeled like Cross-Domain Tax */
+    .shows-up { margin: clamp(2.75rem, 5vw, 4rem) 0 0; }
+    .shows-up p { margin: 0 0 1.25rem; }
+    .shows-up p:last-child { margin-bottom: 0; }
+    .shows-up .section-label { margin-bottom: 0.75rem; }
 
     /* Section label (Cross-Domain Tax) */
     .section-label {
@@ -258,6 +265,13 @@
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+    // v1.6 narrative fields are plain strings that may hold 2-3 paragraphs
+    // separated by blank lines — render each as its own <p>.
+    const paras = (s, cls) => String(s == null ? '' : s).split(/\n\s*\n/)
+      .map((p) => p.trim()).filter(Boolean)
+      .map((p) => '<p' + (cls ? ' class="' + cls + '"' : '') + '>' + esc(p) + '</p>')
+      .join('');
+
     function renderLoading() {
       app.innerHTML = '<section class="surface state"><div class="spinner" role="status" aria-label="Loading"></div><p>Opening your Map…</p></section>';
     }
@@ -293,9 +307,16 @@
       // (2) System Picture — no label, extra whitespace above.
       const sp = efo.system_picture && efo.system_picture.narrative;
       const systemPicture = sp && String(sp).trim()
-        ? '<div class="system-picture"><p>' + esc(sp) + '</p></div>' : '';
+        ? '<div class="system-picture">' + paras(sp) + '</div>' : '';
 
-      // (3) Cross-Domain Tax — only when present.
+      // (2b) How this shows up for you — v1.6 translation layer. Absent on
+      // pre-v1.6 Maps; renders nothing in that case.
+      const hts = efo.how_this_shows_up;
+      const showsUp = hts && String(hts).trim()
+        ? '<div class="shows-up"><p class="section-label">How this shows up for you</p>' + paras(hts) + '</div>' : '';
+
+      // (3) Cross-Domain Tax — only when present (explorer-facing through v1.5;
+      // coach-only from v1.6, so new Maps render nothing here).
       const tax = efo.cross_domain_tax;
       const taxText = tax && tax.narrative && String(tax.narrative).trim() ? tax.narrative : '';
       const crossTax = taxText
@@ -334,6 +355,7 @@
           (goal ? '<p class="goal">' + esc(goal) + '</p>' : '') +
           '<div class="snapshot">' + snapshots + '</div>' +
           systemPicture +
+          showsUp +
           crossTax +
           release +
           statusRow +
