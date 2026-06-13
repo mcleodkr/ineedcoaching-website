@@ -567,7 +567,7 @@
         effmapSetMsg(container, (data && data.error) || 'Could not cancel. Please try again.', true);
         return;
       }
-      render(); // refresh → back to the Assign state
+      reload(); // re-fetch assignment state (the cancelled link is gone) → re-render
     } catch (e) {
       effmapSetMsg(container, 'Could not cancel. Please try again.', true);
     }
@@ -668,17 +668,24 @@
     }
   }
 
+  // Re-fetch Maps + assignment rows and re-render. Used on first load and after
+  // a cancel (which changes assignment state server-side, so a plain re-render of
+  // stale state would wrongly keep showing the cancelled link as active).
+  async function reload() {
+    var results = await Promise.all([fetchMaps(), fetchAssignments()]);
+    mapsState = results[0] || [];
+    assignmentsState = results[1] || [];
+    await applyHeader(mapsState);
+    render();
+  }
+
   async function init() {
     if (!clientEmail) { showError('No client specified.'); return; }
     var profile = await loadCoachProfile();
     if (!profile) return; // guard already redirected / showed an error
     coachId = profile.id;
     try {
-      var results = await Promise.all([fetchMaps(), fetchAssignments()]);
-      mapsState = results[0] || [];
-      assignmentsState = results[1] || [];
-      await applyHeader(mapsState);
-      render();
+      await reload();
     } catch (e) {
       showError('Could not load the Effectiveness Map right now.');
     }
