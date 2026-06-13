@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Effectiveness Map · Coach Clarity</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Sibling surface to coaching-strategy-panel.html / pattern-map-panel.html.
+       The Effectiveness Map is goal-specific and re-takeable, so this page is a
+       full tool: assignment management (assign / resend / cancel a client link)
+       plus a viewer of every Map generated for the client, newest first. */
+    :root {
+      --navy: #1a3a52;
+      --gold: #c49a3c;
+      --teal: #2f6168;
+      --cream: #f7f4ee;
+      --bg: #f7f5f1;
+      --white: #ffffff;
+      --border: #e8e4dc;
+      --ink: #1a1a1a;
+      --muted: #6b6b60;
+      --r-sm: 6px; /* compat: the reused Map render uses var(--r-sm) inline */
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'DM Sans', sans-serif; font-size: 18px; background: var(--bg); color: var(--ink); line-height: 1.5; }
+    h1, h2, h3 { font-family: 'Cormorant Garamond', serif; color: var(--navy); font-weight: 600; margin: 0 0 8px; }
+    h1 { font-size: 1.85rem; }
+    .panel { max-width: 980px; margin: 0 auto; padding: 28px 22px 80px; }
+    .top-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .top-bar a { font-size: 0.85rem; color: var(--muted); text-decoration: none; }
+    .top-bar a:hover { color: var(--ink); }
+    .meta { font-size: 0.78rem; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+    .card { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 20px 22px; margin-bottom: 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+    .loader { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .spinner { display: inline-block; width: 28px; height: 28px; border: 3px solid rgba(196,154,60,0.2); border-top-color: var(--gold); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 12px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-box { background: #fff5f5; border: 1px solid #c44; color: #8a2222; padding: 14px 18px; border-radius: 6px; margin-bottom: 18px; font-size: 0.88rem; }
+    .save-btn { border: none; color: #fff; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-weight: 600; cursor: pointer; transition: opacity 0.12s ease; }
+    .save-btn:hover { opacity: 0.92; }
+    .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Two-column layout: Map selector | selected Map. Stacks on narrow screens. */
+    .map-layout { display: flex; gap: 22px; align-items: flex-start; }
+    .map-selector { flex: 0 0 232px; }
+    .map-viewer { flex: 1; min-width: 0; }
+    .sel-goal {
+      font-family: 'Cormorant Garamond', serif; font-size: 0.92rem; font-weight: 600;
+      color: var(--navy); line-height: 1.25; margin: 14px 0 6px; padding-bottom: 4px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sel-goal:first-child { margin-top: 0; }
+    .sel-item {
+      display: block; width: 100%; text-align: left; cursor: pointer;
+      background: var(--white); border: 1px solid var(--border); border-radius: var(--r-sm);
+      padding: 9px 12px; margin-bottom: 6px; font-family: 'DM Sans', sans-serif;
+      font-size: 0.82rem; color: var(--ink); transition: border-color 0.12s ease, background 0.12s ease;
+    }
+    .sel-item:hover { border-color: var(--gold); }
+    .sel-item.active { background: rgba(196,154,60,0.12); border-color: var(--gold); border-left: 3px solid var(--gold); }
+    .sel-item .sel-date { font-weight: 600; }
+    .sel-item .sel-phase { color: var(--muted); font-size: 0.74rem; }
+    .sel-item .sel-current { display: inline-block; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); margin-left: 6px; }
+
+    /* Coach-facing helper glosses (item 4): plain-language definitions next to
+       Evidence / Confidence / Cross-domain tax. */
+    .help-tip { cursor: help; color: var(--muted); font-weight: 400; font-size: 0.7rem; margin-left: 4px; border-bottom: 1px dotted var(--muted); }
+    .help-note { font-size: 0.72rem; color: var(--muted); font-style: italic; line-height: 1.5; margin: 0 0 10px; }
+
+    @media (max-width: 720px) {
+      .map-layout { flex-direction: column; }
+      .map-selector { flex: 1 1 auto; width: 100%; }
+    }
+    @media (max-width: 600px) {
+      .panel { padding: 20px 14px 60px; }
+      .top-bar { flex-direction: column; align-items: flex-start; }
+      .card { padding: 18px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <div class="top-bar">
+      <div>
+        <div class="meta" style="margin-bottom:6px;">Effectiveness Map</div>
+        <h1 id="client-heading">Loading…</h1>
+        <div class="meta" id="header-meta" style="text-transform:none;letter-spacing:0;font-size:0.82rem;color:var(--muted);">&nbsp;</div>
+      </div>
+      <a href="/coach-dashboard.html" id="back-link" onclick="if(document.referrer && document.referrer.indexOf('/coach-dashboard.html') !== -1){history.back();return false;}">← Back to dashboard</a>
+    </div>
+
+    <div id="content">
+      <div class="loader">
+        <div class="spinner"></div>
+        <div>Loading Effectiveness Map…</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  const SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+  const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+  const TOKEN_KEY = 'sb_access_token';
+
+  // P.I.P.E.S. display order — mirrors coach-dashboard.html.
+  var EFFMAP_DOMAINS = [
+    ['physical', 'Physical'], ['intellectual', 'Intellectual'],
+    ['psychological', 'Psychological'], ['environmental', 'Environmental'],
+    ['social', 'Social']
+  ];
+
+  const params = new URLSearchParams(location.search);
+  const clientEmail = params.get('client_email') || '';
+  let coachId = null;
+  let mapsState = [];
+  let assignmentsState = [];
+  let selectedIdx = 0;
+
+  function $(id) { return document.getElementById(id); }
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+    });
+  }
+  function apiHeaders() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    return {
+      apikey: ANON_KEY,
+      Authorization: token ? ('Bearer ' + token) : ('Bearer ' + ANON_KEY),
+      'Content-Type': 'application/json',
+    };
+  }
+  function showError(msg) { $('content').innerHTML = '<div class="error-box">' + escapeHtml(msg) + '</div>'; }
+
+  /* ---- auth guard + header (mirrors the sibling tool pages) ---- */
+  async function loadCoachProfile() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) { window.location.href = '/coach-dashboard.html'; return null; }
+    const userRes = await fetch(SUPABASE_URL + '/auth/v1/user', { headers: { apikey: ANON_KEY, Authorization: 'Bearer ' + token } });
+    if (!userRes.ok) { window.location.href = '/coach-dashboard.html'; return null; }
+    const user = await userRes.json();
+    const profRes = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles?user_email=eq.' + encodeURIComponent(user.email.toLowerCase()) + '&select=id,display_name', { headers: apiHeaders() });
+    const profRows = await profRes.json();
+    if (!Array.isArray(profRows) || profRows.length === 0) {
+      showError('No coach profile found for ' + user.email);
+      return null;
+    }
+    return profRows[0];
+  }
+
+  async function loadClientNameFallback(email) {
+    if (!email) return null;
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/coach_bookings?coach_id=eq.' + coachId + '&client_email=eq.' + encodeURIComponent(email) + '&select=notes', { headers: apiHeaders() });
+      if (!res.ok) return null;
+      const rows = await res.json();
+      if (!Array.isArray(rows)) return null;
+      for (const r of rows) {
+        const m = ((r && r.notes) || '').match(/^Name:\s*(.+)/m);
+        if (m) return m[1].trim();
+      }
+      return null;
+    } catch (_) { return null; }
+  }
+
+  async function applyHeader(maps) {
+    let name = await loadClientNameFallback(clientEmail);
+    if (!name) name = clientEmail;
+    $('client-heading').textContent = name;
+    const parts = [];
+    if (clientEmail && name !== clientEmail) parts.push(clientEmail);
+    parts.push(maps.length + ' Map' + (maps.length === 1 ? '' : 's'));
+    $('header-meta').textContent = parts.join(' · ');
+  }
+
+  /* ---- data ---- */
+  // Maps via the existing coach-scoped endpoint (coach derived from the JWT;
+  // returns coaching, non-crisis Maps newest-first).
+  async function fetchMaps() {
+    const res = await fetch('/api/map-coach-read', {
+      method: 'POST', headers: apiHeaders(), body: JSON.stringify({ client_email: clientEmail })
+    });
+    const data = await res.json().catch(function() { return null; });
+    return (data && data.ok && Array.isArray(data.maps)) ? data.maps : [];
+  }
+  // Assignment rows (coach-readable via RLS) for the assign/resend/cancel bar.
+  async function fetchAssignments() {
+    try {
+      const url = SUPABASE_URL + '/rest/v1/effectiveness_map_assignments?coach_id=eq.' + coachId
+        + '&client_email=eq.' + encodeURIComponent(String(clientEmail).toLowerCase())
+        + '&product_context=eq.coaching&order=assigned_at.desc'
+        + '&select=session_id,status,assigned_at,expires_at,completed_at';
+      const res = await fetch(url, { headers: apiHeaders() });
+      if (!res.ok) return [];
+      const rows = await res.json();
+      return Array.isArray(rows) ? rows : [];
+    } catch (_) { return []; }
+  }
+
+  /* =========================================================================
+     Map render — reused verbatim from coach-dashboard.html so v1.5, v1.6 and
+     v1.7 Maps all render through one path. Only additions: the explorer opener
+     (shown at the top of each Map on this page) and the coach-facing helper
+     glosses on Evidence / Confidence / Cross-domain tax (item 4).
+     ========================================================================= */
+  function effmapMessage(msg) {
+    return '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;margin:0;">' + escapeHtml(msg) + '</p>';
+  }
+  function effmapDate(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  function effmapParas(s, style) {
+    return String(s == null ? '' : s).split(/\n\s*\n/)
+      .map(function(p) { return p.trim(); })
+      .filter(function(p) { return p; })
+      .map(function(p) { return '<p style="' + style + '">' + escapeHtml(p) + '</p>'; })
+      .join('');
+  }
+
+  // Explorer opener ("Why this is different") — v1.7 only; absent on older Maps.
+  function effmapOpenerHtml(m) {
+    var efo = (m && m.explorer_facing_output && typeof m.explorer_facing_output === 'object') ? m.explorer_facing_output : {};
+    var op = efo.opener;
+    if (!op || !String(op).trim()) return '';
+    var lines = String(op).split(/\n\s*\n/).map(function(s) { return s.trim(); }).filter(Boolean);
+    var head = (lines.length > 1 && lines[0].length < 60) ? lines.shift() : 'Why this is different';
+    return '<div style="margin:0 0 20px;padding:16px 18px;background:var(--cream);border-radius:var(--r-sm);">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:600;color:var(--navy);margin-bottom:8px;">' + escapeHtml(head) + '</div>'
+      + lines.map(function(p) { return '<p style="margin:0 0 10px;font-size:0.88rem;line-height:1.6;color:var(--ink);">' + escapeHtml(p) + '</p>'; }).join('')
+      + '</div>';
+  }
+
+  function effmapReadingOrderHtml(m) {
+    var efo = (m && m.explorer_facing_output && typeof m.explorer_facing_output === 'object') ? m.explorer_facing_output : {};
+    var ds = (efo.domain_statuses && typeof efo.domain_statuses === 'object') ? efo.domain_statuses : {};
+    var out = '';
+
+    var snaps = '';
+    EFFMAP_DOMAINS.forEach(function(d) {
+      var p = ds[d[0]] && ds[d[0]].snapshot_paragraph;
+      if (p && String(p).trim()) snaps += '<p style="margin:0 0 14px;font-size:0.9rem;line-height:1.6;color:var(--ink);">' + escapeHtml(p) + '</p>';
+    });
+    if (snaps) out += '<div style="margin-bottom:20px;">' + snaps + '</div>';
+
+    var sp = efo.system_picture && efo.system_picture.narrative;
+    if (sp && String(sp).trim()) {
+      out += '<div style="margin:0 0 20px;">'
+        + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:600;color:var(--gold);margin-bottom:6px;">The Whole Picture</div>'
+        + effmapParas(sp, 'margin:0 0 14px;font-size:0.95rem;line-height:1.65;color:var(--ink);')
+        + '</div>';
+    }
+
+    var hts = efo.how_this_shows_up;
+    if (hts && String(hts).trim()) {
+      out += '<div style="margin:0 0 20px;">'
+        + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:600;color:var(--gold);margin-bottom:6px;">How this shows up for you</div>'
+        + effmapParas(hts, 'margin:0 0 14px;font-size:0.9rem;line-height:1.6;color:var(--ink);')
+        + '</div>';
+    }
+
+    // Explorer-facing through v1.5; coach-only from v1.6 (see Intelligence Notes).
+    var tax = efo.cross_domain_tax;
+    if (tax && tax.narrative && String(tax.narrative).trim()) {
+      out += '<div style="margin:0 0 20px;">'
+        + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:600;color:var(--gold);margin-bottom:6px;">Where the load is moving</div>'
+        + '<p style="margin:0;font-size:0.9rem;line-height:1.6;color:var(--ink);">' + escapeHtml(tax.narrative) + '</p>'
+        + '</div>';
+    }
+
+    // v1.7: closing summary — for/against per area; absent on older Maps.
+    var cs = efo.closing_summary;
+    if (cs && typeof cs === 'object') {
+      var DIR_LABELS = { 'for': 'Working for the goal', against: 'Working against it', both: 'Cuts both ways', neutral: '—' };
+      var csRows = '';
+      EFFMAP_DOMAINS.forEach(function(d) {
+        var c = cs[d[0]];
+        if (!c || typeof c !== 'object') return;
+        csRows += '<div style="display:flex;gap:10px;align-items:baseline;margin:0 0 8px;">'
+          + '<span style="flex:0 0 100px;font-family:\'Cormorant Garamond\',serif;font-size:0.92rem;font-weight:600;color:var(--navy);">' + escapeHtml(d[1]) + '</span>'
+          + '<span style="flex:0 0 auto;font-size:0.62rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--gold);white-space:nowrap;">' + escapeHtml(DIR_LABELS[c.direction] || '—') + '</span>'
+          + (c.plain && String(c.plain).trim() ? '<span style="font-size:0.85rem;line-height:1.5;color:var(--ink);">' + escapeHtml(c.plain) + '</span>' : '')
+          + '</div>';
+      });
+      if (csRows) {
+        out += '<div style="margin:0 0 20px;">'
+          + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:600;color:var(--gold);margin-bottom:8px;">In short</div>'
+          + csRows + '</div>';
+      }
+    }
+
+    var rq = efo.release_question && efo.release_question.question;
+    if (rq && String(rq).trim()) {
+      out += '<div style="margin:0 0 22px;padding:16px 18px;background:rgba(196,154,60,0.10);border-radius:var(--r-sm);">'
+        + '<div style="font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">A question to sit with</div>'
+        + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:var(--navy);line-height:1.3;">' + escapeHtml(rq) + '</div>'
+        + '</div>';
+    }
+
+    var cells = '';
+    EFFMAP_DOMAINS.forEach(function(d) {
+      var v = ds[d[0]] && ds[d[0]].primary_status;
+      var has = v && String(v).trim();
+      cells += '<div style="flex:1;min-width:90px;text-align:center;">'
+        + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;font-weight:600;color:var(--navy);">' + escapeHtml(d[1]) + '</div>'
+        + '<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:' + (has ? 'var(--gold)' : 'var(--muted)') + ';margin-top:3px;">' + escapeHtml(has ? v : '—') + '</div>'
+        + '</div>';
+    });
+    out += '<div style="display:flex;flex-wrap:wrap;gap:12px;padding-top:16px;border-top:1px solid var(--border);">' + cells + '</div>';
+
+    // v1.7: status legend under the chips (shown to both audiences).
+    if (efo.status_legend && String(efo.status_legend).trim()) {
+      var legendItems = String(efo.status_legend).split(/\n+/)
+        .map(function(l) { return l.replace(/^[-*\s]+/, '').replace(/\*\*/g, '').trim(); })
+        .filter(function(l) { return l; })
+        .map(function(l) {
+          var lm = l.match(/^(\w+)\s*[—–-]\s*(.+)$/);
+          return '<p style="margin:0 0 6px;font-size:0.78rem;line-height:1.5;color:var(--muted);">'
+            + (lm ? '<strong style="color:var(--navy);font-weight:600;">' + escapeHtml(lm[1]) + '</strong> — ' + escapeHtml(lm[2]) : escapeHtml(l))
+            + '</p>';
+        }).join('');
+      if (legendItems) out += '<div style="margin-top:12px;">' + legendItems + '</div>';
+    }
+
+    return out || effmapMessage('This Map has no displayable content.');
+  }
+
+  // Coach-only Intelligence Notes. Item 4 adds plain-language glosses next to
+  // Evidence, Confidence, and Cross-domain tax. Reads v1.5 (raw.domain_statuses)
+  // and v1.6+/v1.7 (raw.explorer_facing.domains / raw.coach_facing) shapes.
+  var HELP_EVIDENCE = 'how much the client’s answers gave us to work with in this area';
+  var HELP_CONFIDENCE = 'how strongly the read in this area is supported by what they wrote';
+  var HELP_TAX = 'when one area of life is quietly draining or carrying another';
+  function helpTip(text) {
+    return '<span class="help-tip" title="' + escapeHtml(text) + '">ⓘ</span>';
+  }
+  function effmapIntelHtml(m) {
+    var raw = (m && m.raw_output && typeof m.raw_output === 'object') ? m.raw_output : {};
+    var ef = (raw.explorer_facing && typeof raw.explorer_facing === 'object') ? raw.explorer_facing : {};
+    var cf = (raw.coach_facing && typeof raw.coach_facing === 'object') ? raw.coach_facing : {};
+    var ds = (raw.domain_statuses && typeof raw.domain_statuses === 'object') ? raw.domain_statuses
+      : ((ef.domains && typeof ef.domains === 'object') ? ef.domains : {});
+    var head = '';
+    // v1.7: coach opener ("How this Map works") — fixed copy.
+    if (cf.opener && String(cf.opener).trim()) {
+      head += '<div style="margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);">'
+        + effmapParas(cf.opener, 'margin:0 0 8px;font-size:0.82rem;line-height:1.55;color:var(--muted);')
+        + '</div>';
+    }
+    if (cf.coach_synthesis && String(cf.coach_synthesis).trim()) {
+      head += '<div style="margin-bottom:14px;">'
+        + '<div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">Coach synthesis</div>'
+        + effmapParas(cf.coach_synthesis, 'margin:0 0 12px;font-size:0.88rem;line-height:1.6;color:var(--ink);')
+        + '</div>';
+    }
+    var cfTax = cf.cross_domain_tax;
+    if (cfTax && cfTax.narrative && String(cfTax.narrative).trim()) {
+      head += '<div style="margin-bottom:14px;">'
+        + '<div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">Cross-domain tax' + helpTip(HELP_TAX) + '</div>'
+        + '<p class="help-note">' + escapeHtml(HELP_TAX) + '.</p>'
+        + '<p style="margin:0;font-size:0.88rem;line-height:1.6;color:var(--ink);">' + escapeHtml(cfTax.narrative) + '</p>'
+        + '</div>';
+    }
+    var rows = '';
+    EFFMAP_DOMAINS.forEach(function(d) {
+      var info = ds[d[0]] || {};
+      rows += '<tr>'
+        + '<td style="padding:6px 10px;font-size:0.82rem;color:var(--ink);border-bottom:1px solid var(--border);">' + escapeHtml(d[1]) + '</td>'
+        + '<td style="padding:6px 10px;font-size:0.82rem;color:var(--muted);border-bottom:1px solid var(--border);">' + escapeHtml(info.evidence_strength || '—') + '</td>'
+        + '<td style="padding:6px 10px;font-size:0.82rem;color:var(--muted);border-bottom:1px solid var(--border);">' + escapeHtml(info.interpretation_confidence || '—') + '</td>'
+        + '</tr>';
+    });
+    return head
+      + '<div style="font-size:0.85rem;color:var(--ink);margin-bottom:12px;"><strong style="font-weight:600;">Dominant pattern:</strong> ' + escapeHtml(m.dominant_pattern_label || '—') + '</div>'
+      + '<table style="width:100%;border-collapse:collapse;margin-bottom:6px;"><thead><tr>'
+      +   '<th style="text-align:left;padding:6px 10px;font-size:0.7rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);">Domain</th>'
+      +   '<th style="text-align:left;padding:6px 10px;font-size:0.7rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);">Evidence' + helpTip(HELP_EVIDENCE) + '</th>'
+      +   '<th style="text-align:left;padding:6px 10px;font-size:0.7rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);">Confidence' + helpTip(HELP_CONFIDENCE) + '</th>'
+      + '</tr></thead><tbody>' + rows + '</tbody></table>'
+      + '<p class="help-note"><strong style="font-style:normal;color:var(--navy);">Evidence</strong> &mdash; ' + escapeHtml(HELP_EVIDENCE) + '. <strong style="font-style:normal;color:var(--navy);">Confidence</strong> &mdash; ' + escapeHtml(HELP_CONFIDENCE) + '.</p>'
+      + '<div style="font-size:0.78rem;color:var(--muted);">Overall evidence: ' + escapeHtml(m.overall_evidence_strength || '—') + ' &bull; Prompt version: ' + escapeHtml(m.prompt_version || '—') + '</div>';
+  }
+
+  function effmapCollapsible(id, title, innerHtml) {
+    return '<div style="border:1px solid var(--border);border-radius:var(--r-sm);margin-top:16px;overflow:hidden;">'
+      + '<button type="button" data-effmap-toggle="' + id + '" style="width:100%;text-align:left;background:var(--cream);border:none;cursor:pointer;padding:11px 16px;display:flex;justify-content:space-between;align-items:center;font-family:\'Cormorant Garamond\',serif;font-size:0.98rem;font-weight:600;color:var(--navy);">'
+      +   '<span>' + escapeHtml(title) + '</span><span class="effmap-caret">▾</span>'
+      + '</button>'
+      + '<div id="' + escapeHtml(id) + '" style="display:none;padding:16px;border-top:1px solid var(--border);">' + innerHtml + '</div>'
+      + '</div>';
+  }
+  function wireEffmapToggles(container) {
+    container.querySelectorAll('[data-effmap-toggle]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var target = document.getElementById(btn.getAttribute('data-effmap-toggle'));
+        if (!target) return;
+        var open = target.style.display !== 'none';
+        target.style.display = open ? 'none' : 'block';
+        var caret = btn.querySelector('.effmap-caret');
+        if (caret) caret.textContent = open ? '▾' : '▴';
+      });
+    });
+  }
+
+  /* =========================================================================
+     Assignment management — assign / resend / cancel / copy a client link.
+     Reused from coach-dashboard.html, retargeted to this page's #assign-bar.
+     ========================================================================= */
+  function effmapIsExpired(a) {
+    var t = new Date(a.expires_at).getTime();
+    return isFinite(t) && Date.now() > t;
+  }
+  function effmapActiveAssignment(list) {
+    for (var i = 0; i < list.length; i++) {
+      var a = list[i];
+      if (a && (a.status === 'pending' || a.status === 'in_progress') && !effmapIsExpired(a)) return a;
+    }
+    return null;
+  }
+  function effmapEmptyHtml(email) {
+    return '<div style="padding:4px 0;">'
+      + '<div style="font-size:0.9rem;line-height:1.65;color:var(--ink);text-align:left;margin-bottom:20px;">'
+      +   '<p style="margin:0 0 14px;">Most inventories tell you who your client is. The Effectiveness Map tells you how they are showing up right now, toward a specific goal they are actively working on.</p>'
+      +   '<p style="margin:0 0 14px;">It reads across five domains (Physical, Intellectual, Psychological, Environmental, and Social) and surfaces which ones are fueling the work, which are quietly creating drag, and where there is capacity that has not yet been recruited into the goal.</p>'
+      +   '<p style="margin:0;">Your client answers ten open-ended questions and receives the same structured read you do. Use it when a client starts a new goal, when momentum stalls, or when something feels off but you cannot locate it yet.</p>'
+      + '</div>'
+      + '<div style="text-align:center;">'
+      +   '<button class="save-btn" id="effmap-assign-btn" data-client-email="' + escapeHtml(email) + '" style="padding:10px 22px;font-size:0.82rem;background:var(--gold);">Assign Effectiveness Map</button>'
+      + '</div>'
+      + '</div>';
+  }
+  function effmapStatusCardHtml(a, link) {
+    var statusLabel = a.status === 'in_progress' ? 'In progress' : 'Pending';
+    return '<div style="border:1px solid var(--border);border-radius:var(--r-sm);padding:16px 18px;background:var(--cream);">'
+      + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;">'
+      +   '<span style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#fff;background:var(--gold);border-radius:999px;padding:3px 10px;">' + escapeHtml(statusLabel) + '</span>'
+      +   '<span style="font-size:0.82rem;color:var(--muted);">Sent ' + escapeHtml(effmapDate(a.assigned_at)) + '</span>'
+      + '</div>'
+      + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">'
+      +   '<input type="text" readonly id="effmap-link-input" value="' + escapeHtml(link || '') + '" placeholder="Click Copy link to generate the link" style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:0.8rem;color:var(--ink);background:var(--white);">'
+      +   '<button type="button" class="save-btn" data-effmap-copy data-session-id="' + escapeHtml(a.session_id) + '" style="padding:8px 16px;font-size:0.8rem;background:var(--gold);white-space:nowrap;">Copy link</button>'
+      + '</div>'
+      + '<div style="display:flex;gap:8px;">'
+      +   '<button type="button" data-effmap-resend data-session-id="' + escapeHtml(a.session_id) + '" style="padding:7px 14px;font-size:0.8rem;background:none;border:1px solid var(--gold);color:var(--gold);border-radius:999px;cursor:pointer;">Resend</button>'
+      +   '<button type="button" data-effmap-cancel data-session-id="' + escapeHtml(a.session_id) + '" style="padding:7px 14px;font-size:0.8rem;background:none;border:1px solid var(--border);color:var(--muted);border-radius:999px;cursor:pointer;">Cancel</button>'
+      + '</div>'
+      + '<div data-effmap-msg style="font-size:0.78rem;color:var(--muted);margin-top:8px;min-height:1em;"></div>'
+      + '</div>';
+  }
+  function effmapAssignBarHtml(email, maps, assignments) {
+    var active = effmapActiveAssignment(assignments);
+    if (active) return effmapStatusCardHtml(active, null);
+    if (!maps.length) {
+      var latest = assignments[0] || null;
+      var pre = '';
+      if (latest && (latest.status === 'expired' || effmapIsExpired(latest))) {
+        pre = '<p style="font-size:0.82rem;color:var(--muted);font-style:italic;margin:0 0 12px;">A previous link expired on ' + escapeHtml(effmapDate(latest.expires_at)) + '.</p>';
+      }
+      return pre + effmapEmptyHtml(email);
+    }
+    // Maps exist, nothing in flight — offer a fresh one (Maps are re-takeable).
+    return '<div style="text-align:center;">'
+      + '<button type="button" class="save-btn" id="effmap-assign-btn" data-client-email="' + escapeHtml(email) + '" style="padding:9px 20px;font-size:0.8rem;background:var(--gold);">Assign a new Effectiveness Map</button>'
+      + '</div>';
+  }
+  function wireEffmapAssignment(container, email) {
+    var assignBtn = container.querySelector('#effmap-assign-btn');
+    if (assignBtn) assignBtn.addEventListener('click', function() { effmapAssign(assignBtn, email); });
+    var copyBtn = container.querySelector('[data-effmap-copy]');
+    if (copyBtn) copyBtn.addEventListener('click', function() { effmapCopy(container, email, copyBtn.getAttribute('data-session-id')); });
+    var resendBtn = container.querySelector('[data-effmap-resend]');
+    if (resendBtn) resendBtn.addEventListener('click', function() { effmapResend(container, email, resendBtn.getAttribute('data-session-id')); });
+    var cancelBtn = container.querySelector('[data-effmap-cancel]');
+    if (cancelBtn) cancelBtn.addEventListener('click', function() { effmapCancel(container, email, cancelBtn.getAttribute('data-session-id')); });
+  }
+  function effmapSetMsg(container, msg, isError) {
+    var el = container.querySelector('[data-effmap-msg]');
+    if (!el) {
+      el = container.querySelector('#effmap-flash');
+      if (!el) {
+        el = document.createElement('p');
+        el.id = 'effmap-flash';
+        el.style.cssText = 'font-size:0.8rem;margin:10px 0 0;';
+        container.appendChild(el);
+      }
+    }
+    el.textContent = msg || '';
+    el.style.color = isError ? '#9a2b2b' : 'var(--muted)';
+  }
+  async function effmapClipboard(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch (e) { return false; }
+  }
+  async function effmapAssign(btn, email) {
+    var bar = $('assign-bar');
+    btn.disabled = true;
+    var orig = btn.textContent;
+    btn.textContent = 'Creating link…';
+    try {
+      var res = await fetch('/api/assign-effectiveness-map', {
+        method: 'POST', headers: apiHeaders(), body: JSON.stringify({ client_email: email })
+      });
+      var data = await res.json().catch(function() { return null; });
+      if (!res.ok || !data || !data.ok) {
+        btn.disabled = false; btn.textContent = orig;
+        if (data && data.code === 'SUBSCRIPTION_INACTIVE') {
+          effmapSetMsg(bar, 'A subscription is required to assign Maps. Visit your account settings to activate or renew.', false);
+        } else {
+          effmapSetMsg(bar, (data && data.error) || 'Could not create the link. Please try again.', true);
+        }
+        return;
+      }
+      var active = { session_id: data.session_id, status: data.status || 'pending', assigned_at: data.assigned_at, expires_at: data.expires_at };
+      bar.innerHTML = effmapStatusCardHtml(active, data.link);
+      wireEffmapAssignment(bar, email);
+      effmapSetMsg(bar, 'Link created. Copy it and send it to your client.', false);
+    } catch (e) {
+      btn.disabled = false; btn.textContent = orig;
+      effmapSetMsg(bar, 'Could not create the link. Please try again.', true);
+    }
+  }
+  async function effmapFetchLink(email, sessionId) {
+    try {
+      var res = await fetch('/api/assign-effectiveness-map', {
+        method: 'POST', headers: apiHeaders(),
+        body: JSON.stringify({ client_email: email, action: 'resend', session_id: sessionId })
+      });
+      var data = await res.json().catch(function() { return null; });
+      return (res.ok && data && data.ok && data.link) ? data.link : '';
+    } catch (e) { return ''; }
+  }
+  async function effmapCopy(container, email, sessionId) {
+    var input = container.querySelector('#effmap-link-input');
+    var link = input && input.value ? input.value : '';
+    if (!link) {
+      link = await effmapFetchLink(email, sessionId);
+      if (!link) { effmapSetMsg(container, 'Could not generate the link. Try Resend.', true); return; }
+      if (input) input.value = link;
+    }
+    var ok = await effmapClipboard(link);
+    effmapSetMsg(container, ok ? 'Link copied to clipboard.' : 'Copy failed — select the link above and copy manually.', !ok);
+  }
+  async function effmapResend(container, email, sessionId) {
+    effmapSetMsg(container, 'Refreshing link…', false);
+    var link = await effmapFetchLink(email, sessionId);
+    if (!link) { effmapSetMsg(container, 'Could not refresh the link. If it has expired, assign a new one.', true); return; }
+    var input = container.querySelector('#effmap-link-input');
+    if (input) input.value = link;
+    var ok = await effmapClipboard(link);
+    effmapSetMsg(container, ok ? 'Link copied — paste it to your client.' : 'Link ready — copy it from the field above.', false);
+  }
+  async function effmapCancel(container, email, sessionId) {
+    if (!window.confirm('Cancel this Effectiveness Map link? Your client will no longer be able to use it.')) return;
+    effmapSetMsg(container, 'Cancelling…', false);
+    try {
+      var res = await fetch('/api/assign-effectiveness-map', {
+        method: 'POST', headers: apiHeaders(),
+        body: JSON.stringify({ client_email: email, action: 'cancel', session_id: sessionId })
+      });
+      var data = await res.json().catch(function() { return null; });
+      if (!res.ok || !data || !data.ok) {
+        effmapSetMsg(container, (data && data.error) || 'Could not cancel. Please try again.', true);
+        return;
+      }
+      render(); // refresh → back to the Assign state
+    } catch (e) {
+      effmapSetMsg(container, 'Could not cancel. Please try again.', true);
+    }
+  }
+
+  /* =========================================================================
+     Selector + selected-Map layout (item 2). Maps are already created_at desc
+     from the endpoint; we cluster CONSECUTIVE same-goal Maps visually only —
+     no data-layer grouping or reordering. Each item is labelled goal + date.
+     ========================================================================= */
+  function buildSelectorHtml(maps, sel) {
+    // Consecutive-goal clusters over the (already date-desc) list.
+    var clusters = [];
+    maps.forEach(function(m, i) {
+      var g = (m.goal || 'Untitled goal').trim();
+      var last = clusters.length ? clusters[clusters.length - 1] : null;
+      if (last && last.goal === g) last.items.push({ m: m, idx: i });
+      else clusters.push({ goal: g, items: [{ m: m, idx: i }] });
+    });
+    var html = '';
+    clusters.forEach(function(cl) {
+      html += '<div class="sel-goal">' + escapeHtml(cl.goal) + '</div>';
+      cl.items.forEach(function(it) {
+        var active = it.idx === sel ? ' active' : '';
+        var current = it.idx === 0 ? '<span class="sel-current">Current</span>' : '';
+        html += '<button type="button" class="sel-item' + active + '" data-map-idx="' + it.idx + '">'
+          + '<span class="sel-date">' + escapeHtml(effmapDate(it.m.created_at)) + '</span>' + current
+          + (it.m.phase ? '<br><span class="sel-phase">' + escapeHtml(it.m.phase) + ' phase</span>' : '')
+          + '</button>';
+      });
+    });
+    return html;
+  }
+
+  function renderSelectedMap(m) {
+    var viewer = $('map-viewer');
+    if (!viewer) return;
+    viewer.innerHTML =
+      '<div class="card">'
+      + '<div style="margin-bottom:18px;">'
+      +   '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">'
+      +     (selectedIdx === 0 ? 'Current Map' : 'Map') + ' &bull; ' + escapeHtml(effmapDate(m.created_at)) + (m.phase ? ' &bull; ' + escapeHtml(m.phase) : '')
+      +   '</div>'
+      +   '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.25rem;font-weight:600;color:var(--navy);line-height:1.2;">' + escapeHtml(m.goal || 'Untitled goal') + '</div>'
+      + '</div>'
+      + effmapOpenerHtml(m)
+      + effmapReadingOrderHtml(m)
+      + effmapCollapsible('effmap-intel', 'Intelligence Notes (coach only)', effmapIntelHtml(m))
+      + '</div>';
+    wireEffmapToggles(viewer);
+  }
+
+  function selectMap(idx) {
+    selectedIdx = idx;
+    var sel = $('map-selector');
+    if (sel) sel.innerHTML = buildSelectorHtml(mapsState, selectedIdx);
+    wireSelector();
+    renderSelectedMap(mapsState[idx]);
+  }
+  function wireSelector() {
+    var sel = $('map-selector');
+    if (!sel) return;
+    sel.querySelectorAll('[data-map-idx]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var i = parseInt(btn.getAttribute('data-map-idx'), 10);
+        if (!isNaN(i) && i !== selectedIdx) selectMap(i);
+      });
+    });
+  }
+
+  /* ---- top-level render ---- */
+  function render() {
+    var maps = mapsState, assignments = assignmentsState;
+    var html = '<div class="card" style="margin-bottom:18px;">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:var(--navy);border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:14px;">Assign a Map</div>'
+      + '<div id="assign-bar"></div>'
+      + '</div>';
+    if (maps.length) {
+      html += '<div class="map-layout">'
+        + '<div class="map-selector" id="map-selector"></div>'
+        + '<div class="map-viewer" id="map-viewer"></div>'
+        + '</div>';
+    } else {
+      html += '<div class="card"><p style="margin:0;color:var(--muted);font-size:0.9rem;font-style:italic;">No Maps generated for this client yet. Assign one above — once your client completes it, every Map will appear here newest first.</p></div>';
+    }
+    $('content').innerHTML = html;
+
+    var bar = $('assign-bar');
+    bar.innerHTML = effmapAssignBarHtml(clientEmail, maps, assignments);
+    wireEffmapAssignment(bar, clientEmail);
+
+    if (maps.length) {
+      if (selectedIdx >= maps.length) selectedIdx = 0;
+      var sel = $('map-selector');
+      sel.innerHTML = buildSelectorHtml(maps, selectedIdx);
+      wireSelector();
+      renderSelectedMap(maps[selectedIdx]);
+    }
+  }
+
+  async function init() {
+    if (!clientEmail) { showError('No client specified.'); return; }
+    var profile = await loadCoachProfile();
+    if (!profile) return; // guard already redirected / showed an error
+    coachId = profile.id;
+    try {
+      var results = await Promise.all([fetchMaps(), fetchAssignments()]);
+      mapsState = results[0] || [];
+      assignmentsState = results[1] || [];
+      await applyHeader(mapsState);
+      render();
+    } catch (e) {
+      showError('Could not load the Effectiveness Map right now.');
+    }
+  }
+
+  init();
+  </script>
+</body>
+</html>
