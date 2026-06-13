@@ -8809,13 +8809,10 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
     +     '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;font-weight:600;">Open Coaching Strategy</span>'
     +     '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.74rem;color:rgba(255,255,255,0.85);line-height:1.45;">Longitudinal game plan \u2014 what\u2019s working, what\u2019s not, when to pivot.</span>'
     +   '</a>'
-    +   '<div id="effmap-card" role="button" tabindex="0" aria-expanded="false" aria-controls="effmap-panel" style="display:flex;flex-direction:column;gap:4px;background:#2f6168;color:#ffffff;border-radius:6px;padding:14px 18px;cursor:pointer;transition:background 0.12s ease;">'
-    +     '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px;">Open Effectiveness Map <span class="effmap-card-caret" style="font-size:0.78rem;font-weight:400;">\u25be</span></span>'
+    +   '<a href="/effectiveness-map?client_email=' + encodeURIComponent(client.email) + '" style="display:flex;flex-direction:column;gap:4px;background:#2f6168;color:#ffffff;border-radius:6px;padding:14px 18px;text-decoration:none;transition:background 0.12s ease;">'
+    +     '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;font-weight:600;">Open Effectiveness Map</span>'
     +     '<span style="font-family:\'DM Sans\',sans-serif;font-size:0.74rem;color:rgba(255,255,255,0.85);line-height:1.45;">Goal-specific system read across five domains: see what is fueling the work and what is creating drag.</span>'
-    +   '</div>'
-    + '</div>'
-    + '<div id="effmap-panel" style="display:none;margin-top:14px;">'
-    +   '<div id="effmap-body"><div class="loading-state" style="min-height:80px;"><div class="loading-spinner"></div></div></div>'
+    +   '</a>'
     + '</div>'
     + clientPanelClose();
 
@@ -9035,27 +9032,9 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
 
   $('clients-detail-view').innerHTML = html;
 
-  // Effectiveness Map launcher (Coach Intelligence card) — expand the panel inline
-  // and lazy-load it on first open (the sibling cards navigate to standalone pages;
-  // the Map has no standalone page, so it expands in place).
-  (function() {
-    var card = document.getElementById('effmap-card');
-    var panel = document.getElementById('effmap-panel');
-    if (!card || !panel) return;
-    var loaded = false;
-    var toggle = function() {
-      var open = panel.style.display !== 'none';
-      panel.style.display = open ? 'none' : 'block';
-      card.setAttribute('aria-expanded', open ? 'false' : 'true');
-      var caret = card.querySelector('.effmap-card-caret');
-      if (caret) caret.textContent = open ? '▾' : '▴';
-      if (!open && !loaded) { loaded = true; loadClientMap(client.email); }
-    };
-    card.addEventListener('click', toggle);
-    card.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
-    });
-  })();
+  // The Effectiveness Map is now a standalone tool at /effectiveness-map; the
+  // Coach Intelligence card navigates there (like the four sibling cards). The
+  // former inline-expand panel + lazy-load wiring was removed with it.
 
   // Fix 6: auto-load Daily Check-ins so the computed summary shows immediately
   // (detail stays collapsed behind a toggle inside loadDailyCheckins). Async,
