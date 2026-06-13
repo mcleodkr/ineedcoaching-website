@@ -57,6 +57,7 @@
     { "source": "/coach-mirror", "destination": "/coach-mirror-panel" },
     { "source": "/pattern-map", "destination": "/pattern-map-panel" },
     { "source": "/coaching-strategy", "destination": "/coaching-strategy-panel" },
+    { "source": "/effectiveness-map", "destination": "/effectiveness-map-panel" },
     { "source": "/article", "destination": "/api/article-render" },
     { "source": "/sitemap.xml", "destination": "/api/sitemap" }
   ]
