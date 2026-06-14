@@ -48,6 +48,42 @@
     .help-tip { cursor: help; color: var(--muted); font-weight: 400; font-size: 0.7rem; margin-left: 4px; border-bottom: 1px dotted var(--muted); }
     .help-note { font-size: 0.72rem; color: var(--muted); font-style: italic; line-height: 1.5; margin: 0 0 10px; }
 
+    /* Goal navigation: slim sticky rail beside the full-width stacked cards (≥2 goals).
+       Cards keep their own column width and stacking — this is anchor nav, not a swap. */
+    .goal-nav-layout { display: flex; align-items: flex-start; gap: 22px; }
+    .goal-cards-col { flex: 1; min-width: 0; }
+    .goal-rail {
+      flex: 0 0 196px; position: sticky; top: 16px; align-self: flex-start;
+      background: var(--white); border: 1px solid var(--border); border-radius: var(--r-sm);
+      padding: 10px 8px; max-height: calc(100vh - 32px); overflow-y: auto;
+    }
+    .goal-rail-label { font-size: 0.64rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 4px 10px 8px; }
+    .goal-nav-item {
+      display: block; text-decoration: none; padding: 8px 10px; border-radius: var(--r-sm);
+      border-left: 3px solid transparent; margin-bottom: 2px; cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .goal-nav-item:hover { background: var(--cream); }
+    .goal-nav-item.active { background: rgba(196,154,60,0.12); border-left-color: var(--gold); }
+    .goal-nav-title { display: block; font-family: 'Cormorant Garamond', serif; font-size: 0.9rem; font-weight: 600; color: var(--navy); line-height: 1.2; }
+    .goal-nav-date { display: block; font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+    .goal-card { scroll-margin-top: 16px; }
+
+    /* Narrow screens: rail collapses to a sticky horizontal bar of goal chips. */
+    @media (max-width: 720px) {
+      .goal-nav-layout { flex-direction: column; gap: 12px; }
+      .goal-rail {
+        position: sticky; top: 0; z-index: 20; flex: 1 1 auto; width: 100%;
+        display: flex; gap: 6px; overflow-x: auto; max-height: none; padding: 8px 10px;
+        box-shadow: 0 2px 8px rgba(26,58,82,0.06);
+      }
+      .goal-rail-label { display: none; }
+      .goal-nav-item { flex: 0 0 auto; white-space: nowrap; border-left: none; border-bottom: 3px solid transparent; padding: 6px 10px; }
+      .goal-nav-item.active { border-left-color: transparent; border-bottom-color: var(--gold); }
+      .goal-nav-title { font-size: 0.84rem; }
+      .goal-card { scroll-margin-top: 72px; }
+    }
+
     @media (max-width: 600px) {
       .panel { padding: 20px 14px 60px; }
       .top-bar { flex-direction: column; align-items: flex-start; }
@@ -739,7 +775,44 @@
         + '<p style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;">Earlier Maps for this goal</p>'
         + older + '</div>'
       : '';
-    return '<div class="card goal-card" style="margin-bottom:18px;">' + head + body + olderSection + '</div>';
+    return '<div class="card goal-card" id="goal-card-' + gi + '" style="margin-bottom:18px;">' + head + body + olderSection + '</div>';
+  }
+
+  // Slim nav: one compact entry per goal (title + most-recent date; "Current" on the
+  // newest). Anchors jump to each goal's card. Rendered only for ≥2 goals.
+  function renderGoalNavHtml(groups) {
+    var items = groups.map(function(g, gi) {
+      var primary = g.maps[0];
+      return '<a class="goal-nav-item" href="#goal-card-' + gi + '" data-nav-target="goal-card-' + gi + '">'
+        + '<span class="goal-nav-title">' + escapeHtml(g.goal) + '</span>'
+        + '<span class="goal-nav-date">' + escapeHtml(effmapDate(primary.created_at)) + (gi === 0 ? ' · Current' : '') + '</span>'
+        + '</a>';
+    }).join('');
+    return '<nav class="goal-rail" id="goal-rail" aria-label="Goals">'
+      + '<div class="goal-rail-label">Goals</div>' + items + '</nav>';
+  }
+
+  // Wire goal-nav clicks: smooth-scroll to the card + set the entry active. (Scroll-
+  // spy that updates active while scrolling is added separately.)
+  function setActiveGoalNav(targetId) {
+    var nav = $('goal-rail');
+    if (!nav) return;
+    nav.querySelectorAll('.goal-nav-item').forEach(function(it) {
+      it.classList.toggle('active', it.getAttribute('data-nav-target') === targetId);
+    });
+  }
+  function wireGoalNav() {
+    var nav = $('goal-rail');
+    if (!nav) return;
+    var items = nav.querySelectorAll('.goal-nav-item');
+    items.forEach(function(it) {
+      it.addEventListener('click', function(e) {
+        var id = it.getAttribute('data-nav-target');
+        var target = document.getElementById(id);
+        if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth', block: 'start' }); setActiveGoalNav(id); }
+      });
+    });
+    if (items.length) items[0].classList.add('active'); // newest goal active by default
   }
 
   // Wire each in-card "Update this goal": carries that card's goal, respects the
@@ -776,9 +849,13 @@
       + '</div>';
     if (maps.length) {
       var groups = groupMapsByGoal(maps);
-      html += '<div id="goal-cards">'
-        + groups.map(function(g, gi) { return renderGoalCardHtml(g, gi, gi === 0, assignActive); }).join('')
-        + '</div>';
+      var cardsHtml = groups.map(function(g, gi) { return renderGoalCardHtml(g, gi, gi === 0, assignActive); }).join('');
+      // ≥2 goals → slim sticky rail beside the stacked cards; 1 goal → cards only
+      // (a single-goal rail has nothing to navigate).
+      html += groups.length >= 2
+        ? '<div class="goal-nav-layout">' + renderGoalNavHtml(groups)
+            + '<div class="goal-cards-col" id="goal-cards">' + cardsHtml + '</div></div>'
+        : '<div id="goal-cards">' + cardsHtml + '</div>';
     } else {
       html += '<div class="card"><p style="margin:0;color:var(--muted);font-size:0.9rem;font-style:italic;">No Maps generated for this client yet. Assign one above — once your client completes it, every Map will appear here, grouped by goal.</p></div>';
     }
@@ -792,6 +869,7 @@
       var cards = $('goal-cards');
       wireEffmapToggles(cards);
       wireGoalCardUpdates(cards);
+      wireGoalNav();
     }
   }
 
