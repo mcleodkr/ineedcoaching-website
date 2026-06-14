@@ -43,37 +43,11 @@
     .save-btn:hover { opacity: 0.92; }
     .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* Two-column layout: Map selector | selected Map. Stacks on narrow screens. */
-    .map-layout { display: flex; gap: 22px; align-items: flex-start; }
-    .map-selector { flex: 0 0 232px; }
-    .map-viewer { flex: 1; min-width: 0; }
-    .sel-goal {
-      font-family: 'Cormorant Garamond', serif; font-size: 0.92rem; font-weight: 600;
-      color: var(--navy); line-height: 1.25; margin: 14px 0 6px; padding-bottom: 4px;
-      border-bottom: 1px solid var(--border);
-    }
-    .sel-goal:first-child { margin-top: 0; }
-    .sel-item {
-      display: block; width: 100%; text-align: left; cursor: pointer;
-      background: var(--white); border: 1px solid var(--border); border-radius: var(--r-sm);
-      padding: 9px 12px; margin-bottom: 6px; font-family: 'DM Sans', sans-serif;
-      font-size: 0.82rem; color: var(--ink); transition: border-color 0.12s ease, background 0.12s ease;
-    }
-    .sel-item:hover { border-color: var(--gold); }
-    .sel-item.active { background: rgba(196,154,60,0.12); border-color: var(--gold); border-left: 3px solid var(--gold); }
-    .sel-item .sel-date { font-weight: 600; }
-    .sel-item .sel-phase { color: var(--muted); font-size: 0.74rem; }
-    .sel-item .sel-current { display: inline-block; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); margin-left: 6px; }
-
     /* Coach-facing helper glosses (item 4): plain-language definitions next to
        Evidence / Confidence / Cross-domain tax. */
     .help-tip { cursor: help; color: var(--muted); font-weight: 400; font-size: 0.7rem; margin-left: 4px; border-bottom: 1px dotted var(--muted); }
     .help-note { font-size: 0.72rem; color: var(--muted); font-style: italic; line-height: 1.5; margin: 0 0 10px; }
 
-    @media (max-width: 720px) {
-      .map-layout { flex-direction: column; }
-      .map-selector { flex: 1 1 auto; width: 100%; }
-    }
     @media (max-width: 600px) {
       .panel { padding: 20px 14px 60px; }
       .top-bar { flex-direction: column; align-items: flex-start; }
@@ -118,7 +92,6 @@
   let mapsState = [];
   let assignmentsState = [];
   let usageState = null;
-  let selectedIdx = 0;
 
   function $(id) { return document.getElementById(id); }
   function escapeHtml(s) {
@@ -395,7 +368,7 @@
       +   '<th style="text-align:left;padding:6px 10px;font-size:0.7rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);">Confidence' + helpTip(HELP_CONFIDENCE) + '</th>'
       + '</tr></thead><tbody>' + rows + '</tbody></table>'
       + '<p class="help-note"><strong style="font-style:normal;color:var(--navy);">Evidence</strong> &mdash; ' + escapeHtml(HELP_EVIDENCE) + '. <strong style="font-style:normal;color:var(--navy);">Confidence</strong> &mdash; ' + escapeHtml(HELP_CONFIDENCE) + '.</p>'
-      + '<div style="font-size:0.78rem;color:var(--muted);">Overall evidence: ' + escapeHtml(m.overall_evidence_strength || '—') + ' &bull; Prompt version: ' + escapeHtml(m.prompt_version || '—') + '</div>';
+      + '<div style="font-size:0.78rem;color:var(--muted);">Overall evidence: ' + escapeHtml(m.overall_evidence_strength || '—') + '</div>';
   }
 
   function effmapCollapsible(id, title, innerHtml) {
@@ -586,28 +559,16 @@
       }
       return pre + effmapEmptyHtml(email);
     }
-    // Maps exist, nothing in flight — two distinct re-take actions:
-    //   "Update this goal" carries the currently-selected Map's goal forward (the new
-    //     Map files under the same goal and clusters with it). Primary (gold).
-    //   "Map a new goal" is the original fresh assignment — the client names a brand-
-    //     new goal. Secondary (navy outline).
-    var selMap = mapsState[selectedIdx] || null;
-    var selGoal = (selMap && selMap.goal && String(selMap.goal).trim() !== '') ? String(selMap.goal) : '';
-    var updateBtn = selGoal
-      ? '<button type="button" class="save-btn" id="effmap-update-btn" data-client-email="' + escapeHtml(email) + '" data-carry-goal="' + escapeHtml(selGoal) + '" style="padding:9px 20px;font-size:0.8rem;background:var(--gold);">Update this goal</button>'
-      : '';
-    var newBtn = '<button type="button" id="effmap-assign-btn" data-client-email="' + escapeHtml(email) + '" style="padding:9px 20px;font-size:0.8rem;background:none;border:1px solid var(--navy);color:var(--navy);border-radius:999px;cursor:pointer;transition:all 0.15s ease;">Map a new goal</button>';
-    return '<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center;">' + updateBtn + newBtn + '</div>'
-      + (selGoal ? '<p style="text-align:center;font-size:0.76rem;color:var(--muted);margin:8px 0 0;">“Update this goal” carries forward: ' + escapeHtml(selGoal) + '</p>' : '');
+    // Maps exist, nothing in flight — the top action stays goal-agnostic: a fresh
+    // Map where the client names a brand-new goal. Per-goal "Update this goal" lives
+    // inside each goal card below (not here), so it can carry that card's own goal.
+    return '<div style="text-align:center;">'
+      + '<button type="button" class="save-btn" id="effmap-assign-btn" data-client-email="' + escapeHtml(email) + '" style="padding:9px 20px;font-size:0.8rem;background:var(--gold);">Map a new goal</button>'
+      + '</div>';
   }
   function wireEffmapAssignment(container, email) {
-    // "Update this goal" — re-take carrying the selected Map's goal forward.
-    var updateBtn = container.querySelector('#effmap-update-btn');
-    if (updateBtn) updateBtn.addEventListener('click', function() {
-      if (effmapAtLimit()) { effmapShowOverageConsent(container, email); return; }
-      effmapAssign(updateBtn, email, updateBtn.getAttribute('data-carry-goal') || '');
-    });
     // "Map a new goal" / "Assign Effectiveness Map" (empty state) — fresh, no goal.
+    // (Per-goal "Update this goal" lives inside the goal cards, wired separately.)
     var assignBtn = container.querySelector('#effmap-assign-btn');
     if (assignBtn) assignBtn.addEventListener('click', function() {
       // At the monthly limit, the assign action becomes an overage consent prompt
@@ -662,15 +623,17 @@
         } else {
           effmapSetMsg(bar, (data && data.error) || 'Could not create the link. Please try again.', true);
         }
-        return;
+        return false;
       }
       var active = { session_id: data.session_id, status: data.status || 'pending', assigned_at: data.assigned_at, expires_at: data.expires_at };
       bar.innerHTML = effmapStatusCardHtml(active, data.link);
       wireEffmapAssignment(bar, email);
       effmapSetMsg(bar, 'Link created. Copy it and send it to your client.', false);
+      return true;
     } catch (e) {
       btn.disabled = false; btn.textContent = orig;
       effmapSetMsg(bar, 'Could not create the link. Please try again.', true);
+      return false;
     }
   }
   async function effmapFetchLink(email, sessionId) {
@@ -723,74 +686,81 @@
   }
 
   /* =========================================================================
-     Selector + selected-Map layout (item 2). Maps are already created_at desc
-     from the endpoint; we cluster CONSECUTIVE same-goal Maps visually only —
-     no data-layer grouping or reordering. Each item is labelled goal + date.
+     Per-goal cards. Each DISTINCT goal is one self-contained card: the goal text,
+     the date + Current/phase badge, the Map(s) for that goal (newest rendered in
+     full; earlier same-goal Maps collapsible inside the same card), and an in-card
+     "Update this goal" that carries THAT card's goal forward. Maps arrive
+     created_at desc, so first-seen order keeps cards newest-activity-first and each
+     group's Maps newest-first.
      ========================================================================= */
-  function buildSelectorHtml(maps, sel) {
-    // Consecutive-goal clusters over the (already date-desc) list.
-    var clusters = [];
-    maps.forEach(function(m, i) {
-      var g = (m.goal || 'Untitled goal').trim();
-      var last = clusters.length ? clusters[clusters.length - 1] : null;
-      if (last && last.goal === g) last.items.push({ m: m, idx: i });
-      else clusters.push({ goal: g, items: [{ m: m, idx: i }] });
+  function groupMapsByGoal(maps) {
+    var order = [], byGoal = {};
+    (maps || []).forEach(function(m) {
+      var g = (m && m.goal && String(m.goal).trim() !== '') ? String(m.goal).trim() : 'Untitled goal';
+      if (!byGoal[g]) { byGoal[g] = { goal: g, maps: [] }; order.push(byGoal[g]); }
+      byGoal[g].maps.push(m);
     });
-    var html = '';
-    clusters.forEach(function(cl) {
-      html += '<div class="sel-goal">' + escapeHtml(cl.goal) + '</div>';
-      cl.items.forEach(function(it) {
-        var active = it.idx === sel ? ' active' : '';
-        var current = it.idx === 0 ? '<span class="sel-current">Current</span>' : '';
-        html += '<button type="button" class="sel-item' + active + '" data-map-idx="' + it.idx + '">'
-          + '<span class="sel-date">' + escapeHtml(effmapDate(it.m.created_at)) + '</span>' + current
-          + (it.m.phase ? '<br><span class="sel-phase">' + escapeHtml(it.m.phase) + ' phase</span>' : '')
-          + '</button>';
-      });
-    });
-    return html;
+    return order;
   }
 
-  function renderSelectedMap(m) {
-    var viewer = $('map-viewer');
-    if (!viewer) return;
-    viewer.innerHTML =
-      '<div class="card">'
-      + '<div style="margin-bottom:18px;">'
-      +   '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">'
-      +     (selectedIdx === 0 ? 'Current Map' : 'Map') + ' &bull; ' + escapeHtml(effmapDate(m.created_at)) + (m.phase ? ' &bull; ' + escapeHtml(m.phase) : '')
-      +   '</div>'
-      +   '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.25rem;font-weight:600;color:var(--navy);line-height:1.2;">' + escapeHtml(m.goal || 'Untitled goal') + '</div>'
-      + '</div>'
-      + effmapOpenerHtml(m)
+  // A single Map's full body (opener + reading order + coach-only intel). idSuffix
+  // keeps every collapsible id unique across all cards on the page.
+  function effmapMapBodyHtml(m, idSuffix) {
+    return effmapOpenerHtml(m)
       + effmapReadingOrderHtml(m)
-      + effmapCollapsible('effmap-intel', 'Intelligence Notes (coach only)', effmapIntelHtml(m))
-      + '</div>';
-    wireEffmapToggles(viewer);
+      + effmapCollapsible('effmap-intel-' + idSuffix, 'Intelligence Notes (coach only)', effmapIntelHtml(m));
   }
 
-  function selectMap(idx) {
-    selectedIdx = idx;
-    var sel = $('map-selector');
-    if (sel) sel.innerHTML = buildSelectorHtml(mapsState, selectedIdx);
-    wireSelector();
-    renderSelectedMap(mapsState[idx]);
-    // Re-point "Update this goal" at the newly selected Map's goal. Only when the
-    // assign buttons are showing — never clobber a status card (active or just-
-    // created link), whose presence is detected by the absent assign button.
-    var bar = $('assign-bar');
-    if (bar && bar.querySelector('#effmap-assign-btn')) {
-      bar.innerHTML = effmapAssignBarHtml(clientEmail, mapsState, assignmentsState);
-      wireEffmapAssignment(bar, clientEmail);
-    }
+  function renderGoalCardHtml(group, gi, isCurrentGroup, assignActive) {
+    var maps = group.maps;
+    var primary = maps[0];
+    var badge = (isCurrentGroup ? 'Current Map' : 'Map') + ' · ' + escapeHtml(effmapDate(primary.created_at))
+      + (primary.phase ? ' · ' + escapeHtml(primary.phase) + ' phase' : '');
+    // In-card "Update this goal" carries THIS card's goal. Disabled while an
+    // assignment is in flight (mirrors the top one-active-at-a-time convention).
+    var updateBtn = '<button type="button" class="save-btn effmap-card-update" data-client-email="' + escapeHtml(clientEmail) + '"'
+      + ' data-carry-goal="' + escapeHtml(group.goal) + '"' + (assignActive ? ' disabled' : '')
+      + ' style="padding:8px 16px;font-size:0.78rem;background:var(--gold);white-space:nowrap;flex:0 0 auto;">Update this goal</button>';
+    var head = '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:18px;">'
+      + '<div style="min-width:0;">'
+      +   '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">' + badge + '</div>'
+      +   '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.25rem;font-weight:600;color:var(--navy);line-height:1.2;">' + escapeHtml(group.goal) + '</div>'
+      + '</div>' + updateBtn
+      + '</div>';
+    var body = effmapMapBodyHtml(primary, gi + '-0');
+    // Earlier Maps for THIS goal — each collapsible, full render inside.
+    var older = maps.slice(1).map(function(m, ri) {
+      var mi = ri + 1;
+      var label = 'Earlier Map · ' + effmapDate(m.created_at) + (m.phase ? ' · ' + String(m.phase) + ' phase' : '');
+      return effmapCollapsible('effmap-older-' + gi + '-' + mi, label, effmapMapBodyHtml(m, gi + '-' + mi));
+    }).join('');
+    var olderSection = older
+      ? '<div style="margin-top:20px;border-top:1px solid var(--border);padding-top:12px;">'
+        + '<p style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;">Earlier Maps for this goal</p>'
+        + older + '</div>'
+      : '';
+    return '<div class="card goal-card" style="margin-bottom:18px;">' + head + body + olderSection + '</div>';
   }
-  function wireSelector() {
-    var sel = $('map-selector');
-    if (!sel) return;
-    sel.querySelectorAll('[data-map-idx]').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        var i = parseInt(btn.getAttribute('data-map-idx'), 10);
-        if (!isNaN(i) && i !== selectedIdx) selectMap(i);
+
+  // Wire each in-card "Update this goal": carries that card's goal, respects the
+  // at-limit overage flow; on success the new link surfaces in the top assign bar
+  // and all in-card update buttons disable (an assignment is now in flight).
+  function wireGoalCardUpdates(container) {
+    container.querySelectorAll('.effmap-card-update').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        if (btn.disabled) return;
+        var email = btn.getAttribute('data-client-email') || clientEmail;
+        var goal = btn.getAttribute('data-carry-goal') || '';
+        if (effmapAtLimit()) { effmapShowOverageConsent($('assign-bar'), email); return; }
+        var ok = await effmapAssign(btn, email, goal);
+        if (ok) {
+          document.querySelectorAll('.effmap-card-update').forEach(function(b) {
+            b.disabled = true; b.style.opacity = '0.5'; b.style.cursor = 'not-allowed';
+          });
+          btn.textContent = 'Update this goal';
+        } else {
+          btn.disabled = false; btn.textContent = 'Update this goal';
+        }
       });
     });
   }
@@ -798,18 +768,19 @@
   /* ---- top-level render ---- */
   function render() {
     var maps = mapsState, assignments = assignmentsState;
+    var assignActive = !!effmapActiveAssignment(assignments);
     var html = '<div class="card" style="margin-bottom:18px;">'
       + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:var(--navy);border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:14px;">Assign a Map</div>'
       + effmapUsageHtml(usageState)
       + '<div id="assign-bar"></div>'
       + '</div>';
     if (maps.length) {
-      html += '<div class="map-layout">'
-        + '<div class="map-selector" id="map-selector"></div>'
-        + '<div class="map-viewer" id="map-viewer"></div>'
+      var groups = groupMapsByGoal(maps);
+      html += '<div id="goal-cards">'
+        + groups.map(function(g, gi) { return renderGoalCardHtml(g, gi, gi === 0, assignActive); }).join('')
         + '</div>';
     } else {
-      html += '<div class="card"><p style="margin:0;color:var(--muted);font-size:0.9rem;font-style:italic;">No Maps generated for this client yet. Assign one above — once your client completes it, every Map will appear here newest first.</p></div>';
+      html += '<div class="card"><p style="margin:0;color:var(--muted);font-size:0.9rem;font-style:italic;">No Maps generated for this client yet. Assign one above — once your client completes it, every Map will appear here, grouped by goal.</p></div>';
     }
     $('content').innerHTML = html;
 
@@ -818,11 +789,9 @@
     wireEffmapAssignment(bar, clientEmail);
 
     if (maps.length) {
-      if (selectedIdx >= maps.length) selectedIdx = 0;
-      var sel = $('map-selector');
-      sel.innerHTML = buildSelectorHtml(maps, selectedIdx);
-      wireSelector();
-      renderSelectedMap(maps[selectedIdx]);
+      var cards = $('goal-cards');
+      wireEffmapToggles(cards);
+      wireGoalCardUpdates(cards);
     }
   }
 
