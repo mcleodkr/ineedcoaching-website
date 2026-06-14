@@ -31,6 +31,7 @@
   --border: #e8e4dc;
   --border-soft: #f0ece3;
   --text: #1f2937;
+  --ink: #1f2937; /* body text alias — keeps the ported Effectiveness Map render (var(--ink)) on-palette */
   --muted: #6b6b60;
   --shadow-sm: 0 1px 2px rgba(26,58,82,0.04);
   --shadow: 0 4px 14px rgba(26,58,82,0.06);
@@ -378,6 +379,7 @@ a { color: var(--navy); text-decoration: none; }
       <nav class="side-nav">
         <button class="side-item active" data-section="sessions"><span class="icon">&#9679;</span>My Sessions</button>
         <button class="side-item" data-section="goals"><span class="icon">&#9679;</span>My Goals</button>
+        <button class="side-item" data-section="effmap"><span class="icon">&#9679;</span>Effectiveness Map</button>
         <button class="side-item" data-section="homework"><span class="icon">&#9679;</span>Homework</button>
         <button class="side-item" data-section="checkins"><span class="icon">&#9679;</span>My Check-ins</button>
         <button class="side-item" data-section="my-courses"><span class="icon">&#9679;</span>My Courses</button>
@@ -575,6 +577,13 @@ a { color: var(--navy); text-decoration: none; }
           <h1 class="page-title">My Goals</h1>
           <p class="page-sub">The intentions you and your coach are working toward. Mark where you are — no pressure, just a reflection.</p>
           <div id="goals-content"></div>
+        </section>
+
+        <!-- EFFECTIVENESS MAP -->
+        <section class="section" id="sec-effmap">
+          <h1 class="page-title">Effectiveness Map</h1>
+          <p class="page-sub">Each Map is a read on how you're showing up toward a specific goal, across five areas of life. Your coach sends you a Map; once you complete it, it lives here so you can return to it anytime.</p>
+          <div id="effmap-content"><div class="loading"><div class="spinner"></div></div></div>
         </section>
 
         <!-- HOMEWORK -->
@@ -1126,6 +1135,7 @@ function setupSidebar() {
       if (!btn._loaded) {
         btn._loaded = true;
         if (target === 'goals') loadGoals();
+        if (target === 'effmap') loadEffmap();
         if (target === 'homework') loadHomework();
         if (target === 'checkins') loadCheckins();
         if (target === 'my-courses') loadMyCourses();
@@ -1136,6 +1146,253 @@ function setupSidebar() {
       }
     });
   });
+}
+
+/* ================================================
+   EFFECTIVENESS MAP (client view)
+   Lets a logged-in client re-read their own completed Maps. Reads via
+   /api/map-client-read (authenticated by the client's own JWT, scoped to their
+   own email, explorer-facing fields only). The render is ported verbatim from
+   the coach Effectiveness Map page (effectiveness-map-panel.html) but STRIPPED to
+   explorer-facing content: no Coach Synthesis, no Intelligence Notes, no
+   evidence/confidence, no dominant pattern. Organized by goal, newest first,
+   each goal its own card — the same way the coach page does.
+   ================================================ */
+// P.I.P.E.S. display order — mirrors the coach page.
+var EFFMAP_DOMAINS = [
+  ['physical', 'Physical'], ['intellectual', 'Intellectual'],
+  ['psychological', 'Psychological'], ['environmental', 'Environmental'],
+  ['social', 'Social']
+];
+
+function effmapMessage(msg) {
+  return '<p style="color:var(--muted);font-size:0.88rem;font-style:italic;margin:0;">' + escapeHtml(msg) + '</p>';
+}
+function effmapDate(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function effmapParas(s, style) {
+  return String(s == null ? '' : s).split(/\n\s*\n/)
+    .map(function(p) { return p.trim(); })
+    .filter(function(p) { return p; })
+    .map(function(p) { return '<p style="' + style + '">' + escapeHtml(p) + '</p>'; })
+    .join('');
+}
+
+// Explorer opener ("Why this is different") — v1.7 only; absent on older Maps.
+function effmapOpenerHtml(m) {
+  var efo = (m && m.explorer_facing_output && typeof m.explorer_facing_output === 'object') ? m.explorer_facing_output : {};
+  var op = efo.opener;
+  if (!op || !String(op).trim()) return '';
+  var lines = String(op).split(/\n\s*\n/).map(function(s) { return s.trim(); }).filter(Boolean);
+  var head = (lines.length > 1 && lines[0].length < 60) ? lines.shift() : 'Why this is different';
+  return '<div style="margin:0 0 20px;padding:16px 18px;background:var(--cream);border-radius:var(--r-sm);">'
+    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:600;color:var(--navy);margin-bottom:8px;">' + escapeHtml(head) + '</div>'
+    + lines.map(function(p) { return '<p style="margin:0 0 10px;font-size:0.88rem;line-height:1.6;color:var(--ink);">' + escapeHtml(p) + '</p>'; }).join('')
+    + '</div>';
+}
+
+// The full explorer-facing reading order — ported verbatim from the coach page.
+// Reads ONLY from explorer_facing_output, so it carries no coach-only content:
+// domain snapshots, The Whole Picture, How this shows up, Where the load is
+// moving, In short, the release question, the status chips, and the legend.
+function effmapReadingOrderHtml(m) {
+  var efo = (m && m.explorer_facing_output && typeof m.explorer_facing_output === 'object') ? m.explorer_facing_output : {};
+  var ds = (efo.domain_statuses && typeof efo.domain_statuses === 'object') ? efo.domain_statuses : {};
+  var out = '';
+
+  var snaps = '';
+  EFFMAP_DOMAINS.forEach(function(d) {
+    var p = ds[d[0]] && ds[d[0]].snapshot_paragraph;
+    if (p && String(p).trim()) snaps += '<p style="margin:0 0 14px;font-size:0.9rem;line-height:1.6;color:var(--ink);">' + escapeHtml(p) + '</p>';
+  });
+  if (snaps) out += '<div style="margin-bottom:20px;">' + snaps + '</div>';
+
+  var sp = efo.system_picture && efo.system_picture.narrative;
+  if (sp && String(sp).trim()) {
+    out += '<div style="margin:0 0 20px;">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:600;color:var(--gold);margin-bottom:6px;">The Whole Picture</div>'
+      + effmapParas(sp, 'margin:0 0 14px;font-size:0.95rem;line-height:1.65;color:var(--ink);')
+      + '</div>';
+  }
+
+  var hts = efo.how_this_shows_up;
+  if (hts && String(hts).trim()) {
+    out += '<div style="margin:0 0 20px;">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:600;color:var(--gold);margin-bottom:6px;">How this shows up for you</div>'
+      + effmapParas(hts, 'margin:0 0 14px;font-size:0.9rem;line-height:1.6;color:var(--ink);')
+      + '</div>';
+  }
+
+  // Explorer-facing through v1.5; coach-only from v1.6 — present here only when it
+  // lives in the explorer blob (the endpoint never returns the coach copy).
+  var tax = efo.cross_domain_tax;
+  if (tax && tax.narrative && String(tax.narrative).trim()) {
+    out += '<div style="margin:0 0 20px;">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:600;color:var(--gold);margin-bottom:6px;">Where the load is moving</div>'
+      + '<p style="margin:0;font-size:0.9rem;line-height:1.6;color:var(--ink);">' + escapeHtml(tax.narrative) + '</p>'
+      + '</div>';
+  }
+
+  // v1.7: closing summary — for/against per area; absent on older Maps.
+  var cs = efo.closing_summary;
+  if (cs && typeof cs === 'object') {
+    var DIR_LABELS = { 'for': 'Working for the goal', against: 'Working against it', both: 'Cuts both ways', neutral: '—' };
+    var csRows = '';
+    EFFMAP_DOMAINS.forEach(function(d) {
+      var c = cs[d[0]];
+      if (!c || typeof c !== 'object') return;
+      csRows += '<div style="display:flex;gap:10px;align-items:baseline;margin:0 0 8px;">'
+        + '<span style="flex:0 0 100px;font-family:\'Cormorant Garamond\',serif;font-size:0.92rem;font-weight:600;color:var(--navy);">' + escapeHtml(d[1]) + '</span>'
+        + '<span style="flex:0 0 auto;font-size:0.62rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--gold);white-space:nowrap;">' + escapeHtml(DIR_LABELS[c.direction] || '—') + '</span>'
+        + (c.plain && String(c.plain).trim() ? '<span style="font-size:0.85rem;line-height:1.5;color:var(--ink);">' + escapeHtml(c.plain) + '</span>' : '')
+        + '</div>';
+    });
+    if (csRows) {
+      out += '<div style="margin:0 0 20px;">'
+        + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:600;color:var(--gold);margin-bottom:8px;">In short</div>'
+        + csRows + '</div>';
+    }
+  }
+
+  var rq = efo.release_question && efo.release_question.question;
+  if (rq && String(rq).trim()) {
+    out += '<div style="margin:0 0 22px;padding:16px 18px;background:rgba(196,154,60,0.10);border-radius:var(--r-sm);">'
+      + '<div style="font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">A question to sit with</div>'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:var(--navy);line-height:1.3;">' + escapeHtml(rq) + '</div>'
+      + '</div>';
+  }
+
+  var cells = '';
+  EFFMAP_DOMAINS.forEach(function(d) {
+    var v = ds[d[0]] && ds[d[0]].primary_status;
+    var has = v && String(v).trim();
+    cells += '<div style="flex:1;min-width:90px;text-align:center;">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;font-weight:600;color:var(--navy);">' + escapeHtml(d[1]) + '</div>'
+      + '<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:' + (has ? 'var(--gold)' : 'var(--muted)') + ';margin-top:3px;">' + escapeHtml(has ? v : '—') + '</div>'
+      + '</div>';
+  });
+  out += '<div style="display:flex;flex-wrap:wrap;gap:12px;padding-top:16px;border-top:1px solid var(--border);">' + cells + '</div>';
+
+  // v1.7: status legend under the chips.
+  if (efo.status_legend && String(efo.status_legend).trim()) {
+    var legendItems = String(efo.status_legend).split(/\n+/)
+      .map(function(l) { return l.replace(/^[-*\s]+/, '').replace(/\*\*/g, '').trim(); })
+      .filter(function(l) { return l; })
+      .map(function(l) {
+        var lm = l.match(/^(\w+)\s*[—–-]\s*(.+)$/);
+        return '<p style="margin:0 0 6px;font-size:0.78rem;line-height:1.5;color:var(--muted);">'
+          + (lm ? '<strong style="color:var(--navy);font-weight:600;">' + escapeHtml(lm[1]) + '</strong> — ' + escapeHtml(lm[2]) : escapeHtml(l))
+          + '</p>';
+      }).join('');
+    if (legendItems) out += '<div style="margin-top:12px;">' + legendItems + '</div>';
+  }
+
+  return out || effmapMessage('This Map has no displayable content yet.');
+}
+
+// Collapsible wrapper for earlier same-goal Maps (mirrors the coach page).
+function effmapCollapsible(id, title, innerHtml) {
+  return '<div style="border:1px solid var(--border);border-radius:var(--r-sm);margin-top:16px;overflow:hidden;">'
+    + '<button type="button" data-effmap-toggle="' + escapeHtml(id) + '" style="width:100%;text-align:left;background:var(--cream-warm);border:none;cursor:pointer;padding:11px 16px;display:flex;justify-content:space-between;align-items:center;font-family:\'Cormorant Garamond\',serif;font-size:0.98rem;font-weight:600;color:var(--navy);">'
+    +   '<span>' + escapeHtml(title) + '</span><span class="effmap-caret">&#9662;</span>'
+    + '</button>'
+    + '<div id="' + escapeHtml(id) + '" style="display:none;padding:16px;border-top:1px solid var(--border);">' + innerHtml + '</div>'
+    + '</div>';
+}
+function wireEffmapToggles(container) {
+  container.querySelectorAll('[data-effmap-toggle]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var target = document.getElementById(btn.getAttribute('data-effmap-toggle'));
+      if (!target) return;
+      var open = target.style.display !== 'none';
+      target.style.display = open ? 'none' : 'block';
+      var caret = btn.querySelector('.effmap-caret');
+      if (caret) caret.innerHTML = open ? '&#9662;' : '&#9652;';
+    });
+  });
+}
+
+// Group Maps by goal, preserving newest-activity-first card order and
+// newest-first within each goal (rows arrive created_at desc from the endpoint).
+function groupMapsByGoal(maps) {
+  var order = [], byGoal = {};
+  (maps || []).forEach(function(m) {
+    var g = (m && m.goal && String(m.goal).trim() !== '') ? String(m.goal).trim() : 'Untitled goal';
+    if (!byGoal[g]) { byGoal[g] = { goal: g, maps: [] }; order.push(byGoal[g]); }
+    byGoal[g].maps.push(m);
+  });
+  return order;
+}
+
+// One goal → one card. Newest Map rendered in full; earlier same-goal Maps
+// collapsible inside the same card. No coach-only content, no assign controls.
+function effmapClientCardHtml(group, gi, isCurrentGroup) {
+  var maps = group.maps;
+  var primary = maps[0];
+  var badge = (isCurrentGroup ? 'Current Map' : 'Map') + ' · ' + escapeHtml(effmapDate(primary.created_at))
+    + (primary.phase ? ' · ' + escapeHtml(primary.phase) + ' phase' : '');
+  var head = '<div style="margin-bottom:18px;">'
+    + '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">' + badge + '</div>'
+    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.25rem;font-weight:600;color:var(--navy);line-height:1.2;">' + escapeHtml(group.goal) + '</div>'
+    + '</div>';
+  var body = effmapOpenerHtml(primary) + effmapReadingOrderHtml(primary);
+  var older = maps.slice(1).map(function(m, ri) {
+    var mi = ri + 1;
+    var label = 'Earlier Map · ' + effmapDate(m.created_at) + (m.phase ? ' · ' + String(m.phase) + ' phase' : '');
+    return effmapCollapsible('effmap-older-' + gi + '-' + mi, label, effmapOpenerHtml(m) + effmapReadingOrderHtml(m));
+  }).join('');
+  var olderSection = older
+    ? '<div style="margin-top:20px;border-top:1px solid var(--border);padding-top:12px;">'
+      + '<p style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;">Earlier Maps for this goal</p>'
+      + older + '</div>'
+    : '';
+  return '<div class="card" id="effmap-goal-' + gi + '" style="scroll-margin-top:16px;">' + head + body + olderSection + '</div>';
+}
+
+// Compact jump-nav above the cards — one entry per goal, only when 2+ goals.
+function effmapJumpNavHtml(groups) {
+  if (groups.length < 2) return '';
+  var items = groups.map(function(g, gi) {
+    return '<a href="#effmap-goal-' + gi + '" class="effmap-jump"'
+      + ' style="display:inline-block;padding:6px 12px;border:1px solid var(--border);border-radius:999px;font-size:0.8rem;color:var(--navy);text-decoration:none;background:var(--white);transition:all 0.15s ease;">'
+      + escapeHtml(g.goal) + (gi === 0 ? ' · Current' : '') + '</a>';
+  }).join('');
+  return '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;">' + items + '</div>';
+}
+
+async function loadEffmap() {
+  var container = $('effmap-content');
+  if (!container) return;
+  container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    var res = await fetch('/api/map-client-read', {
+      method: 'POST', headers: apiHeaders(), body: JSON.stringify({})
+    });
+    var data = await res.json().catch(function() { return null; });
+    if (!res.ok || !data || !data.ok) {
+      container.innerHTML = '<div class="empty"><p>' + escapeHtml((data && data.error) || 'We couldn’t load your Effectiveness Maps right now. Please try again in a moment.') + '</p></div>';
+      return;
+    }
+    var maps = Array.isArray(data.maps) ? data.maps : [];
+    if (!maps.length) {
+      container.innerHTML = '<div class="empty">'
+        + '<p>You don’t have any Effectiveness Maps yet.</p>'
+        + '<p style="margin-top:8px;">When your coach sends you one, you’ll answer a few open-ended questions and your Map will appear here — ready to revisit anytime.</p>'
+        + '</div>';
+      return;
+    }
+    var groups = groupMapsByGoal(maps);
+    var html = effmapJumpNavHtml(groups);
+    groups.forEach(function(g, gi) { html += effmapClientCardHtml(g, gi, gi === 0); });
+    container.innerHTML = html;
+    wireEffmapToggles(container);
+  } catch (e) {
+    container.innerHTML = '<div class="empty"><p>We couldn’t load your Effectiveness Maps right now. Please try again in a moment.</p></div>';
+  }
 }
 
 /* ================================================
