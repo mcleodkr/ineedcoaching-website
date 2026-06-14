@@ -586,12 +586,28 @@
       }
       return pre + effmapEmptyHtml(email);
     }
-    // Maps exist, nothing in flight — offer a fresh one (Maps are re-takeable).
-    return '<div style="text-align:center;">'
-      + '<button type="button" class="save-btn" id="effmap-assign-btn" data-client-email="' + escapeHtml(email) + '" style="padding:9px 20px;font-size:0.8rem;background:var(--gold);">Assign a new Effectiveness Map</button>'
-      + '</div>';
+    // Maps exist, nothing in flight — two distinct re-take actions:
+    //   "Update this goal" carries the currently-selected Map's goal forward (the new
+    //     Map files under the same goal and clusters with it). Primary (gold).
+    //   "Map a new goal" is the original fresh assignment — the client names a brand-
+    //     new goal. Secondary (navy outline).
+    var selMap = mapsState[selectedIdx] || null;
+    var selGoal = (selMap && selMap.goal && String(selMap.goal).trim() !== '') ? String(selMap.goal) : '';
+    var updateBtn = selGoal
+      ? '<button type="button" class="save-btn" id="effmap-update-btn" data-client-email="' + escapeHtml(email) + '" data-carry-goal="' + escapeHtml(selGoal) + '" style="padding:9px 20px;font-size:0.8rem;background:var(--gold);">Update this goal</button>'
+      : '';
+    var newBtn = '<button type="button" id="effmap-assign-btn" data-client-email="' + escapeHtml(email) + '" style="padding:9px 20px;font-size:0.8rem;background:none;border:1px solid var(--navy);color:var(--navy);border-radius:999px;cursor:pointer;transition:all 0.15s ease;">Map a new goal</button>';
+    return '<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center;">' + updateBtn + newBtn + '</div>'
+      + (selGoal ? '<p style="text-align:center;font-size:0.76rem;color:var(--muted);margin:8px 0 0;">“Update this goal” carries forward: ' + escapeHtml(selGoal) + '</p>' : '');
   }
   function wireEffmapAssignment(container, email) {
+    // "Update this goal" — re-take carrying the selected Map's goal forward.
+    var updateBtn = container.querySelector('#effmap-update-btn');
+    if (updateBtn) updateBtn.addEventListener('click', function() {
+      if (effmapAtLimit()) { effmapShowOverageConsent(container, email); return; }
+      effmapAssign(updateBtn, email, updateBtn.getAttribute('data-carry-goal') || '');
+    });
+    // "Map a new goal" / "Assign Effectiveness Map" (empty state) — fresh, no goal.
     var assignBtn = container.querySelector('#effmap-assign-btn');
     if (assignBtn) assignBtn.addEventListener('click', function() {
       // At the monthly limit, the assign action becomes an overage consent prompt
@@ -624,14 +640,19 @@
   async function effmapClipboard(text) {
     try { await navigator.clipboard.writeText(text); return true; } catch (e) { return false; }
   }
-  async function effmapAssign(btn, email) {
+  async function effmapAssign(btn, email, carryGoal) {
     var bar = $('assign-bar');
     btn.disabled = true;
     var orig = btn.textContent;
     btn.textContent = 'Creating link…';
     try {
+      // carryGoal present → re-take: the assignment carries the goal forward so the
+      // intake pre-fills it and the new Map files under the same goal. Absent → fresh.
+      var payload = (carryGoal && String(carryGoal).trim() !== '')
+        ? { client_email: email, goal: String(carryGoal) }
+        : { client_email: email };
       var res = await fetch('/api/assign-effectiveness-map', {
-        method: 'POST', headers: apiHeaders(), body: JSON.stringify({ client_email: email })
+        method: 'POST', headers: apiHeaders(), body: JSON.stringify(payload)
       });
       var data = await res.json().catch(function() { return null; });
       if (!res.ok || !data || !data.ok) {
@@ -754,6 +775,14 @@
     if (sel) sel.innerHTML = buildSelectorHtml(mapsState, selectedIdx);
     wireSelector();
     renderSelectedMap(mapsState[idx]);
+    // Re-point "Update this goal" at the newly selected Map's goal. Only when the
+    // assign buttons are showing — never clobber a status card (active or just-
+    // created link), whose presence is detected by the absent assign button.
+    var bar = $('assign-bar');
+    if (bar && bar.querySelector('#effmap-assign-btn')) {
+      bar.innerHTML = effmapAssignBarHtml(clientEmail, mapsState, assignmentsState);
+      wireEffmapAssignment(bar, clientEmail);
+    }
   }
   function wireSelector() {
     var sel = $('map-selector');
