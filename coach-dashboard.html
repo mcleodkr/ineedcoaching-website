@@ -11595,7 +11595,10 @@ function renderPostSessionAnalysis(a, container) {
     + '</div>';
 
   // Two-column layout: sidebar + main
-  h += '<div style="display:flex;gap:24px;align-items:flex-start;">';
+  // psi-layout lets the <=768px media query stack this to a single column so the
+  // mobile pill nav sits above the content column instead of sharing a non-wrapping
+  // flex row with it (which collapsed the flex:1;min-width:0 content to ~0 width).
+  h += '<div class="psi-layout" style="display:flex;gap:24px;align-items:flex-start;">';
 
   // Sticky sidebar nav (desktop)
   var navLinkStyle = 'display:block;font-size:0.78rem;color:var(--muted);text-decoration:none;padding:9px 16px;border-left:2.5px solid transparent;cursor:pointer;font-weight:500;transition:all 0.15s ease;';
@@ -11624,7 +11627,7 @@ function renderPostSessionAnalysis(a, container) {
   h += '<style>'
     + '.psi-nav-link:hover,.pm-nav-link:hover{color:var(--ink)!important;border-left-color:rgba(196,154,60,0.5)!important;background:rgba(196,154,60,0.04)!important}'
     + '.psi-nav-link.psi-active,.pm-nav-link.pm-active{color:var(--ink)!important;font-weight:700!important;border-left-color:var(--gold)!important;background:rgba(196,154,60,0.06)!important}'
-    + '@media(max-width:768px){.psi-sidebar{display:none!important}.psi-mobile-nav{display:flex!important}}'
+    + '@media(max-width:768px){.psi-sidebar{display:none!important}.psi-mobile-nav{display:flex!important}.psi-layout{flex-direction:column!important;align-items:stretch!important}}'
     + '</style>';
   h += '<div class="psi-mobile-nav" style="display:none;overflow-x:auto;gap:8px;padding:8px 0;margin-bottom:12px;white-space:nowrap;width:100%;">';
   ['Session Intelligence', 'Next Session', 'Client'].forEach(function(group, i) {
