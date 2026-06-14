@@ -813,6 +813,25 @@
       });
     });
     if (items.length) items[0].classList.add('active'); // newest goal active by default
+
+    // Scroll-spy: highlight the goal card crossing the viewport's vertical centre.
+    // A centre band keeps exactly one card "current" even when a card is taller than
+    // the viewport; the topmost card in the band wins when two overlap. No-ops where
+    // IntersectionObserver is unavailable — the click highlighting still works.
+    var cardsEl = $('goal-cards');
+    if (!cardsEl || !('IntersectionObserver' in window)) return;
+    var cards = cardsEl.querySelectorAll('.goal-card');
+    if (!cards.length) return;
+    var inView = {};
+    var spy = new IntersectionObserver(function(entries) {
+      entries.forEach(function(en) {
+        if (en.isIntersecting) inView[en.target.id] = true; else delete inView[en.target.id];
+      });
+      for (var i = 0; i < cards.length; i++) {
+        if (inView[cards[i].id]) { setActiveGoalNav(cards[i].id); break; }
+      }
+    }, { rootMargin: '-40% 0px -40% 0px', threshold: 0 });
+    cards.forEach(function(c) { spy.observe(c); });
   }
 
   // Wire each in-card "Update this goal": carries that card's goal, respects the
