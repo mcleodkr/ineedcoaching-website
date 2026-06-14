@@ -13,7 +13,9 @@
 //   4. Past expires_at → flip status='expired' (the "expire on next load" rule), invalid.
 //   5. status='expired' → generic invalid.
 //   6. pending|in_progress → flip pending→in_progress (idempotent), return the saved
-//      draft (answers, current_screen) so the explorer resumes where they left off.
+//      draft (answers, current_screen) so the explorer resumes where they left off,
+//      plus goal: the coach's carried-forward goal (Map re-take) or null. When set,
+//      the intake pre-fills it read-only and skips goal entry.
 //
 // Never leaks why a link failed (one generic message), and never returns coach_id
 // or client_email to the browser — the token already carries them; the server
@@ -49,9 +51,9 @@ export default async function handler(req, res) {
     if (!decoded) return res.status(200).json({ ok: false, error: INACTIVE_MSG });
     const sessionId = decoded.sessionId;
 
-    // 2. Assignment row by session_id.
+    // 2. Assignment row by session_id (goal: a carried-forward goal on a Map re-take).
     const aRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/effectiveness_map_assignments?session_id=eq.${encodeURIComponent(sessionId)}&select=status,expires_at&limit=1`,
+      `${SUPABASE_URL}/rest/v1/effectiveness_map_assignments?session_id=eq.${encodeURIComponent(sessionId)}&select=status,expires_at,goal&limit=1`,
       { headers: READ_HEADERS }
     );
     const aRows = await aRes.json().catch(() => []);
@@ -92,7 +94,13 @@ export default async function handler(req, res) {
       ? { answers: draftRow.answers || {}, current_screen: draftRow.current_screen || 0 }
       : null;
 
-    return res.status(200).json({ ok: true, status: 'in_progress', draft });
+    // goal (when set) is the coach's carried-forward goal — the intake pre-fills it
+    // read-only and skips goal entry. null → the client names the goal (default flow).
+    const carriedGoal = assignment.goal != null && String(assignment.goal).trim() !== ''
+      ? String(assignment.goal)
+      : null;
+
+    return res.status(200).json({ ok: true, status: 'in_progress', draft, goal: carriedGoal });
   } catch (e) {
     console.error('[map-intake-validate] error', e && e.message);
     return res.status(500).json({ ok: false, error: INACTIVE_MSG });
