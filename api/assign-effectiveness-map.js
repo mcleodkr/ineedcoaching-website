@@ -21,6 +21,7 @@
 
 import { randomUUID } from 'crypto';
 import { signMapLink } from '../lib/map-link.js';
+import { limitForTier, monthlyMapCount } from '../lib/effmap-limits.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://qroizygknxdjsstkezsf.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -31,9 +32,6 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const SITE_ORIGIN = process.env.SITE_URL || 'https://www.ineedcoaching.org';
 const INTAKE_PATH = '/map/intake';
 const EXPIRY_MS = 14 * 24 * 60 * 60 * 1000; // 14-day window (brief)
-
-const TIER_LIMITS = { founding: 25, practice: 50, scale: 150 };
-const DEFAULT_TIER_LIMIT = 25;
 
 const FAIL_MSG = 'Could not create the assignment. Please try again.';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -46,11 +44,6 @@ function sbHeaders(extra) {
 
 function safeJson(s) {
   try { return JSON.parse(s); } catch { return {}; }
-}
-
-function monthStartISO() {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
 }
 
 // --- coach identity from the JWT (never trusted from the body) ---
@@ -93,17 +86,6 @@ async function isActiveConnection(coachId, clientEmail) {
   if (!Array.isArray(rows)) return false;
   const target = clientEmail.toLowerCase();
   return rows.some((row) => row && row.client_email && String(row.client_email).toLowerCase() === target);
-}
-
-async function monthlyMapCount(coachId) {
-  const url = `${SUPABASE_URL}/rest/v1/effectiveness_maps`
-    + `?coach_id=eq.${encodeURIComponent(coachId)}&crisis_flag=eq.false`
-    + `&created_at=gte.${encodeURIComponent(monthStartISO())}&select=id`;
-  const r = await fetch(url, { headers: sbHeaders({ Prefer: 'count=exact', Range: '0-0' }) });
-  if (!r.ok && r.status !== 206) return null;
-  const cr = r.headers.get('content-range') || '';
-  const total = parseInt(cr.split('/')[1], 10);
-  return Number.isFinite(total) ? total : null;
 }
 
 // One assignment row owned by this coach for this client+session, or null.
@@ -165,8 +147,8 @@ export default async function handler(req, res) {
       return res.status(403).json({ ok: false, error: 'This client is not an active connection.', code: 'NOT_CONNECTED' });
     }
     const tier = coach.subscription_tier ? String(coach.subscription_tier).toLowerCase() : '';
-    const limit = Object.prototype.hasOwnProperty.call(TIER_LIMITS, tier) ? TIER_LIMITS[tier] : DEFAULT_TIER_LIMIT;
-    const used = await monthlyMapCount(coach.id);
+    const limit = limitForTier(tier);
+    const used = await monthlyMapCount(coach.id, SUPABASE_URL, SUPABASE_KEY);
     if (used === null) {
       // Count unavailable: fail open (business guardrail, not a security boundary). Logged.
       console.error(`[assign-effectiveness-map] monthly count unavailable for coach ${coach.id}; allowing`);

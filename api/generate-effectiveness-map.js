@@ -11,7 +11,7 @@
 //
 //   Gate 1a — coach has an active paid subscription (coach_profiles.subscription_status = 'active').
 //   Gate 1b — client_email is an ACTIVE connection of this coach (coach_clients).
-//   Gate 2  — coach is under their monthly Map limit (by tier: founding 25 / practice 50 / scale 150).
+//   Gate 2  — coach is under their monthly Map limit (by tier: founding 25 / practice 25 / scale 50).
 //   Failures: 401 UNAUTHORIZED (no/invalid coach token) · 403 ACCESS_DENIED · 403 MONTHLY_LIMIT_EXCEEDED.
 //
 // Conventions copied from generate-coaching-strategy.js: the system prompt is
@@ -30,6 +30,7 @@
 
 import { createRequire } from 'module';
 import { logAIUsage } from '../lib/ai-usage.js';
+import { limitForTier, monthlyMapCount } from '../lib/effmap-limits.js';
 import { jsonrepair } from 'jsonrepair';
 
 const require = createRequire(import.meta.url);
@@ -49,12 +50,6 @@ const ANSWER_KEYS = [
   'social_1', 'social_2',
 ];
 
-// Monthly Map-generation limits by subscription tier. Unknown/null tier falls back
-// to DEFAULT_TIER_LIMIT (lowest) so an active coach is never blocked by a tier-string
-// mismatch. NOTE: only 'practice' is confirmed in prod; confirm 'founding'/'scale'.
-const TIER_LIMITS = { founding: 25, practice: 50, scale: 150 };
-const DEFAULT_TIER_LIMIT = 25;
-
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://qroizygknxdjsstkezsf.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -63,11 +58,6 @@ function sbHeaders(extra) {
 }
 
 function safeJson(s) { try { return JSON.parse(s); } catch { return {}; } }
-
-function monthStartISO() {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
-}
 
 // --- access-gate data access -------------------------------------------------
 
@@ -110,20 +100,6 @@ async function isActiveConnection(coachId, clientEmail) {
   if (!Array.isArray(rows)) return false;
   const target = clientEmail.toLowerCase();
   return rows.some((row) => row && row.client_email && String(row.client_email).toLowerCase() === target);
-}
-
-// Gate 2 — count this coach's non-crisis Maps in the current calendar month (UTC) via
-// an exact PostgREST count. Crisis rows are exempt from the limit (no map was produced
-// for the client). Returns null if the count can't be determined.
-async function monthlyMapCount(coachId) {
-  const url = `${SUPABASE_URL}/rest/v1/effectiveness_maps`
-    + `?coach_id=eq.${encodeURIComponent(coachId)}&crisis_flag=eq.false`
-    + `&created_at=gte.${encodeURIComponent(monthStartISO())}&select=id`;
-  const r = await fetch(url, { headers: sbHeaders({ Prefer: 'count=exact', Range: '0-0' }) });
-  if (!r.ok && r.status !== 206) return null;
-  const cr = r.headers.get('content-range') || '';
-  const total = parseInt(cr.split('/')[1], 10);
-  return Number.isFinite(total) ? total : null;
 }
 
 // --- synthesis (unchanged from explorer-initiated build) ---------------------
@@ -393,8 +369,8 @@ export default async function handler(req, res) {
 
     // --- GATE 2: monthly Map limit for this coach's tier ---
     const tier = coach.subscription_tier ? String(coach.subscription_tier).toLowerCase() : '';
-    const limit = Object.prototype.hasOwnProperty.call(TIER_LIMITS, tier) ? TIER_LIMITS[tier] : DEFAULT_TIER_LIMIT;
-    const used = await monthlyMapCount(coach.id);
+    const limit = limitForTier(tier);
+    const used = await monthlyMapCount(coach.id, SUPABASE_URL, SUPABASE_KEY);
     if (used === null) {
       // Count unavailable: fail open so a paying coach is not blocked by a telemetry
       // glitch (limit is a business guardrail, not a security boundary). Logged loudly.
