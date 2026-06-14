@@ -23,8 +23,8 @@
 //          (error):         { ok:false, error, code? }
 
 import { randomUUID } from 'crypto';
-import { signMapLink } from '../lib/map-link.js';
-import { limitForTier, monthlyMapCount } from '../lib/effmap-limits.js';
+import { signMapLink } from '../lib/effmap-core/map-link.js';
+import { limitForTier, monthlyMapCount } from '../lib/effmap-core/effmap-limits.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://qroizygknxdjsstkezsf.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;

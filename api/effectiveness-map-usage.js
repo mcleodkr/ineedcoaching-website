@@ -3,8 +3,8 @@
 // GET /api/effectiveness-map-usage — coach-facing Effectiveness Map usage counter.
 // The coach's Supabase JWT is the authorization; no body. Returns the coach's tier,
 // their monthly Map limit, Maps generated this calendar month, and remaining — read
-// through lib/effmap-limits.js, the SAME source the generate/assign gates enforce,
-// so the displayed counter can never drift from what's actually allowed.
+// through lib/effmap-core/effmap-limits.js, the SAME source the generate/assign gates
+// enforce, so the displayed counter can never drift from what's actually allowed.
 //
 //   Authorization: Bearer <coach JWT>   (required)
 //   200 { ok:true, tier, subscription_status, limit, used, remaining, at_limit, count_unavailable }
@@ -14,7 +14,7 @@
 // `used`/`remaining` are null when the count can't be determined (telemetry glitch);
 // the gates fail open in that case, so the UI treats null as "no number to show".
 
-import { limitForTier, monthlyMapCount } from '../lib/effmap-limits.js';
+import { limitForTier, monthlyMapCount } from '../lib/effmap-core/effmap-limits.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://qroizygknxdjsstkezsf.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;

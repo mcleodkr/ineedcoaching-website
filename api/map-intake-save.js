@@ -11,7 +11,7 @@
 //
 // Refuses to write for a completed/expired/past-expiry link.
 
-import { verifyMapLink } from '../lib/map-link.js';
+import { verifyMapLink } from '../lib/effmap-core/map-link.js';
 
 const ANSWER_KEYS = [
   'goal', 'phase',
