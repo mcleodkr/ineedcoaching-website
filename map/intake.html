@@ -404,7 +404,12 @@
         });
         const data = await r.json().catch(() => ({}));
 
-        if (data && data.ok && data.status === 'completed') return renderMapReady();
+        if (data && data.ok && data.status === 'completed') {
+          // Map generated — take the explorer straight to their results.
+          // replace() so the back button never returns to the consumed intake.
+          location.replace('/map/results?token=' + encodeURIComponent(TOKEN));
+          return;
+        }
         if (data && data.ok && data.status === 'crisis') return renderCrisis();
         if (data && data.incomplete) {
           return bounceTo(Number.isInteger(data.screen) ? data.screen : 0,
@@ -437,14 +442,6 @@
       currentScreen = Math.max(0, Math.min(5, screen));
       renderScreen();
       injectBanner(msg);
-    }
-
-    function renderMapReady() {
-      app.innerHTML =
-        '<section class="surface state">' +
-          '<h2>Your Map is ready</h2>' +
-          '<p>Thank you for completing your Effectiveness Map. Your coach will walk through it with you.</p>' +
-        '</section>';
     }
 
     function renderCrisis() {
