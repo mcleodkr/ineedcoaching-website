@@ -117,6 +117,7 @@
   let coachId = null;
   let mapsState = [];
   let assignmentsState = [];
+  let usageState = null;
   let selectedIdx = 0;
 
   function $(id) { return document.getElementById(id); }
@@ -199,6 +200,16 @@
       const rows = await res.json();
       return Array.isArray(rows) ? rows : [];
     } catch (_) { return []; }
+  }
+  // Monthly usage counter (coach derived from the JWT). Reads the SAME source the
+  // assign/generate gates enforce, so the count shown matches what's allowed.
+  // Returns null on any failure → the counter is simply hidden (never a false number).
+  async function fetchUsage() {
+    try {
+      const res = await fetch('/api/effectiveness-map-usage', { headers: apiHeaders() });
+      const data = await res.json().catch(function() { return null; });
+      return (data && data.ok) ? data : null;
+    } catch (_) { return null; }
   }
 
   /* =========================================================================
@@ -453,6 +464,30 @@
       + '<div data-effmap-msg style="font-size:0.78rem;color:var(--muted);margin-top:8px;min-height:1em;"></div>'
       + '</div>';
   }
+  // "X of Y Maps used this month · Z remaining" with a soft warning as the coach
+  // nears the limit, and a clear at-limit state. Hidden entirely when the count is
+  // unavailable (u==null / count_unavailable) so we never show a misleading number.
+  // The assign-action consent prompt at the limit is wired separately.
+  function effmapUsageHtml(u) {
+    if (!u || u.count_unavailable || u.used == null || u.limit == null) return '';
+    var used = u.used, limit = u.limit;
+    var remaining = (u.remaining == null) ? Math.max(0, limit - used) : u.remaining;
+    var atLimit = !!u.at_limit || remaining <= 0;
+    var warnAt = Math.max(1, Math.ceil(limit * 0.2)); // "approaching" = within ~20% of the cap
+    var approaching = !atLimit && remaining <= warnAt;
+    var bg = atLimit ? 'rgba(154,43,43,0.08)' : approaching ? 'rgba(196,154,60,0.12)' : 'var(--cream)';
+    var fg = atLimit ? '#9a2b2b' : approaching ? '#8a6d1f' : 'var(--muted)';
+    var bd = atLimit ? 'rgba(154,43,43,0.25)' : approaching ? 'rgba(196,154,60,0.35)' : 'var(--border)';
+    var line = used + ' of ' + limit + ' Maps used this month · ' + remaining + ' remaining';
+    var note = atLimit ? 'You’ve reached your monthly limit.'
+      : approaching ? (remaining === 1 ? 'Just 1 Map left this month.' : 'You’re close to your monthly limit.')
+      : '';
+    return '<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;'
+      + 'padding:8px 12px;margin-bottom:14px;border:1px solid ' + bd + ';border-radius:var(--r-sm);background:' + bg + ';">'
+      + '<span style="font-size:0.82rem;font-weight:600;color:' + ((atLimit || approaching) ? fg : 'var(--navy)') + ';">' + escapeHtml(line) + '</span>'
+      + (note ? '<span style="font-size:0.78rem;color:' + fg + ';">' + escapeHtml(note) + '</span>' : '')
+      + '</div>';
+  }
   function effmapAssignBarHtml(email, maps, assignments) {
     var active = effmapActiveAssignment(assignments);
     if (active) return effmapStatusCardHtml(active, null);
@@ -643,6 +678,7 @@
     var maps = mapsState, assignments = assignmentsState;
     var html = '<div class="card" style="margin-bottom:18px;">'
       + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:var(--navy);border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:14px;">Assign a Map</div>'
+      + effmapUsageHtml(usageState)
       + '<div id="assign-bar"></div>'
       + '</div>';
     if (maps.length) {
@@ -672,9 +708,10 @@
   // a cancel (which changes assignment state server-side, so a plain re-render of
   // stale state would wrongly keep showing the cancelled link as active).
   async function reload() {
-    var results = await Promise.all([fetchMaps(), fetchAssignments()]);
+    var results = await Promise.all([fetchMaps(), fetchAssignments(), fetchUsage()]);
     mapsState = results[0] || [];
     assignmentsState = results[1] || [];
+    usageState = results[2] || null;
     await applyHeader(mapsState);
     render();
   }
