@@ -586,28 +586,16 @@
       }
       return pre + effmapEmptyHtml(email);
     }
-    // Maps exist, nothing in flight — two distinct re-take actions:
-    //   "Update this goal" carries the currently-selected Map's goal forward (the new
-    //     Map files under the same goal and clusters with it). Primary (gold).
-    //   "Map a new goal" is the original fresh assignment — the client names a brand-
-    //     new goal. Secondary (navy outline).
-    var selMap = mapsState[selectedIdx] || null;
-    var selGoal = (selMap && selMap.goal && String(selMap.goal).trim() !== '') ? String(selMap.goal) : '';
-    var updateBtn = selGoal
-      ? '<button type="button" class="save-btn" id="effmap-update-btn" data-client-email="' + escapeHtml(email) + '" data-carry-goal="' + escapeHtml(selGoal) + '" style="padding:9px 20px;font-size:0.8rem;background:var(--gold);">Update this goal</button>'
-      : '';
-    var newBtn = '<button type="button" id="effmap-assign-btn" data-client-email="' + escapeHtml(email) + '" style="padding:9px 20px;font-size:0.8rem;background:none;border:1px solid var(--navy);color:var(--navy);border-radius:999px;cursor:pointer;transition:all 0.15s ease;">Map a new goal</button>';
-    return '<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center;">' + updateBtn + newBtn + '</div>'
-      + (selGoal ? '<p style="text-align:center;font-size:0.76rem;color:var(--muted);margin:8px 0 0;">“Update this goal” carries forward: ' + escapeHtml(selGoal) + '</p>' : '');
+    // Maps exist, nothing in flight — the top action stays goal-agnostic: a fresh
+    // Map where the client names a brand-new goal. Per-goal "Update this goal" lives
+    // inside each goal card below (not here), so it can carry that card's own goal.
+    return '<div style="text-align:center;">'
+      + '<button type="button" class="save-btn" id="effmap-assign-btn" data-client-email="' + escapeHtml(email) + '" style="padding:9px 20px;font-size:0.8rem;background:var(--gold);">Map a new goal</button>'
+      + '</div>';
   }
   function wireEffmapAssignment(container, email) {
-    // "Update this goal" — re-take carrying the selected Map's goal forward.
-    var updateBtn = container.querySelector('#effmap-update-btn');
-    if (updateBtn) updateBtn.addEventListener('click', function() {
-      if (effmapAtLimit()) { effmapShowOverageConsent(container, email); return; }
-      effmapAssign(updateBtn, email, updateBtn.getAttribute('data-carry-goal') || '');
-    });
     // "Map a new goal" / "Assign Effectiveness Map" (empty state) — fresh, no goal.
+    // (Per-goal "Update this goal" lives inside the goal cards, wired separately.)
     var assignBtn = container.querySelector('#effmap-assign-btn');
     if (assignBtn) assignBtn.addEventListener('click', function() {
       // At the monthly limit, the assign action becomes an overage consent prompt
@@ -775,14 +763,6 @@
     if (sel) sel.innerHTML = buildSelectorHtml(mapsState, selectedIdx);
     wireSelector();
     renderSelectedMap(mapsState[idx]);
-    // Re-point "Update this goal" at the newly selected Map's goal. Only when the
-    // assign buttons are showing — never clobber a status card (active or just-
-    // created link), whose presence is detected by the absent assign button.
-    var bar = $('assign-bar');
-    if (bar && bar.querySelector('#effmap-assign-btn')) {
-      bar.innerHTML = effmapAssignBarHtml(clientEmail, mapsState, assignmentsState);
-      wireEffmapAssignment(bar, clientEmail);
-    }
   }
   function wireSelector() {
     var sel = $('map-selector');
