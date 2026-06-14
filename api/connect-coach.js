@@ -47,15 +47,42 @@ export default async function handler(req, res) {
 
     // Validate the target coach exists before writing the relationship.
     const coachRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/coach_profiles?id=eq.${encodeURIComponent(coachId)}&select=id&limit=1`,
+      `${SUPABASE_URL}/rest/v1/coach_profiles?id=eq.${encodeURIComponent(coachId)}&select=id,user_email,display_name&limit=1`,
       { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
     );
     const coachRows = await coachRes.json().catch(() => []);
     if (!Array.isArray(coachRows) || !coachRows[0]) {
       return res.status(404).json({ error: 'Coach not found' });
     }
+    const coach = coachRows[0];
 
     const result = await connectOrSwitch(email, coachId, 'self_connect');
+
+    if (result.action === 'connected' || result.action === 'switched') {
+      try {
+        const coachEmail = coach && coach.user_email ? coach.user_email : '';
+        if (coachEmail) {
+          const coachName = coach.display_name || 'Coach';
+          const dashboardUrl = 'https://www.ineedcoaching.org/coach-dashboard.html';
+          const subject = 'A new client just connected with you';
+          const text =
+            `Hi ${coachName},\n\n` +
+            `A new client connected with you on ineedcoaching.org: ${email}\n\n` +
+            `They are now active in your client list. You can open their profile and begin from your dashboard:\n${dashboardUrl}\n\n` +
+            `The ineedcoaching.org team`;
+          const origin = req.headers.host ? `https://${req.headers.host}` : 'https://www.ineedcoaching.org';
+          const r = await fetch(`${origin}/api/send-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: coachEmail, subject, text }),
+          });
+          if (!r.ok) console.error('[connect-coach] coach notify send-email failed', r.status, await r.text().catch(() => ''));
+        }
+      } catch (notifyErr) {
+        console.error('[connect-coach] coach notify error', notifyErr && notifyErr.message);
+      }
+    }
+
     return res.status(200).json({ ok: true, ...result });
   } catch (e) {
     console.error('[connect-coach] error', e);
