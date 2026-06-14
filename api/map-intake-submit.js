@@ -19,7 +19,7 @@
 //   { ok:false, incomplete:true, screen:N }  intake unfinished — bounce to screen N
 //   { ok:false, error:'<friendly>' }         generation failed — link still usable for retry
 
-import { verifyMapLink } from '../lib/map-link.js';
+import { verifyMapLink } from '../lib/effmap-core/map-link.js';
 
 const ANSWER_KEYS = [
   'physical_1', 'physical_2',

@@ -26,7 +26,7 @@
 //   { ok:true,  status:'crisis' }                    crisis row — show safety resources
 //   { ok:false, error:'<friendly>' }                 invalid link, or map not ready
 
-import { verifyMapLink } from '../lib/map-link.js';
+import { verifyMapLink } from '../lib/effmap-core/map-link.js';
 
 const INACTIVE_MSG = 'This link is no longer active. Ask your coach to send a new one.';
 const NOT_READY_MSG = 'Your map isn’t ready yet. Check back shortly, or ask your coach to resend the link.';

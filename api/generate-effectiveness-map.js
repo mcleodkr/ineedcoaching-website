@@ -30,11 +30,11 @@
 
 import { createRequire } from 'module';
 import { logAIUsage } from '../lib/ai-usage.js';
-import { limitForTier, monthlyMapCount } from '../lib/effmap-limits.js';
+import { limitForTier, monthlyMapCount } from '../lib/effmap-core/effmap-limits.js';
 import { jsonrepair } from 'jsonrepair';
 
 const require = createRequire(import.meta.url);
-const SYNTH = require('./prompts/effectiveness-map-synthesis-v1.7.2.json');
+const SYNTH = require('../lib/effmap-core/prompts/effectiveness-map-synthesis-v1.7.2.json');
 const SYNTHESIS_PROMPT = SYNTH.prompt;
 const PROMPT_VERSION = SYNTH.version; // '1.7.2'
 

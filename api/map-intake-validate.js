@@ -21,7 +21,7 @@
 // or client_email to the browser — the token already carries them; the server
 // re-derives them on every call (e.g. the submit handler in Step 3).
 
-import { verifyMapLink } from '../lib/map-link.js';
+import { verifyMapLink } from '../lib/effmap-core/map-link.js';
 
 const INACTIVE_MSG = 'This link is no longer active. Ask your coach to send a new one.';
 
