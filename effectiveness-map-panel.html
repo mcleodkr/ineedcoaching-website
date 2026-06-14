@@ -368,7 +368,7 @@
       +   '<th style="text-align:left;padding:6px 10px;font-size:0.7rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);">Confidence' + helpTip(HELP_CONFIDENCE) + '</th>'
       + '</tr></thead><tbody>' + rows + '</tbody></table>'
       + '<p class="help-note"><strong style="font-style:normal;color:var(--navy);">Evidence</strong> &mdash; ' + escapeHtml(HELP_EVIDENCE) + '. <strong style="font-style:normal;color:var(--navy);">Confidence</strong> &mdash; ' + escapeHtml(HELP_CONFIDENCE) + '.</p>'
-      + '<div style="font-size:0.78rem;color:var(--muted);">Overall evidence: ' + escapeHtml(m.overall_evidence_strength || '—') + ' &bull; Prompt version: ' + escapeHtml(m.prompt_version || '—') + '</div>';
+      + '<div style="font-size:0.78rem;color:var(--muted);">Overall evidence: ' + escapeHtml(m.overall_evidence_strength || '—') + '</div>';
   }
 
   function effmapCollapsible(id, title, innerHtml) {
