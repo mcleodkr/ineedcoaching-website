@@ -820,8 +820,12 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
     .dash-sidebar .tab-btn:hover { border-left-color:rgba(196,154,60,0.4); color:var(--ink); background:rgba(196,154,60,0.04); }
     .dash-sidebar .tab-btn.active { border-left-color:var(--gold); color:#1a3a52; font-weight:500; background:rgba(196,154,60,0.08); }
     .dash-mobile-nav { display:none; overflow-x:auto; gap:8px; padding:8px 16px; white-space:nowrap; border-bottom:1px solid var(--border); }
-    .dash-mobile-nav a { display:inline-block; padding:6px 14px; border-radius:50px; font-size:0.75rem; font-weight:600; color:var(--muted); background:var(--cream); text-decoration:none; white-space:nowrap; }
-    @media(max-width:768px) { .dash-sidebar { display:none!important; } .dash-mobile-nav { display:flex!important; } .dash-layout { flex-direction:column!important; } }
+    .dash-mobile-nav a { display:inline-block; padding:6px 14px; border-radius:50px; font-size:0.75rem; font-weight:600; color:var(--muted); background:var(--cream); text-decoration:none; white-space:nowrap; cursor:pointer; }
+    .dash-mobile-nav a.active { background:var(--gold); color:#1a3a52; }
+    .dash-mobile-subnav { display:none; overflow-x:auto; gap:8px; padding:8px 16px; white-space:nowrap; border-bottom:1px solid var(--border); background:#faf8f4; }
+    .dash-mobile-subnav button { display:inline-block; padding:6px 14px; border-radius:50px; font-size:0.75rem; font-weight:600; color:var(--muted); background:var(--white); border:1px solid var(--border); white-space:nowrap; cursor:pointer; font-family:'DM Sans',sans-serif; }
+    .dash-mobile-subnav button.active { background:var(--gold); color:#1a3a52; border-color:var(--gold); }
+    @media(max-width:768px) { .dash-sidebar { display:none!important; } .dash-mobile-nav { display:flex!important; } .dash-mobile-subnav.open { display:flex!important; } .dash-layout { flex-direction:column!important; } }
   </style>
   <style>
     /* =========================================================
@@ -18271,6 +18275,86 @@ function submitSplitFromModal() {
       btn.focus();
     }
   });
+})();
+</script>
+
+<script data-MOBILE_DASH_NAV_v1>
+// Two-tier mobile dashboard nav: the four group pills (.dash-mobile-nav) reveal a
+// second row of that group's section tabs. Each child pill delegates to the real
+// sidebar button's .click() so switching + lazy-loading reuse setupTabs() — no
+// duplicate handlers, no reimplemented section switching.
+(function() {
+  var groupNav = document.querySelector('.dash-mobile-nav');
+  var sidebar = document.querySelector('.dash-sidebar');
+  if (!groupNav || !sidebar) return;
+  var pills = Array.prototype.slice.call(groupNav.querySelectorAll('a[data-mobile-group]'));
+  if (!pills.length) return;
+
+  // Build the group -> sidebar-buttons map by walking the sidebar in document
+  // order. Each .dash-group divider starts a new group; subsequent visible
+  // .tab-btn[data-tab] buttons (incl. Scheduling submenu children) belong to it.
+  var groups = [];
+  var current = null;
+  sidebar.querySelectorAll('.dash-group, .tab-btn[data-tab]').forEach(function(node) {
+    if (node.classList.contains('dash-group')) {
+      current = { buttons: [] };
+      groups.push(current);
+    } else if (current && node.style.display !== 'none') {
+      current.buttons.push(node);
+    }
+  });
+
+  // Second-row container, inserted right after the group pills.
+  var subNav = document.createElement('div');
+  subNav.className = 'dash-mobile-subnav';
+  groupNav.insertAdjacentElement('afterend', subNav);
+
+  var openIndex = -1;
+
+  function closeSub() {
+    subNav.classList.remove('open');
+    subNav.innerHTML = '';
+    openIndex = -1;
+    pills.forEach(function(p) { p.classList.remove('active'); });
+  }
+
+  function openGroup(index) {
+    var group = groups[index];
+    if (!group) return;
+    subNav.innerHTML = '';
+    group.buttons.forEach(function(realBtn) {
+      var pill = document.createElement('button');
+      pill.type = 'button';
+      pill.textContent = realBtn.textContent.trim();
+      if (realBtn.classList.contains('active')) pill.classList.add('active');
+      pill.addEventListener('click', function() {
+        realBtn.click(); // delegate: existing setupTabs() handles switch + lazy load
+        closeSub();
+        pills[index].classList.add('active'); // keep the group context highlighted
+      });
+      subNav.appendChild(pill);
+    });
+    subNav.classList.add('open');
+    openIndex = index;
+    pills.forEach(function(p) { p.classList.remove('active'); });
+    pills[index].classList.add('active');
+  }
+
+  pills.forEach(function(pill, index) {
+    pill.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (openIndex === index) { closeSub(); return; } // tapping the open group closes it
+      openGroup(index);
+    });
+  });
+
+  // On load, highlight the group pill that owns the currently-active tab.
+  var activeBtn = sidebar.querySelector('.tab-btn.active[data-tab]');
+  if (activeBtn) {
+    for (var i = 0; i < groups.length; i++) {
+      if (groups[i].buttons.indexOf(activeBtn) !== -1) { pills[i].classList.add('active'); break; }
+    }
+  }
 })();
 </script>
 
