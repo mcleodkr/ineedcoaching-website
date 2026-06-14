@@ -385,7 +385,10 @@ a { color: var(--navy); text-decoration: none; }
         <button class="side-item" data-section="my-courses"><span class="icon">&#9679;</span>My Courses</button>
         <button class="side-item" data-section="journal"><span class="icon">&#9679;</span>Journal</button>
         <button class="side-item" data-section="messages"><span class="icon">&#9679;</span>Messages</button>
+        <!-- Resources — hidden until coach-side resource sharing ships.
+             Restore together with: #sec-resources section, loadResources(), and its dispatch.
         <button class="side-item" data-section="resources"><span class="icon">&#9679;</span>Resources</button>
+        -->
         <button class="side-item" data-section="profile"><span class="icon">&#9679;</span>My Profile</button>
       </nav>
       <div class="side-foot">
@@ -621,12 +624,13 @@ a { color: var(--navy); text-decoration: none; }
           <div id="my-courses-content"></div>
         </section>
 
-        <!-- RESOURCES -->
+        <!-- RESOURCES — hidden until coach-side resource sharing ships (restore with nav button + loadResources)
         <section class="section" id="sec-resources">
           <h1 class="page-title">Resources</h1>
           <p class="page-sub">A space for the worksheets, articles, and tools your coach shares with you.</p>
           <div id="resources-content"></div>
         </section>
+        -->
 
         <!-- PROFILE -->
         <section class="section" id="sec-profile">
@@ -1141,7 +1145,8 @@ function setupSidebar() {
         if (target === 'my-courses') loadMyCourses();
         if (target === 'journal') loadJournal();
         if (target === 'messages') loadMessages();
-        if (target === 'resources') loadResources();
+        // Resources hidden until coach-side resource sharing ships:
+        // if (target === 'resources') loadResources();
         if (target === 'profile') renderProfile();
       }
     });
@@ -2728,8 +2733,10 @@ async function loadMyCourses() {
 }
 
 /* ================================================
-   RESOURCES — placeholder until coach-side sharing UI ships
-   ================================================ */
+   RESOURCES — hidden until coach-side resource sharing ships.
+   Restore together with the nav button (data-section="resources"),
+   the #sec-resources section, and the dispatch in the nav handler.
+   ================================================
 function loadResources() {
   const container = $('resources-content');
   if (!container) return;
@@ -2738,6 +2745,7 @@ function loadResources() {
     + '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.88rem;color:#5a5560;line-height:1.6;margin:0;"><span style="font-weight:600;color:#c49a3c;text-transform:uppercase;font-size:0.72rem;letter-spacing:0.06em;">Coming soon</span> — your coach will be able to share worksheets, articles, and tools directly to your space.</p>'
     + '</div>';
 }
+*/
 
 /* ================================================
    PROFILE
