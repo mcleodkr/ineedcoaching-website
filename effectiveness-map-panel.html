@@ -117,6 +117,7 @@
   let coachId = null;
   let mapsState = [];
   let assignmentsState = [];
+  let usageState = null;
   let selectedIdx = 0;
 
   function $(id) { return document.getElementById(id); }
@@ -199,6 +200,16 @@
       const rows = await res.json();
       return Array.isArray(rows) ? rows : [];
     } catch (_) { return []; }
+  }
+  // Monthly usage counter (coach derived from the JWT). Reads the SAME source the
+  // assign/generate gates enforce, so the count shown matches what's allowed.
+  // Returns null on any failure → the counter is simply hidden (never a false number).
+  async function fetchUsage() {
+    try {
+      const res = await fetch('/api/effectiveness-map-usage', { headers: apiHeaders() });
+      const data = await res.json().catch(function() { return null; });
+      return (data && data.ok) ? data : null;
+    } catch (_) { return null; }
   }
 
   /* =========================================================================
@@ -453,6 +464,117 @@
       + '<div data-effmap-msg style="font-size:0.78rem;color:var(--muted);margin-top:8px;min-height:1em;"></div>'
       + '</div>';
   }
+  // "X of Y Maps used this month · Z remaining" with a soft warning as the coach
+  // nears the limit, and a clear at-limit state. Hidden entirely when the count is
+  // unavailable (u==null / count_unavailable) so we never show a misleading number.
+  // The assign-action consent prompt at the limit is wired separately.
+  function effmapUsageHtml(u) {
+    if (!u || u.count_unavailable || u.used == null || u.limit == null) return '';
+    var used = u.used, limit = u.limit;
+    var remaining = (u.remaining == null) ? Math.max(0, limit - used) : u.remaining;
+    var atLimit = !!u.at_limit || remaining <= 0;
+    var warnAt = Math.max(1, Math.ceil(limit * 0.2)); // "approaching" = within ~20% of the cap
+    var approaching = !atLimit && remaining <= warnAt;
+    var bg = atLimit ? 'rgba(154,43,43,0.08)' : approaching ? 'rgba(196,154,60,0.12)' : 'var(--cream)';
+    var fg = atLimit ? '#9a2b2b' : approaching ? '#8a6d1f' : 'var(--muted)';
+    var bd = atLimit ? 'rgba(154,43,43,0.25)' : approaching ? 'rgba(196,154,60,0.35)' : 'var(--border)';
+    var line = used + ' of ' + limit + ' Maps used this month · ' + remaining + ' remaining';
+    var note = atLimit ? 'You’ve reached your monthly limit.'
+      : approaching ? (remaining === 1 ? 'Just 1 Map left this month.' : 'You’re close to your monthly limit.')
+      : '';
+    return '<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;'
+      + 'padding:8px 12px;margin-bottom:14px;border:1px solid ' + bd + ';border-radius:var(--r-sm);background:' + bg + ';">'
+      + '<span style="font-size:0.82rem;font-weight:600;color:' + ((atLimit || approaching) ? fg : 'var(--navy)') + ';">' + escapeHtml(line) + '</span>'
+      + (note ? '<span style="font-size:0.78rem;color:' + fg + ';">' + escapeHtml(note) + '</span>' : '')
+      + '</div>';
+  }
+  // True only when we have a reliable count AND it has hit the cap. A null/unknown
+  // usage state never triggers the overage flow (the server gate still applies).
+  function effmapAtLimit() {
+    return !!(usageState && !usageState.count_unavailable && usageState.at_limit);
+  }
+
+  // Overage purchase options (brief: $4 each, or a 5-for-$20 block).
+  var OVERAGE_OPTIONS = [
+    { id: 'single', label: '1 additional Map', price: '$4', sub: 'One extra Map this month' },
+    { id: 'block5', label: '5 additional Maps', price: '$20', sub: 'A block of five, $4 each' },
+  ];
+
+  // At-limit consent prompt shown IN PLACE of the assign action. The coach must
+  // pick an option and confirm. Billing is a separate follow-up — see
+  // effmapConfirmOverage — so confirming does NOT generate a Map yet.
+  function effmapOverageConsentHtml(u) {
+    var limit = (u && u.limit != null) ? String(u.limit) : '';
+    var opts = OVERAGE_OPTIONS.map(function(o) {
+      return '<label data-overage-opt="' + o.id + '" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--r-sm);cursor:pointer;background:var(--white);transition:all 0.15s ease;">'
+        + '<input type="radio" name="overage-choice" value="' + o.id + '" style="accent-color:var(--gold);width:16px;height:16px;cursor:pointer;">'
+        + '<span style="flex:1;min-width:0;">'
+        +   '<span style="display:block;font-size:0.88rem;font-weight:600;color:var(--navy);">' + escapeHtml(o.label) + '</span>'
+        +   '<span style="display:block;font-size:0.76rem;color:var(--muted);">' + escapeHtml(o.sub) + '</span>'
+        + '</span>'
+        + '<span style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:700;color:var(--gold);">' + escapeHtml(o.price) + '</span>'
+        + '</label>';
+    }).join('');
+    return '<div style="border:1px solid rgba(154,43,43,0.25);border-radius:var(--r-sm);padding:16px 18px;background:rgba(154,43,43,0.05);">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:600;color:var(--navy);margin-bottom:6px;">You’ve reached your monthly limit</div>'
+      + '<p style="margin:0 0 14px;font-size:0.85rem;line-height:1.6;color:var(--ink);">You’ve used all ' + escapeHtml(limit) + ' of your Maps this month. You can add more at <strong>$4 each</strong> — choose how many, then confirm.</p>'
+      + '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">' + opts + '</div>'
+      + '<div data-overage-msg style="font-size:0.78rem;color:var(--muted);margin:0 0 12px;min-height:1em;line-height:1.5;"></div>'
+      + '<div style="display:flex;gap:8px;">'
+      +   '<button type="button" data-overage-confirm class="save-btn" disabled style="padding:9px 18px;font-size:0.8rem;background:var(--gold);opacity:0.5;cursor:not-allowed;">Confirm &amp; continue</button>'
+      +   '<button type="button" data-overage-cancel style="padding:9px 16px;font-size:0.8rem;background:none;border:1px solid var(--border);color:var(--muted);border-radius:999px;cursor:pointer;">Not now</button>'
+      + '</div>'
+      + '</div>';
+  }
+
+  function effmapShowOverageConsent(bar, email) {
+    bar.innerHTML = effmapOverageConsentHtml(usageState);
+    wireOverageConsent(bar, email);
+  }
+
+  function wireOverageConsent(container, email) {
+    var confirmBtn = container.querySelector('[data-overage-confirm]');
+    function enableConfirm() {
+      if (!confirmBtn) return;
+      confirmBtn.disabled = false;
+      confirmBtn.style.opacity = '1';
+      confirmBtn.style.cursor = 'pointer';
+    }
+    container.querySelectorAll('input[name="overage-choice"]').forEach(function(r) {
+      r.addEventListener('change', enableConfirm);
+    });
+    if (confirmBtn) confirmBtn.addEventListener('click', function() { effmapConfirmOverage(container, email); });
+    var cancelBtn = container.querySelector('[data-overage-cancel]');
+    if (cancelBtn) cancelBtn.addEventListener('click', function() {
+      // Back out to the normal assign bar (no purchase, no Map).
+      container.innerHTML = effmapAssignBarHtml(email, mapsState, assignmentsState);
+      wireEffmapAssignment(container, email);
+    });
+  }
+
+  function effmapConfirmOverage(container, email) {
+    var sel = container.querySelector('input[name="overage-choice"]:checked');
+    var choice = sel ? sel.value : '';
+    if (!choice) return;
+    // ──────────────────────────────────────────────────────────────────────────
+    // TODO (Stripe follow-up): initiate the $4 (single) / $20 (5-block) charge
+    // here, and only on a successful charge proceed to assign/generate the
+    // overage Map(s). Until billing is wired, overage purchases are NOT completed
+    // and NO Map is generated past the monthly limit (no free overage). We lock
+    // the prompt and surface a clear coming-soon state; the coach's choice is
+    // captured in the UI only.
+    // ──────────────────────────────────────────────────────────────────────────
+    var confirmBtn = container.querySelector('[data-overage-confirm]');
+    if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.style.opacity = '0.5'; confirmBtn.style.cursor = 'not-allowed'; }
+    container.querySelectorAll('input[name="overage-choice"]').forEach(function(r) { r.disabled = true; });
+    var msg = container.querySelector('[data-overage-msg]');
+    if (msg) {
+      msg.style.color = 'var(--navy)';
+      msg.textContent = (choice === 'block5' ? 'A 5-Map block is noted. ' : 'One additional Map is noted. ')
+        + 'Overage purchases aren’t available just yet — payment is coming soon, and no Map is generated until then.';
+    }
+  }
+
   function effmapAssignBarHtml(email, maps, assignments) {
     var active = effmapActiveAssignment(assignments);
     if (active) return effmapStatusCardHtml(active, null);
@@ -471,7 +593,13 @@
   }
   function wireEffmapAssignment(container, email) {
     var assignBtn = container.querySelector('#effmap-assign-btn');
-    if (assignBtn) assignBtn.addEventListener('click', function() { effmapAssign(assignBtn, email); });
+    if (assignBtn) assignBtn.addEventListener('click', function() {
+      // At the monthly limit, the assign action becomes an overage consent prompt
+      // instead of a generation request — the server gate is unchanged and still
+      // the source of truth; this just gives the coach a clear in-product path.
+      if (effmapAtLimit()) { effmapShowOverageConsent(container, email); return; }
+      effmapAssign(assignBtn, email);
+    });
     var copyBtn = container.querySelector('[data-effmap-copy]');
     if (copyBtn) copyBtn.addEventListener('click', function() { effmapCopy(container, email, copyBtn.getAttribute('data-session-id')); });
     var resendBtn = container.querySelector('[data-effmap-resend]');
@@ -643,6 +771,7 @@
     var maps = mapsState, assignments = assignmentsState;
     var html = '<div class="card" style="margin-bottom:18px;">'
       + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:var(--navy);border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:14px;">Assign a Map</div>'
+      + effmapUsageHtml(usageState)
       + '<div id="assign-bar"></div>'
       + '</div>';
     if (maps.length) {
@@ -672,9 +801,10 @@
   // a cancel (which changes assignment state server-side, so a plain re-render of
   // stale state would wrongly keep showing the cancelled link as active).
   async function reload() {
-    var results = await Promise.all([fetchMaps(), fetchAssignments()]);
+    var results = await Promise.all([fetchMaps(), fetchAssignments(), fetchUsage()]);
     mapsState = results[0] || [];
     assignmentsState = results[1] || [];
+    usageState = results[2] || null;
     await applyHeader(mapsState);
     render();
   }
