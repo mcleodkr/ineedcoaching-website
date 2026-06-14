@@ -122,13 +122,20 @@ export default async function handler(req, res) {
 }
 
 // Rebuild the explorer-facing output from scratch so only known, explorer-safe
-// fields can ever be returned. Domain statuses are trimmed to PRIMARY ONLY
-// (secondary_status is dropped); the one-line read and snapshot paragraph stay —
-// they are the explorer-facing content of the results page.
+// fields can ever be returned (defense in depth — the column is already the
+// explorer blob, but a field-by-field allowlist means a future stored-shape
+// change cannot leak a new field). Allowlist kept at PARITY with
+// api/map-client-read.js, so the explorer sees the SAME complete Map on this
+// results page (shown right after they submit) as in their client dashboard:
+// opener, the five domain snapshots + primary status, The Whole Picture, How
+// this shows up, Where the load is moving, In short, the release question, and
+// the status legend. Domain statuses stay primary-only (secondary_status dropped).
 function sanitizeExplorerFacing(efo) {
   if (!efo || typeof efo !== 'object') return null;
 
   const out = {};
+
+  if (typeof efo.opener === 'string') out.opener = efo.opener;
 
   if (efo.domain_statuses && typeof efo.domain_statuses === 'object') {
     out.domain_statuses = {};
@@ -143,9 +150,33 @@ function sanitizeExplorerFacing(efo) {
     }
   }
 
-  out.system_picture = efo.system_picture ?? null;
-  out.cross_domain_tax = efo.cross_domain_tax ?? null;
-  out.release_question = efo.release_question ?? null;
+  if (efo.system_picture && typeof efo.system_picture === 'object') {
+    out.system_picture = { narrative: efo.system_picture.narrative ?? null };
+  }
+
+  if (typeof efo.how_this_shows_up === 'string') out.how_this_shows_up = efo.how_this_shows_up;
+
+  if (efo.cross_domain_tax && typeof efo.cross_domain_tax === 'object') {
+    out.cross_domain_tax = { narrative: efo.cross_domain_tax.narrative ?? null };
+  }
+
+  if (efo.closing_summary && typeof efo.closing_summary === 'object') {
+    out.closing_summary = {};
+    for (const domain of DOMAINS) {
+      const c = efo.closing_summary[domain];
+      if (!c || typeof c !== 'object') continue;
+      out.closing_summary[domain] = {
+        direction: c.direction ?? null,
+        plain: c.plain ?? null,
+      };
+    }
+  }
+
+  if (efo.release_question && typeof efo.release_question === 'object') {
+    out.release_question = { question: efo.release_question.question ?? null };
+  }
+
+  if (typeof efo.status_legend === 'string') out.status_legend = efo.status_legend;
 
   return out;
 }
