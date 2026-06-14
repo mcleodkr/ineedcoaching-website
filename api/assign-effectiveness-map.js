@@ -7,14 +7,17 @@
 //
 //   action:'create' (default) — full gates (active subscription, active
 //       coach_clients connection, monthly Map limit), then a new 'pending'
-//       assignment row + a signed 14-day HMAC intake link.
+//       assignment row + a signed 14-day HMAC intake link. Optional body.goal
+//       carries a prior goal forward (a Map re-take): stored on the row so the
+//       intake pre-fills it and the new Map files under the same goal. Absent →
+//       the client names a brand-new goal (unchanged behavior).
 //   action:'resend'           — re-mint the SAME link for an existing active
 //       assignment (same session_id + expiry → identical token). No new row, no
 //       limit charge. Requires the coach own the row + an active connection.
 //   action:'cancel'           — flip an existing active assignment to 'expired'
 //       (kills the link). Requires only that the coach own the row.
 //
-// Body: { client_email, action?, session_id? }   (session_id required for resend/cancel)
+// Body: { client_email, action?, session_id?, goal? }   (session_id: resend/cancel; goal: optional carry-forward on create)
 // Returns (create/resend): { ok:true, link, session_id, status, expires_at, assigned_at? }
 //          (cancel):        { ok:true, session_id, status:'expired' }
 //          (error):         { ok:false, error, code? }
@@ -36,6 +39,7 @@ const EXPIRY_MS = 14 * 24 * 60 * 60 * 1000; // 14-day window (brief)
 const FAIL_MSG = 'Could not create the assignment. Please try again.';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const EMAIL_MAX = 254;
+const GOAL_MAX = 1000; // a carried-forward goal is a real goal sentence; cap defensively
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function sbHeaders(extra) {
@@ -156,6 +160,13 @@ export default async function handler(req, res) {
       return res.status(403).json({ ok: false, error: `You have reached your monthly limit of ${limit} Maps.`, code: 'MONTHLY_LIMIT_EXCEEDED', limit, used });
     }
 
+    // --- optional carry-forward goal (Map re-take). Stored on the row so the
+    //     intake pre-fills it; absent → the client names a brand-new goal. ---
+    const carriedGoal = body && body.goal != null ? String(body.goal).trim() : '';
+    if (carriedGoal.length > GOAL_MAX) {
+      return res.status(400).json({ ok: false, error: 'That goal is too long to carry forward.', code: 'BAD_GOAL' });
+    }
+
     // --- mint + persist (token and assignment share one expiry, so they can't drift) ---
     const sessionId = randomUUID();
     const expiresAtMs = Date.now() + EXPIRY_MS;
@@ -169,6 +180,8 @@ export default async function handler(req, res) {
         status: 'pending',
         expires_at: new Date(expiresAtMs).toISOString(),
         product_context: 'coaching',
+        // Only set when carried forward; omitted → column stays NULL (new-goal flow).
+        ...(carriedGoal ? { goal: carriedGoal } : {}),
       }),
     });
     if (!insRes.ok) {

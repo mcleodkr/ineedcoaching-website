@@ -276,6 +276,7 @@
 
     let answers = {};        // { goal, phase, physical_1 … social_2 }
     let currentScreen = 0;   // 0 = goal/phase · 1–5 = domains · 6 = review
+    let carriedGoal = null;  // coach-carried goal (Map re-take); when set, goal is read-only and only the phase is asked
 
     const app = document.getElementById('app');
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
@@ -296,16 +297,26 @@
           '<span class="opt-desc">' + esc(p.desc) + '</span>' +
         '</label>'
       )).join('');
-      app.innerHTML =
-        '<section class="surface screen">' +
-          '<p class="eyebrow">Your Effectiveness Map</p>' +
-          '<h1>Let’s start with your goal</h1>' +
-          '<p class="intro-copy">Your coach has invited you to complete your Effectiveness Map — a reflection on how your whole system is showing up in service of your goal right now. There are no right or wrong answers. Just answer honestly in your own words.</p>' +
+      // Goal section: editable entry (default), or read-only confirmation when the
+      // coach carried a goal forward for an updated Map (re-take). Either way the
+      // phase is asked fresh below — phase can change over time.
+      const goalSection = carriedGoal
+        ? '<p class="intro-copy">Your coach has asked for an updated Effectiveness Map on the goal below. Take a fresh look at where you are with it now — there are no right or wrong answers.</p>' +
+          '<div class="field">' +
+            '<p class="summary-label">Your goal</p>' +
+            '<p class="summary-value">' + esc(carriedGoal) + '</p>' +
+          '</div>'
+        : '<p class="intro-copy">Your coach has invited you to complete your Effectiveness Map — a reflection on how your whole system is showing up in service of your goal right now. There are no right or wrong answers. Just answer honestly in your own words.</p>' +
           '<div class="field">' +
             '<label class="question" for="goal">What goal are you working toward right now?</label>' +
             '<textarea id="goal" rows="4">' + esc(answers.goal || '') + '</textarea>' +
             '<p class="field-error" id="goal-error" aria-live="polite"></p>' +
-          '</div>' +
+          '</div>';
+      app.innerHTML =
+        '<section class="surface screen">' +
+          '<p class="eyebrow">Your Effectiveness Map</p>' +
+          '<h1>' + (carriedGoal ? 'Where are you with this goal now?' : 'Let’s start with your goal') + '</h1>' +
+          goalSection +
           '<div class="field"><fieldset>' +
             '<legend class="question">Which of these best describes where you are with this goal?</legend>' +
             '<div class="options">' + opts + '</div>' +
@@ -317,16 +328,23 @@
     }
 
     function onGoalContinue() {
-      const goalEl = document.getElementById('goal');
-      const goalErr = document.getElementById('goal-error');
       const phaseErr = document.getElementById('phase-error');
-      const goal = goalEl.value.trim();
       const phase = (document.querySelector('input[name="phase"]:checked') || {}).value || '';
-      goalErr.textContent = '';
       phaseErr.textContent = '';
-      if (!goal) { goalErr.textContent = 'Please share the goal you’re working toward.'; goalEl.focus(); return; }
+
+      // Carried-forward goal: read-only, authoritative — only the phase needs
+      // picking. Default flow: validate and capture the goal entry as well.
+      if (carriedGoal) {
+        answers.goal = carriedGoal;
+      } else {
+        const goalEl = document.getElementById('goal');
+        const goalErr = document.getElementById('goal-error');
+        const goal = goalEl.value.trim();
+        goalErr.textContent = '';
+        if (!goal) { goalErr.textContent = 'Please share the goal you’re working toward.'; goalEl.focus(); return; }
+        answers.goal = goal;
+      }
       if (!phase) { phaseErr.textContent = 'Please choose where you are with this goal.'; return; }
-      answers.goal = goal;
       answers.phase = phase;
       navigate(1);
     }
@@ -481,6 +499,12 @@
         if (!data || !data.ok) { renderError(data && data.error); return; }
         if (data.status === 'completed') { location.replace('/map/results?token=' + encodeURIComponent(TOKEN)); return; }
         if (data.draft && data.draft.answers && typeof data.draft.answers === 'object') answers = { ...data.draft.answers };
+        // Coach-carried goal (Map re-take): authoritative goal text. Pre-fill it so
+        // the goal screen shows it read-only and the draft/submit carry it forward.
+        if (typeof data.goal === 'string' && data.goal.trim() !== '') {
+          carriedGoal = data.goal;
+          answers.goal = carriedGoal;
+        }
         currentScreen = (data.draft && Number.isInteger(data.draft.current_screen)) ? data.draft.current_screen : 0;
         renderScreen();
       } catch (e) {
