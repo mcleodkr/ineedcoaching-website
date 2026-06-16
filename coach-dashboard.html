@@ -1579,6 +1579,9 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 
     <!-- BOOKINGS TAB -->
     <div id="tab-bookings" class="tab-panel">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+        <button id="add-manual-session-btn" type="button" style="padding:10px 20px;background:var(--gold);color:#fff;border:none;border-radius:50px;font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:600;cursor:pointer;transition:all 0.15s ease;">+ Add session manually</button>
+      </div>
       <div id="bookings-loading" class="loading-state" style="min-height:30vh;">
         <div class="loading-spinner"></div>
       </div>
@@ -3067,6 +3070,9 @@ async function init() {
     var deepBtn = document.querySelector('.tab-btn[data-tab="' + deepTab.replace(/[^a-z0-9-]/gi, '') + '"]');
     if (deepBtn) deepBtn.click();
   }
+
+  var addManualSessionBtn = $('add-manual-session-btn');
+  if (addManualSessionBtn) addManualSessionBtn.addEventListener('click', openManualSessionModal);
 
   // "Building your practice" widget — independent of the clients fetch
   loadCoachArticlesWidget();
@@ -7642,6 +7648,200 @@ async function submitAddClient() {
     errorEl.style.display = 'block';
     saveBtn.disabled = false;
     saveBtn.textContent = 'Add client';
+  }
+}
+
+// "Add session manually" — for a session that happened without a completed
+// booking (e.g. checkout failed but the session still ran). Inserts a
+// coach_bookings row with status='manual', mirroring submitAddClient's proven
+// direct REST insert, but with a dropdown of existing clients (+ new-client
+// fallback) and a service-type dropdown. The resulting row shows in the
+// Bookings list and the per-client sessions view with transcript upload, the
+// same as any confirmed session.
+var MS_FIELD_STYLE = 'width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--cream);';
+var MS_LABEL_STYLE = 'display:block;font-family:\'DM Sans\',sans-serif;font-size:0.8rem;font-weight:600;color:var(--ink);margin-bottom:6px;';
+
+function openManualSessionModal() {
+  var modal = $('manual-session-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'manual-session-modal';
+    modal.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;';
+    modal.innerHTML = '<div style="background:var(--white);border-radius:var(--r);max-width:520px;width:90%;max-height:85vh;overflow-y:auto;padding:32px;position:relative;box-shadow:0 12px 40px rgba(0,0,0,0.15);">'
+      + '<button id="ms-close" style="position:absolute;top:14px;right:18px;background:none;border:none;font-size:1.4rem;color:var(--muted);cursor:pointer;">&times;</button>'
+      + '<h2 style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:700;color:var(--ink);margin:0 0 6px 0;">Add session manually</h2>'
+      + '<p style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:var(--muted);margin:0 0 22px 0;">For a session that happened without a completed booking. It will appear in your sessions list with transcript upload available.</p>'
+      + '<div style="margin-bottom:14px;"><label style="' + MS_LABEL_STYLE + '">Client <span style="color:#b93a3a;">*</span></label>'
+      + '<select id="ms-client" style="' + MS_FIELD_STYLE + '"></select></div>'
+      + '<div id="ms-new-fields" style="display:none;">'
+      +   '<div style="margin-bottom:14px;"><label style="' + MS_LABEL_STYLE + '">New client name <span style="color:#b93a3a;">*</span></label>'
+      +   '<input type="text" id="ms-name" placeholder="First Last" style="' + MS_FIELD_STYLE + '"></div>'
+      +   '<div style="margin-bottom:14px;"><label style="' + MS_LABEL_STYLE + '">New client email <span style="color:var(--muted);font-weight:400;">(optional)</span></label>'
+      +   '<input type="email" id="ms-email" placeholder="client@example.com" style="' + MS_FIELD_STYLE + '"></div>'
+      + '</div>'
+      + '<div style="margin-bottom:14px;"><label style="' + MS_LABEL_STYLE + '">Service type <span style="color:var(--muted);font-weight:400;">(optional)</span></label>'
+      + '<select id="ms-service" style="' + MS_FIELD_STYLE + '"></select></div>'
+      + '<div style="margin-bottom:14px;"><label style="' + MS_LABEL_STYLE + '">Session date &amp; time <span style="color:#b93a3a;">*</span></label>'
+      + '<input type="datetime-local" id="ms-datetime" style="' + MS_FIELD_STYLE + '"></div>'
+      + '<div style="margin-bottom:18px;"><label style="' + MS_LABEL_STYLE + '">Notes <span style="color:var(--muted);font-weight:400;">(optional)</span></label>'
+      + '<textarea id="ms-notes" rows="3" placeholder="Anything you want to remember about this session" style="' + MS_FIELD_STYLE + 'resize:vertical;"></textarea></div>'
+      + '<div id="ms-error" style="display:none;color:#b93a3a;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;margin-bottom:12px;"></div>'
+      + '<div style="display:flex;gap:10px;justify-content:flex-end;">'
+      + '<button id="ms-cancel" style="padding:10px 18px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;cursor:pointer;">Cancel</button>'
+      + '<button id="ms-save" style="padding:10px 20px;background:var(--gold);color:#fff;border:none;border-radius:50px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:600;cursor:pointer;">Add session</button>'
+      + '</div>'
+      + '</div>';
+    document.body.appendChild(modal);
+    $('ms-close').addEventListener('click', function() { modal.style.display = 'none'; });
+    $('ms-cancel').addEventListener('click', function() { modal.style.display = 'none'; });
+    modal.addEventListener('click', function(e) { if (e.target === modal) modal.style.display = 'none'; });
+    $('ms-save').addEventListener('click', submitManualSession);
+    $('ms-client').addEventListener('change', function() {
+      $('ms-new-fields').style.display = (this.value === '__new__') ? 'block' : 'none';
+    });
+  }
+
+  // Client dropdown: existing roster (+ a new-client fallback option).
+  var roster = Array.isArray(clientsData) ? clientsData : [];
+  var clientOpts = '<option value="__new__">+ New client (enter below)</option>';
+  roster.forEach(function(c) {
+    if (!c || !c.email) return;
+    var label = c.name ? c.name : c.email;
+    if (c.name && c.email && c.email.indexOf('@local.ineedcoaching.org') === -1) label += ' (' + c.email + ')';
+    clientOpts += '<option value="' + escapeHtml(c.email) + '">' + escapeHtml(label) + '</option>';
+  });
+  var clientSel = $('ms-client');
+  clientSel.innerHTML = clientOpts;
+  clientSel.value = roster.length ? roster[0].email : '__new__';
+  $('ms-new-fields').style.display = (clientSel.value === '__new__') ? 'block' : 'none';
+
+  // Service dropdown: active services only.
+  var svcOpts = '<option value="">— No specific service —</option>';
+  (Array.isArray(coachServicesRows) ? coachServicesRows : []).forEach(function(s) {
+    if (!s || s.is_active === false) return;
+    svcOpts += '<option value="' + escapeHtml(s.id) + '">' + escapeHtml(s.title || 'Session') + '</option>';
+  });
+  $('ms-service').innerHTML = svcOpts;
+
+  $('ms-name').value = '';
+  $('ms-email').value = '';
+  $('ms-datetime').value = '';
+  $('ms-notes').value = '';
+  $('ms-error').style.display = 'none';
+  $('ms-error').textContent = '';
+  $('ms-save').disabled = false;
+  $('ms-save').textContent = 'Add session';
+  modal.style.display = 'flex';
+}
+
+function showManualSessionError(msg) {
+  var el = $('ms-error');
+  if (el) { el.textContent = msg; el.style.display = 'block'; }
+  var b = $('ms-save');
+  if (b) { b.disabled = false; b.textContent = 'Add session'; }
+}
+
+async function submitManualSession() {
+  $('ms-error').style.display = 'none';
+  $('ms-error').textContent = '';
+
+  // Resolve client — existing roster pick, or new-client free text.
+  var clientChoice = $('ms-client').value;
+  var name = '';
+  var effectiveEmail = '';
+  if (clientChoice === '__new__') {
+    name = $('ms-name').value.trim();
+    var newEmail = $('ms-email').value.trim();
+    if (!name) return showManualSessionError('New client name is required.');
+    if (newEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+      return showManualSessionError('Please enter a valid email, or leave it blank.');
+    }
+    // Synthesize an email when missing — keeps downstream keys (session notes,
+    // transcripts) stable, same convention as submitAddClient.
+    effectiveEmail = newEmail || ('manual+' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8) + '@local.ineedcoaching.org');
+  } else {
+    var picked = (Array.isArray(clientsData) ? clientsData : []).find(function(x) { return x.email === clientChoice; });
+    if (!picked) return showManualSessionError('Choose a client, or add a new one.');
+    effectiveEmail = picked.email;
+    name = picked.name || picked.email;
+  }
+
+  // Date & time — interpret the naive picker value as the coach's wall clock.
+  var datetimeVal = $('ms-datetime').value;
+  if (!datetimeVal) return showManualSessionError('Session date & time is required.');
+  var scheduledIso;
+  try {
+    var p = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(datetimeVal);
+    if (!p) throw new Error('bad');
+    scheduledIso = coachWallToUtc(+p[1], +p[2], +p[3], +p[4], +p[5]).toISOString();
+  } catch (e) {
+    return showManualSessionError('Invalid session date & time.');
+  }
+
+  var svcId = $('ms-service').value;
+  var svc = svcId ? (Array.isArray(coachServicesRows) ? coachServicesRows : []).find(function(r) { return r.id === svcId; }) : null;
+  var serviceTitle = svc ? (svc.title || '') : '';
+  var extraNotes = $('ms-notes').value.trim();
+
+  // Notes carry "Name:"/"Service:" prefixes so the bookings list + per-client
+  // view render correctly even where they parse notes rather than columns.
+  var notesPayload = 'Name: ' + name
+    + (serviceTitle ? '\nService: ' + serviceTitle : '')
+    + (extraNotes ? '\n\n' + extraNotes : '');
+
+  var saveBtn = $('ms-save');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Adding…';
+
+  try {
+    var body = {
+      coach_id: coachProfile.id,
+      client_email: effectiveEmail,
+      client_name: name,
+      status: 'manual',
+      scheduled_at: scheduledIso,
+      notes: notesPayload
+    };
+    if (svcId) { body.service_id = svcId; body.service_name = serviceTitle; }
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_bookings', {
+      method: 'POST',
+      headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      var errBody = await res.text();
+      throw new Error(errBody || ('HTTP ' + res.status));
+    }
+
+    // Best-effort: bump monthly_client_count on the client's first
+    // confirmed/manual booking. No-ops when a prior booking exists; never
+    // blocks the add. Mirrors submitAddClient.
+    try {
+      var insertedRows = await res.json().catch(function () { return null; });
+      var newBookingId = (insertedRows && insertedRows[0] && insertedRows[0].id) || null;
+      var priorPath = 'coach_bookings?coach_id=eq.' + coachProfile.id
+        + '&client_email=eq.' + encodeURIComponent(effectiveEmail)
+        + '&status=in.(confirmed,manual)'
+        + (newBookingId ? '&id=neq.' + encodeURIComponent(newBookingId) : '')
+        + '&select=id&limit=1';
+      var prior = await supabaseGet(priorPath);
+      if (Array.isArray(prior) && prior.length === 0) {
+        await fetch(SUPABASE_URL + '/rest/v1/rpc/increment_coach_usage', {
+          method: 'POST',
+          headers: apiHeaders(),
+          body: JSON.stringify({ p_coach_id: coachProfile.id, p_kind: 'client' }),
+        });
+      }
+    } catch (incErr) {
+      console.warn('[manual-session] usage increment failed:', incErr && incErr.message);
+    }
+
+    $('manual-session-modal').style.display = 'none';
+    await loadBookings();
+    loadClientsTab();
+  } catch (e) {
+    console.error('[manual-session] failed:', e);
+    showManualSessionError('Could not add session. ' + (e.message || '').slice(0, 160));
   }
 }
 
