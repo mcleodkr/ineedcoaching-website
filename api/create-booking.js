@@ -69,6 +69,55 @@ export default async function handler(req, res) {
       row.discount_amount_cents = body.discount_amount_cents;
     }
 
+    // Idempotency guard. When a paid booking errors mid-flow (e.g. Stripe is
+    // down), book.html re-enables the button and a re-click re-runs this whole
+    // insert — previously stacking up a new pending_payment row per attempt
+    // (one client created 7 in a day). Before inserting, reuse any existing
+    // pending_payment booking for the same coach + client + slot instead of
+    // creating a second. Scoped to pending_payment: confirmed (free) bookings
+    // aren't part of this retry loop. Best-effort — if the lookup fails we fall
+    // through to the insert rather than block a booking.
+    if (status === 'pending_payment') {
+      try {
+        const dupUrl = `${SUPABASE_URL}/rest/v1/coach_bookings`
+          + `?coach_id=eq.${encodeURIComponent(coachId)}`
+          + `&client_email=eq.${encodeURIComponent(clientEmail)}`
+          + `&scheduled_at=eq.${encodeURIComponent(scheduledAt)}`
+          + `&status=eq.pending_payment`
+          + `&select=id,zoom_link&limit=1`;
+        const dupRes = await fetch(dupUrl, {
+          headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+        });
+        if (dupRes.ok) {
+          const dupRows = await dupRes.json().catch(() => []);
+          const existing = Array.isArray(dupRows) && dupRows[0];
+          if (existing && existing.id) {
+            // Reuse the row: refresh its mutable fields, never insert a second.
+            const patchRes = await fetch(
+              `${SUPABASE_URL}/rest/v1/coach_bookings?id=eq.${encodeURIComponent(existing.id)}`,
+              {
+                method: 'PATCH',
+                headers: {
+                  apikey: SUPABASE_KEY,
+                  Authorization: `Bearer ${SUPABASE_KEY}`,
+                  'Content-Type': 'application/json',
+                  Prefer: 'return=representation',
+                },
+                body: JSON.stringify(row),
+              }
+            );
+            const patchedRows = patchRes.ok ? await patchRes.json().catch(() => null) : null;
+            const patched = Array.isArray(patchedRows) && patchedRows[0];
+            const reusedId = (patched && patched.id) || existing.id;
+            const reusedZoom = (patched && patched.zoom_link) || existing.zoom_link || '';
+            return res.status(200).json({ id: reusedId, zoom_link: reusedZoom });
+          }
+        }
+      } catch (dupErr) {
+        console.error('[create-booking] dedup check failed', dupErr && dupErr.message);
+      }
+    }
+
     const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/coach_bookings`, {
       method: 'POST',
       headers: {
