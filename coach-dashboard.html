@@ -3059,6 +3059,15 @@ async function init() {
     loadClientsTab();
   }
 
+  // Deep link: a ?tab=<name> param (e.g. from the "new message" notification
+  // email's link) selects that tab on load by delegating to its real button,
+  // which reuses setupTabs()' switch + lazy-load. No-op when absent or unknown.
+  var deepTab = new URLSearchParams(window.location.search).get('tab');
+  if (deepTab) {
+    var deepBtn = document.querySelector('.tab-btn[data-tab="' + deepTab.replace(/[^a-z0-9-]/gi, '') + '"]');
+    if (deepBtn) deepBtn.click();
+  }
+
   // "Building your practice" widget — independent of the clients fetch
   loadCoachArticlesWidget();
 

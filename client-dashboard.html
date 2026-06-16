@@ -2663,12 +2663,26 @@ async function sendMessage(coachId) {
     };
     const res = await fetch(SUPABASE_URL + '/rest/v1/coach_messages', {
       method: 'POST',
-      headers: Object.assign({}, apiHeaders(), { 'Prefer': 'return=minimal' }),
+      headers: Object.assign({}, apiHeaders(), { 'Prefer': 'return=representation' }),
       body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error('Send failed ' + res.status);
     input.value = '';
     if (note) { note.textContent = 'Sent. Your coach will respond at their next availability.'; note.style.color = ''; }
+    // Best-effort: notify the coach by email (and SMS if they've opted in) so
+    // they hear about the message without logging in. Never block the send UX
+    // on this — the message is already saved.
+    try {
+      const inserted = await res.json();
+      const messageId = Array.isArray(inserted) && inserted[0] && inserted[0].id;
+      if (messageId) {
+        fetch('/api/notify-new-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message_id: messageId })
+        }).catch(function() {});
+      }
+    } catch (notifyErr) { console.warn('[Messages] coach notify skipped:', notifyErr); }
     loadMessages();
   } catch (err) {
     console.error('[Messages] send error:', err);
