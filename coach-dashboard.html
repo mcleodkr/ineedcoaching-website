@@ -15275,13 +15275,18 @@ async function cbApplyGeneratedOutline(outline) {
       var modId = Array.isArray(modRows) && modRows.length ? modRows[0].id : null;
       if (!modId) continue;
       var lessons = Array.isArray(m.lessons) ? m.lessons : [];
+      // course_id is NOT NULL on coach_course_lessons — it must be sent or the
+      // insert is rejected (silently, since we don't surface per-lesson errors).
       // order_index is explicit, so lessons can be inserted concurrently.
-      await Promise.all(lessons.map(function(l, j) {
+      var lessonRes = await Promise.all(lessons.map(function(l, j) {
         return fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons', {
           method: 'POST', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ module_id: modId, title: l.title || '', description: l.description || '', order_index: j })
-        }).catch(function() {});
+          body: JSON.stringify({ course_id: currentCourseId, module_id: modId, title: l.title || '', description: l.description || '', order_index: j })
+        }).then(function(r) { return r.ok; }).catch(function() { return false; });
       }));
+      if (lessonRes.some(function(ok) { return ok === false; })) {
+        console.error('cbApplyGeneratedOutline: one or more lesson inserts failed for module', modId);
+      }
     } catch (e) { /* skip a failed module, keep going */ }
   }
 
