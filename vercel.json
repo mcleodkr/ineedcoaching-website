@@ -45,6 +45,9 @@
     "api/generate-course-outline.js": {
       "maxDuration": 120
     },
+    "api/generate-lesson-content.js": {
+      "maxDuration": 60
+    },
     "api/*.js": {
       "maxDuration": 30
     }
