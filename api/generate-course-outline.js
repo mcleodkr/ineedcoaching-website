@@ -13,37 +13,62 @@ const DEFAULT_MODULES = 5;
 const MIN_MODULES = 1;
 const MAX_MODULES = 12;
 
-// Belt-and-suspenders: strip em/en dashes from generated copy so the output
-// can never violate the no-em-dash rule even if the model slips. Collapse a
-// spaced dash into a comma so sentences stay readable.
-function stripDashes(str) {
+// Gestalt vocabulary reframe. The system prompt asks the model to avoid these
+// words, but it occasionally slips (e.g. "Finding the Right Rhythm"). Acceptance
+// requires the banned words appear NOWHERE, so reframe deterministically into
+// the effective/ineffective + suggestive vocabulary as a hard guarantee. Whole
+// word, case-insensitive; case of the first letter is preserved so titles stay
+// title-cased. Substrings are safe (\b protects "bright", "rights", "goodness").
+const VOCAB_REFRAME = {
+  good: 'effective',
+  bad: 'ineffective',
+  right: 'effective',
+  wrong: 'ineffective',
+  should: 'can',
+  must: 'can',
+};
+const BANNED_RE = new RegExp('\\b(' + Object.keys(VOCAB_REFRAME).join('|') + ')\\b', 'gi');
+
+function matchCase(replacement, original) {
+  if (original[0] === original[0].toUpperCase()) {
+    return replacement.charAt(0).toUpperCase() + replacement.slice(1);
+  }
+  return replacement;
+}
+
+// Belt-and-suspenders sanitizer for all generated copy: strip em/en dashes
+// (collapse a spaced dash to a comma so sentences stay readable) and reframe
+// any banned vocabulary, so the output can never violate the rules even when
+// the model slips.
+function sanitizeCopy(str) {
   if (typeof str !== 'string') return str;
   return str
     .replace(/\s*[—–]\s*/g, ', ')
+    .replace(BANNED_RE, function (m) { return matchCase(VOCAB_REFRAME[m.toLowerCase()], m); })
     .replace(/\s{2,}/g, ' ')
     .trim();
 }
 
 function cleanStringList(arr) {
   return (Array.isArray(arr) ? arr : [])
-    .map(function (s) { return stripDashes(typeof s === 'string' ? s : ''); })
+    .map(function (s) { return sanitizeCopy(typeof s === 'string' ? s : ''); })
     .filter(function (s) { return s.length > 0; });
 }
 
 function cleanOutline(outline) {
   return {
-    course_title: stripDashes(outline.course_title || ''),
-    course_description: stripDashes(outline.course_description || ''),
+    course_title: sanitizeCopy(outline.course_title || ''),
+    course_description: sanitizeCopy(outline.course_description || ''),
     modules: (Array.isArray(outline.modules) ? outline.modules : []).map(function (m) {
       return {
-        title: stripDashes(m && m.title ? m.title : ''),
-        summary: stripDashes(m && m.summary ? m.summary : ''),
+        title: sanitizeCopy(m && m.title ? m.title : ''),
+        summary: sanitizeCopy(m && m.summary ? m.summary : ''),
         topics: cleanStringList(m && m.topics),
         learning_outcomes: cleanStringList(m && m.learning_outcomes),
         lessons: (m && Array.isArray(m.lessons) ? m.lessons : []).map(function (l) {
           return {
-            title: stripDashes(l && l.title ? l.title : ''),
-            description: stripDashes(l && l.description ? l.description : ''),
+            title: sanitizeCopy(l && l.title ? l.title : ''),
+            description: sanitizeCopy(l && l.description ? l.description : ''),
           };
         }),
       };
