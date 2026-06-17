@@ -16380,7 +16380,7 @@ async function cbDeleteQuiz(lessonId, quizId) {
   } catch (e) { console.error('Delete quiz error:', e); }
 }
 
-/* AI Quiz */
+/* Coach Clarity Quiz Builder — reads the lesson's own fields, no pasting. */
 function cbShowAIQuiz(lessonId) {
   var container = $('ai-quiz-' + lessonId);
   if (!container) return;
@@ -16388,14 +16388,21 @@ function cbShowAIQuiz(lessonId) {
   var builder = $('quiz-builder-' + lessonId);
   if (builder) builder.style.display = 'none';
 
+  var bodyEl = document.querySelector('textarea[data-lesson-id="' + lessonId + '"][data-lesson-field="content"]');
+  var lessonBody = bodyEl ? bodyEl.value.trim() : '';
+
+  // No lesson body yet — Coach Clarity has nothing to build from.
+  if (!lessonBody) {
+    container.innerHTML = '<div class="cb-section" style="margin-bottom:0;">'
+      + '<div class="cb-section-title">&#10022; Coach Clarity Quiz Builder</div>'
+      + '<div class="cb-info-box" style="text-align:center;">Write your lesson content first, then Coach Clarity can build your quiz.</div>'
+      + '</div>';
+    return;
+  }
+
   container.innerHTML = '<div class="cb-section" style="margin-bottom:0;">'
-    + '<div class="cb-section-title">&#10022; AI Quiz Generator</div>'
-    + '<div style="font-size:0.82rem;color:#8a8a9a;margin-bottom:12px;">Paste your lesson content, objectives, or upload a PDF and we will generate quiz questions for you.</div>'
-    + '<textarea class="cb-input" id="ai-quiz-content-' + lessonId + '" placeholder="Paste lesson content here..." style="min-height:120px;font-size:0.82rem;resize:vertical;margin-bottom:8px;"></textarea>'
-    + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">'
-    + '<span style="font-size:0.78rem;color:#8a8a9a;">Or upload files:</span>'
-    + '<input type="file" id="ai-quiz-file-' + lessonId + '" accept=".pdf,.txt,.doc,.docx" multiple style="font-size:0.78rem;">'
-    + '</div>'
+    + '<div class="cb-section-title">&#10022; Coach Clarity Quiz Builder</div>'
+    + '<div style="font-size:0.82rem;color:#8a8a9a;margin-bottom:12px;">Coach Clarity reads this lesson, its summary, reflection prompt, and the module learning outcomes, then drafts quiz questions. No pasting needed. Just choose how many questions and build.</div>'
     + '<div style="margin-bottom:12px;"><label class="cb-label">How many questions?</label>'
     + '<div style="display:flex;gap:4px;flex-wrap:wrap;" id="ai-quiz-count-' + lessonId + '">'
     + '<button onclick="cbSetQuizCount(\'' + lessonId + '\',5)" class="cb-lesson-tab">5</button>'
@@ -16406,7 +16413,7 @@ function cbShowAIQuiz(lessonId) {
     + '</div>'
     + '<input type="number" id="ai-quiz-custom-count-' + lessonId + '" class="cb-input" min="1" max="30" value="8" placeholder="Number" style="display:none;width:80px;margin-top:6px;font-size:0.82rem;">'
     + '</div>'
-    + '<button onclick="cbGenerateAIQuiz(\'' + lessonId + '\')" class="cb-btn-next" style="width:100%;">Generate Quiz</button>'
+    + '<button onclick="cbGenerateAIQuiz(\'' + lessonId + '\')" class="cb-btn-next" style="width:100%;">&#10022; Build Quiz with Coach Clarity</button>'
     + '<div id="ai-quiz-status-' + lessonId + '" style="font-size:0.82rem;margin-top:8px;"></div>'
     + '</div>';
 }
@@ -16425,56 +16432,31 @@ function cbSetQuizCount(lessonId, count) {
 
 async function cbGenerateAIQuiz(lessonId) {
   var statusEl = $('ai-quiz-status-' + lessonId);
-  var contentEl = $('ai-quiz-content-' + lessonId);
-  var fileEl = $('ai-quiz-file-' + lessonId);
-  var content = contentEl ? contentEl.value.trim() : '';
 
-  // Try reading files (multiple supported, PDF.js for PDFs)
-  if (!content && fileEl && fileEl.files.length > 0) {
-    if (statusEl) { statusEl.textContent = 'Reading files...'; statusEl.style.color = '#8a8a9a'; }
-    try {
-      var fileTexts = [];
-      for (var fi = 0; fi < fileEl.files.length; fi++) {
-        var f = fileEl.files[fi];
-        if (f.name.toLowerCase().endsWith('.pdf') && typeof pdfjsLib !== 'undefined') {
-          // Extract text from PDF using PDF.js
-          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-          var arrayBuf = await new Promise(function(resolve, reject) {
-            var reader = new FileReader();
-            reader.onload = function() { resolve(reader.result); };
-            reader.onerror = reject;
-            reader.readAsArrayBuffer(f);
-          });
-          var pdf = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
-          var pdfTexts = [];
-          for (var pi = 1; pi <= pdf.numPages; pi++) {
-            var page = await pdf.getPage(pi);
-            var tc = await page.getTextContent();
-            var pageText = tc.items.map(function(item) { return item.str; }).join(' ');
-            if (pageText.trim()) pdfTexts.push(pageText);
-          }
-          fileTexts.push(pdfTexts.join('\n\n'));
-        } else {
-          // Plain text files
-          var fileText = await new Promise(function(resolve, reject) {
-            var reader = new FileReader();
-            reader.onload = function() { resolve(reader.result); };
-            reader.onerror = reject;
-            reader.readAsText(f);
-          });
-          fileTexts.push(fileText);
-        }
-      }
-      content = fileTexts.join('\n\n--- Next Document ---\n\n');
-    } catch (e) { console.error('File read error:', e); content = ''; }
-  }
+  // Pull context straight from the lesson's already-populated fields — no paste.
+  var bodyEl = document.querySelector('textarea[data-lesson-id="' + lessonId + '"][data-lesson-field="content"]');
+  var summaryEl = document.querySelector('textarea[data-lesson-id="' + lessonId + '"][data-lesson-field="description"]');
+  var reflEl = document.querySelector('textarea[data-lesson-id="' + lessonId + '"][data-lesson-field="reflection_prompt"]');
+  var titleEl = $('lesson-title-' + lessonId);
+  var modId = bodyEl ? bodyEl.dataset.modId : null;
+  var mod = (courseModules || []).find(function(m) { return m.id === modId; }) || {};
+  var outcomes = Array.isArray(mod.learning_outcomes) ? mod.learning_outcomes : [];
 
-  if (!content) {
-    if (statusEl) { statusEl.textContent = 'Please paste content or upload a file.'; statusEl.style.color = '#c44'; }
+  var lessonBody = bodyEl ? bodyEl.value.trim() : '';
+  if (!lessonBody) {
+    if (statusEl) { statusEl.textContent = 'Write your lesson content first, then Coach Clarity can build your quiz.'; statusEl.style.color = '#c44'; }
     return;
   }
 
-  if (statusEl) { statusEl.textContent = 'Reviewing your content and building quiz questions...'; statusEl.style.color = '#8a8a9a'; }
+  var parts = [];
+  if (titleEl && titleEl.textContent.trim()) parts.push('Lesson title: ' + titleEl.textContent.trim());
+  if (summaryEl && summaryEl.value.trim()) parts.push('Lesson summary: ' + summaryEl.value.trim());
+  parts.push('Lesson content:\n' + lessonBody);
+  if (reflEl && reflEl.value.trim()) parts.push('Reflection prompt: ' + reflEl.value.trim());
+  if (outcomes.length) parts.push('Module learning outcomes:\n- ' + outcomes.join('\n- '));
+  var content = parts.join('\n\n');
+
+  if (statusEl) { statusEl.textContent = 'Coach Clarity is building your quiz questions...'; statusEl.style.color = '#8a8a9a'; }
 
   try {
     var res = await fetch('/api/generate-quiz', {
@@ -16486,7 +16468,7 @@ async function cbGenerateAIQuiz(lessonId) {
     if (!res.ok) {
       var errData = await res.json().catch(function() { return {}; });
       console.error('AI quiz generation failed:', res.status, errData);
-      if (statusEl) { statusEl.textContent = 'AI generation failed. Try the manual quiz builder instead.'; statusEl.style.color = '#c44'; }
+      if (statusEl) { statusEl.textContent = 'Coach Clarity could not build the quiz. Try again, or use the manual quiz builder.'; statusEl.style.color = '#c44'; }
       return;
     }
 
