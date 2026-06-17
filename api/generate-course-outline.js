@@ -8,54 +8,13 @@
 // and logs cost to coach_ai_usage_log.
 
 import { logAIUsage } from '../lib/ai-usage.js';
+import { sanitizeCopy, cleanStringList } from '../lib/copy-sanitize.js';
 
 const DEFAULT_MODULES = 5;
 const MIN_MODULES = 1;
 // Capped at 8: a single generation stays reliable (fully-populated modules) at
 // this size. Larger counts let the model thin out later modules.
 const MAX_MODULES = 8;
-
-// Gestalt vocabulary reframe. The system prompt asks the model to avoid these
-// words, but it occasionally slips (e.g. "Finding the Right Rhythm"). Acceptance
-// requires the banned words appear NOWHERE, so reframe deterministically into
-// the effective/ineffective + suggestive vocabulary as a hard guarantee. Whole
-// word, case-insensitive; case of the first letter is preserved so titles stay
-// title-cased. Substrings are safe (\b protects "bright", "rights", "goodness").
-const VOCAB_REFRAME = {
-  good: 'effective',
-  bad: 'ineffective',
-  right: 'effective',
-  wrong: 'ineffective',
-  should: 'can',
-  must: 'can',
-};
-const BANNED_RE = new RegExp('\\b(' + Object.keys(VOCAB_REFRAME).join('|') + ')\\b', 'gi');
-
-function matchCase(replacement, original) {
-  if (original[0] === original[0].toUpperCase()) {
-    return replacement.charAt(0).toUpperCase() + replacement.slice(1);
-  }
-  return replacement;
-}
-
-// Belt-and-suspenders sanitizer for all generated copy: strip em/en dashes
-// (collapse a spaced dash to a comma so sentences stay readable) and reframe
-// any banned vocabulary, so the output can never violate the rules even when
-// the model slips.
-function sanitizeCopy(str) {
-  if (typeof str !== 'string') return str;
-  return str
-    .replace(/\s*[—–]\s*/g, ', ')
-    .replace(BANNED_RE, function (m) { return matchCase(VOCAB_REFRAME[m.toLowerCase()], m); })
-    .replace(/\s{2,}/g, ' ')
-    .trim();
-}
-
-function cleanStringList(arr) {
-  return (Array.isArray(arr) ? arr : [])
-    .map(function (s) { return sanitizeCopy(typeof s === 'string' ? s : ''); })
-    .filter(function (s) { return s.length > 0; });
-}
 
 // A module is usable only when it carries the structural backbone: at least one
 // topic, one learning outcome, and one lesson. Guards against the model leaving

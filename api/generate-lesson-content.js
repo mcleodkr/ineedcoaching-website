@@ -1,96 +1,145 @@
-// POST { mode, ...context, coachId? }
+// POST { coach_id, lesson_title, lesson_summary, module_title, module_description,
+//        module_topics, module_outcomes, course_title, course_topic, mode }
 // Tier 2 Coach Clarity lesson content generation. Two modes:
 //   mode 'lesson'     -> { lesson_body, reflection_prompt }
 //   mode 'activities' -> { activities: [string, string, string] }
-// Topic/title context in, student-facing draft copy out. Writes NO tables — the
-// coach dashboard populates editable fields and the coach saves normally. Only
-// logs cost to coach_ai_usage_log.
+// Before calling Claude it fetches the coach's DNA + recent client patterns
+// (service role) so the copy sounds like the coach, not generic. Degrades
+// gracefully: a failed DNA/pattern fetch just drops that context. Writes NO
+// tables — the dashboard populates editable fields the coach saves normally.
+// Only logs cost to coach_ai_usage_log.
 
 import { logAIUsage } from '../lib/ai-usage.js';
+import { sanitizeCopy, cleanStringList } from '../lib/copy-sanitize.js';
 
-// Gestalt vocabulary reframe + em/en dash stripping, identical policy to the
-// outline generator. Guarantees the rules even when the model slips.
-const VOCAB_REFRAME = {
-  good: 'effective',
-  bad: 'ineffective',
-  right: 'effective',
-  wrong: 'ineffective',
-  should: 'can',
-  must: 'can',
-};
-const BANNED_RE = new RegExp('\\b(' + Object.keys(VOCAB_REFRAME).join('|') + ')\\b', 'gi');
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://qroizygknxdjsstkezsf.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-function matchCase(replacement, original) {
-  if (original[0] === original[0].toUpperCase()) {
-    return replacement.charAt(0).toUpperCase() + replacement.slice(1);
-  }
-  return replacement;
+function serviceHeaders() {
+  return { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 }
 
-function sanitizeCopy(str) {
-  if (typeof str !== 'string') return str;
-  return str
-    .replace(/\s*[—–]\s*/g, ', ')
-    .replace(BANNED_RE, function (m) { return matchCase(VOCAB_REFRAME[m.toLowerCase()], m); })
-    .replace(/[ \t]{2,}/g, ' ')
-    .trim();
+// Robust, shape-agnostic stringify for jsonb/text DNA + pattern fields, trimmed
+// to a character budget to keep the prompt lean.
+function summarizeValue(v, budget) {
+  if (v == null) return '';
+  let s;
+  if (typeof v === 'string') s = v;
+  else { try { s = JSON.stringify(v); } catch (e) { s = String(v); } }
+  s = (s || '').trim();
+  if (s.length > budget) s = s.slice(0, budget) + '...';
+  return s;
 }
 
-function cleanStringList(arr) {
-  return (Array.isArray(arr) ? arr : [])
-    .map(function (s) { return sanitizeCopy(typeof s === 'string' ? s : ''); })
-    .filter(function (s) { return s.length > 0; });
+// Fetch coach name + DNA + up to 3 most-recent client pattern maps (coach-wide,
+// no client identity reaches the prompt). Every piece degrades to '' on failure
+// so generation never blocks on missing context.
+async function fetchCoachContext(coachId) {
+  const ctx = { coachName: '', dnaSummary: '', patternSummary: '' };
+  if (!coachId || !SUPABASE_KEY) return ctx;
+
+  const headers = serviceHeaders();
+  const profileUrl = `${SUPABASE_URL}/rest/v1/coach_profiles?id=eq.${coachId}&select=display_name,full_name&limit=1`;
+  const dnaUrl = `${SUPABASE_URL}/rest/v1/coach_dna_profiles?coach_id=eq.${coachId}&order=last_analyzed.desc&limit=1&select=declared_orientation,framework_distribution,growth_edges,signal_patterns`;
+  // Coach-wide, most recent first, pattern_map only — never select client_email.
+  const patternsUrl = `${SUPABASE_URL}/rest/v1/coach_client_patterns?coach_id=eq.${coachId}&order=last_analyzed.desc&limit=3&select=pattern_map`;
+
+  const [profileRes, dnaRes, patternsRes] = await Promise.all([
+    fetch(profileUrl, { headers }).catch(function () { return null; }),
+    fetch(dnaUrl, { headers }).catch(function () { return null; }),
+    fetch(patternsUrl, { headers }).catch(function () { return null; }),
+  ]);
+
+  try {
+    const rows = profileRes && profileRes.ok ? await profileRes.json() : [];
+    if (Array.isArray(rows) && rows[0]) ctx.coachName = rows[0].display_name || rows[0].full_name || '';
+  } catch (e) { /* degrade */ }
+
+  try {
+    const rows = dnaRes && dnaRes.ok ? await dnaRes.json() : [];
+    const p = Array.isArray(rows) && rows[0] ? rows[0] : null;
+    if (p) {
+      const parts = [];
+      if (p.declared_orientation) parts.push('Orientation: ' + summarizeValue(p.declared_orientation, 200));
+      if (p.signal_patterns) parts.push('Signal patterns: ' + summarizeValue(p.signal_patterns, 600));
+      if (p.growth_edges) parts.push('Growth edges: ' + summarizeValue(p.growth_edges, 300));
+      if (p.framework_distribution) parts.push('Frameworks: ' + summarizeValue(p.framework_distribution, 300));
+      ctx.dnaSummary = parts.filter(Boolean).join('\n');
+    }
+  } catch (e) { /* degrade */ }
+
+  try {
+    const rows = patternsRes && patternsRes.ok ? await patternsRes.json() : [];
+    if (Array.isArray(rows) && rows.length) {
+      ctx.patternSummary = rows
+        .map(function (r) { return summarizeValue(r && r.pattern_map, 400); })
+        .filter(Boolean)
+        .map(function (s) { return '- ' + s; })
+        .join('\n');
+    }
+  } catch (e) { /* degrade */ }
+
+  return ctx;
 }
 
-const VOICE_RULES = `Voice and language rules (follow exactly):
-- Write directly to the student in second person ("you will explore", "reflect on", "consider").
-- Coaching voice: warm, direct, transformation-focused. Not academic, not instructional, not clinical.
-- Frame quality as effective/ineffective and aligned/serving. Never use the words good, bad, should, must, right, or wrong.
-- Never use em dashes or en dashes. Use commas or periods instead.`;
+const VOCAB_RULES = `Vocabulary rules (non-negotiable):
+- Use: effective, ineffective, aligned with, serving, accomplishing.
+- Never use: good, bad, right, wrong, should, must, mistake, failure.
+- No em dashes or en dashes anywhere.`;
 
-function buildLessonPrompt(ctx) {
-  const system = `You are Coach Clarity, the intelligence layer of a professional coaching platform. You write a single lesson's content for a coach's course, drafted for the coach to refine.
-
-Return ONLY valid JSON. No preamble, no markdown code fences. Match this exact shape:
-{ "lesson_body": "string", "reflection_prompt": "string" }
-
-Content rules:
-- "lesson_body" is 150 to 250 words, structured but conversational, in plain sentences (no headings or markdown).
-- "reflection_prompt" is one open question that starts with "What", "How", or "Where".
-
-${VOICE_RULES}`;
-
-  const parts = [];
-  if (ctx.course_title) parts.push(`Course: ${ctx.course_title}.`);
-  if (ctx.course_topic) parts.push(`Course topic: ${ctx.course_topic}.`);
-  if (ctx.module_title) parts.push(`Module: ${ctx.module_title}.`);
-  if (ctx.module_description) parts.push(`Module overview: ${ctx.module_description}.`);
-  parts.push(`Lesson title: ${ctx.lesson_title}.`);
-  if (ctx.lesson_summary) parts.push(`Lesson summary: ${ctx.lesson_summary}.`);
-  parts.push('Write this lesson body and reflection prompt as JSON.');
-  return { system, user: parts.join(' ') };
+function coachContextBlock(ctx) {
+  const lines = [];
+  lines.push('You are writing for: ' + (ctx.coachName || 'this coach') + '.');
+  lines.push('Their coaching style and strengths (Coach DNA): ' + (ctx.dnaSummary || 'not available, write in a warm, transformation-focused coaching voice.'));
+  lines.push('Client patterns they commonly work with: ' + (ctx.patternSummary || 'not available.'));
+  return lines.join('\n');
 }
 
-function buildActivitiesPrompt(ctx) {
-  const system = `You are Coach Clarity, the intelligence layer of a professional coaching platform. You suggest practice activities for one module of a coach's course, drafted for the coach to refine.
+function buildLessonPrompt(ctx, c) {
+  const system = `You are Coach Clarity, an AI assistant that helps coaches create course content that sounds like them, not generic content that could come from anyone.
 
-Return ONLY valid JSON. No preamble, no markdown code fences. Match this exact shape:
+${coachContextBlock(ctx)}
+
+Course: ${c.course_title || ''} ${c.course_topic ? '- ' + c.course_topic : ''}
+Module: ${c.module_title || ''} ${c.module_description ? '- ' + c.module_description : ''}
+Topics this module covers: ${c.module_topics || 'not specified'}
+Learning outcomes: ${c.module_outcomes || 'not specified'}
+Lesson: ${c.lesson_title} ${c.lesson_summary ? '- ' + c.lesson_summary : ''}
+
+Write directly to the student in second person ("you", "your"). Warm, direct, transformation-focused coaching voice, not academic, not instructional. 150 to 250 words for the lesson body.
+
+Return ONLY valid JSON, no preamble, no markdown fences:
+{
+  "lesson_body": "string",
+  "reflection_prompt": "string (one open question starting with What, How, or Where)"
+}
+
+${VOCAB_RULES}`;
+  return { system, user: 'Write this lesson now as JSON.' };
+}
+
+function buildActivitiesPrompt(ctx, c) {
+  const system = `You are Coach Clarity, an AI assistant that helps coaches create course content that sounds like them, not generic content that could come from anyone.
+
+${coachContextBlock(ctx)}
+
+Course: ${c.course_title || ''} ${c.course_topic ? '- ' + c.course_topic : ''}
+Module: ${c.module_title || ''} ${c.module_description ? '- ' + c.module_description : ''}
+Topics this module covers: ${c.module_topics || 'not specified'}
+Learning outcomes: ${c.module_outcomes || 'not specified'}
+
+Suggest 3 practice activities for this module. Each is action-oriented, 1 to 2 sentences, written directly to the student in second person ("you", "your"). Warm, transformation-focused coaching voice.
+
+Return ONLY valid JSON, no preamble, no markdown fences:
 { "activities": ["string", "string", "string"] }
 
-Content rules:
-- Provide exactly 3 activities.
-- Each activity is action-oriented and 1 to 2 sentences.
+${VOCAB_RULES}`;
+  return { system, user: 'Suggest the 3 activities now as JSON.' };
+}
 
-${VOICE_RULES}`;
-
-  const parts = [];
-  if (ctx.course_title) parts.push(`Course: ${ctx.course_title}.`);
-  parts.push(`Module: ${ctx.module_title || 'this module'}.`);
-  if (ctx.module_description) parts.push(`Module overview: ${ctx.module_description}.`);
-  if (Array.isArray(ctx.topics) && ctx.topics.length) parts.push(`Topics covered: ${ctx.topics.join('; ')}.`);
-  if (Array.isArray(ctx.learning_outcomes) && ctx.learning_outcomes.length) parts.push(`Learning outcomes: ${ctx.learning_outcomes.join('; ')}.`);
-  parts.push('Suggest 3 practice activities as JSON.');
-  return { system, user: parts.join(' ') };
+function joinList(v) {
+  if (Array.isArray(v)) return v.filter(Boolean).join('; ');
+  return typeof v === 'string' ? v : '';
 }
 
 function parseJson(responseText) {
@@ -112,29 +161,29 @@ export default async function handler(req, res) {
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
     const mode = body.mode === 'activities' ? 'activities' : 'lesson';
-    const coachId = body.coachId || null;
+    const coachId = body.coach_id || body.coachId || null;
 
-    let prompt;
-    if (mode === 'lesson') {
-      const lessonTitle = (body.lesson_title || '').trim();
-      if (!lessonTitle) return res.status(400).json({ error: 'Missing lesson title.' });
-      prompt = buildLessonPrompt({
-        lesson_title: lessonTitle,
-        lesson_summary: (body.lesson_summary || '').trim(),
-        module_title: (body.module_title || '').trim(),
-        module_description: (body.module_description || '').trim(),
-        course_title: (body.course_title || '').trim(),
-        course_topic: (body.course_topic || '').trim(),
-      });
-    } else {
-      prompt = buildActivitiesPrompt({
-        module_title: (body.module_title || '').trim(),
-        module_description: (body.module_description || '').trim(),
-        course_title: (body.course_title || '').trim(),
-        topics: Array.isArray(body.topics) ? body.topics : [],
-        learning_outcomes: Array.isArray(body.learning_outcomes) ? body.learning_outcomes : [],
-      });
+    const ctxFields = {
+      lesson_title: (body.lesson_title || '').trim(),
+      lesson_summary: (body.lesson_summary || '').trim(),
+      module_title: (body.module_title || '').trim(),
+      module_description: (body.module_description || '').trim(),
+      module_topics: joinList(body.module_topics != null ? body.module_topics : body.topics),
+      module_outcomes: joinList(body.module_outcomes != null ? body.module_outcomes : body.learning_outcomes),
+      course_title: (body.course_title || '').trim(),
+      course_topic: (body.course_topic || '').trim(),
+    };
+
+    if (mode === 'lesson' && !ctxFields.lesson_title) {
+      return res.status(400).json({ error: 'Missing lesson title.' });
     }
+
+    // Coach DNA + client patterns (graceful: '' on any failure).
+    const coachContext = await fetchCoachContext(coachId);
+
+    const prompt = mode === 'lesson'
+      ? buildLessonPrompt(coachContext, ctxFields)
+      : buildActivitiesPrompt(coachContext, ctxFields);
 
     const model = 'claude-sonnet-4-5-20250929';
     const feature = mode === 'activities' ? 'lesson_activities' : 'lesson_content';
