@@ -15357,11 +15357,13 @@ async function cbWriteLesson(lessonId, modId) {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         mode: 'lesson',
-        coachId: coachProfile && coachProfile.id,
+        coach_id: coachProfile && coachProfile.id,
         lesson_title: lessonTitle,
         lesson_summary: summaryEl ? summaryEl.value.trim() : '',
         module_title: mod.title || '',
         module_description: mod.description || '',
+        module_topics: Array.isArray(mod.topics_covered) ? mod.topics_covered : [],
+        module_outcomes: Array.isArray(mod.learning_outcomes) ? mod.learning_outcomes : [],
         course_title: courseData.title || '',
         course_topic: courseData.description || ''
       })
@@ -15412,12 +15414,13 @@ async function cbWriteActivities(modId) {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         mode: 'activities',
-        coachId: coachProfile && coachProfile.id,
+        coach_id: coachProfile && coachProfile.id,
         module_title: mod.title || '',
         module_description: mod.description || '',
         course_title: courseData.title || '',
-        topics: Array.isArray(mod.topics_covered) ? mod.topics_covered : [],
-        learning_outcomes: Array.isArray(mod.learning_outcomes) ? mod.learning_outcomes : []
+        course_topic: courseData.description || '',
+        module_topics: Array.isArray(mod.topics_covered) ? mod.topics_covered : [],
+        module_outcomes: Array.isArray(mod.learning_outcomes) ? mod.learning_outcomes : []
       })
     });
     var data = await res.json().catch(function() { return null; });
@@ -15431,7 +15434,7 @@ async function cbWriteActivities(modId) {
   } catch (e) {
     alert('Something went wrong. Please try again.');
   } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = origLabel || '&#10022; Write with Coach Clarity'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = origLabel || '&#10022; Write Activities with Coach Clarity'; }
   }
 }
 window.cbWriteActivities = cbWriteActivities;
@@ -15626,7 +15629,7 @@ function renderModulesList(container, skipSubLoads) {
       html += '</div>'
         + '<div class="cb-add-row"><input type="text" class="cb-input" id="mod-activity-input-' + mod.id + '" placeholder="Add an activity..." onkeydown="if(event.key===\'Enter\'){event.preventDefault();cbAddListItem(\'' + mod.id + '\',\'suggested_activities\',\'mod-activity-input-' + mod.id + '\');}">'
         + '<button onclick="cbAddListItem(\'' + mod.id + '\',\'suggested_activities\',\'mod-activity-input-' + mod.id + '\')" style="padding:10px 18px;background:#1a3a52;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:0.85rem;font-weight:700;cursor:pointer;">Add</button>'
-        + '<button id="cc-activities-btn-' + mod.id + '" onclick="cbWriteActivities(\'' + mod.id + '\')" style="padding:10px 16px;background:#fff;color:#1a3a52;border:1.5px solid #1a3a52;border-radius:8px;font-family:inherit;font-size:0.85rem;font-weight:700;cursor:pointer;white-space:nowrap;">&#10022; Write with Coach Clarity</button></div>'
+        + '<button id="cc-activities-btn-' + mod.id + '" onclick="cbWriteActivities(\'' + mod.id + '\')" style="padding:10px 16px;background:#fff;color:#1a3a52;border:1.5px solid #1a3a52;border-radius:8px;font-family:inherit;font-size:0.85rem;font-weight:700;cursor:pointer;white-space:nowrap;">&#10022; Write Activities with Coach Clarity</button></div>'
         + '</div>';
 
       // Lessons
