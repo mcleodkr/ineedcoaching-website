@@ -15345,8 +15345,9 @@ window.cbApplyGeneratedOutline = cbApplyGeneratedOutline;
 
 /* ── COACH CLARITY LESSON + ACTIVITY GENERATION (Tier 2) ── */
 // Write a lesson body + reflection prompt for one lesson. Populates the
-// existing editable fields; does not auto-save (the lesson fields persist via
-// their normal blur-autosave when the coach reviews and saves).
+// existing editable fields and persists them (a programmatic .value set does
+// not trigger the blur-autosave, so it is PATCHed explicitly). Fields stay
+// editable; saves survive a refresh.
 async function cbWriteLesson(lessonId, modId) {
   var btn = $('cc-lesson-btn-' + lessonId);
   var titleEl = $('lesson-title-' + lessonId);
@@ -15379,10 +15380,19 @@ async function cbWriteLesson(lessonId, modId) {
       alert((data && data.error) || 'Could not write the lesson. Please try again.');
       return;
     }
-    // Populate editable fields only — coach reviews then saves normally.
+    // Populate the editable fields...
     cbLessonTab(lessonId, 'write');
     if (bodyEl) bodyEl.value = data.lesson_body;
     if (reflEl && data.reflection_prompt) reflEl.value = data.reflection_prompt;
+    // ...then persist explicitly. The blur-autosave only fires on user input,
+    // so a programmatic .value set never saves on its own — it must be PATCHed
+    // or the content vanishes on refresh. Fields stay fully editable after.
+    var lessonPatch = { content: data.lesson_body };
+    if (data.reflection_prompt) lessonPatch.reflection_prompt = data.reflection_prompt;
+    await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?id=eq.' + lessonId, {
+      method: 'PATCH', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify(lessonPatch)
+    }).catch(function(e) { console.error('cbWriteLesson save error:', e); });
   } catch (e) {
     alert('Something went wrong. Please try again.');
   } finally {
@@ -15406,9 +15416,9 @@ function cbRenderActivities(modId) {
   cont.innerHTML = html;
 }
 
-// Suggest 3 practice activities for a module. Appends them to the in-memory
-// Suggested Activities list as editable/deletable items. Does not auto-save:
-// they persist through the existing per-item save when the coach edits the list.
+// Suggest 3 practice activities for a module. Appends them to the Suggested
+// Activities list as editable/deletable items and persists the array (a
+// programmatic update never triggers a save on its own). Saves survive refresh.
 async function cbWriteActivities(modId) {
   var btn = $('cc-activities-btn-' + modId);
   var mod = (courseModules || []).find(function(m) { return m.id === modId; });
@@ -15437,6 +15447,11 @@ async function cbWriteActivities(modId) {
     var existing = Array.isArray(mod.suggested_activities) ? mod.suggested_activities : [];
     mod.suggested_activities = existing.concat(data.activities);
     cbRenderActivities(modId);
+    // Persist the updated array (jsonb column), same shape as cbAddListItem.
+    await fetch(SUPABASE_URL + '/rest/v1/coach_course_modules?id=eq.' + modId, {
+      method: 'PATCH', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ suggested_activities: mod.suggested_activities })
+    }).catch(function(e) { console.error('cbWriteActivities save error:', e); });
   } catch (e) {
     alert('Something went wrong. Please try again.');
   } finally {
@@ -16397,18 +16412,16 @@ function cbShowAIQuiz(lessonId) {
   var bodyEl = document.querySelector('textarea[data-lesson-id="' + lessonId + '"][data-lesson-field="content"]');
   var lessonBody = bodyEl ? bodyEl.value.trim() : '';
 
-  // No lesson body yet — Coach Clarity has nothing to build from.
-  if (!lessonBody) {
-    container.innerHTML = '<div class="cb-section" style="margin-bottom:0;">'
-      + '<div class="cb-section-title">&#10022; Coach Clarity Quiz Builder</div>'
-      + '<div class="cb-info-box" style="text-align:center;">Write your lesson content first, then Coach Clarity can build your quiz.</div>'
-      + '</div>';
-    return;
-  }
+  // Lesson content is the primary source; a document upload is the secondary
+  // source. With no lesson body, Coach Clarity can still build from a document,
+  // so the generator stays available with a hint instead of being hidden.
+  var hint = lessonBody
+    ? 'Coach Clarity reads this lesson, its summary, reflection prompt, and the module learning outcomes, then drafts quiz questions. Just choose how many questions and build.'
+    : 'Write your lesson content first, then Coach Clarity can build your quiz. Or generate from a document below.';
 
   container.innerHTML = '<div class="cb-section" style="margin-bottom:0;">'
     + '<div class="cb-section-title">&#10022; Coach Clarity Quiz Builder</div>'
-    + '<div style="font-size:0.82rem;color:#8a8a9a;margin-bottom:12px;">Coach Clarity reads this lesson, its summary, reflection prompt, and the module learning outcomes, then drafts quiz questions. No pasting needed. Just choose how many questions and build.</div>'
+    + '<div style="font-size:0.82rem;color:#8a8a9a;margin-bottom:12px;">' + hint + '</div>'
     + '<div style="margin-bottom:12px;"><label class="cb-label">How many questions?</label>'
     + '<div style="display:flex;gap:4px;flex-wrap:wrap;" id="ai-quiz-count-' + lessonId + '">'
     + '<button onclick="cbSetQuizCount(\'' + lessonId + '\',5)" class="cb-lesson-tab">5</button>'
@@ -16420,8 +16433,43 @@ function cbShowAIQuiz(lessonId) {
     + '<input type="number" id="ai-quiz-custom-count-' + lessonId + '" class="cb-input" min="1" max="30" value="8" placeholder="Number" style="display:none;width:80px;margin-top:6px;font-size:0.82rem;">'
     + '</div>'
     + '<button onclick="cbGenerateAIQuiz(\'' + lessonId + '\')" class="cb-btn-next" style="width:100%;">&#10022; Build Quiz with Coach Clarity</button>'
+    + '<div style="margin-top:14px;padding-top:12px;border-top:1px solid #f0ede6;">'
+    + '<label class="cb-label" style="font-size:0.72rem;">Or generate from a document instead</label>'
+    + '<input type="file" id="ai-quiz-file-' + lessonId + '" accept=".pdf,.txt,.doc,.docx" style="font-size:0.8rem;margin-top:4px;">'
+    + '<div style="font-size:0.72rem;color:#9a9490;margin-top:4px;">Upload a PDF or document and Coach Clarity will build the quiz from it instead of the lesson.</div>'
+    + '</div>'
     + '<div id="ai-quiz-status-' + lessonId + '" style="font-size:0.82rem;margin-top:8px;"></div>'
     + '</div>';
+}
+
+// Extract plain text from an uploaded file. PDFs via PDF.js; everything else as
+// plain text. Used as the secondary quiz source when a coach uploads a document.
+async function cbExtractFileText(file) {
+  if (!file) return '';
+  if (file.name.toLowerCase().endsWith('.pdf') && typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    var arrayBuf = await new Promise(function(resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function() { resolve(reader.result); };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+    var pdf = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
+    var pages = [];
+    for (var pi = 1; pi <= pdf.numPages; pi++) {
+      var page = await pdf.getPage(pi);
+      var tc = await page.getTextContent();
+      var pageText = tc.items.map(function(item) { return item.str; }).join(' ');
+      if (pageText.trim()) pages.push(pageText);
+    }
+    return pages.join('\n\n');
+  }
+  return await new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onload = function() { resolve(reader.result || ''); };
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
 }
 
 var _quizCounts = {};
@@ -16438,29 +16486,44 @@ function cbSetQuizCount(lessonId, count) {
 
 async function cbGenerateAIQuiz(lessonId) {
   var statusEl = $('ai-quiz-status-' + lessonId);
+  var fileEl = $('ai-quiz-file-' + lessonId);
+  var content = '';
 
-  // Pull context straight from the lesson's already-populated fields — no paste.
-  var bodyEl = document.querySelector('textarea[data-lesson-id="' + lessonId + '"][data-lesson-field="content"]');
-  var summaryEl = document.querySelector('textarea[data-lesson-id="' + lessonId + '"][data-lesson-field="description"]');
-  var reflEl = document.querySelector('textarea[data-lesson-id="' + lessonId + '"][data-lesson-field="reflection_prompt"]');
-  var titleEl = $('lesson-title-' + lessonId);
-  var modId = bodyEl ? bodyEl.dataset.modId : null;
-  var mod = (courseModules || []).find(function(m) { return m.id === modId; }) || {};
-  var outcomes = Array.isArray(mod.learning_outcomes) ? mod.learning_outcomes : [];
+  // Secondary source: if a document is uploaded, build from it instead of the
+  // lesson fields.
+  if (fileEl && fileEl.files && fileEl.files.length > 0) {
+    if (statusEl) { statusEl.textContent = 'Reading your document...'; statusEl.style.color = '#8a8a9a'; }
+    try {
+      content = (await cbExtractFileText(fileEl.files[0]) || '').trim();
+    } catch (e) { console.error('Quiz document read error:', e); content = ''; }
+    if (!content) {
+      if (statusEl) { statusEl.textContent = 'Could not read that document. Try another file, or build from the lesson.'; statusEl.style.color = '#c44'; }
+      return;
+    }
+  } else {
+    // Primary source: the lesson's own already-populated fields.
+    var bodyEl = document.querySelector('textarea[data-lesson-id="' + lessonId + '"][data-lesson-field="content"]');
+    var summaryEl = document.querySelector('textarea[data-lesson-id="' + lessonId + '"][data-lesson-field="description"]');
+    var reflEl = document.querySelector('textarea[data-lesson-id="' + lessonId + '"][data-lesson-field="reflection_prompt"]');
+    var titleEl = $('lesson-title-' + lessonId);
+    var modId = bodyEl ? bodyEl.dataset.modId : null;
+    var mod = (courseModules || []).find(function(m) { return m.id === modId; }) || {};
+    var outcomes = Array.isArray(mod.learning_outcomes) ? mod.learning_outcomes : [];
 
-  var lessonBody = bodyEl ? bodyEl.value.trim() : '';
-  if (!lessonBody) {
-    if (statusEl) { statusEl.textContent = 'Write your lesson content first, then Coach Clarity can build your quiz.'; statusEl.style.color = '#c44'; }
-    return;
+    var lessonBody = bodyEl ? bodyEl.value.trim() : '';
+    if (!lessonBody) {
+      if (statusEl) { statusEl.textContent = 'Write your lesson content first, or upload a document below.'; statusEl.style.color = '#c44'; }
+      return;
+    }
+
+    var parts = [];
+    if (titleEl && titleEl.textContent.trim()) parts.push('Lesson title: ' + titleEl.textContent.trim());
+    if (summaryEl && summaryEl.value.trim()) parts.push('Lesson summary: ' + summaryEl.value.trim());
+    parts.push('Lesson content:\n' + lessonBody);
+    if (reflEl && reflEl.value.trim()) parts.push('Reflection prompt: ' + reflEl.value.trim());
+    if (outcomes.length) parts.push('Module learning outcomes:\n- ' + outcomes.join('\n- '));
+    content = parts.join('\n\n');
   }
-
-  var parts = [];
-  if (titleEl && titleEl.textContent.trim()) parts.push('Lesson title: ' + titleEl.textContent.trim());
-  if (summaryEl && summaryEl.value.trim()) parts.push('Lesson summary: ' + summaryEl.value.trim());
-  parts.push('Lesson content:\n' + lessonBody);
-  if (reflEl && reflEl.value.trim()) parts.push('Reflection prompt: ' + reflEl.value.trim());
-  if (outcomes.length) parts.push('Module learning outcomes:\n- ' + outcomes.join('\n- '));
-  var content = parts.join('\n\n');
 
   if (statusEl) { statusEl.textContent = 'Coach Clarity is building your quiz questions...'; statusEl.style.color = '#8a8a9a'; }
 
