@@ -14454,7 +14454,7 @@ function renderCourseList() {
         + '<span class="prop-badge ' + statusBadge + '">' + escapeHtml(statusLabel) + '</span>'
         + '<div class="prop-actions">'
         + '<a href="#" onclick="event.preventDefault();event.stopPropagation();renderCourseStudents(\'' + c.id + '\')" class="prop-btn prop-btn-edit" style="background:#1a3a52;color:#fff;border-color:#1a3a52;">Students</a>'
-        + '<a href="#" onclick="event.preventDefault();event.stopPropagation();openCourseBuilder(\'' + c.id + '\')" class="prop-btn prop-btn-edit">Edit</a>'
+        + '<a href="#" onclick="event.preventDefault();event.stopPropagation();openCourseBuilder(\'' + c.id + '\', 3)" class="prop-btn prop-btn-edit">Edit</a>'
         + '<button class="prop-btn prop-btn-delete" onclick="event.stopPropagation();deleteCourse(\'' + c.id + '\')">Delete</button>'
         + '</div>'
         + '</div>'
@@ -14522,7 +14522,7 @@ async function renderCourseStudents(courseId) {
 
     var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:12px;">'
       + '<a href="#" onclick="event.preventDefault();renderCourseList()" style="font-size:0.78rem;color:var(--muted);text-decoration:none;">&larr; Back to Courses</a>'
-      + '<a href="#" onclick="event.preventDefault();openCourseBuilder(\'' + escapeHtml(courseId) + '\')" class="prop-new" style="font-size:0.8rem;">Edit course</a>'
+      + '<a href="#" onclick="event.preventDefault();openCourseBuilder(\'' + escapeHtml(courseId) + '\', 3)" class="prop-new" style="font-size:0.8rem;">Edit course</a>'
       + '</div>'
       + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.5rem;font-weight:600;color:#1a3a52;margin-bottom:2px;">' + escapeHtml(course.title || 'Course') + '</div>'
       + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:var(--muted);margin-bottom:22px;">' + enrollments.length + ' enrolled student' + (enrollments.length === 1 ? '' : 's') + ' &middot; ' + totalLessons + ' lesson' + (totalLessons === 1 ? '' : 's') + '</div>';
@@ -14655,7 +14655,11 @@ function toggleStudentQuizDetail(detailId) {
 window.toggleStudentQuizDetail = toggleStudentQuizDetail;
 
 /* ── COURSE BUILDER ── */
-async function openCourseBuilder(courseId) {
+// step (optional): which builder step to land on. Defaults to 1 (Basics) for a
+// new course; Edit on an existing course passes 3 (Syllabus) so the coach lands
+// straight on modules/lessons/quizzes. renderCourseBuilder loads modules when
+// it renders Step 3 with a currentCourseId.
+async function openCourseBuilder(courseId, step) {
   courseStep = 1;
   courseObjectives = [];
   courseModules = [];
@@ -14673,6 +14677,8 @@ async function openCourseBuilder(courseId) {
         if (!courseData.enrollment_date_option) courseData.enrollment_date_option = 'always';
       }
     } catch (e) { /* use defaults */ }
+    // Jump to the requested step (e.g. Syllabus) only for an existing course.
+    if (step && step >= 1 && step <= 4) courseStep = step;
   } else {
     currentCourseId = null;
     courseData = { course_type: 'self-paced', enrollment_date_option: 'always' };
