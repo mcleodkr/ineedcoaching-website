@@ -14760,7 +14760,7 @@ function renderStep1() {
   html += '<div class="cb-ai-banner">'
     + '<div class="cb-ai-banner-copy"><strong>Start with a draft</strong>'
     + 'Share a topic and Coach Clarity will outline modules and lessons you can edit, reorder, or regenerate.</div>'
-    + '<button type="button" class="cb-ai-btn" onclick="cbOpenOutlineModal()">&#10022; Generate outline with AI</button>'
+    + '<button type="button" class="cb-ai-btn" onclick="cbOpenOutlineModal()">&#10022; Draft with Coach Clarity</button>'
     + '</div>';
 
   html += '<div class="cb-field"><label class="cb-label">Course Title</label>'
@@ -18827,7 +18827,7 @@ function submitSplitFromModal() {
 <!-- AI Course Outline Generator modal (Coach Clarity) -->
 <div id="outline-modal" class="modal" onclick="if(event.target===this)cbCloseOutlineModal()">
   <div class="modal-content">
-    <h3 class="modal-title">Generate outline with AI</h3>
+    <h3 class="modal-title">Draft with Coach Clarity</h3>
     <div class="modal-sub">Coach Clarity drafts a starting outline from your topic. You shape every field after, nothing is published automatically.</div>
     <div class="cb-field"><label class="cb-label">Course topic <span style="color:#c49a3c;">*</span></label>
       <input type="text" id="outline-topic" class="cb-input" placeholder="e.g. Building confident public speaking habits"></div>
