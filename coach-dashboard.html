@@ -15263,7 +15263,11 @@ async function cbApplyGeneratedOutline(outline) {
           title: m.title || '',
           description: m.summary || '',
           sort_order: startOrder + i,
-          topics_covered: [], learning_outcomes: [], suggested_activities: []
+          // Topics + outcomes come from the AI draft; Suggested Activities and
+          // Resources stay empty for the coach's own voice and materials.
+          topics_covered: Array.isArray(m.topics) ? m.topics : [],
+          learning_outcomes: Array.isArray(m.learning_outcomes) ? m.learning_outcomes : [],
+          suggested_activities: []
         })
       });
       if (!modRes.ok) continue;

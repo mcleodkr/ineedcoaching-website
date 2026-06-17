@@ -24,6 +24,12 @@ function stripDashes(str) {
     .trim();
 }
 
+function cleanStringList(arr) {
+  return (Array.isArray(arr) ? arr : [])
+    .map(function (s) { return stripDashes(typeof s === 'string' ? s : ''); })
+    .filter(function (s) { return s.length > 0; });
+}
+
 function cleanOutline(outline) {
   return {
     course_title: stripDashes(outline.course_title || ''),
@@ -32,6 +38,8 @@ function cleanOutline(outline) {
       return {
         title: stripDashes(m && m.title ? m.title : ''),
         summary: stripDashes(m && m.summary ? m.summary : ''),
+        topics: cleanStringList(m && m.topics),
+        learning_outcomes: cleanStringList(m && m.learning_outcomes),
         lessons: (m && Array.isArray(m.lessons) ? m.lessons : []).map(function (l) {
           return {
             title: stripDashes(l && l.title ? l.title : ''),
@@ -73,15 +81,23 @@ Return ONLY valid JSON. No preamble, no explanation, no markdown code fences. Th
   "course_title": "string",
   "course_description": "string",
   "modules": [
-    { "title": "string", "summary": "string",
-      "lessons": [ { "title": "string", "description": "string" } ] }
+    {
+      "title": "string",
+      "summary": "string",
+      "topics": ["string"],
+      "learning_outcomes": ["string"],
+      "lessons": [ { "title": "string", "description": "string" } ]
+    }
   ]
 }
 
 Structure rules:
 - Produce exactly ${numModules} module(s), in a logical progression from foundation to integration.
+- Give each module 3 to 5 entries in "topics" (the subjects that module covers).
+- Give each module 2 to 4 entries in "learning_outcomes" (what the student can do differently by the end of that module).
 - Give each module 3 to 5 lessons.
-- "course_description" is 2 to 3 sentences. "summary" is one sentence per module. "description" is one sentence per lesson.
+- "course_description" is 2 to 3 sentences. "summary" is one sentence per module. Each "topics" and "learning_outcomes" entry is a short phrase. "description" is one sentence per lesson.
+- Fill "topics", "learning_outcomes", and "lessons" for every module. Do not leave them empty.
 
 Language rules (follow exactly):
 - Use coaching language: forward-focused, strength-based, suggestive, never directive.
