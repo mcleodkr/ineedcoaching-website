@@ -15811,14 +15811,18 @@ async function cbAddLesson(modId) {
     if (countRes.ok) { existing = await countRes.json(); }
     var nextOrder = Array.isArray(existing) ? existing.length : 0;
 
+    // course_id is required: coach_course_lessons.course_id is NOT NULL and the
+    // INSERT RLS policy checks course_id IN (coach's own courses). Omitting it
+    // fails both and the lesson never saves.
     var postRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons', {
       method: 'POST', headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
-      body: JSON.stringify({ module_id: modId, title: title, description: '', order_index: nextOrder })
+      body: JSON.stringify({ course_id: currentCourseId, module_id: modId, title: title, description: '', order_index: nextOrder })
     });
 
     if (!postRes.ok) {
       var errBody = await postRes.json().catch(function() { return {}; });
       console.error('Lesson POST failed:', postRes.status, errBody);
+      if (titleInput) { titleInput.style.borderColor = '#c44'; titleInput.placeholder = 'Could not save lesson, please try again'; }
       return;
     }
 
