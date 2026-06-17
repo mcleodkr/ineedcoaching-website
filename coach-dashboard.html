@@ -16416,8 +16416,8 @@ function cbShowAIQuiz(lessonId) {
   // source. With no lesson body, Coach Clarity can still build from a document,
   // so the generator stays available with a hint instead of being hidden.
   var hint = lessonBody
-    ? 'Coach Clarity reads this lesson, its summary, reflection prompt, and the module learning outcomes, then drafts quiz questions. Just choose how many questions and build.'
-    : 'Write your lesson content first, then Coach Clarity can build your quiz. Or generate from a document below.';
+    ? 'Coach Clarity builds your quiz from this lesson, its summary, reflection prompt, and the module learning outcomes. Add a document below to include additional material.'
+    : 'Coach Clarity builds your quiz from this lesson. Write your lesson content, or add a document below to include as material.';
 
   container.innerHTML = '<div class="cb-section" style="margin-bottom:0;">'
     + '<div class="cb-section-title">&#10022; Coach Clarity Quiz Builder</div>'
@@ -16434,9 +16434,9 @@ function cbShowAIQuiz(lessonId) {
     + '</div>'
     + '<button onclick="cbGenerateAIQuiz(\'' + lessonId + '\')" class="cb-btn-next" style="width:100%;">&#10022; Build Quiz with Coach Clarity</button>'
     + '<div style="margin-top:14px;padding-top:12px;border-top:1px solid #f0ede6;">'
-    + '<label class="cb-label" style="font-size:0.72rem;">Or generate from a document instead</label>'
+    + '<label class="cb-label" style="font-size:0.72rem;">Add supplementary material (optional)</label>'
     + '<input type="file" id="ai-quiz-file-' + lessonId + '" accept=".pdf,.txt,.doc,.docx" style="font-size:0.8rem;margin-top:4px;">'
-    + '<div style="font-size:0.72rem;color:#9a9490;margin-top:4px;">Upload a PDF or document and Coach Clarity will build the quiz from it instead of the lesson.</div>'
+    + '<div style="font-size:0.72rem;color:#9a9490;margin-top:4px;">Upload a PDF or document (a worksheet, external resource, etc.) and Coach Clarity includes it alongside the lesson when building the quiz.</div>'
     + '</div>'
     + '<div id="ai-quiz-status-' + lessonId + '" style="font-size:0.82rem;margin-top:8px;"></div>'
     + '</div>';
@@ -16487,42 +16487,41 @@ function cbSetQuizCount(lessonId, count) {
 async function cbGenerateAIQuiz(lessonId) {
   var statusEl = $('ai-quiz-status-' + lessonId);
   var fileEl = $('ai-quiz-file-' + lessonId);
-  var content = '';
 
-  // Secondary source: if a document is uploaded, build from it instead of the
-  // lesson fields.
+  // Primary source: the lesson's own already-populated fields. Always included.
+  var bodyEl = document.querySelector('textarea[data-lesson-id="' + lessonId + '"][data-lesson-field="content"]');
+  var summaryEl = document.querySelector('textarea[data-lesson-id="' + lessonId + '"][data-lesson-field="description"]');
+  var reflEl = document.querySelector('textarea[data-lesson-id="' + lessonId + '"][data-lesson-field="reflection_prompt"]');
+  var titleEl = $('lesson-title-' + lessonId);
+  var modId = bodyEl ? bodyEl.dataset.modId : null;
+  var mod = (courseModules || []).find(function(m) { return m.id === modId; }) || {};
+  var outcomes = Array.isArray(mod.learning_outcomes) ? mod.learning_outcomes : [];
+  var lessonBody = bodyEl ? bodyEl.value.trim() : '';
+
+  var parts = [];
+  if (titleEl && titleEl.textContent.trim()) parts.push('Lesson title: ' + titleEl.textContent.trim());
+  if (summaryEl && summaryEl.value.trim()) parts.push('Lesson summary: ' + summaryEl.value.trim());
+  if (lessonBody) parts.push('Lesson content:\n' + lessonBody);
+  if (reflEl && reflEl.value.trim()) parts.push('Reflection prompt: ' + reflEl.value.trim());
+  if (outcomes.length) parts.push('Module learning outcomes:\n- ' + outcomes.join('\n- '));
+  var lessonContent = parts.join('\n\n');
+
+  // Supplementary source: an uploaded document, layered in on top of the lesson.
+  var additional = '';
   if (fileEl && fileEl.files && fileEl.files.length > 0) {
     if (statusEl) { statusEl.textContent = 'Reading your document...'; statusEl.style.color = '#8a8a9a'; }
     try {
-      content = (await cbExtractFileText(fileEl.files[0]) || '').trim();
-    } catch (e) { console.error('Quiz document read error:', e); content = ''; }
-    if (!content) {
-      if (statusEl) { statusEl.textContent = 'Could not read that document. Try another file, or build from the lesson.'; statusEl.style.color = '#c44'; }
+      additional = (await cbExtractFileText(fileEl.files[0]) || '').trim();
+    } catch (e) { console.error('Quiz document read error:', e); additional = ''; }
+    if (!additional) {
+      if (statusEl) { statusEl.textContent = 'Could not read that document. Try another file, or build from the lesson alone.'; statusEl.style.color = '#c44'; }
       return;
     }
-  } else {
-    // Primary source: the lesson's own already-populated fields.
-    var bodyEl = document.querySelector('textarea[data-lesson-id="' + lessonId + '"][data-lesson-field="content"]');
-    var summaryEl = document.querySelector('textarea[data-lesson-id="' + lessonId + '"][data-lesson-field="description"]');
-    var reflEl = document.querySelector('textarea[data-lesson-id="' + lessonId + '"][data-lesson-field="reflection_prompt"]');
-    var titleEl = $('lesson-title-' + lessonId);
-    var modId = bodyEl ? bodyEl.dataset.modId : null;
-    var mod = (courseModules || []).find(function(m) { return m.id === modId; }) || {};
-    var outcomes = Array.isArray(mod.learning_outcomes) ? mod.learning_outcomes : [];
+  }
 
-    var lessonBody = bodyEl ? bodyEl.value.trim() : '';
-    if (!lessonBody) {
-      if (statusEl) { statusEl.textContent = 'Write your lesson content first, or upload a document below.'; statusEl.style.color = '#c44'; }
-      return;
-    }
-
-    var parts = [];
-    if (titleEl && titleEl.textContent.trim()) parts.push('Lesson title: ' + titleEl.textContent.trim());
-    if (summaryEl && summaryEl.value.trim()) parts.push('Lesson summary: ' + summaryEl.value.trim());
-    parts.push('Lesson content:\n' + lessonBody);
-    if (reflEl && reflEl.value.trim()) parts.push('Reflection prompt: ' + reflEl.value.trim());
-    if (outcomes.length) parts.push('Module learning outcomes:\n- ' + outcomes.join('\n- '));
-    content = parts.join('\n\n');
+  if (!lessonContent && !additional) {
+    if (statusEl) { statusEl.textContent = 'Write your lesson content first, or add a document below.'; statusEl.style.color = '#c44'; }
+    return;
   }
 
   if (statusEl) { statusEl.textContent = 'Coach Clarity is building your quiz questions...'; statusEl.style.color = '#8a8a9a'; }
@@ -16531,7 +16530,7 @@ async function cbGenerateAIQuiz(lessonId) {
     var res = await fetch('/api/generate-quiz', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: content.substring(0, 6000), num_questions: _quizCounts[lessonId] === 0 ? (parseInt(($('ai-quiz-custom-count-' + lessonId) || {}).value) || 8) : (_quizCounts[lessonId] || 8) })
+      body: JSON.stringify({ content: lessonContent, additional_material: additional, num_questions: _quizCounts[lessonId] === 0 ? (parseInt(($('ai-quiz-custom-count-' + lessonId) || {}).value) || 8) : (_quizCounts[lessonId] || 8) })
     });
 
     if (!res.ok) {

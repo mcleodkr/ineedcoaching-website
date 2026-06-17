@@ -10,12 +10,25 @@ export default async function handler(req, res) {
   if (!ANTHROPIC_KEY) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
 
   try {
-    const { content, num_questions, coach_id } = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    if (!content) return res.status(400).json({ error: 'Missing content' });
+    const { content, additional_material, num_questions, coach_id } = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const lesson = (content || '').toString().trim();
+    const extra = (additional_material || '').toString().trim();
+    if (!lesson && !extra) return res.status(400).json({ error: 'Missing content' });
 
     const questionCount = parseInt(num_questions) || 8;
     const model = 'claude-sonnet-4-6';
     const startTime = Date.now();
+
+    // Lesson content is the primary source. An uploaded document, when present,
+    // is supplementary material layered in on top of it.
+    const userParts = [];
+    if (lesson) userParts.push('Lesson material (primary source):\n' + lesson.substring(0, 6000));
+    if (extra) userParts.push('Additional course material (supplementary — e.g. a worksheet or external resource):\n' + extra.substring(0, 4000));
+    const userMessage = 'Generate quiz questions from the following.\n\n' + userParts.join('\n\n');
+
+    const weighting = extra
+      ? ' Draw questions primarily from the lesson material, and incorporate relevant points from the additional course material where they add depth. Keep the lesson as the main source.'
+      : '';
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -27,8 +40,8 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model,
         max_tokens: 2000,
-        system: `You are a coaching education expert. Generate quiz questions from the provided content. Return ONLY valid JSON with no markdown, no backticks, just raw JSON: { "title": "string", "questions": [ { "type": "multiple_choice" or "true_false", "question": "string", "options": ["string"] (4 options for mc, ["True","False"] for tf), "correct_answer": "string", "explanation": "string" } ] }. Generate exactly ${questionCount} thoughtful practical questions.`,
-        messages: [{ role: 'user', content: 'Generate quiz questions from this content:\n\n' + content.substring(0, 6000) }],
+        system: `You are a coaching education expert. Generate quiz questions from the provided content. Return ONLY valid JSON with no markdown, no backticks, just raw JSON: { "title": "string", "questions": [ { "type": "multiple_choice" or "true_false", "question": "string", "options": ["string"] (4 options for mc, ["True","False"] for tf), "correct_answer": "string", "explanation": "string" } ] }. Generate exactly ${questionCount} thoughtful practical questions.${weighting}`,
+        messages: [{ role: 'user', content: userMessage }],
       }),
     });
 
