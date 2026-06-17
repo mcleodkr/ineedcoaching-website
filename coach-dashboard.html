@@ -15210,6 +15210,20 @@ async function cbGenerateOutline() {
 
   if (!coachProfile || !coachProfile.id) { showErr('Your coach profile is still loading. Please try again in a moment.'); return; }
 
+  // Regenerate guard: if this course already has modules, warn the coach that
+  // generating replaces the current draft (and their edits to it) before we
+  // spend a generation. Asked up front so a cancel costs nothing.
+  if (currentCourseId) {
+    var existingCount = 0;
+    try {
+      var exRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_modules?course_id=eq.' + currentCourseId + '&select=id', { headers: apiHeaders() });
+      if (exRes.ok) { var exRows = await exRes.json(); existingCount = Array.isArray(exRows) ? exRows.length : 0; }
+    } catch (e) { /* if the check fails, fall through and let the coach proceed */ }
+    if (existingCount > 0 && !confirm('This course already has ' + existingCount + ' module(s). Generating a new outline replaces the current modules and their lessons, and any edits you have made to them will be lost. Continue?')) {
+      return;
+    }
+  }
+
   if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
   try {
     var res = await fetch('/api/generate-course-outline', {
@@ -15239,6 +15253,27 @@ window.cbGenerateOutline = cbGenerateOutline;
 // the SAME REST insert path the manual "+ Add Module" / "Add Lesson" buttons
 // use, so they render as fully editable cards. Saved as a draft only — never
 // published. The coach edits, deletes, reorders, or regenerates from here.
+// Delete every module (and its lessons + resources) for a course so a
+// regenerate replaces the draft rather than appending to it. Mirrors the delete
+// order in cbDeleteModule. Resets the in-memory module state too.
+async function cbClearCourseSyllabus(courseId) {
+  try {
+    var modRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_modules?course_id=eq.' + courseId + '&select=id', { headers: apiHeaders() });
+    var mods = modRes.ok ? await modRes.json() : [];
+    var ids = Array.isArray(mods) ? mods.map(function(m) { return m.id; }) : [];
+    if (ids.length) {
+      var inList = '(' + ids.join(',') + ')';
+      await fetch(SUPABASE_URL + '/rest/v1/coach_course_resources?module_id=in.' + inList, { method: 'DELETE', headers: apiHeaders() }).catch(function() {});
+      await fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons?module_id=in.' + inList, { method: 'DELETE', headers: apiHeaders() }).catch(function() {});
+      await fetch(SUPABASE_URL + '/rest/v1/coach_course_modules?course_id=eq.' + courseId, { method: 'DELETE', headers: apiHeaders() });
+    }
+  } catch (e) {
+    console.error('cbClearCourseSyllabus error:', e);
+  }
+  courseModules = [];
+  expandedModules = {};
+}
+
 async function cbApplyGeneratedOutline(outline) {
   courseData.title = outline.course_title || courseData.title || '';
   courseData.description = outline.course_description || courseData.description || '';
@@ -15250,8 +15285,14 @@ async function cbApplyGeneratedOutline(outline) {
   await cbSaveDraft();
   if (!currentCourseId) { alert('Could not save the course draft. Please try again.'); return; }
 
+  // Regenerate = replace: clear any existing modules/lessons/resources so a
+  // second generation produces one clean set instead of stacking duplicates.
+  // (The coach already confirmed the replace in cbGenerateOutline.) No-op on a
+  // first generation. Insert order then starts from 0.
+  await cbClearCourseSyllabus(currentCourseId);
+
   // Create modules + lessons via the existing insert path.
-  var startOrder = Array.isArray(courseModules) ? courseModules.length : 0;
+  var startOrder = 0;
   var modules = Array.isArray(outline.modules) ? outline.modules : [];
   for (var i = 0; i < modules.length; i++) {
     var m = modules[i];
