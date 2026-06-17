@@ -716,6 +716,21 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 #package-modal .modal-title, #coupon-modal .modal-title { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.4rem; font-weight: 700; color: var(--ink); margin-bottom: 14px; }
 #package-modal .modal-actions, #coupon-modal .modal-actions { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; align-items: center; }
 
+/* AI Course Outline Generator (Coach Clarity) */
+#outline-modal.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; z-index: 1200; padding: 16px; }
+#outline-modal.modal.is-open { display: flex; }
+#outline-modal .modal-content { background: var(--white); border-radius: 12px; padding: 28px 32px; max-width: 520px; width: 100%; box-shadow: 0 20px 48px rgba(0,0,0,0.2); max-height: 92vh; overflow-y: auto; }
+#outline-modal .modal-title { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.45rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+#outline-modal .modal-sub { font-size: 0.86rem; color: var(--muted); line-height: 1.5; margin-bottom: 18px; }
+#outline-modal .modal-actions { display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap; align-items: center; }
+#outline-modal #outline-error { display: none; color: #c44; font-size: 0.85rem; margin-top: 10px; }
+.cb-ai-btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; background: var(--gold); color: #1a3a52; border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; }
+.cb-ai-btn:hover { background: #a87d1f; color: #fff; }
+.cb-ai-btn:disabled { opacity: 0.55; cursor: default; }
+.cb-ai-banner { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; background: linear-gradient(135deg, #fbf6ea 0%, #f7f4ee 100%); border: 1px solid #e8dfc0; border-radius: 10px; padding: 16px 18px; margin-bottom: 22px; }
+.cb-ai-banner-copy { font-size: 0.86rem; color: #1a3a52; line-height: 1.5; max-width: 340px; }
+.cb-ai-banner-copy strong { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.05rem; display: block; margin-bottom: 2px; }
+
 </style>
 <style data-MOBILE_NAV_HAMBURGER_v1>
 /* Mobile hamburger nav */
@@ -14740,6 +14755,14 @@ function renderStep1() {
   var html = '<div class="cb-section">'
     + '<div class="cb-section-title">Course Basics</div>';
 
+  // AI outline draft — removes the blank-page barrier. Topic in, editable
+  // outline out. Coach Clarity drafts; the coach shapes everything after.
+  html += '<div class="cb-ai-banner">'
+    + '<div class="cb-ai-banner-copy"><strong>Start with a draft</strong>'
+    + 'Share a topic and Coach Clarity will outline modules and lessons you can edit, reorder, or regenerate.</div>'
+    + '<button type="button" class="cb-ai-btn" onclick="cbOpenOutlineModal()">&#10022; Generate outline with AI</button>'
+    + '</div>';
+
   html += '<div class="cb-field"><label class="cb-label">Course Title</label>'
     + '<input type="text" id="cb-title" class="cb-input" value="' + escapeHtml(d.title || '') + '" placeholder="e.g. Mindful Leadership Masterclass" oninput="cbAutoSlug()"></div>';
 
@@ -15149,6 +15172,120 @@ async function cbSaveDraft() {
     if (status) { status.textContent = 'Error'; status.style.color = '#c44'; }
   }
 }
+
+/* ── AI OUTLINE GENERATOR (Coach Clarity) ── */
+function cbOpenOutlineModal() {
+  var m = $('outline-modal');
+  if (!m) return;
+  var titleEl = $('cb-title');
+  if ($('outline-topic')) $('outline-topic').value = (titleEl && titleEl.value.trim()) || '';
+  if ($('outline-audience')) $('outline-audience').value = '';
+  if ($('outline-outcome')) $('outline-outcome').value = '';
+  if ($('outline-modules')) $('outline-modules').value = '5';
+  var err = $('outline-error'); if (err) { err.style.display = 'none'; err.textContent = ''; }
+  m.classList.add('is-open');
+  setTimeout(function() { var t = $('outline-topic'); if (t) t.focus(); }, 40);
+}
+window.cbOpenOutlineModal = cbOpenOutlineModal;
+
+function cbCloseOutlineModal() {
+  var m = $('outline-modal');
+  if (m) m.classList.remove('is-open');
+}
+window.cbCloseOutlineModal = cbCloseOutlineModal;
+
+async function cbGenerateOutline() {
+  var btn = $('outline-generate-btn');
+  var err = $('outline-error');
+  function showErr(msg) { if (err) { err.textContent = msg; err.style.display = 'block'; } }
+  if (err) { err.style.display = 'none'; err.textContent = ''; }
+
+  var topic = ($('outline-topic').value || '').trim();
+  if (!topic) { showErr('Please enter a course topic.'); var tf = $('outline-topic'); if (tf) tf.focus(); return; }
+  var audience = ($('outline-audience').value || '').trim();
+  var outcome = ($('outline-outcome').value || '').trim();
+  var numModules = parseInt($('outline-modules').value, 10);
+  if (!Number.isFinite(numModules)) numModules = 5;
+  numModules = Math.max(1, Math.min(12, numModules));
+
+  if (!coachProfile || !coachProfile.id) { showErr('Your coach profile is still loading. Please try again in a moment.'); return; }
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
+  try {
+    var res = await fetch('/api/generate-course-outline', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic: topic, audience: audience, outcome: outcome, num_modules: numModules, coachId: coachProfile.id })
+    });
+    var data = await res.json().catch(function() { return null; });
+    if (!res.ok || !data || !data.outline) {
+      showErr((data && data.error) || 'Outline generation failed. Please try again.');
+      if (btn) { btn.disabled = false; btn.textContent = 'Generate outline'; }
+      return;
+    }
+    if (btn) btn.textContent = 'Adding to builder...';
+    await cbApplyGeneratedOutline(data.outline);
+    cbCloseOutlineModal();
+  } catch (e) {
+    showErr('Something went wrong. Please try again.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Generate outline'; }
+  }
+}
+window.cbGenerateOutline = cbGenerateOutline;
+
+// Populate the existing builder from a generated outline. Title and
+// description go into the basics form; modules and lessons are created through
+// the SAME REST insert path the manual "+ Add Module" / "Add Lesson" buttons
+// use, so they render as fully editable cards. Saved as a draft only — never
+// published. The coach edits, deletes, reorders, or regenerates from here.
+async function cbApplyGeneratedOutline(outline) {
+  courseData.title = outline.course_title || courseData.title || '';
+  courseData.description = outline.course_description || courseData.description || '';
+  var titleEl = $('cb-title'); if (titleEl) titleEl.value = courseData.title;
+  var descEl = $('cb-desc'); if (descEl) descEl.value = courseData.description;
+
+  // Persist basics to obtain a course id (existing draft-save path).
+  cbCollectStepData();
+  await cbSaveDraft();
+  if (!currentCourseId) { alert('Could not save the course draft. Please try again.'); return; }
+
+  // Create modules + lessons via the existing insert path.
+  var startOrder = Array.isArray(courseModules) ? courseModules.length : 0;
+  var modules = Array.isArray(outline.modules) ? outline.modules : [];
+  for (var i = 0; i < modules.length; i++) {
+    var m = modules[i];
+    try {
+      var modRes = await fetch(SUPABASE_URL + '/rest/v1/coach_course_modules', {
+        method: 'POST', headers: { ...apiHeaders(), 'Prefer': 'return=representation' },
+        body: JSON.stringify({
+          course_id: currentCourseId,
+          title: m.title || '',
+          description: m.summary || '',
+          sort_order: startOrder + i,
+          topics_covered: [], learning_outcomes: [], suggested_activities: []
+        })
+      });
+      if (!modRes.ok) continue;
+      var modRows = await modRes.json();
+      var modId = Array.isArray(modRows) && modRows.length ? modRows[0].id : null;
+      if (!modId) continue;
+      var lessons = Array.isArray(m.lessons) ? m.lessons : [];
+      // order_index is explicit, so lessons can be inserted concurrently.
+      await Promise.all(lessons.map(function(l, j) {
+        return fetch(SUPABASE_URL + '/rest/v1/coach_course_lessons', {
+          method: 'POST', headers: { ...apiHeaders(), 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ module_id: modId, title: l.title || '', description: l.description || '', order_index: j })
+        }).catch(function() {});
+      }));
+    } catch (e) { /* skip a failed module, keep going */ }
+  }
+
+  // Jump to the Syllabus step so the editable cards render.
+  courseStep = 3;
+  renderCourseBuilder();
+}
+window.cbApplyGeneratedOutline = cbApplyGeneratedOutline;
 
 async function cbNext() {
   cbCollectStepData();
@@ -18629,6 +18766,27 @@ function submitSplitFromModal() {
     <div style="display:flex;justify-content:flex-end;gap:10px;padding:16px 24px;border-top:1px solid #edeae4;background:#fdfbf8;border-radius:0 0 12px 12px;">
       <button id="session-type-modal-cancel" style="padding:9px 18px;background:none;border:1px solid #edeae4;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:600;color:#9a9490;cursor:pointer;">Cancel</button>
       <button id="session-type-modal-save" class="save-btn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI Course Outline Generator modal (Coach Clarity) -->
+<div id="outline-modal" class="modal" onclick="if(event.target===this)cbCloseOutlineModal()">
+  <div class="modal-content">
+    <h3 class="modal-title">Generate outline with AI</h3>
+    <div class="modal-sub">Coach Clarity drafts a starting outline from your topic. You shape every field after, nothing is published automatically.</div>
+    <div class="cb-field"><label class="cb-label">Course topic <span style="color:#c49a3c;">*</span></label>
+      <input type="text" id="outline-topic" class="cb-input" placeholder="e.g. Building confident public speaking habits"></div>
+    <div class="cb-field"><label class="cb-label">Who it's for (optional)</label>
+      <input type="text" id="outline-audience" class="cb-input" placeholder="e.g. New managers stepping into leadership"></div>
+    <div class="cb-field"><label class="cb-label">What they'll do differently by the end (optional)</label>
+      <textarea id="outline-outcome" class="cb-textarea" style="min-height:70px;" placeholder="e.g. Lead a meeting and give feedback with ease"></textarea></div>
+    <div class="cb-field"><label class="cb-label">Number of modules (optional)</label>
+      <input type="number" id="outline-modules" class="cb-input" min="1" max="12" step="1" value="5" style="max-width:120px;"></div>
+    <div id="outline-error"></div>
+    <div class="modal-actions">
+      <button type="button" class="cb-ai-btn" id="outline-generate-btn" onclick="cbGenerateOutline()">Generate outline</button>
+      <button type="button" class="cal-btn-link" onclick="cbCloseOutlineModal()" style="background:none;border:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer;padding:8px 12px;text-decoration:underline;">Cancel</button>
     </div>
   </div>
 </div>
