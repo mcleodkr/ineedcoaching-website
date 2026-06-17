@@ -15337,6 +15337,105 @@ async function cbApplyGeneratedOutline(outline) {
 }
 window.cbApplyGeneratedOutline = cbApplyGeneratedOutline;
 
+/* ── COACH CLARITY LESSON + ACTIVITY GENERATION (Tier 2) ── */
+// Write a lesson body + reflection prompt for one lesson. Populates the
+// existing editable fields; does not auto-save (the lesson fields persist via
+// their normal blur-autosave when the coach reviews and saves).
+async function cbWriteLesson(lessonId, modId) {
+  var btn = $('cc-lesson-btn-' + lessonId);
+  var titleEl = $('lesson-title-' + lessonId);
+  var lessonTitle = titleEl ? (titleEl.textContent || '').trim() : '';
+  if (!lessonTitle) { alert('Give this lesson a title first.'); return; }
+  var summaryEl = document.querySelector('textarea[data-lesson-id="' + lessonId + '"][data-lesson-field="description"]');
+  var bodyEl = document.querySelector('textarea[data-lesson-id="' + lessonId + '"][data-lesson-field="content"]');
+  var reflEl = document.querySelector('textarea[data-lesson-id="' + lessonId + '"][data-lesson-field="reflection_prompt"]');
+  var mod = (courseModules || []).find(function(m) { return m.id === modId; }) || {};
+  var origLabel = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = 'Writing...'; }
+  try {
+    var res = await fetch('/api/generate-lesson-content', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mode: 'lesson',
+        coachId: coachProfile && coachProfile.id,
+        lesson_title: lessonTitle,
+        lesson_summary: summaryEl ? summaryEl.value.trim() : '',
+        module_title: mod.title || '',
+        module_description: mod.description || '',
+        course_title: courseData.title || '',
+        course_topic: courseData.description || ''
+      })
+    });
+    var data = await res.json().catch(function() { return null; });
+    if (!res.ok || !data || !data.lesson_body) {
+      alert((data && data.error) || 'Could not write the lesson. Please try again.');
+      return;
+    }
+    // Populate editable fields only — coach reviews then saves normally.
+    cbLessonTab(lessonId, 'write');
+    if (bodyEl) bodyEl.value = data.lesson_body;
+    if (reflEl && data.reflection_prompt) reflEl.value = data.reflection_prompt;
+  } catch (e) {
+    alert('Something went wrong. Please try again.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = origLabel || '&#10022; Write Lesson with Coach Clarity'; }
+  }
+}
+window.cbWriteLesson = cbWriteLesson;
+
+// Re-render just one module's Suggested Activities list from in-memory state,
+// without touching its lessons (avoids the full-list re-render).
+function cbRenderActivities(modId) {
+  var mod = (courseModules || []).find(function(m) { return m.id === modId; });
+  var cont = $('mod-activities-' + modId);
+  if (!mod || !cont) return;
+  var activities = Array.isArray(mod.suggested_activities) ? mod.suggested_activities : [];
+  var html = '';
+  activities.forEach(function(a, ai) {
+    html += '<div class="cb-bullet-item"><span class="cb-bullet-dot"></span><span>' + escapeHtml(a) + '</span>'
+      + '<button onclick="cbRemoveListItem(\'' + modId + '\',\'suggested_activities\',' + ai + ')">&times;</button></div>';
+  });
+  cont.innerHTML = html;
+}
+
+// Suggest 3 practice activities for a module. Appends them to the in-memory
+// Suggested Activities list as editable/deletable items. Does not auto-save:
+// they persist through the existing per-item save when the coach edits the list.
+async function cbWriteActivities(modId) {
+  var btn = $('cc-activities-btn-' + modId);
+  var mod = (courseModules || []).find(function(m) { return m.id === modId; });
+  if (!mod) return;
+  var origLabel = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = 'Writing...'; }
+  try {
+    var res = await fetch('/api/generate-lesson-content', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mode: 'activities',
+        coachId: coachProfile && coachProfile.id,
+        module_title: mod.title || '',
+        module_description: mod.description || '',
+        course_title: courseData.title || '',
+        topics: Array.isArray(mod.topics_covered) ? mod.topics_covered : [],
+        learning_outcomes: Array.isArray(mod.learning_outcomes) ? mod.learning_outcomes : []
+      })
+    });
+    var data = await res.json().catch(function() { return null; });
+    if (!res.ok || !data || !Array.isArray(data.activities) || !data.activities.length) {
+      alert((data && data.error) || 'Could not write activities. Please try again.');
+      return;
+    }
+    var existing = Array.isArray(mod.suggested_activities) ? mod.suggested_activities : [];
+    mod.suggested_activities = existing.concat(data.activities);
+    cbRenderActivities(modId);
+  } catch (e) {
+    alert('Something went wrong. Please try again.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = origLabel || '&#10022; Write with Coach Clarity'; }
+  }
+}
+window.cbWriteActivities = cbWriteActivities;
+
 async function cbNext() {
   cbCollectStepData();
   if (courseStep === 1 && !currentCourseId) {
@@ -15526,7 +15625,8 @@ function renderModulesList(container, skipSubLoads) {
       });
       html += '</div>'
         + '<div class="cb-add-row"><input type="text" class="cb-input" id="mod-activity-input-' + mod.id + '" placeholder="Add an activity..." onkeydown="if(event.key===\'Enter\'){event.preventDefault();cbAddListItem(\'' + mod.id + '\',\'suggested_activities\',\'mod-activity-input-' + mod.id + '\');}">'
-        + '<button onclick="cbAddListItem(\'' + mod.id + '\',\'suggested_activities\',\'mod-activity-input-' + mod.id + '\')" style="padding:10px 18px;background:#1a3a52;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:0.85rem;font-weight:700;cursor:pointer;">Add</button></div>'
+        + '<button onclick="cbAddListItem(\'' + mod.id + '\',\'suggested_activities\',\'mod-activity-input-' + mod.id + '\')" style="padding:10px 18px;background:#1a3a52;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:0.85rem;font-weight:700;cursor:pointer;">Add</button>'
+        + '<button id="cc-activities-btn-' + mod.id + '" onclick="cbWriteActivities(\'' + mod.id + '\')" style="padding:10px 16px;background:#fff;color:#1a3a52;border:1.5px solid #1a3a52;border-radius:8px;font-family:inherit;font-size:0.85rem;font-weight:700;cursor:pointer;white-space:nowrap;">&#10022; Write with Coach Clarity</button></div>'
         + '</div>';
 
       // Lessons
@@ -15714,7 +15814,7 @@ async function cbLoadModuleLessons(modId) {
         // Header
         + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
         + '<span style="font-size:0.72rem;font-weight:800;color:#c49a3c;min-width:20px;">' + (idx + 1) + '</span>'
-        + '<span style="flex:1;font-weight:700;font-size:0.92rem;color:#1a3a52;">' + escapeHtml(l.title) + '</span>'
+        + '<span id="lesson-title-' + l.id + '" style="flex:1;font-weight:700;font-size:0.92rem;color:#1a3a52;">' + escapeHtml(l.title) + '</span>'
         + '<button onclick="cbDeleteLesson(\'' + modId + '\',\'' + l.id + '\')" style="background:none;border:none;color:#c44;cursor:pointer;font-size:0.9rem;padding:2px 6px;">&times;</button>'
         + '</div>'
 
@@ -15735,6 +15835,7 @@ async function cbLoadModuleLessons(modId) {
         + '<button onclick="cbLessonTab(\'' + l.id + '\',\'write\')" class="cb-lesson-tab' + (activeTab === 'write' ? ' active' : '') + '" id="lt-write-' + l.id + '">Write</button>'
         + '<button onclick="cbLessonTab(\'' + l.id + '\',\'video\')" class="cb-lesson-tab' + (activeTab === 'video' ? ' active' : '') + '" id="lt-video-' + l.id + '">Video</button>'
         + '<button onclick="cbLessonTab(\'' + l.id + '\',\'upload\')" class="cb-lesson-tab" id="lt-upload-' + l.id + '">Upload File</button>'
+        + '<button id="cc-lesson-btn-' + l.id + '" onclick="cbWriteLesson(\'' + l.id + '\',\'' + modId + '\')" style="margin-left:auto;padding:7px 14px;background:#fff;color:#1a3a52;border:1.5px solid #1a3a52;border-radius:6px;font-family:inherit;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;">&#10022; Write Lesson with Coach Clarity</button>'
         + '</div>'
         + '<div id="lp-write-' + l.id + '" style="display:' + (activeTab === 'write' ? 'block' : 'none') + ';"><textarea class="cb-input cb-lesson-autosave" data-lesson-id="' + l.id + '" data-lesson-field="content" data-mod-id="' + modId + '" placeholder="Write your lesson content here..." style="font-size:0.82rem;min-height:100px;resize:vertical;">' + escapeHtml(l.content || '') + '</textarea></div>'
         + '<div id="lp-video-' + l.id + '" style="display:' + (activeTab === 'video' ? 'block' : 'none') + ';"><input type="text" class="cb-input cb-lesson-autosave" data-lesson-id="' + l.id + '" data-lesson-field="video_url" data-mod-id="' + modId + '" value="' + escapeHtml(realVideoUrl) + '" placeholder="Paste video URL (YouTube, Vimeo, Zoom recording...)" style="font-size:0.82rem;"></div>'
@@ -15776,7 +15877,7 @@ async function cbLoadModuleLessons(modId) {
         + '<div id="quiz-area-' + l.id + '"><div style="font-size:0.82rem;color:#8a8a9a;">Loading quiz...</div></div>'
         + '<div id="quiz-buttons-' + l.id + '" style="display:flex;gap:8px;margin-top:8px;">'
         + '<button onclick="cbShowQuizBuilder(\'' + l.id + '\')" style="padding:7px 16px;background:#fff;color:#c49a3c;border:1.5px solid #c49a3c;border-radius:6px;font-family:inherit;font-size:0.78rem;font-weight:700;cursor:pointer;">Add Quiz</button>'
-        + '<button onclick="cbShowAIQuiz(\'' + l.id + '\')" style="padding:7px 16px;background:#fff;color:#1a3a52;border:1.5px solid #1a3a52;border-radius:6px;font-family:inherit;font-size:0.78rem;font-weight:700;cursor:pointer;">&#10022; AI Build Quiz</button>'
+        + '<button onclick="cbShowAIQuiz(\'' + l.id + '\')" style="padding:7px 16px;background:#fff;color:#1a3a52;border:1.5px solid #1a3a52;border-radius:6px;font-family:inherit;font-size:0.78rem;font-weight:700;cursor:pointer;">&#10022; Build Quiz with Coach Clarity</button>'
         + '</div>'
         + '<div id="quiz-builder-' + l.id + '" style="display:none;margin-top:12px;"></div>'
         + '<div id="ai-quiz-' + l.id + '" style="display:none;margin-top:12px;"></div>'
@@ -16269,7 +16370,7 @@ async function cbDeleteQuiz(lessonId, quizId) {
     if (btns) {
       btns.style.display = 'flex';
       btns.innerHTML = '<button onclick="cbShowQuizBuilder(\'' + lessonId + '\')" style="padding:7px 16px;background:#fff;color:#c49a3c;border:1.5px solid #c49a3c;border-radius:6px;font-family:inherit;font-size:0.78rem;font-weight:700;cursor:pointer;">Add Quiz</button>'
-        + '<button onclick="cbShowAIQuiz(\'' + lessonId + '\')" style="padding:7px 16px;background:#fff;color:#1a3a52;border:1.5px solid #1a3a52;border-radius:6px;font-family:inherit;font-size:0.78rem;font-weight:700;cursor:pointer;">&#10022; AI Build Quiz</button>';
+        + '<button onclick="cbShowAIQuiz(\'' + lessonId + '\')" style="padding:7px 16px;background:#fff;color:#1a3a52;border:1.5px solid #1a3a52;border-radius:6px;font-family:inherit;font-size:0.78rem;font-weight:700;cursor:pointer;">&#10022; Build Quiz with Coach Clarity</button>';
     }
     var builder = $('quiz-builder-' + lessonId);
     if (builder) builder.style.display = 'none';
