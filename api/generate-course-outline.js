@@ -11,7 +11,9 @@ import { logAIUsage } from '../lib/ai-usage.js';
 
 const DEFAULT_MODULES = 5;
 const MIN_MODULES = 1;
-const MAX_MODULES = 12;
+// Capped at 8: a single generation stays reliable (fully-populated modules) at
+// this size. Larger counts let the model thin out later modules.
+const MAX_MODULES = 8;
 
 // Gestalt vocabulary reframe. The system prompt asks the model to avoid these
 // words, but it occasionally slips (e.g. "Finding the Right Rhythm"). Acceptance
@@ -53,6 +55,28 @@ function cleanStringList(arr) {
   return (Array.isArray(arr) ? arr : [])
     .map(function (s) { return sanitizeCopy(typeof s === 'string' ? s : ''); })
     .filter(function (s) { return s.length > 0; });
+}
+
+// A module is usable only when it carries the structural backbone: at least one
+// topic, one learning outcome, and one lesson. Guards against the model leaving
+// later modules thin or empty at higher module counts.
+function moduleComplete(m) {
+  return !!m
+    && Array.isArray(m.topics) && m.topics.length >= 1
+    && Array.isArray(m.learning_outcomes) && m.learning_outcomes.length >= 1
+    && Array.isArray(m.lessons) && m.lessons.length >= 1;
+}
+
+function completeModuleCount(outline) {
+  if (!outline || !Array.isArray(outline.modules)) return 0;
+  return outline.modules.filter(moduleComplete).length;
+}
+
+function outlineComplete(outline) {
+  return !!outline
+    && Array.isArray(outline.modules)
+    && outline.modules.length >= 1
+    && outline.modules.every(moduleComplete);
 }
 
 function cleanOutline(outline) {
@@ -122,7 +146,7 @@ Structure rules:
 - Give each module 2 to 4 entries in "learning_outcomes" (what the student can do differently by the end of that module).
 - Give each module 3 to 5 lessons.
 - "course_description" is 2 to 3 sentences. "summary" is one sentence per module. Each "topics" and "learning_outcomes" entry is a short phrase. "description" is one sentence per lesson.
-- Fill "topics", "learning_outcomes", and "lessons" for every module. Do not leave them empty.
+- EVERY module must be fully populated. Do not leave any module's "topics", "learning_outcomes", or "lessons" empty, including the last module. Give the final modules the same depth as the first.
 
 Language rules (follow exactly):
 - Use coaching language: forward-focused, strength-based, suggestive, never directive.
@@ -136,63 +160,91 @@ Language rules (follow exactly):
     userParts.push(`Draft a ${numModules}-module course outline as JSON.`);
 
     const model = 'claude-sonnet-4-5-20250929';
-    const startTime = Date.now();
-    let claudeRes, claudeData;
-    try {
-      claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-          model,
-          max_tokens: 8192,
-          system,
-          messages: [{ role: 'user', content: userParts.join(' ') }],
-        }),
+
+    // One generation attempt: call Claude, log usage, defensively parse, clean.
+    // Returns a cleaned outline or null (API error / parse failure).
+    async function attemptOutline() {
+      const startTime = Date.now();
+      let claudeRes, claudeData;
+      try {
+        claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'x-api-key': ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            model,
+            max_tokens: 8192,
+            system,
+            messages: [{ role: 'user', content: userParts.join(' ') }],
+          }),
+        });
+        claudeData = await claudeRes.json().catch(function () { return null; });
+      } catch (err) {
+        await logAIUsage({ feature: 'course_outline', coachId, model, status: 'error', errorMessage: err && err.message, durationMs: Date.now() - startTime });
+        return null;
+      }
+
+      await logAIUsage({
+        feature: 'course_outline',
+        coachId,
+        model: (claudeData && claudeData.model) || model,
+        usage: claudeData && claudeData.usage,
+        requestId: claudeData && claudeData.id,
+        status: claudeRes.ok ? 'success' : 'error',
+        errorMessage: claudeRes.ok ? null : (claudeData && claudeData.error && claudeData.error.message),
+        durationMs: Date.now() - startTime,
       });
-      claudeData = await claudeRes.json().catch(function () { return null; });
-    } catch (err) {
-      await logAIUsage({ feature: 'course_outline', coachId, model, status: 'error', errorMessage: err && err.message, durationMs: Date.now() - startTime });
-      throw err;
+
+      if (!claudeRes.ok) {
+        console.error('[generate-course-outline] Claude error:', claudeRes.status, claudeData);
+        return null;
+      }
+
+      const responseText = (claudeData && claudeData.content && claudeData.content[0] && claudeData.content[0].text) || '';
+      // Defensive parse: strip any ```json fences, then take the first JSON object.
+      try {
+        const unfenced = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
+        const jsonMatch = unfenced.match(/\{[\s\S]*\}/);
+        const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(unfenced);
+        if (!parsed || !Array.isArray(parsed.modules) || !parsed.modules.length) return null;
+        return cleanOutline(parsed);
+      } catch (parseErr) {
+        console.error('[generate-course-outline] JSON parse failed:', parseErr.message);
+        return null;
+      }
     }
 
-    await logAIUsage({
-      feature: 'course_outline',
-      coachId,
-      model: (claudeData && claudeData.model) || model,
-      usage: claudeData && claudeData.usage,
-      requestId: claudeData && claudeData.id,
-      status: claudeRes.ok ? 'success' : 'error',
-      errorMessage: claudeRes.ok ? null : (claudeData && claudeData.error && claudeData.error.message),
-      durationMs: Date.now() - startTime,
-    });
+    // Consistency pass: try up to twice and keep the most complete result. The
+    // second attempt only runs when the first leaves a module thin, so the
+    // common (already-complete) case stays a single call.
+    let best = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const candidate = await attemptOutline();
+      if (!candidate) continue;
+      if (outlineComplete(candidate)) { best = candidate; break; }
+      if (!best || completeModuleCount(candidate) > completeModuleCount(best)) best = candidate;
+      console.warn('[generate-course-outline] attempt', attempt, 'incomplete:', completeModuleCount(candidate), 'of', candidate.modules.length, 'modules fully populated');
+    }
 
-    if (!claudeRes.ok) {
-      console.error('[generate-course-outline] Claude error:', claudeRes.status, claudeData);
+    if (!best) {
       return res.status(502).json({ error: 'Outline generation failed. Please try again.' });
     }
 
-    const responseText = (claudeData && claudeData.content && claudeData.content[0] && claudeData.content[0].text) || '';
-
-    // Defensive parse: strip any ```json fences, then take the first JSON object.
-    let outline;
-    try {
-      const unfenced = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
-      const jsonMatch = unfenced.match(/\{[\s\S]*\}/);
-      outline = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(unfenced);
-    } catch (parseErr) {
-      console.error('[generate-course-outline] JSON parse failed:', parseErr.message);
-      return res.status(500).json({ error: 'Could not read the generated outline. Please try again.' });
+    // Final guarantee: never hand the builder an empty module. Drop any module
+    // still missing its backbone so the coach only sees fully-populated cards.
+    const dropped = best.modules.length - completeModuleCount(best);
+    const outline = { ...best, modules: best.modules.filter(moduleComplete) };
+    if (!outline.modules.length) {
+      return res.status(502).json({ error: 'The generated outline was incomplete. Please try again.' });
+    }
+    if (dropped > 0) {
+      console.warn('[generate-course-outline] dropped', dropped, 'incomplete module(s) after retry');
     }
 
-    if (!outline || !Array.isArray(outline.modules) || !outline.modules.length) {
-      return res.status(500).json({ error: 'The generated outline was incomplete. Please try again.' });
-    }
-
-    return res.status(200).json({ success: true, outline: cleanOutline(outline) });
+    return res.status(200).json({ success: true, outline });
   } catch (e) {
     console.error('[generate-course-outline] Error:', e);
     return res.status(500).json({ error: e.message });
