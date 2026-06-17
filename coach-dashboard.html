@@ -15357,6 +15357,9 @@ async function cbWriteLesson(lessonId, modId) {
   var bodyEl = document.querySelector('textarea[data-lesson-id="' + lessonId + '"][data-lesson-field="content"]');
   var reflEl = document.querySelector('textarea[data-lesson-id="' + lessonId + '"][data-lesson-field="reflection_prompt"]');
   var mod = (courseModules || []).find(function(m) { return m.id === modId; }) || {};
+  // Regenerating overwrites the lesson body — confirm so an accidental re-click
+  // doesn't silently replace existing content (and burn tokens).
+  if (bodyEl && bodyEl.value.trim() && !confirm('This will replace your existing lesson content. Continue?')) return;
   var origLabel = btn ? btn.innerHTML : '';
   if (btn) { btn.disabled = true; btn.innerHTML = 'Writing...'; }
   try {
@@ -15416,13 +15419,17 @@ function cbRenderActivities(modId) {
   cont.innerHTML = html;
 }
 
-// Suggest 3 practice activities for a module. Appends them to the Suggested
-// Activities list as editable/deletable items and persists the array (a
+// Suggest 3 practice activities for a module. Replaces the Suggested
+// Activities list with editable/deletable items and persists the array (a
 // programmatic update never triggers a save on its own). Saves survive refresh.
 async function cbWriteActivities(modId) {
   var btn = $('cc-activities-btn-' + modId);
   var mod = (courseModules || []).find(function(m) { return m.id === modId; });
   if (!mod) return;
+  // Regenerating replaces existing activities — confirm so an accidental
+  // re-click doesn't silently discard the current list (and burn tokens).
+  var existingActivities = Array.isArray(mod.suggested_activities) ? mod.suggested_activities : [];
+  if (existingActivities.length && !confirm('This will replace your existing activities. Continue?')) return;
   var origLabel = btn ? btn.innerHTML : '';
   if (btn) { btn.disabled = true; btn.innerHTML = 'Writing...'; }
   try {
@@ -15444,8 +15451,7 @@ async function cbWriteActivities(modId) {
       alert((data && data.error) || 'Could not write activities. Please try again.');
       return;
     }
-    var existing = Array.isArray(mod.suggested_activities) ? mod.suggested_activities : [];
-    mod.suggested_activities = existing.concat(data.activities);
+    mod.suggested_activities = data.activities;
     cbRenderActivities(modId);
     // Persist the updated array (jsonb column), same shape as cbAddListItem.
     await fetch(SUPABASE_URL + '/rest/v1/coach_course_modules?id=eq.' + modId, {
@@ -16432,12 +16438,12 @@ function cbShowAIQuiz(lessonId) {
     + '</div>'
     + '<input type="number" id="ai-quiz-custom-count-' + lessonId + '" class="cb-input" min="1" max="30" value="8" placeholder="Number" style="display:none;width:80px;margin-top:6px;font-size:0.82rem;">'
     + '</div>'
-    + '<button onclick="cbGenerateAIQuiz(\'' + lessonId + '\')" class="cb-btn-next" style="width:100%;">&#10022; Build Quiz with Coach Clarity</button>'
     + '<div style="margin-top:14px;padding-top:12px;border-top:1px solid #f0ede6;">'
     + '<label class="cb-label" style="font-size:0.72rem;">Add supplementary material (optional)</label>'
     + '<input type="file" id="ai-quiz-file-' + lessonId + '" accept=".pdf,.txt,.doc,.docx" style="font-size:0.8rem;margin-top:4px;">'
     + '<div style="font-size:0.72rem;color:#9a9490;margin-top:4px;">Upload a PDF or document (a worksheet, external resource, etc.) and Coach Clarity includes it alongside the lesson when building the quiz.</div>'
     + '</div>'
+    + '<button onclick="cbGenerateAIQuiz(\'' + lessonId + '\')" class="cb-btn-next" style="width:100%;margin-top:14px;">&#10022; Build Quiz with Coach Clarity</button>'
     + '<div id="ai-quiz-status-' + lessonId + '" style="font-size:0.82rem;margin-top:8px;"></div>'
     + '</div>';
 }
@@ -16485,6 +16491,10 @@ function cbSetQuizCount(lessonId, count) {
 }
 
 async function cbGenerateAIQuiz(lessonId) {
+  // Regenerating replaces the lesson's existing quiz — confirm so an accidental
+  // re-click doesn't silently rebuild it (and burn tokens).
+  var existingQuiz = quizData[lessonId];
+  if (existingQuiz && existingQuiz.id && !confirm('This will replace your existing quiz. Continue?')) return;
   var statusEl = $('ai-quiz-status-' + lessonId);
   var fileEl = $('ai-quiz-file-' + lessonId);
 
