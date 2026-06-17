@@ -42,6 +42,9 @@
     "api/map-intake-submit.js": {
       "maxDuration": 180
     },
+    "api/generate-course-outline.js": {
+      "maxDuration": 120
+    },
     "api/*.js": {
       "maxDuration": 30
     }
