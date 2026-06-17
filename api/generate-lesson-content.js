@@ -186,7 +186,7 @@ export default async function handler(req, res) {
       : buildActivitiesPrompt(coachContext, ctxFields);
 
     const model = 'claude-sonnet-4-5-20250929';
-    const feature = mode === 'activities' ? 'lesson_activities' : 'lesson_content';
+    const feature = mode === 'activities' ? 'course_activities' : 'course_lesson';
     const startTime = Date.now();
     let claudeRes, claudeData;
     try {
