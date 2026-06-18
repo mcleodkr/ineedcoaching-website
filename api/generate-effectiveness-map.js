@@ -39,7 +39,10 @@ const SYNTHESIS_PROMPT = SYNTH.prompt;
 const PROMPT_VERSION = SYNTH.version; // '1.7.2'
 
 const MODEL = 'claude-sonnet-4-6';
-const MAX_TOKENS = 4000;
+// Raised 4000 -> 8000 for the prompt depth upgrades (6-8 sentence per-domain arc +
+// first_move + coach_recommended_focus). The therapy T7 depth alone ran output to
+// ~3954 tokens; the deeper coaching paragraphs plus the new coach-facing field run higher.
+const MAX_TOKENS = 8000;
 const PHASES = ['Dreaming', 'Building', 'Refining', 'Releasing', 'Sustaining'];
 const PRODUCT_CONTEXTS = ['coaching', 'therapy']; // default 'coaching' (ineedcoaching); 'therapy' = Sprixle
 const ANSWER_KEYS = [
