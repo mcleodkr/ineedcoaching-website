@@ -825,11 +825,119 @@
     return order;
   }
 
-  // A single Map's full body (opener + reading order + coach-only intel). idSuffix
-  // keeps every collapsible id unique across all cards on the page.
-  function effmapMapBodyHtml(m, idSuffix) {
+  /* =========================================================================
+     Longitudinal comparison layer (Ticket 3) — display-only, no AI call, no
+     endpoint. When a goal has ≥2 Maps, read the current Map against the
+     immediately preceding same-goal Map: per-domain status movement, phase
+     movement, and a plain-language pattern note computed from the data. All
+     same-goal comparison; never across goals.
+     ========================================================================= */
+  // A single domain's primary_status for one Map. Canonical path is
+  // explorer_facing_output.domain_statuses[domain].primary_status; falls back to
+  // the raw_output shapes (older Maps store the explorer blob differently) so the
+  // comparison reads consistently across v1.5 → v1.8 rows. Returns '' when absent.
+  function effmapPrimaryStatus(m, key) {
+    var efo = (m && m.explorer_facing_output && typeof m.explorer_facing_output === 'object') ? m.explorer_facing_output : {};
+    var ds = (efo.domain_statuses && typeof efo.domain_statuses === 'object') ? efo.domain_statuses : {};
+    var v = ds[key] && ds[key].primary_status;
+    if (v && String(v).trim()) return String(v).trim();
+    var raw = (m && m.raw_output && typeof m.raw_output === 'object') ? m.raw_output : {};
+    var ef = (raw.explorer_facing && typeof raw.explorer_facing === 'object') ? raw.explorer_facing : {};
+    var rds = (raw.domain_statuses && typeof raw.domain_statuses === 'object') ? raw.domain_statuses
+      : ((ef.domains && typeof ef.domains === 'object') ? ef.domains : {});
+    var rv = rds[key] && rds[key].primary_status;
+    return (rv && String(rv).trim()) ? String(rv).trim() : '';
+  }
+
+  // Build the comparison block for current vs previous Map (same goal). Returns ''
+  // (renders nothing — no error, no placeholder) unless both Maps carry a phase AND
+  // the preceding Map carries at least one domain primary_status.
+  function effmapComparisonHtml(curMap, prevMap) {
+    if (!curMap || !prevMap) return '';
+    var curPhase = curMap.phase && String(curMap.phase).trim();
+    var prevPhase = prevMap.phase && String(prevMap.phase).trim();
+    if (!curPhase || !prevPhase) return '';
+
+    // Part 1 — per-domain movement. Skip domains absent on both Maps.
+    var rows = [], heldNames = [], shiftedNames = [], prevHasStatus = false;
+    EFFMAP_DOMAINS.forEach(function(d) {
+      var prev = effmapPrimaryStatus(prevMap, d[0]);
+      var cur = effmapPrimaryStatus(curMap, d[0]);
+      if (prev) prevHasStatus = true;
+      if (!prev && !cur) return;
+      var held = !!(prev && cur && prev.toLowerCase() === cur.toLowerCase());
+      rows.push({ label: d[1], prev: prev, cur: cur, held: held });
+      if (held) heldNames.push(d[1] + ' (' + cur + ')');
+      else shiftedNames.push(d[1] + ' (' + (prev || '—') + ' → ' + (cur || '—') + ')');
+    });
+    if (!prevHasStatus || !rows.length) return '';
+
+    var rowHtml = rows.map(function(r) {
+      var movement = '<span style="color:var(--muted);">' + escapeHtml(r.prev || '—') + '</span>'
+        + ' <span style="color:var(--gold);">→</span> '
+        + '<span style="color:var(--gold);font-weight:600;">' + escapeHtml(r.cur || '—') + '</span>';
+      var badge = r.held
+        ? '<span style="flex:0 0 auto;font-size:0.62rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);">Held</span>'
+        : '<span style="flex:0 0 auto;font-size:0.62rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--gold);background:rgba(196,154,60,0.14);border-radius:999px;padding:2px 9px;">Shifted</span>';
+      return '<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin:0 0 8px;">'
+        + '<span style="flex:0 0 110px;font-family:\'Cormorant Garamond\',serif;font-size:0.92rem;font-weight:600;color:var(--navy);">' + escapeHtml(r.label) + '</span>'
+        + '<span style="flex:1;min-width:140px;font-size:0.85rem;line-height:1.5;">' + movement + '</span>'
+        + badge + '</div>';
+    }).join('');
+
+    // Part 2 — phase movement.
+    var phaseChanged = prevPhase.toLowerCase() !== curPhase.toLowerCase();
+    var phaseLine = '<div style="margin:12px 0 0;padding-top:10px;border-top:1px dashed var(--border);font-size:0.85rem;color:var(--ink);">'
+      + '<strong style="font-weight:600;color:var(--navy);">Phase:</strong> '
+      + '<span style="color:var(--muted);">' + escapeHtml(prevPhase) + '</span>'
+      + ' <span style="color:var(--gold);">→</span> '
+      + '<span style="color:var(--gold);font-weight:600;">' + escapeHtml(curPhase) + '</span>'
+      + (phaseChanged
+          ? ' <span style="font-size:0.62rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--gold);background:rgba(196,154,60,0.14);border-radius:999px;padding:2px 9px;margin-left:4px;">Movement</span>'
+          : ' <span style="font-size:0.62rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-left:4px;">Held</span>')
+      + '</div>';
+
+    // Part 3 — pattern note, computed from the held/shifted counts.
+    var held = heldNames.length;
+    var heldStr = heldNames.join(', ');
+    var shiftedStr = shiftedNames.join(', ');
+    var note;
+    if (held >= 4) {
+      note = 'The core pattern has been consistent across both Maps. '
+        + (heldStr ? heldStr + ' held steady. ' : '')
+        + 'Consistency across Maps can mean a pattern is stable and worth exploring directly in session.';
+    } else if (held >= 2) {
+      note = 'Some areas shifted between Maps and some held. '
+        + (shiftedStr ? shiftedStr + ' shifted' : '')
+        + (heldStr ? (shiftedStr ? '; ' : '') + heldStr + ' held' : '')
+        + '. The areas that shifted may reflect real movement; the areas that held may be worth sustained attention.';
+    } else {
+      note = 'Most areas shifted between Maps, which can reflect real change or different answers in different moments. '
+        + (shiftedStr ? shiftedStr + ' shifted. ' : '')
+        + 'A coach may want to explore what changed in the client’s experience between the two Maps.';
+    }
+    note += phaseChanged
+      ? ' Phase moved from ' + prevPhase + ' to ' + curPhase + '.'
+      : ' Phase held at ' + curPhase + '.';
+
+    var prevDate = effmapDate(prevMap.created_at);
+    var heading = prevDate ? 'Progress since ' + prevDate : 'Since the last Map';
+    return '<div style="margin:20px 0 0;padding:16px 18px;background:var(--cream);border:1px solid var(--border);border-radius:var(--r-sm);">'
+      + '<div style="font-size:0.7rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);margin-bottom:12px;">' + escapeHtml(heading) + '</div>'
+      + rowHtml
+      + phaseLine
+      + '<p style="margin:12px 0 0;font-size:0.85rem;line-height:1.6;color:var(--ink);">' + escapeHtml(note) + '</p>'
+      + '</div>';
+  }
+
+  // A single Map's full body (opener + reading order + optional comparison layer +
+  // coach-only intel). idSuffix keeps every collapsible id unique across all cards.
+  // comparisonHtml (Ticket 3) is inserted ABOVE Intelligence Notes; passed only for
+  // the current Map of a multi-Map goal, '' otherwise.
+  function effmapMapBodyHtml(m, idSuffix, comparisonHtml) {
     return effmapOpenerHtml(m)
       + effmapReadingOrderHtml(m)
+      + (comparisonHtml || '')
       + effmapCollapsible('effmap-intel-' + idSuffix, 'Intelligence Notes (coach only)', effmapIntelHtml(m, idSuffix));
   }
 
@@ -849,7 +957,10 @@
       +   '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.25rem;font-weight:600;color:var(--navy);line-height:1.2;">' + escapeHtml(group.goal) + '</div>'
       + '</div>' + updateBtn
       + '</div>';
-    var body = effmapMapBodyHtml(primary, gi + '-0');
+    // Ticket 3: comparison layer for the current Map vs the immediately preceding
+    // same-goal Map (maps[1]). Renders nothing for single-Map goals.
+    var comparison = maps.length >= 2 ? effmapComparisonHtml(primary, maps[1]) : '';
+    var body = effmapMapBodyHtml(primary, gi + '-0', comparison);
     // Earlier Maps for THIS goal — each collapsible, full render inside.
     var older = maps.slice(1).map(function(m, ri) {
       var mi = ri + 1;

@@ -1208,7 +1208,9 @@ function effmapOpenerHtml(m) {
 // Reads ONLY from explorer_facing_output, so it carries no coach-only content:
 // domain snapshots, The Whole Picture, How this shows up, Where the load is
 // moving, In short, the release question, the status chips, and the legend.
-function effmapReadingOrderHtml(m) {
+// comparisonHtml (Ticket 3) is inserted directly below the "In short" summary and
+// above the release question; passed only for a goal's current Map, '' otherwise.
+function effmapReadingOrderHtml(m, comparisonHtml) {
   var efo = (m && m.explorer_facing_output && typeof m.explorer_facing_output === 'object') ? m.explorer_facing_output : {};
   var ds = (efo.domain_statuses && typeof efo.domain_statuses === 'object') ? efo.domain_statuses : {};
   var out = '';
@@ -1266,6 +1268,9 @@ function effmapReadingOrderHtml(m) {
         + csRows + '</div>';
     }
   }
+
+  // Ticket 3: comparison layer — below "In short", above the release question.
+  if (comparisonHtml) out += comparisonHtml;
 
   var rq = efo.release_question && efo.release_question.question;
   if (rq && String(rq).trim()) {
@@ -1337,6 +1342,97 @@ function groupMapsByGoal(maps) {
   return order;
 }
 
+/* ================================================
+   Longitudinal comparison layer (Ticket 3) — client view. Display-only, no AI
+   call, no endpoint. When a goal has ≥2 Maps, compares the current Map against the
+   immediately preceding same-goal Map. Client-facing language only (no coach or
+   clinical terminology). Same-goal only; never across goals.
+   ================================================ */
+function effmapPrimaryStatus(m, key) {
+  var efo = (m && m.explorer_facing_output && typeof m.explorer_facing_output === 'object') ? m.explorer_facing_output : {};
+  var ds = (efo.domain_statuses && typeof efo.domain_statuses === 'object') ? efo.domain_statuses : {};
+  var v = ds[key] && ds[key].primary_status;
+  return (v && String(v).trim()) ? String(v).trim() : '';
+}
+
+// Returns '' (renders nothing) unless both Maps carry a phase AND the preceding Map
+// carries at least one primary_status.
+function effmapComparisonHtml(curMap, prevMap) {
+  if (!curMap || !prevMap) return '';
+  var curPhase = curMap.phase && String(curMap.phase).trim();
+  var prevPhase = prevMap.phase && String(prevMap.phase).trim();
+  if (!curPhase || !prevPhase) return '';
+
+  var rows = [], heldNames = [], shiftedNames = [], prevHasStatus = false;
+  EFFMAP_DOMAINS.forEach(function(d) {
+    var prev = effmapPrimaryStatus(prevMap, d[0]);
+    var cur = effmapPrimaryStatus(curMap, d[0]);
+    if (prev) prevHasStatus = true;
+    if (!prev && !cur) return;
+    var held = !!(prev && cur && prev.toLowerCase() === cur.toLowerCase());
+    rows.push({ label: d[1], prev: prev, cur: cur, held: held });
+    if (held) heldNames.push(d[1] + ' (' + cur + ')');
+    else shiftedNames.push(d[1] + ' (' + (prev || '—') + ' → ' + (cur || '—') + ')');
+  });
+  if (!prevHasStatus || !rows.length) return '';
+
+  var rowHtml = rows.map(function(r) {
+    var movement = '<span style="color:var(--muted);">' + escapeHtml(r.prev || '—') + '</span>'
+      + ' <span style="color:var(--gold);">→</span> '
+      + '<span style="color:var(--gold);font-weight:600;">' + escapeHtml(r.cur || '—') + '</span>';
+    var badge = r.held
+      ? '<span style="flex:0 0 auto;font-size:0.62rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);">Held</span>'
+      : '<span style="flex:0 0 auto;font-size:0.62rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--gold);background:rgba(196,154,60,0.14);border-radius:999px;padding:2px 9px;">Shifted</span>';
+    return '<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin:0 0 8px;">'
+      + '<span style="flex:0 0 110px;font-family:\'Cormorant Garamond\',serif;font-size:0.92rem;font-weight:600;color:var(--navy);">' + escapeHtml(r.label) + '</span>'
+      + '<span style="flex:1;min-width:140px;font-size:0.85rem;line-height:1.5;">' + movement + '</span>'
+      + badge + '</div>';
+  }).join('');
+
+  var phaseChanged = prevPhase.toLowerCase() !== curPhase.toLowerCase();
+  var phaseLine = '<div style="margin:12px 0 0;padding-top:10px;border-top:1px dashed var(--border);font-size:0.85rem;color:var(--ink);">'
+    + '<strong style="font-weight:600;color:var(--navy);">Phase:</strong> '
+    + '<span style="color:var(--muted);">' + escapeHtml(prevPhase) + '</span>'
+    + ' <span style="color:var(--gold);">→</span> '
+    + '<span style="color:var(--gold);font-weight:600;">' + escapeHtml(curPhase) + '</span>'
+    + (phaseChanged
+        ? ' <span style="font-size:0.62rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--gold);background:rgba(196,154,60,0.14);border-radius:999px;padding:2px 9px;margin-left:4px;">Movement</span>'
+        : ' <span style="font-size:0.62rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-left:4px;">Held</span>')
+    + '</div>';
+
+  // Plain-language pattern note (client-facing, suggestive tone).
+  var held = heldNames.length;
+  var heldStr = heldNames.join(', ');
+  var shiftedStr = shiftedNames.join(', ');
+  var note;
+  if (held >= 4) {
+    note = 'The heart of your Map has stayed steady across both. '
+      + (heldStr ? heldStr + ' held steady. ' : '')
+      + 'When areas stay consistent across two Maps, it can be a sign of a pattern that has settled in — and one that may be worth sitting with.';
+  } else if (held >= 2) {
+    note = 'Some areas shifted between your two Maps and some stayed the same. '
+      + (shiftedStr ? shiftedStr + ' shifted' : '')
+      + (heldStr ? (shiftedStr ? '; ' : '') + heldStr + ' held' : '')
+      + '. The areas that shifted may reflect real movement; the ones that stayed the same may be worth keeping in view.';
+  } else {
+    note = 'Most areas shifted between your two Maps. That can reflect real change, or simply different answers on different days. '
+      + (shiftedStr ? shiftedStr + ' shifted. ' : '')
+      + 'It may be worth reflecting on what felt different between the two.';
+  }
+  note += phaseChanged
+    ? ' Your phase moved from ' + prevPhase + ' to ' + curPhase + '.'
+    : ' Your phase held at ' + curPhase + '.';
+
+  var prevDate = effmapDate(prevMap.created_at);
+  var heading = prevDate ? 'Since your last Map · ' + prevDate : 'Since your last Map';
+  return '<div style="margin:20px 0;padding:16px 18px;background:var(--cream);border:1px solid var(--border);border-radius:var(--r-sm);">'
+    + '<div style="font-size:0.7rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);margin-bottom:12px;">' + escapeHtml(heading) + '</div>'
+    + rowHtml
+    + phaseLine
+    + '<p style="margin:12px 0 0;font-size:0.85rem;line-height:1.6;color:var(--ink);">' + escapeHtml(note) + '</p>'
+    + '</div>';
+}
+
 // One goal → one card. Newest Map rendered in full; earlier same-goal Maps
 // collapsible inside the same card. No coach-only content, no assign controls.
 function effmapClientCardHtml(group, gi, isCurrentGroup) {
@@ -1348,7 +1444,10 @@ function effmapClientCardHtml(group, gi, isCurrentGroup) {
     + '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">' + badge + '</div>'
     + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.25rem;font-weight:600;color:var(--navy);line-height:1.2;">' + escapeHtml(group.goal) + '</div>'
     + '</div>';
-  var body = effmapOpenerHtml(primary) + effmapReadingOrderHtml(primary);
+  // Ticket 3: comparison layer for the current Map vs the immediately preceding
+  // same-goal Map (maps[1]). Renders nothing for single-Map goals.
+  var comparison = maps.length >= 2 ? effmapComparisonHtml(primary, maps[1]) : '';
+  var body = effmapOpenerHtml(primary) + effmapReadingOrderHtml(primary, comparison);
   var older = maps.slice(1).map(function(m, ri) {
     var mi = ri + 1;
     var label = 'Earlier Map · ' + effmapDate(m.created_at) + (m.phase ? ' · ' + String(m.phase) + ' phase' : '');
