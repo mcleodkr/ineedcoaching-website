@@ -272,8 +272,48 @@
 
     @media (prefers-reduced-motion: reduce) {
       *, .screen { animation: none !important; transition: none !important; }
-      .btn-primary:hover { transform: none; }
+      .btn-primary:hover, .btn-secondary:hover { transform: none; }
     }
+
+    /* Force-portrait visual (TC3) — always at the top of the results surface. */
+    .map-portrait { margin: 0 0 clamp(2.5rem, 5vw, 3.5rem); }
+
+    /* Cross-domain tension lines (TC3) — "How these areas are working together". */
+    .cross-domain { margin: clamp(2.75rem, 5vw, 4rem) 0 0; }
+    .cd-card {
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.15rem;
+      margin: 0 0 0.85rem;
+    }
+    .cd-card:last-child { margin-bottom: 0; }
+    .cd-rel {
+      margin: 0 0 0.4rem;
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 600; font-size: 1.02rem; color: var(--navy);
+    }
+    .cd-arrow { color: var(--gold); padding: 0 0.2rem; }
+    .cd-reading { margin: 0; font-size: 0.98rem; line-height: 1.6; color: var(--text); }
+
+    /* A first move (TC3) — explorer-facing action step. */
+    .first-move { margin: clamp(2.75rem, 5vw, 4rem) 0 0; }
+    .first-move p { margin: 0 0 1rem; font-size: 1.05rem; line-height: 1.65; }
+    .first-move p:last-child { margin-bottom: 0; }
+
+    /* Share with your provider (TC3) — calm outlined button, no urgency. */
+    .share-provider {
+      margin: clamp(2.5rem, 5vw, 3.5rem) 0 0;
+      padding-top: clamp(2rem, 4vw, 2.5rem);
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+    .btn-secondary { background: transparent; color: var(--navy); border: 1px solid var(--border); }
+    .btn-secondary:hover { border-color: var(--gold); transform: translateY(-1px); }
+    .btn-secondary:active { transform: translateY(0); }
+    .share-desc { margin: 0.85rem auto 0; max-width: 42ch; font-size: 0.9rem; color: var(--muted); }
+    .share-msg { margin: 0.85rem auto 0; max-width: 42ch; font-size: 0.9rem; color: #9a3b2f; }
+    .share-msg[hidden] { display: none; }
   </style>
 </head>
 <body>
@@ -329,10 +369,176 @@
         '</section>';
     }
 
+    // ---- Force-portrait visual (TC3) ----
+    // Ported from ineedtherapy effectiveness-map.html. Five life-area nodes around a
+    // center goal node. Node SIZE comes from influence_level (coaching prompt v1.7.4,
+    // surfaced per-domain by /api/map-results-read); Maps without scores fall back to
+    // sizing by primary_status. Arrow direction comes from status. Coaching tokens only.
+    // Returns an HTML string, or '' when the Map has no domain data.
+    function wrapGoalText(text, maxChars, maxLines) {
+      const words = String(text == null ? '' : text).trim().split(/\s+/).filter(Boolean);
+      if (!words.length) return ['Your goal'];
+      const lines = []; let cur = '';
+      for (const w of words) {
+        const test = cur ? cur + ' ' + w : w;
+        if (test.length <= maxChars || !cur) { cur = test; }
+        else { lines.push(cur); cur = w; if (lines.length === maxLines) { cur = ''; break; } }
+      }
+      if (cur && lines.length < maxLines) lines.push(cur);
+      const rendered = lines.join(' ').split(/\s+/).filter(Boolean).length;
+      if (rendered < words.length && lines.length) {
+        let last = lines[lines.length - 1];
+        while (last.length + 1 > maxChars && last.indexOf(' ') > -1) last = last.slice(0, last.lastIndexOf(' '));
+        lines[lines.length - 1] = last + '…';
+      }
+      return lines;
+    }
+
+    function effmapForcePortrait(data) {
+      const efo = (data.explorer_facing_output && typeof data.explorer_facing_output === 'object') ? data.explorer_facing_output : {};
+      const ds = (efo.domain_statuses && typeof efo.domain_statuses === 'object') ? efo.domain_statuses : {};
+      const hasData = DOMAINS.some((d) => ds[d.key] && ds[d.key].primary_status && String(ds[d.key].primary_status).trim());
+      if (!hasData) return '';
+
+      const CX = 320, CY = 300;
+      const RADIUS = { 'Minimal': 26, 'Low': 29, 'Moderate': 33, 'High': 39, 'Very High': 46 };
+      const STATUS_LEVEL = { 'Dominating': 'Very High', 'Resourcing': 'Moderate', 'Draining': 'Moderate', 'Unreleased': 'Low' };
+      const LAYOUT = {
+        physical:      { pos: [320, 150], side: 'top' },
+        social:        { pos: [150, 196], side: 'top' },
+        intellectual:  { pos: [490, 182], side: 'top' },
+        psychological: { pos: [486, 438], side: 'bottom' },
+        environmental: { pos: [154, 452], side: 'bottom' },
+      };
+      const STATUS = {
+        'Resourcing': { dir: 'toward', fill: 'var(--gold)', stroke: 'var(--gold)', ring: null,          marker: 'fpToward', sFill: 'var(--gold)' },
+        'Dominating': { dir: 'toward', fill: 'var(--gold)', stroke: 'var(--gold)', ring: 'var(--navy)',  marker: 'fpToward', sFill: 'var(--gold)' },
+        'Draining':   { dir: 'away',   fill: 'var(--navy)', stroke: 'var(--navy)', ring: null,           marker: 'fpAway',   sFill: 'var(--navy)' },
+        'Unreleased': { dir: 'broken', fill: 'none',        stroke: 'var(--gold)', ring: null,           marker: null,       sFill: 'var(--muted)' },
+      };
+      const radiusFor = (lvl) => RADIUS[lvl] || RADIUS.Moderate;
+      const levelFor = (rec, status) => {
+        const lvl = rec && rec.influence_level && String(rec.influence_level).trim();
+        return (lvl && RADIUS[lvl]) ? lvl : (STATUS_LEVEL[status] || 'Moderate');
+      };
+
+      let threads = '', nodes = '';
+      DOMAINS.forEach((d) => {
+        const lay = LAYOUT[d.key]; if (!lay) return;
+        const rec = ds[d.key] || {};
+        const status = rec.primary_status && String(rec.primary_status).trim();
+        if (!status) return;
+        const st = STATUS[status] || STATUS.Resourcing;
+        const r = radiusFor(levelFor(rec, status));
+        const px = lay.pos[0], py = lay.pos[1];
+        const mx = ((px + CX) / 2).toFixed(1), my = ((py + CY) / 2).toFixed(1);
+        if (st.dir === 'broken') {
+          const ex = (CX + (px - CX) * 0.62).toFixed(1), ey = (CY + (py - CY) * 0.62).toFixed(1);
+          threads += '<line x1="' + CX + '" y1="' + CY + '" x2="' + ex + '" y2="' + ey + '" stroke="var(--border)" stroke-width="1.6" stroke-dasharray="2 7" opacity="0.75"/>';
+        } else {
+          const pts = (st.dir === 'toward')
+            ? (px + ',' + py + ' ' + mx + ',' + my + ' ' + CX + ',' + CY)
+            : (CX + ',' + CY + ' ' + mx + ',' + my + ' ' + px + ',' + py);
+          threads += '<polyline points="' + pts + '" fill="none" stroke="' + st.stroke + '" stroke-width="2.4" marker-mid="url(#' + st.marker + ')" opacity="0.85"/>';
+        }
+        if (st.dir === 'broken') {
+          nodes += '<circle cx="' + px + '" cy="' + py + '" r="' + r + '" fill="none" stroke="' + st.stroke + '" stroke-width="1.8" stroke-dasharray="3 4" opacity="0.9"/>';
+        } else {
+          nodes += '<circle cx="' + px + '" cy="' + py + '" r="' + r + '" fill="' + st.fill + '"'
+            + (st.ring ? ' stroke="' + st.ring + '" stroke-width="2"' : '')
+            + (status === 'Draining' ? ' opacity="0.9"' : '') + ' filter="url(#fpSoft)"/>';
+        }
+        const nameY = lay.side === 'top' ? py - r - 18 : py + r + 26;
+        const statusY = lay.side === 'top' ? py - r - 33 : py + r + 41;
+        nodes += '<text x="' + px + '" y="' + nameY + '" text-anchor="middle" font-family="\'Cormorant Garamond\',serif" font-size="15" font-weight="600" fill="var(--navy)">' + esc(d.label) + '</text>';
+        nodes += '<text x="' + px + '" y="' + statusY + '" text-anchor="middle" font-family="\'DM Sans\',sans-serif" font-size="9.5" font-weight="700" letter-spacing="0.08em" fill="' + st.sFill + '">' + esc(status.toUpperCase()) + '</text>';
+      });
+
+      const goalLines = wrapGoalText(data.goal || '', 15, 3);
+      const startY = CY - (goalLines.length - 1) * 8;
+      let goalText = '';
+      goalLines.forEach((ln, i) => {
+        goalText += '<text x="' + CX + '" y="' + (startY + i * 16) + '" text-anchor="middle" font-family="\'Cormorant Garamond\',serif" font-size="13" font-weight="600" fill="#ffffff">' + esc(ln) + '</text>';
+      });
+      const phase = data.phase ? String(data.phase) : '';
+      const phaseText = phase
+        ? '<text x="' + CX + '" y="' + (CY + 90) + '" text-anchor="middle" font-family="\'DM Sans\',sans-serif" font-size="10" font-weight="700" letter-spacing="0.14em" fill="var(--gold)">' + esc(phase.toUpperCase()) + '</text>' : '';
+      const center = '<circle cx="' + CX + '" cy="' + CY + '" r="62" fill="var(--navy)" stroke="var(--gold)" stroke-width="2" filter="url(#fpSoft)"/>';
+      const defs = '<defs>'
+        + '<marker id="fpToward" markerWidth="11" markerHeight="11" refX="5.5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--gold)"/></marker>'
+        + '<marker id="fpAway" markerWidth="11" markerHeight="11" refX="5.5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--navy)"/></marker>'
+        + '<filter id="fpSoft" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="1.5" stdDeviation="2.5" flood-color="#1a3a52" flood-opacity="0.16"/></filter>'
+        + '<radialGradient id="fpGlow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="var(--gold)" stop-opacity="0.12"/><stop offset="70%" stop-color="var(--gold)" stop-opacity="0.03"/><stop offset="100%" stop-color="var(--gold)" stop-opacity="0"/></radialGradient>'
+        + '</defs>';
+      const glow = '<circle cx="' + CX + '" cy="' + CY + '" r="150" fill="url(#fpGlow)"/>';
+      const svg = '<svg viewBox="0 0 640 600" width="100%" style="max-width:520px;display:block;margin:0 auto;height:auto;" role="img" aria-label="A picture of your five life areas around your goal. Each circle\'s size shows how much that area is influencing the goal; arrows point toward the goal for areas feeding it and away for areas draining it.">'
+        + defs + glow + threads + center + goalText + phaseText + nodes + '</svg>';
+      return '<div class="map-portrait">' + svg + '</div>';
+    }
+
+    // ---- Share with your provider (TC3) ----
+    // Mirrors ineedtherapy T8: the provider summary is never shown inline; on click we
+    // fetch it and hand it off as a downloaded .txt file. Rendered only when the row
+    // carries a provider_summary (has_provider_summary from the endpoint).
+    function showShareMsg(text) { const m = document.getElementById('shareProviderMsg'); if (!m) return; m.textContent = text || ''; m.hidden = !text; }
+    function downloadText(filename, text) {
+      try {
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+        return true;
+      } catch (e) { return false; }
+    }
+    async function fetchProviderSummary(btn, sessionId) {
+      showShareMsg('');
+      if (!sessionId) { showShareMsg('We could not find this Map. Please reopen your link and try again.'); return; }
+      if (btn) { btn.disabled = true; btn.textContent = 'Preparing summary…'; }
+      const reset = () => { if (btn) { btn.disabled = false; btn.textContent = 'Share with your provider'; } };
+      const headers = {};
+      const tok = localStorage.getItem('sb_access_token'); // repo convention; sent only if present
+      if (tok) headers['Authorization'] = 'Bearer ' + tok;
+      let res;
+      try {
+        res = await fetch('/api/get-provider-summary?session_id=' + encodeURIComponent(sessionId), { method: 'GET', headers });
+      } catch (e) { reset(); showShareMsg('We could not reach the server. Please check your connection and try again.'); return; }
+      let payload = null; try { payload = await res.json(); } catch (e) {}
+      if (res.ok && payload && typeof payload.provider_summary === 'string' && payload.provider_summary.trim()) {
+        const ok = downloadText('effectiveness-map-provider-summary.txt', payload.provider_summary);
+        reset();
+        showShareMsg(ok ? '' : 'We prepared your summary but could not download it. Please try again.');
+        return;
+      }
+      reset();
+      showShareMsg('We could not prepare your provider summary just now. Please try again.');
+    }
+
     function renderResults(data) {
       const goal = data.goal || '';
       const efo = (data.explorer_facing_output && typeof data.explorer_facing_output === 'object') ? data.explorer_facing_output : {};
       const ds = (efo.domain_statuses && typeof efo.domain_statuses === 'object') ? efo.domain_statuses : {};
+
+      // (0) Force-portrait visual (TC3) — always at the very top of the surface.
+      const portrait = effmapForcePortrait(data);
+
+      // (0b) Cross-domain tension lines (TC3) — after the portrait, before the
+      // snapshots. Only when explorer_facing_output.cross_domain is a non-empty
+      // array; older Maps (and coaching Maps, which emit none) render nothing.
+      let crossDomain = '';
+      if (Array.isArray(efo.cross_domain) && efo.cross_domain.length) {
+        const cards = efo.cross_domain.map((e) => {
+          if (!e || typeof e !== 'object') return '';
+          const reading = e.reading && String(e.reading).trim();
+          if (!reading) return '';
+          const from = e.from && String(e.from).trim();
+          const to = e.to && String(e.to).trim();
+          const rel = (from && to)
+            ? '<p class="cd-rel">' + esc(from) + ' <span class="cd-arrow">→</span> ' + esc(to) + '</p>' : '';
+          return '<div class="cd-card">' + rel + '<p class="cd-reading">' + esc(reading) + '</p></div>';
+        }).filter(Boolean).join('');
+        if (cards) crossDomain = '<div class="cross-domain"><p class="section-label">How these areas are working together</p>' + cards + '</div>';
+      }
 
       // (1) Domain Snapshot — five paragraphs, no headers, in domain order.
       const snapshots = DOMAINS
@@ -396,6 +602,21 @@
             '<p class="release-question">' + esc(rq) + '</p>' +
           '</div>' : '';
 
+      // (4b) A first move (TC3) — explorer-facing action step, after the release
+      // question and before the status row. Absent on older Maps.
+      const fm = efo.first_move;
+      const firstMove = fm && String(fm).trim()
+        ? '<div class="first-move"><p class="section-label">A first move</p>' + paras(fm) + '</div>' : '';
+
+      // (4c) Share with your provider (TC3) — only when the row carries a
+      // provider_summary. The summary is fetched on click, never shown inline.
+      const share = data.has_provider_summary
+        ? '<div class="share-provider">' +
+            '<button class="btn btn-secondary share-btn" id="shareProviderBtn" type="button">Share with your provider</button>' +
+            '<p class="share-desc">Generates a clinical summary your coach or therapist can read before your session.</p>' +
+            '<p class="share-msg" id="shareProviderMsg" role="status" hidden></p>' +
+          '</div>' : '';
+
       // (5) Domain Status Row — primary status under each domain name.
       const statusCells = DOMAINS.map((d) => {
         const v = ds[d.key] && ds[d.key].primary_status;
@@ -437,19 +658,27 @@
 
       app.innerHTML =
         '<section class="surface screen">' +
+          portrait +
           opener +
           opening +
           (goal ? '<p class="goal">' + esc(goal) + '</p>' : '') +
+          crossDomain +
           '<div class="snapshot">' + snapshots + '</div>' +
           systemPicture +
           showsUp +
           crossTax +
           closing +
           release +
+          firstMove +
+          share +
           statusRow +
           legend +
           keep +
         '</section>';
+
+      // Wire the provider-share button (present only when has_provider_summary).
+      const shareBtn = document.getElementById('shareProviderBtn');
+      if (shareBtn) shareBtn.addEventListener('click', () => fetchProviderSummary(shareBtn, data.session_id));
     }
 
     async function init() {
