@@ -111,6 +111,10 @@ export default async function handler(req, res) {
     }
 
     // Generate a single-use magic link.
+    // Log the EXACT redirect_to we send (delimited so trailing whitespace, http
+    // vs https, and www vs no-www are visible) — Supabase silently falls back to
+    // the Site URL when this doesn't match an allowlist entry character-for-character.
+    console.log(`[invite-client] generate_link redirect_to=>>>${CLIENT_DASHBOARD_URL}<<<`);
     const linkRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
       method: 'POST',
       headers: { ...SB_SERVICE, 'Content-Type': 'application/json' },
@@ -128,6 +132,16 @@ export default async function handler(req, res) {
     const linkData = await linkRes.json().catch(() => ({}));
     const magicLink = linkData.action_link;
     if (!magicLink) throw new Error('No action_link returned');
+    // Log the full action_link so we can read the actual redirect_to baked into
+    // the magic link. If Supabase ignored our redirect_to, the redirect_to query
+    // param here will show the Site URL instead of CLIENT_DASHBOARD_URL.
+    console.log('[invite-client] action_link', magicLink);
+    try {
+      const bakedRedirect = new URL(magicLink).searchParams.get('redirect_to');
+      console.log(`[invite-client] action_link redirect_to=>>>${bakedRedirect}<<< matches=${bakedRedirect === CLIENT_DASHBOARD_URL}`);
+    } catch (urlErr) {
+      console.warn('[invite-client] could not parse action_link', urlErr && urlErr.message);
+    }
 
     // Record the coach ↔ client relationship (never steals an active pointer).
     await attachOnBooking(coachId, clientEmail);
