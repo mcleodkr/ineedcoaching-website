@@ -2191,6 +2191,39 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 
     <!-- CLIENTS TAB -->
     <div id="tab-clients" class="tab-panel active">
+      <!-- Client acquisition: share booking link + invite a client. Visibility
+           is mirrored to the clients list view (hidden while a client detail is open). -->
+      <div id="client-acquisition-cards">
+        <div class="form-section" id="share-booking-link-card">
+          <h2 class="form-section-title">Share Your Booking Link</h2>
+          <p style="font-size:0.88rem;color:var(--muted);margin-bottom:14px;">Send this link to anyone you'd like to book a session with you.</p>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <input type="text" id="booking-link-display" readonly
+              style="flex:1;min-width:220px;padding:11px 13px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.88rem;color:var(--ink);background:var(--cream);cursor:text;">
+            <button class="save-btn" id="copy-booking-link-btn" style="white-space:nowrap;">Copy Link</button>
+          </div>
+          <span id="copy-booking-link-msg" class="save-msg"></span>
+        </div>
+
+        <div class="form-section" id="invite-client-card" style="margin-top:20px;">
+          <h2 class="form-section-title">Invite a Client</h2>
+          <p style="font-size:0.88rem;color:var(--muted);margin-bottom:14px;">Send a client a magic link to create their account and access their coaching dashboard.</p>
+          <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;max-width:520px;">
+            <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;">
+              <label for="invite-client-name">Client Name (optional)</label>
+              <input type="text" id="invite-client-name" placeholder="Jane Smith" maxlength="120"
+                style="width:100%;padding:11px 13px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.88rem;color:var(--ink);background:var(--cream);">
+            </div>
+            <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;">
+              <label for="invite-client-email">Client Email</label>
+              <input type="email" id="invite-client-email" placeholder="client@example.com" maxlength="180"
+                style="width:100%;padding:11px 13px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.88rem;color:var(--ink);background:var(--cream);">
+            </div>
+            <button class="save-btn" id="send-invite-btn" style="white-space:nowrap;margin-bottom:0;">Send Invite</button>
+          </div>
+          <div id="invite-client-msg" style="margin-top:10px;font-size:0.85rem;min-height:18px;"></div>
+        </div>
+      </div>
       <div id="clients-loading" class="loading-state" style="min-height:30vh;">
         <div class="loading-spinner"></div>
       </div>
@@ -3164,6 +3197,7 @@ async function init() {
   setupProfileHandlers();
   setupNotifications();
   setupStripeConnectCard();
+  setupClientAcquisitionCards();
 
   // Clients is the default active tab — the setupTabs lazy-loader
   // only fires on click, so kick off the initial clients fetch here.
@@ -3306,6 +3340,8 @@ function setupTabs() {
         var clientsDetailView = document.getElementById('clients-detail-view');
         if (clientsListView) clientsListView.classList.remove('hidden');
         if (clientsDetailView) clientsDetailView.classList.add('hidden');
+        var acqCardsTab = document.getElementById('client-acquisition-cards');
+        if (acqCardsTab) acqCardsTab.classList.remove('hidden');
         if (!btn._loaded) {
           btn._loaded = true;
           loadClientsTab();
@@ -8402,6 +8438,8 @@ async function openClientDetail(email) {
 
   $('clients-list-view').classList.add('hidden');
   $('clients-detail-view').classList.remove('hidden');
+  var acqCardsDetail = $('client-acquisition-cards');
+  if (acqCardsDetail) acqCardsDetail.classList.add('hidden');
   $('clients-detail-view').innerHTML = '<div class="loading-state" style="min-height:20vh;"><div class="loading-spinner"></div></div>';
 
   // Fetch all related data in parallel
@@ -9605,6 +9643,8 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
   $('back-to-clients').addEventListener('click', function() {
     $('clients-detail-view').classList.add('hidden');
     $('clients-list-view').classList.remove('hidden');
+    var acqCardsBack = $('client-acquisition-cards');
+    if (acqCardsBack) acqCardsBack.classList.remove('hidden');
   });
 
   // Wire edit-info button(s) inside the detail view
@@ -17757,6 +17797,90 @@ function openIntakePreview() {
   });
   document.getElementById('intake-preview-body').innerHTML = html;
   document.getElementById('intake-preview-overlay').classList.add('open');
+}
+
+/* ================================================
+   CLIENT ACQUISITION — share booking link + invite a client
+   ================================================ */
+function setupClientAcquisitionCards() {
+  if (!coachProfile) return;
+
+  // ── Share booking link ────────────────────────────────────────────────
+  var bookingLinkEl = document.getElementById('booking-link-display');
+  var copyBtn = document.getElementById('copy-booking-link-btn');
+  var copyMsg = document.getElementById('copy-booking-link-msg');
+
+  if (bookingLinkEl && coachProfile.slug) {
+    bookingLinkEl.value = 'https://www.ineedcoaching.org/book?coach=' + encodeURIComponent(coachProfile.slug);
+  } else if (bookingLinkEl) {
+    // No slug yet — keep the input from showing a broken/empty share link.
+    bookingLinkEl.value = '';
+    bookingLinkEl.placeholder = 'Your booking link will appear once your profile is published.';
+  }
+
+  if (copyBtn && !copyBtn._wired) {
+    copyBtn._wired = true;
+    copyBtn.addEventListener('click', function() {
+      if (!bookingLinkEl || !bookingLinkEl.value) return;
+      function flash() {
+        copyMsg.textContent = 'Copied!';
+        copyMsg.style.color = 'var(--forest)';
+        copyMsg.classList.add('show');
+        setTimeout(function() { copyMsg.classList.remove('show'); }, 2500);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(bookingLinkEl.value).then(flash).catch(function() {
+          bookingLinkEl.select();
+          document.execCommand('copy');
+          flash();
+        });
+      } else {
+        bookingLinkEl.select();
+        document.execCommand('copy');
+        flash();
+      }
+    });
+  }
+
+  // ── Invite a client ───────────────────────────────────────────────────
+  var inviteBtn = document.getElementById('send-invite-btn');
+  if (inviteBtn && !inviteBtn._wired) {
+    inviteBtn._wired = true;
+    inviteBtn.addEventListener('click', async function() {
+      var btn = this;
+      var msgEl = document.getElementById('invite-client-msg');
+      var emailInput = document.getElementById('invite-client-email');
+      var nameInput = document.getElementById('invite-client-name');
+      var email = (emailInput.value || '').trim();
+      var name = (nameInput.value || '').trim();
+      if (!email) { msgEl.style.color = '#c44'; msgEl.textContent = 'Email is required.'; return; }
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+      msgEl.textContent = '';
+      try {
+        var res = await fetch('/api/invite-client', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+          body: JSON.stringify({ client_email: email, client_name: name, coach_id: coachProfile.id })
+        });
+        var data = await res.json().catch(function() { return {}; });
+        if (res.ok && data.ok) {
+          msgEl.style.color = 'var(--forest)';
+          msgEl.textContent = 'Invite sent to ' + email + '.';
+          emailInput.value = '';
+          nameInput.value = '';
+        } else {
+          msgEl.style.color = '#c44';
+          msgEl.textContent = data.error || 'Something went wrong. Try again.';
+        }
+      } catch (e) {
+        msgEl.style.color = '#c44';
+        msgEl.textContent = 'Network error. Try again.';
+      }
+      btn.disabled = false;
+      btn.textContent = 'Send Invite';
+    });
+  }
 }
 
 /* ================================================
