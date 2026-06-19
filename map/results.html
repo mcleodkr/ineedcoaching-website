@@ -432,21 +432,29 @@
         const r = radiusFor(levelFor(rec, status));
         const px = lay.pos[0], py = lay.pos[1];
         const mx = ((px + CX) / 2).toFixed(1), my = ((py + CY) / 2).toFixed(1);
+        // FIX 1: stop arrow lines at the node + center edges (not the centers) so the line
+        // no longer passes through the node circle. Unit vector points node -> center.
+        const dx = px - CX, dy = py - CY;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const ux = dx / dist, uy = dy / dist;
+        const nodeEdgeX = (px - ux * r).toFixed(1), nodeEdgeY = (py - uy * r).toFixed(1);
+        const centerEdgeX = (CX + ux * 62).toFixed(1), centerEdgeY = (CY + uy * 62).toFixed(1);
         if (st.dir === 'broken') {
           const ex = (CX + (px - CX) * 0.62).toFixed(1), ey = (CY + (py - CY) * 0.62).toFixed(1);
           threads += '<line x1="' + CX + '" y1="' + CY + '" x2="' + ex + '" y2="' + ey + '" stroke="var(--border)" stroke-width="1.6" stroke-dasharray="2 7" opacity="0.75"/>';
         } else {
           const pts = (st.dir === 'toward')
-            ? (px + ',' + py + ' ' + mx + ',' + my + ' ' + CX + ',' + CY)
-            : (CX + ',' + CY + ' ' + mx + ',' + my + ' ' + px + ',' + py);
+            ? (nodeEdgeX + ',' + nodeEdgeY + ' ' + mx + ',' + my + ' ' + centerEdgeX + ',' + centerEdgeY)
+            : (centerEdgeX + ',' + centerEdgeY + ' ' + mx + ',' + my + ' ' + nodeEdgeX + ',' + nodeEdgeY);
           threads += '<polyline points="' + pts + '" fill="none" stroke="' + st.stroke + '" stroke-width="2.4" marker-mid="url(#' + st.marker + ')" opacity="0.85"/>';
         }
         if (st.dir === 'broken') {
-          nodes += '<circle cx="' + px + '" cy="' + py + '" r="' + r + '" fill="none" stroke="' + st.stroke + '" stroke-width="1.8" stroke-dasharray="3 4" opacity="0.9"/>';
+          // FIX 2: bump the Unreleased dashed ring 1.8 -> 2.5 so it reads on the light card.
+          nodes += '<circle cx="' + px + '" cy="' + py + '" r="' + r + '" fill="none" stroke="' + st.stroke + '" stroke-width="2.5" stroke-dasharray="3 4" opacity="0.9"/>';
         } else {
           nodes += '<circle cx="' + px + '" cy="' + py + '" r="' + r + '" fill="' + st.fill + '"'
             + (st.ring ? ' stroke="' + st.ring + '" stroke-width="2"' : '')
-            + (status === 'Draining' ? ' opacity="0.9"' : '') + ' filter="url(#fpSoft)"/>';
+            + (status === 'Draining' ? ' opacity="0.9"' : '') + ' filter="url(#fpSoft)" style="animation: fpPulse 3s ease-in-out infinite;"/>';
         }
         const nameY = lay.side === 'top' ? py - r - 18 : py + r + 26;
         const statusY = lay.side === 'top' ? py - r - 33 : py + r + 41;
@@ -465,6 +473,7 @@
         ? '<text x="' + CX + '" y="' + (CY + 90) + '" text-anchor="middle" font-family="\'DM Sans\',sans-serif" font-size="10" font-weight="700" letter-spacing="0.14em" fill="var(--gold)">' + esc(phase.toUpperCase()) + '</text>' : '';
       const center = '<circle cx="' + CX + '" cy="' + CY + '" r="62" fill="var(--navy)" stroke="var(--gold)" stroke-width="2" filter="url(#fpSoft)"/>';
       const defs = '<defs>'
+        + '<style>@keyframes fpPulse{0%,100%{opacity:0.85;}50%{opacity:1;}}</style>'
         + '<marker id="fpToward" markerWidth="11" markerHeight="11" refX="5.5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--gold)"/></marker>'
         + '<marker id="fpAway" markerWidth="11" markerHeight="11" refX="5.5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--navy)"/></marker>'
         + '<filter id="fpSoft" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="1.5" stdDeviation="2.5" flood-color="#1a3a52" flood-opacity="0.16"/></filter>'

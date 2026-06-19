@@ -255,6 +255,56 @@ function parseMap(text) {
   return null;
 }
 
+// --- TC4: dash-strip normalizer ---------------------------------------------
+// Ported verbatim from ineedtherapy lib/effmap-normalize.js (normalizeDashes): a
+// dash surrounded by spaces collapses to a comma + space; any remaining em/en dash
+// becomes a hyphen. Non-strings pass through untouched.
+function normalizeDashes(s) {
+  if (typeof s !== 'string') return s;
+  return s.replace(/\s[—–]\s/g, ', ').replace(/[—–]/g, '-');
+}
+
+// Strip em/en dashes from the explorer-facing (client-visible) prose on the parsed
+// model map, in place. Coach-facing fields (coach_synthesis, coach_recommended_focus,
+// cross_domain_tax) are left untouched — coaches can handle dashes. Run after parseMap
+// and before storeRow/collectExplorerFacing so raw_output, the derived
+// explorer_facing_output, and the returned map all carry clean prose.
+function stripExplorerDashes(map) {
+  const ef = (map && map.explorer_facing && typeof map.explorer_facing === 'object') ? map.explorer_facing : null;
+  if (!ef) return map;
+  if (ef.domains && typeof ef.domains === 'object') {
+    for (const d of Object.values(ef.domains)) {
+      if (!d || typeof d !== 'object') continue;
+      if (typeof d.paragraph === 'string') d.paragraph = normalizeDashes(d.paragraph);
+      // per-domain reflective field name varies across schema versions; strip if present.
+      if (typeof d.reflective_question === 'string') d.reflective_question = normalizeDashes(d.reflective_question);
+      if (typeof d.reflective_prompt === 'string') d.reflective_prompt = normalizeDashes(d.reflective_prompt);
+    }
+  }
+  if (typeof ef.whole_picture === 'string') ef.whole_picture = normalizeDashes(ef.whole_picture);
+  if (typeof ef.how_this_shows_up === 'string') ef.how_this_shows_up = normalizeDashes(ef.how_this_shows_up);
+  if (typeof ef.first_move === 'string') ef.first_move = normalizeDashes(ef.first_move);
+  // release_question is { question, ... } in the coaching schema; tolerate a bare string too.
+  if (ef.release_question && typeof ef.release_question === 'object' && typeof ef.release_question.question === 'string') {
+    ef.release_question.question = normalizeDashes(ef.release_question.question);
+  } else if (typeof ef.release_question === 'string') {
+    ef.release_question = normalizeDashes(ef.release_question);
+  }
+  // closing_summary: { <domain>: { direction, plain } }
+  if (ef.closing_summary && typeof ef.closing_summary === 'object') {
+    for (const c of Object.values(ef.closing_summary)) {
+      if (c && typeof c === 'object' && typeof c.plain === 'string') c.plain = normalizeDashes(c.plain);
+    }
+  }
+  // cross_domain: [ { from, to, reading } ]
+  if (Array.isArray(ef.cross_domain)) {
+    for (const cd of ef.cross_domain) {
+      if (cd && typeof cd === 'object' && typeof cd.reading === 'string') cd.reading = normalizeDashes(cd.reading);
+    }
+  }
+  return map;
+}
+
 // --- v1.7.2: log-only banned-vocabulary scan -------------------------------
 // Mirrors the prompt's TWO VOICES bans (incl. the anatomical "nervous system"
 // exception). Logs leak frequency for production monitoring; NEVER blocks or
@@ -464,6 +514,10 @@ export default async function handler(req, res) {
       console.warn(`[effectiveness-map] crisis_flag session_id=${sessionId} coach=${coach.id}`); // no content
       return res.status(200).json(crisisResponse());
     }
+
+    // --- TC4: strip em/en dashes from explorer-facing prose (coach-facing untouched),
+    //     after parse + crisis check and before storing/returning. ---
+    stripExplorerDashes(map);
 
     // --- validation gates (warn-only; never reject a generated Map) ---
     const reportedVersion = map.metadata && map.metadata.prompt_version;
