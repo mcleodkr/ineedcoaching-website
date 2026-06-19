@@ -31,9 +31,23 @@ import { verifyMapLink } from '../lib/effmap-core/map-link.js';
 const INACTIVE_MSG = 'This link is no longer active. Ask your coach to send a new one.';
 const NOT_READY_MSG = 'Your map isn’t ready yet. Check back shortly, or ask your coach to resend the link.';
 
-// Explorer-safe columns ONLY. Note the absence of raw_output / coach_id /
+// Explorer-safe columns ONLY. Note the absence of full raw_output / coach_id /
 // client_email / explorer_id / prompt_version — coach-only or sensitive.
-const SELECT_COLS = 'goal,phase,crisis_flag,explorer_facing_output';
+// TC3 adds three NARROW JSON projections out of raw_output (the full blob is still
+// never selected) plus provider_summary, each explorer-safe:
+//   - di: the per-domain influence buckets; ONLY influence_level is surfaced (it
+//     drives node size on the results visual). influence_score and the raw
+//     dimensions are never read out of this object.
+//   - fm: explorer_facing.first_move — an explorer-facing (client-visible) action step.
+//   - cd: explorer_facing.cross_domain — explorer-facing cross-domain readings
+//     (the coaching prompt does not emit this today; surfaced only if present).
+// provider_summary is read for PRESENCE only; its text is never returned here.
+const SELECT_COLS = [
+  'goal', 'phase', 'crisis_flag', 'explorer_facing_output', 'provider_summary',
+  'di:raw_output->metadata->domain_influence',
+  'fm:raw_output->explorer_facing->first_move',
+  'cd:raw_output->explorer_facing->cross_domain',
+].join(',');
 
 // The five P.I.P.E.S. domains, in display order.
 const DOMAINS = ['physical', 'intellectual', 'psychological', 'environmental', 'social'];
@@ -88,7 +102,7 @@ export default async function handler(req, res) {
 
     // 2. The map row, by session_id (unique). Explorer-safe columns only.
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/effectiveness_maps?session_id=eq.${encodeURIComponent(sessionId)}&select=${SELECT_COLS}&limit=1`,
+      `${SUPABASE_URL}/rest/v1/effectiveness_maps?session_id=eq.${encodeURIComponent(sessionId)}&select=${encodeURIComponent(SELECT_COLS)}&limit=1`,
       { headers: READ_HEADERS }
     );
     if (!r.ok) {
@@ -107,13 +121,22 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, status: 'crisis' });
     }
 
-    // 5. Ready → goal, phase, and a rebuilt explorer-facing payload (primary only).
+    // 5. Ready → goal, phase, the rebuilt explorer-facing payload, the session_id
+    //    (already proven by the token — needed for the provider-summary fetch), and
+    //    a provider_summary PRESENCE flag (the text itself is never returned here).
+    const hasProviderSummary = typeof map.provider_summary === 'string' && map.provider_summary.trim().length > 0;
     return res.status(200).json({
       ok: true,
       status: 'ready',
       goal: map.goal ?? null,
       phase: map.phase ?? null,
-      explorer_facing_output: sanitizeExplorerFacing(map.explorer_facing_output),
+      session_id: sessionId,
+      has_provider_summary: hasProviderSummary,
+      explorer_facing_output: sanitizeExplorerFacing(map.explorer_facing_output, {
+        domainInfluence: map.di,
+        firstMove: map.fm,
+        crossDomain: map.cd,
+      }),
     });
   } catch (e) {
     console.error('[map-results-read] error', e && e.message);
@@ -130,8 +153,15 @@ export default async function handler(req, res) {
 // opener, the five domain snapshots + primary status, The Whole Picture, How
 // this shows up, Where the load is moving, In short, the release question, and
 // the status legend. Domain statuses stay primary-only (secondary_status dropped).
-function sanitizeExplorerFacing(efo) {
+// `extras` (TC3) carries the three narrow raw_output projections — domainInfluence,
+// firstMove, crossDomain — sourced in the handler so this rebuild stays the single
+// place that decides what reaches the browser. Only explorer-safe values are merged;
+// influence_score and the raw dimensions are never read. These additions are
+// intentionally results-page-only and are NOT mirrored into api/map-client-read.js.
+function sanitizeExplorerFacing(efo, extras) {
   if (!efo || typeof efo !== 'object') return null;
+  const { domainInfluence, firstMove, crossDomain } = extras || {};
+  const di = (domainInfluence && typeof domainInfluence === 'object') ? domainInfluence : null;
 
   const out = {};
 
@@ -147,6 +177,9 @@ function sanitizeExplorerFacing(efo) {
         one_line_read: d.one_line_read ?? null,
         snapshot_paragraph: d.snapshot_paragraph ?? null,
       };
+      // TC3: surface the influence_level bucket ONLY (drives results-page node size).
+      const lvl = di && di[domain] && di[domain].influence_level;
+      if (typeof lvl === 'string' && lvl.trim()) out.domain_statuses[domain].influence_level = lvl.trim();
     }
   }
 
@@ -177,6 +210,25 @@ function sanitizeExplorerFacing(efo) {
   }
 
   if (typeof efo.status_legend === 'string') out.status_legend = efo.status_legend;
+
+  // TC3: explorer-facing first_move (action step) — sourced from raw_output because
+  // the stored explorer_facing_output blob does not carry it.
+  if (typeof firstMove === 'string' && firstMove.trim()) out.first_move = firstMove;
+
+  // TC3: explorer-facing cross_domain readings — {from, to, reading} only, each a
+  // string, dropped if empty. Absent on coaching Maps today (prompt emits none).
+  if (Array.isArray(crossDomain)) {
+    const entries = crossDomain
+      .map((e) => (e && typeof e === 'object')
+        ? {
+            from: typeof e.from === 'string' ? e.from : null,
+            to: typeof e.to === 'string' ? e.to : null,
+            reading: typeof e.reading === 'string' ? e.reading : null,
+          }
+        : null)
+      .filter((e) => e && e.reading && e.reading.trim());
+    if (entries.length) out.cross_domain = entries;
+  }
 
   return out;
 }
