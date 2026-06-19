@@ -213,6 +213,43 @@ export default async function handler(req, res) {
       }
     }
 
+    // Part 4: turn the client email's "Access your coaching space" button into a
+    // real one-click magic link. Pre-create/confirm the auth user (422 = already
+    // exists, treated as success) so the link is immediately usable, then mint the
+    // magic link. Both calls use the service-role key. Best-effort: any failure
+    // falls back to the bare dashboard URL so the confirmation email still sends.
+    let clientSpaceUrl = 'https://www.ineedcoaching.org/client-dashboard.html';
+    if (booking.client_email) {
+      try {
+        const createRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
+          method: 'POST',
+          headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: booking.client_email, email_confirm: true }),
+        });
+        if (!createRes.ok && createRes.status !== 422) {
+          console.warn('[booking-confirmation] magic-link user create failed', createRes.status);
+        }
+        const linkRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
+          method: 'POST',
+          headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'magiclink',
+            email: booking.client_email,
+            options: { redirect_to: 'https://www.ineedcoaching.org/client-dashboard.html' },
+          }),
+        });
+        if (linkRes.ok) {
+          const linkData = await linkRes.json().catch(() => ({}));
+          if (linkData && linkData.action_link) clientSpaceUrl = linkData.action_link;
+          else console.warn('[booking-confirmation] magic-link generate returned no action_link');
+        } else {
+          console.warn('[booking-confirmation] magic-link generate failed', linkRes.status);
+        }
+      } catch (mlErr) {
+        console.warn('[booking-confirmation] magic-link skipped:', mlErr && mlErr.message);
+      }
+    }
+
     // Client email
     const clientSubject = `Your session with ${coachName} is confirmed`;
     const clientHtml = `
@@ -229,7 +266,7 @@ export default async function handler(req, res) {
         <p style="font-size:0.85rem;color:#6b6b60;">${rescheduleLink ? `Need a different time? <a href="${rescheduleLink}" style="color:#c49a3c;text-decoration:none;font-weight:600;">Reschedule here</a> &mdash; or just reply to this email.` : 'If you need to reschedule, reply to this email.'}</p>
         <div style="margin:24px 0;padding:18px 20px;background:#f7f4ee;border-radius:8px;">
           <p style="margin:0 0 12px;font-size:0.9rem;line-height:1.5;color:#6b6b60;">Your private coaching space is ready. Sign in to see your sessions, track your goals, journal between sessions, and message ${coachName}.</p>
-          <a href="https://www.ineedcoaching.org/client-dashboard.html" style="display:inline-block;background:#c49a3c;color:#fff;text-decoration:none;font-weight:600;font-size:0.85rem;padding:10px 22px;border-radius:50px;">Access your coaching space &rarr;</a>
+          <a href="${clientSpaceUrl}" style="display:inline-block;background:#c49a3c;color:#fff;text-decoration:none;font-weight:600;font-size:0.85rem;padding:10px 22px;border-radius:50px;">Access your coaching space &rarr;</a>
           <p style="margin:10px 0 0;font-size:0.78rem;color:#9a9a8e;">You'll sign in with a magic link sent to this email address (${booking.client_email}) — no password needed.</p>
         </div>
         <p style="font-size:0.82rem;color:#6b6b60;margin-top:24px;">— The <a href="https://www.ineedcoaching.org" style="color:#c49a3c;text-decoration:none;font-weight:600;">ineedcoaching.org</a> team</p>
