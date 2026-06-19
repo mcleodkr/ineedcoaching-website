@@ -34,9 +34,9 @@ import { limitForTier, monthlyMapCount } from '../lib/effmap-core/effmap-limits.
 import { jsonrepair } from 'jsonrepair';
 
 const require = createRequire(import.meta.url);
-const SYNTH = require('../lib/effmap-core/prompts/effectiveness-map-synthesis-v1.7.3.json');
+const SYNTH = require('../lib/effmap-core/prompts/effectiveness-map-synthesis-v1.7.4.json');
 const SYNTHESIS_PROMPT = SYNTH.prompt;
-const PROMPT_VERSION = SYNTH.version; // '1.7.3'
+const PROMPT_VERSION = SYNTH.version; // '1.7.4'
 
 const MODEL = 'claude-sonnet-4-6';
 // Raised 4000 -> 8000 for the prompt depth upgrades (6-8 sentence per-domain arc +
