@@ -110,18 +110,21 @@ export default async function handler(req, res) {
       throw new Error(`auth user create failed: ${createRes.status} ${t.slice(0, 200)}`);
     }
 
-    // Generate a single-use magic link.
-    // Log the EXACT redirect_to we send (delimited so trailing whitespace, http
-    // vs https, and www vs no-www are visible) — Supabase silently falls back to
-    // the Site URL when this doesn't match an allowlist entry character-for-character.
-    console.log(`[invite-client] generate_link redirect_to=>>>${CLIENT_DASHBOARD_URL}<<<`);
+    // Generate a single-use magic link. We intentionally DO NOT pass redirect_to:
+    // the admin generate_link endpoint ignores the redirect allowlist and always
+    // forces redirect_to to the project Site URL (ineedtherapy.org on this shared
+    // Supabase project), so a cross-domain redirect to the coaching dashboard is
+    // impossible that way. Instead we pull the one-time token_hash out of the
+    // returned action_link and hand the client a coaching-domain link; the existing
+    // client-dashboard.html handler verifies that token_hash against /auth/v1/verify
+    // and establishes the session on this domain. The browser never leaves
+    // ineedcoaching.org, so the Site-URL override is irrelevant.
     const linkRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
       method: 'POST',
       headers: { ...SB_SERVICE, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type: 'magiclink',
         email: clientEmail,
-        options: { redirect_to: CLIENT_DASHBOARD_URL },
       }),
     });
     console.log('[invite-client] magic link gen status', linkRes.status);
@@ -130,18 +133,22 @@ export default async function handler(req, res) {
       throw new Error(`magic link failed: ${linkRes.status} ${t.slice(0, 200)}`);
     }
     const linkData = await linkRes.json().catch(() => ({}));
-    const magicLink = linkData.action_link;
-    if (!magicLink) throw new Error('No action_link returned');
-    // Log the full action_link so we can read the actual redirect_to baked into
-    // the magic link. If Supabase ignored our redirect_to, the redirect_to query
-    // param here will show the Site URL instead of CLIENT_DASHBOARD_URL.
-    console.log('[invite-client] action_link', magicLink);
+    const actionLink = linkData.action_link;
+    if (!actionLink) throw new Error('No action_link returned');
+    // Extract the one-time token_hash (the `token` query param) from Supabase's
+    // verify URL and rebuild it as a coaching-domain link the existing
+    // client-dashboard.html callback consumes (?token_hash=...&type=magiclink).
+    let tokenHash, otpType;
     try {
-      const bakedRedirect = new URL(magicLink).searchParams.get('redirect_to');
-      console.log(`[invite-client] action_link redirect_to=>>>${bakedRedirect}<<< matches=${bakedRedirect === CLIENT_DASHBOARD_URL}`);
+      const parsed = new URL(actionLink);
+      tokenHash = parsed.searchParams.get('token');
+      otpType = parsed.searchParams.get('type') || 'magiclink';
     } catch (urlErr) {
-      console.warn('[invite-client] could not parse action_link', urlErr && urlErr.message);
+      throw new Error(`could not parse action_link: ${urlErr && urlErr.message}`);
     }
+    if (!tokenHash) throw new Error('No token_hash in action_link');
+    const magicLink = `${CLIENT_DASHBOARD_URL}?token_hash=${encodeURIComponent(tokenHash)}&type=${encodeURIComponent(otpType)}`;
+    console.log('[invite-client] coaching magic link', magicLink);
 
     // Record the coach ↔ client relationship (never steals an active pointer).
     await attachOnBooking(coachId, clientEmail);
