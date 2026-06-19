@@ -410,6 +410,9 @@ a { color: var(--navy); text-decoration: none; }
           <div class="welcome-coach" id="coach-connection" style="margin-top:14px;font-size:0.88rem;"></div>
         </div>
 
+        <!-- EFFECTIVENESS MAP NUDGE — shown only when the client has a pending/in-progress assignment -->
+        <div id="effmap-nudge"></div>
+
         <!-- GROWTH HOST -->
         <div id="growth-host"></div>
 
@@ -885,6 +888,7 @@ async function init() {
   await Promise.all([loadSessions(), loadSessionNotesCache()]);
   renderWelcome();
   renderCoachConnection();
+  renderEffmapNudge();
   renderGrowthCard();
   renderProgressAndContinuity();
   $('loading-main').style.display = 'none';
@@ -1397,6 +1401,46 @@ async function loadEffmap() {
     wireEffmapToggles(container);
   } catch (e) {
     container.innerHTML = '<div class="empty"><p>We couldn’t load your Effectiveness Maps right now. Please try again in a moment.</p></div>';
+  }
+}
+
+// Effectiveness Map nudge — a pending/in-progress assignment the client hasn't
+// finished yet. /api/map-pending-self is the client's own JWT scoped to their
+// email and mints the intake link server-side. Renders nothing when there's
+// nothing pending, so the card only appears when there's a Map to take.
+async function renderEffmapNudge() {
+  var host = $('effmap-nudge');
+  if (!host) return;
+  try {
+    var res = await fetch('/api/map-pending-self', {
+      method: 'POST', headers: apiHeaders(), body: JSON.stringify({})
+    });
+    var data = await res.json().catch(function() { return null; });
+    if (!res.ok || !data || !data.ok || !Array.isArray(data.pending) || !data.pending.length) {
+      host.innerHTML = '';
+      return;
+    }
+    var p = data.pending[0]; // newest first
+    var resuming = p.status === 'in_progress';
+    var goalLine = p.goal
+      ? '<div style="font-size:0.85rem;color:rgba(247,244,238,0.7);margin-top:4px;">Goal: ' + escapeHtml(p.goal) + '</div>'
+      : '';
+    host.innerHTML = '<div style="background:linear-gradient(135deg,#1a3a52 0%,#0f2535 100%);border-left:4px solid #c49a3c;border-radius:12px;padding:22px 26px;margin-bottom:20px;">'
+      + '<div style="font-family:\'Cormorant Garamond\',Georgia,serif;font-size:1.3rem;font-weight:600;color:#fff;margin-bottom:6px;">'
+      +   (resuming ? 'Finish your Effectiveness Map' : 'Take your Effectiveness Map')
+      + '</div>'
+      + '<div style="font-size:0.9rem;line-height:1.5;color:rgba(247,244,238,0.75);">'
+      +   (resuming
+            ? 'You started a Map — pick up right where you left off.'
+            : 'Your coach sent you a few open-ended questions that turn into a personalized picture of what’s working for you and where to focus next.')
+      + '</div>'
+      + goalLine
+      + '<a href="' + escapeHtml(p.link) + '" style="display:inline-block;margin-top:16px;background:#c49a3c;color:#fff;text-decoration:none;font-weight:600;font-size:0.88rem;padding:11px 24px;border-radius:50px;">'
+      +   (resuming ? 'Resume your Map' : 'Take your Effectiveness Map') + ' &rarr;'
+      + '</a>'
+      + '</div>';
+  } catch (e) {
+    host.innerHTML = '';
   }
 }
 

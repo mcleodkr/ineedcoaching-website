@@ -9012,7 +9012,8 @@ function effmapStatusCardHtml(a, link) {
     +   '<input type="text" readonly id="effmap-link-input" value="' + escapeHtml(link || '') + '" placeholder="Click Copy link to generate the link" style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:0.8rem;color:var(--ink);background:var(--white);">'
     +   '<button type="button" class="save-btn" data-effmap-copy data-session-id="' + escapeHtml(a.session_id) + '" style="padding:8px 16px;font-size:0.8rem;background:var(--gold);white-space:nowrap;">Copy link</button>'
     + '</div>'
-    + '<div style="display:flex;gap:8px;">'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+    +   '<button type="button" data-effmap-email data-session-id="' + escapeHtml(a.session_id) + '" style="padding:7px 14px;font-size:0.8rem;background:var(--gold);border:1px solid var(--gold);color:#fff;border-radius:999px;cursor:pointer;">Send to client</button>'
     +   '<button type="button" data-effmap-resend data-session-id="' + escapeHtml(a.session_id) + '" style="padding:7px 14px;font-size:0.8rem;background:none;border:1px solid var(--gold);color:var(--gold);border-radius:999px;cursor:pointer;">Resend</button>'
     +   '<button type="button" data-effmap-cancel data-session-id="' + escapeHtml(a.session_id) + '" style="padding:7px 14px;font-size:0.8rem;background:none;border:1px solid var(--border);color:var(--muted);border-radius:999px;cursor:pointer;">Cancel</button>'
     + '</div>'
@@ -9029,6 +9030,31 @@ function wireEffmapAssignment(container, email) {
   if (resendBtn) resendBtn.addEventListener('click', function() { effmapResend(container, email, resendBtn.getAttribute('data-session-id')); });
   var cancelBtn = container.querySelector('[data-effmap-cancel]');
   if (cancelBtn) cancelBtn.addEventListener('click', function() { effmapCancel(container, email, cancelBtn.getAttribute('data-session-id')); });
+  var emailBtn = container.querySelector('[data-effmap-email]');
+  if (emailBtn) emailBtn.addEventListener('click', function() { effmapEmail(container, email, emailBtn.getAttribute('data-session-id')); });
+}
+
+// Send to client — emails the intake link to the client via Resend (server side,
+// action:'email' on assign-effectiveness-map). The copy-link flow stays available.
+async function effmapEmail(container, email, sessionId) {
+  var btn = container.querySelector('[data-effmap-email]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+  effmapSetMsg(container, 'Sending the link to your client…', false);
+  try {
+    var res = await fetch('/api/assign-effectiveness-map', {
+      method: 'POST', headers: apiHeaders(),
+      body: JSON.stringify({ client_email: email, action: 'email', session_id: sessionId })
+    });
+    var data = await res.json().catch(function() { return null; });
+    if (!res.ok || !data || !data.ok) {
+      effmapSetMsg(container, (data && data.error) || 'Could not send the link. Copy it and send it manually.', true);
+    } else {
+      effmapSetMsg(container, 'Sent to ' + email + '. They’ll get an email with their link.', false);
+    }
+  } catch (e) {
+    effmapSetMsg(container, 'Could not send the link. Copy it and send it manually.', true);
+  }
+  if (btn) { btn.disabled = false; btn.textContent = 'Send to client'; }
 }
 
 function effmapSetMsg(container, msg, isError) {

@@ -73,7 +73,7 @@ async function deriveCoachEmail(req) {
 async function loadCoach(coachEmail) {
   const url = `${SUPABASE_URL}/rest/v1/coach_profiles`
     + `?user_email=ilike.${encodeURIComponent(coachEmail)}`
-    + `&select=id,user_email,subscription_status,subscription_tier&limit=5`;
+    + `&select=id,user_email,display_name,subscription_status,subscription_tier&limit=5`;
   const r = await fetch(url, { headers: sbHeaders() });
   if (!r.ok) return null;
   const rows = await r.json().catch(() => null);
@@ -137,11 +137,12 @@ export default async function handler(req, res) {
     }
 
     // Whitelist the action up front (create falls through to the gated path below).
-    if (action !== 'create' && action !== 'resend' && action !== 'cancel') {
+    if (action !== 'create' && action !== 'resend' && action !== 'cancel' && action !== 'email') {
       return res.status(400).json({ ok: false, error: 'Unknown action.', code: 'BAD_ACTION' });
     }
     if (action === 'cancel') return cancelAssignment(res, coach.id, clientEmail, body);
     if (action === 'resend') return resendAssignment(res, coach.id, clientEmail, body);
+    if (action === 'email') return emailAssignment(res, coach, clientEmail, body);
 
     // --- CREATE: full gates ---
     if (coach.subscription_status !== 'active') {
@@ -250,4 +251,79 @@ async function cancelAssignment(res, coachId, clientEmail, body) {
     return res.status(200).json({ ok: false, error: FAIL_MSG });
   }
   return res.status(200).json({ ok: true, session_id: sessionId, status: 'expired' });
+}
+
+// Email the existing active assignment's intake link to the client via Resend.
+// Same gates as resend (coach owns the row + active connection + still-active link),
+// then re-mints the SAME token (stored expiry) and delivers it. A delivery failure
+// is reported but never throws — the coach can still copy the link manually.
+async function emailAssignment(res, coach, clientEmail, body) {
+  if (!process.env.RESEND_API_KEY) {
+    console.error('[assign-effectiveness-map] email: RESEND_API_KEY not configured');
+    return res.status(500).json({ ok: false, error: FAIL_MSG });
+  }
+  const coachId = coach.id;
+  const sessionId = body && body.session_id ? String(body.session_id) : '';
+  if (!UUID_RE.test(sessionId)) return res.status(400).json({ ok: false, error: 'A session is required.', code: 'BAD_SESSION' });
+  if (!(await isActiveConnection(coachId, clientEmail))) {
+    return res.status(403).json({ ok: false, error: 'This client is not an active connection.', code: 'NOT_CONNECTED' });
+  }
+  const a = await loadOwnedAssignment(coachId, clientEmail, sessionId);
+  if (!a) return res.status(404).json({ ok: false, error: 'Assignment not found.', code: 'NOT_FOUND' });
+  const expMs = new Date(a.expires_at).getTime();
+  if (!Number.isFinite(expMs) || a.status === 'completed' || a.status === 'expired' || Date.now() > expMs) {
+    return res.status(409).json({ ok: false, error: 'This link is no longer active. Assign a new one.', code: 'NOT_SENDABLE' });
+  }
+  const link = intakeLink(coachId, clientEmail, sessionId, expMs);
+  const coachName = coach.display_name && String(coach.display_name).trim() ? String(coach.display_name).trim() : 'Your coach';
+  const sent = await sendMapEmail(clientEmail, coachName, link);
+  if (!sent) {
+    return res.status(200).json({ ok: false, error: 'Could not email the link. Copy it and send it manually.', code: 'EMAIL_FAILED' });
+  }
+  return res.status(200).json({ ok: true, sent: true, session_id: sessionId, status: a.status, expires_at: a.expires_at });
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Branded Effectiveness Map invite. noreply@ineedcoaching.org is the verified
+// sender used by every working mailer in this project (see api/send-email.js).
+async function sendMapEmail(toEmail, coachName, link) {
+  const safeCoach = escapeHtml(coachName);
+  const html = `
+    <div style="font-family:'DM Sans',sans-serif;max-width:560px;margin:0 auto;padding:32px;color:#1a3a52;">
+      <h1 style="font-family:'Cormorant Garamond',Georgia,serif;font-size:1.6rem;color:#1a3a52;margin-bottom:16px;">Your coach sent you an Effectiveness Map</h1>
+      <p style="font-size:0.95rem;line-height:1.6;color:#6b6b60;">${safeCoach} has invited you to complete an Effectiveness Map &mdash; a few open-ended questions that turn into a personalized picture of what's working for you and where to focus next.</p>
+      <div style="margin:24px 0;">
+        <a href="${link}" style="display:inline-block;background:#c49a3c;color:#fff;text-decoration:none;font-weight:600;font-size:0.92rem;padding:12px 28px;border-radius:50px;">Take your Effectiveness Map &rarr;</a>
+      </div>
+      <p style="font-size:0.78rem;color:#9a9a8e;">This link is personal to you and expires in 14 days. If you didn't expect this, you can ignore it.</p>
+      <p style="font-size:0.82rem;color:#6b6b60;margin-top:24px;">&mdash; The <a href="https://www.ineedcoaching.org" style="color:#c49a3c;text-decoration:none;font-weight:600;">ineedcoaching.org</a> team</p>
+    </div>`;
+  try {
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'ineedcoaching.org <noreply@ineedcoaching.org>',
+        to: toEmail,
+        subject: `${coachName} sent you an Effectiveness Map`,
+        html,
+      }),
+    });
+    if (!r.ok) {
+      console.error('[assign-effectiveness-map] resend failed', r.status, await r.text().catch(() => ''));
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('[assign-effectiveness-map] resend error', e && e.message);
+    return false;
+  }
 }
