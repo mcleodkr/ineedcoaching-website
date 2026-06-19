@@ -120,6 +120,7 @@ export default async function handler(req, res) {
         options: { redirect_to: CLIENT_DASHBOARD_URL },
       }),
     });
+    console.log('[invite-client] magic link gen status', linkRes.status);
     if (!linkRes.ok) {
       const t = await linkRes.text().catch(() => '');
       throw new Error(`magic link failed: ${linkRes.status} ${t.slice(0, 200)}`);
@@ -151,15 +152,21 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: { Authorization: `Bearer ${RESEND_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: 'ineedcoaching.org <hello@ineedcoaching.org>',
+        // noreply@ is the verified sending identity used by every other working
+        // mailer in this project (api/send-email.js, api/notify-new-message.js).
+        // hello@ was accepted by the Resend API (HTTP 200) but did not deliver.
+        from: 'ineedcoaching.org <noreply@ineedcoaching.org>',
         to: clientEmail,
         subject: `${coachName} has invited you to your coaching space`,
         html,
       }),
     });
+    // Log the full Resend response body whether it succeeds or fails, so a
+    // "returned success but no email" report is diagnosable from the function logs.
+    const emailBody = await emailRes.text().catch(() => '');
+    console.log('[invite-client] resend status', emailRes.status, 'body', emailBody.slice(0, 500));
     if (!emailRes.ok) {
-      const t = await emailRes.text().catch(() => '');
-      throw new Error(`email failed: ${emailRes.status} ${t.slice(0, 200)}`);
+      throw new Error(`email failed: ${emailRes.status} ${emailBody.slice(0, 200)}`);
     }
 
     return res.status(200).json({ ok: true });
