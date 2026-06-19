@@ -8575,7 +8575,7 @@ function effmapEmptyHtml(email) {
 function effmapMapsHtml(maps) {
   var current = maps[0];
   var previous = maps.slice(1);
-  var html = effmapHeaderHtml(current) + effmapReadingOrderHtml(current);
+  var html = effmapHeaderHtml(current) + effmapReadingOrderHtml(current, true);
   html += effmapCollapsible('effmap-intel', 'Intelligence Notes (coach only)', effmapIntelHtml(current));
   if (previous.length) {
     var inner = '';
@@ -8604,12 +8604,151 @@ function effmapHeaderHtml(m) {
     + '</div>';
 }
 
+// Greedy word-wrap for the center goal node: up to maxLines lines of ~maxChars,
+// trailing ellipsis if the goal overflows. Returns an array of lines.
+function effmapWrapGoal(text, maxChars, maxLines) {
+  var words = String(text == null ? '' : text).trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return ['Your goal'];
+  var lines = [], cur = '';
+  for (var i = 0; i < words.length; i++) {
+    var w = words[i];
+    var test = cur ? cur + ' ' + w : w;
+    if (test.length <= maxChars || !cur) {
+      cur = test;
+    } else {
+      lines.push(cur);
+      cur = w;
+      if (lines.length === maxLines) { cur = ''; break; }
+    }
+  }
+  if (cur && lines.length < maxLines) lines.push(cur);
+  var rendered = lines.join(' ').split(/\s+/).filter(Boolean).length;
+  if (rendered < words.length && lines.length) {
+    var last = lines[lines.length - 1];
+    while (last.length + 1 > maxChars && last.indexOf(' ') > -1) last = last.slice(0, last.lastIndexOf(' '));
+    lines[lines.length - 1] = last + '…';
+  }
+  return lines;
+}
+
+// Force-portrait visual (ported from ineedtherapy effectiveness-map.html, the
+// renderResults force-portrait). Five life-area nodes around a center goal node.
+// Node SIZE comes ONLY from the coach-facing influence_level
+// (m.raw_output.metadata.domain_influence[key], added in prompt v1.7.4); older
+// Maps with no scores fall back to sizing by primary_status. Arrow direction
+// comes from status: Resourcing/Dominating point toward the goal, Draining away,
+// Unreleased is a dashed broken thread with no arrow. Self-contained; returns an
+// HTML string (or '' when the Map has no domain data). Coach-facing.
+function effmapForcePortrait(m) {
+  var efo = (m && m.explorer_facing_output && typeof m.explorer_facing_output === 'object') ? m.explorer_facing_output : {};
+  var ds = (efo.domain_statuses && typeof efo.domain_statuses === 'object') ? efo.domain_statuses : {};
+  var raw = (m && m.raw_output && typeof m.raw_output === 'object') ? m.raw_output : {};
+  var meta = (raw.metadata && typeof raw.metadata === 'object') ? raw.metadata : {};
+  var infl = (meta.domain_influence && typeof meta.domain_influence === 'object') ? meta.domain_influence : {};
+
+  var hasData = EFFMAP_DOMAINS.some(function(d) {
+    return ds[d[0]] && ds[d[0]].primary_status && String(ds[d[0]].primary_status).trim();
+  });
+  if (!hasData) return '';
+
+  var CX = 320, CY = 300;
+  var RADIUS = { 'Minimal': 26, 'Low': 29, 'Moderate': 33, 'High': 39, 'Very High': 46 };
+  // Backward-compat sizing when influence_level is absent (pre-v1.7.4 Maps).
+  var STATUS_LEVEL = { 'Dominating': 'Very High', 'Resourcing': 'Moderate', 'Draining': 'Moderate', 'Unreleased': 'Low' };
+  var LAYOUT = {
+    physical:      { label: 'Physical',      pos: [320, 150], side: 'top' },
+    social:        { label: 'Social',        pos: [150, 196], side: 'top' },
+    intellectual:  { label: 'Intellectual',  pos: [490, 182], side: 'top' },
+    psychological: { label: 'Psychological', pos: [486, 438], side: 'bottom' },
+    environmental: { label: 'Environmental', pos: [154, 452], side: 'bottom' }
+  };
+  // direction + colour grammar, mapped to coaching dashboard tokens.
+  var STATUS = {
+    'Resourcing': { dir: 'toward', fill: 'var(--gold)', stroke: 'var(--gold)', ring: null,          marker: 'fpToward', statusFill: 'var(--gold)' },
+    'Dominating': { dir: 'toward', fill: 'var(--gold)', stroke: 'var(--gold)', ring: 'var(--navy)',  marker: 'fpToward', statusFill: 'var(--gold)' },
+    'Draining':   { dir: 'away',   fill: 'var(--navy)', stroke: 'var(--navy)', ring: null,           marker: 'fpAway',   statusFill: 'var(--navy)' },
+    'Unreleased': { dir: 'broken', fill: 'none',        stroke: 'var(--gold)', ring: null,           marker: null,       statusFill: 'var(--muted)' }
+  };
+  function radiusFor(level) { return RADIUS[level] || RADIUS.Moderate; }
+  function levelFor(key, status) {
+    var rec = infl[key];
+    var lvl = rec && rec.influence_level && String(rec.influence_level).trim();
+    if (lvl && RADIUS[lvl]) return lvl;
+    return STATUS_LEVEL[status] || 'Moderate';
+  }
+
+  var threads = '', nodes = '';
+  EFFMAP_DOMAINS.forEach(function(d) {
+    var key = d[0], lay = LAYOUT[key];
+    if (!lay) return;
+    var status = ds[key] && ds[key].primary_status && String(ds[key].primary_status).trim();
+    if (!status) return;
+    var st = STATUS[status] || STATUS.Resourcing;
+    var r = radiusFor(levelFor(key, status));
+    var px = lay.pos[0], py = lay.pos[1];
+    var mx = ((px + CX) / 2).toFixed(1), my = ((py + CY) / 2).toFixed(1);
+
+    if (st.dir === 'broken') {
+      var ex = (CX + (px - CX) * 0.62).toFixed(1), ey = (CY + (py - CY) * 0.62).toFixed(1);
+      threads += '<line x1="' + CX + '" y1="' + CY + '" x2="' + ex + '" y2="' + ey + '" stroke="var(--border)" stroke-width="1.6" stroke-dasharray="2 7" opacity="0.75"/>';
+    } else {
+      var pts = (st.dir === 'toward')
+        ? (px + ',' + py + ' ' + mx + ',' + my + ' ' + CX + ',' + CY)
+        : (CX + ',' + CY + ' ' + mx + ',' + my + ' ' + px + ',' + py);
+      threads += '<polyline points="' + pts + '" fill="none" stroke="' + st.stroke + '" stroke-width="2.4" marker-mid="url(#' + st.marker + ')" opacity="0.85"/>';
+    }
+
+    if (st.dir === 'broken') {
+      nodes += '<circle cx="' + px + '" cy="' + py + '" r="' + r + '" fill="none" stroke="' + st.stroke + '" stroke-width="1.8" stroke-dasharray="3 4" opacity="0.9"/>';
+    } else {
+      nodes += '<circle cx="' + px + '" cy="' + py + '" r="' + r + '" fill="' + st.fill + '"'
+        + (st.ring ? ' stroke="' + st.ring + '" stroke-width="2"' : '')
+        + (status === 'Draining' ? ' opacity="0.9"' : '') + ' filter="url(#fpSoft)"/>';
+    }
+    var nameY = lay.side === 'top' ? py - r - 18 : py + r + 26;
+    var statusY = lay.side === 'top' ? py - r - 33 : py + r + 41;
+    nodes += '<text x="' + px + '" y="' + nameY + '" text-anchor="middle" font-family="\'Cormorant Garamond\',serif" font-size="15" font-weight="600" fill="var(--ink)">' + d[1] + '</text>';
+    nodes += '<text x="' + px + '" y="' + statusY + '" text-anchor="middle" font-family="\'DM Sans\',sans-serif" font-size="9.5" font-weight="700" letter-spacing="0.08em" fill="' + st.statusFill + '">' + status.toUpperCase() + '</text>';
+  });
+
+  var goalLines = effmapWrapGoal((m && m.goal) || '', 15, 3);
+  var startY = CY - (goalLines.length - 1) * 8;
+  var goalText = '';
+  goalLines.forEach(function(ln, i) {
+    goalText += '<text x="' + CX + '" y="' + (startY + i * 16) + '" text-anchor="middle" font-family="\'Cormorant Garamond\',serif" font-size="13" font-weight="600" fill="#ffffff">' + escapeHtml(ln) + '</text>';
+  });
+  var phase = (m && m.phase) ? String(m.phase) : '';
+  var phaseText = phase
+    ? '<text x="' + CX + '" y="' + (CY + 90) + '" text-anchor="middle" font-family="\'DM Sans\',sans-serif" font-size="10" font-weight="700" letter-spacing="0.14em" fill="var(--gold)">' + escapeHtml(phase.toUpperCase()) + '</text>'
+    : '';
+  var center = '<circle cx="' + CX + '" cy="' + CY + '" r="62" fill="var(--navy)" stroke="var(--gold)" stroke-width="2" filter="url(#fpSoft)"/>';
+
+  var defs = '<defs>'
+    + '<marker id="fpToward" markerWidth="11" markerHeight="11" refX="5.5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--gold)"/></marker>'
+    + '<marker id="fpAway" markerWidth="11" markerHeight="11" refX="5.5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--navy)"/></marker>'
+    + '<filter id="fpSoft" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="1.5" stdDeviation="2.5" flood-color="#1a2e3b" flood-opacity="0.16"/></filter>'
+    + '<radialGradient id="fpGlow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="var(--gold)" stop-opacity="0.12"/><stop offset="70%" stop-color="var(--gold)" stop-opacity="0.03"/><stop offset="100%" stop-color="var(--gold)" stop-opacity="0"/></radialGradient>'
+    + '</defs>';
+  var glow = '<circle cx="' + CX + '" cy="' + CY + '" r="150" fill="url(#fpGlow)"/>';
+
+  var svg = '<svg viewBox="0 0 640 600" width="100%" style="max-width:520px;display:block;margin:0 auto 22px;height:auto;" role="img" aria-label="Force portrait of the five life areas around the goal. Each node size reflects how much that area is influencing the goal; arrows point toward the goal for areas that feed it and away for areas that drain it.">'
+    + defs + glow + threads + center + goalText + phaseText + nodes
+    + '</svg>';
+  return '<div style="margin:0 0 6px;">' + svg + '</div>';
+}
+
 // Reading order: Domain Snapshot -> System Picture -> Cross-Domain Tax ->
 // Release Question -> Domain Status Row. Built from explorer_facing_output.
-function effmapReadingOrderHtml(m) {
+// The force-portrait visual renders first, but only for the current Map
+// (isCurrent); previous Maps in the collapsible stay text-only.
+function effmapReadingOrderHtml(m, isCurrent) {
   var efo = (m && m.explorer_facing_output && typeof m.explorer_facing_output === 'object') ? m.explorer_facing_output : {};
   var ds = (efo.domain_statuses && typeof efo.domain_statuses === 'object') ? efo.domain_statuses : {};
   var out = '';
+
+  // Force-portrait visual sits at the very top of the current Map's reading
+  // order, above the snapshot paragraphs. Previous Maps stay text-only.
+  if (isCurrent) out += effmapForcePortrait(m);
 
   var snaps = '';
   EFFMAP_DOMAINS.forEach(function(d) {
