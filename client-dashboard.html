@@ -342,6 +342,13 @@ a { color: var(--navy); text-decoration: none; }
 @media (max-width: 700px) {
   .commons-request-header { flex-direction: column; align-items: stretch; text-align: center; }
 }
+
+/* Collapsed Effectiveness Map opener disclosure (shown only when earlier Maps exist). */
+.effmap-opener-s { list-style: none; }
+.effmap-opener-s::-webkit-details-marker { display: none; }
+.effmap-opener-s:hover { background: rgba(196,154,60,0.08); }
+.effmap-opener-caret { color: var(--gold); transition: transform 0.15s ease; }
+.effmap-opener-d[open] .effmap-opener-caret { transform: rotate(180deg); }
 </style>
 </head>
 <body>
@@ -1192,16 +1199,26 @@ function effmapParas(s, style) {
 }
 
 // Explorer opener ("Why this is different") — v1.7 only; absent on older Maps.
-function effmapOpenerHtml(m) {
+// collapsed (Ticket 3 follow-up): when the goal has earlier Maps, hide the opener
+// behind a small disclosure so it doesn't repeat above every Map; first-time
+// (single-Map) goals still render it expanded.
+function effmapOpenerHtml(m, collapsed) {
   var efo = (m && m.explorer_facing_output && typeof m.explorer_facing_output === 'object') ? m.explorer_facing_output : {};
   var op = efo.opener;
   if (!op || !String(op).trim()) return '';
   var lines = String(op).split(/\n\s*\n/).map(function(s) { return s.trim(); }).filter(Boolean);
   var head = (lines.length > 1 && lines[0].length < 60) ? lines.shift() : 'Why this is different';
-  return '<div style="margin:0 0 20px;padding:16px 18px;background:var(--cream);border-radius:var(--r-sm);">'
-    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:600;color:var(--navy);margin-bottom:8px;">' + escapeHtml(head) + '</div>'
-    + lines.map(function(p) { return '<p style="margin:0 0 10px;font-size:0.88rem;line-height:1.6;color:var(--ink);">' + escapeHtml(p) + '</p>'; }).join('')
-    + '</div>';
+  var inner = '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.1rem;font-weight:600;color:var(--navy);margin-bottom:8px;">' + escapeHtml(head) + '</div>'
+    + lines.map(function(p) { return '<p style="margin:0 0 10px;font-size:0.88rem;line-height:1.6;color:var(--ink);">' + escapeHtml(p) + '</p>'; }).join('');
+  if (collapsed) {
+    return '<details class="effmap-opener-d" style="margin:0 0 20px;background:var(--cream);border-radius:var(--r-sm);overflow:hidden;">'
+      + '<summary class="effmap-opener-s" style="cursor:pointer;padding:11px 16px;font-size:0.85rem;font-weight:600;color:var(--navy);display:flex;justify-content:space-between;align-items:center;">'
+      +   '<span>About this Map</span><span class="effmap-opener-caret">&#9662;</span>'
+      + '</summary>'
+      + '<div style="padding:0 18px 16px;">' + inner + '</div>'
+      + '</details>';
+  }
+  return '<div style="margin:0 0 20px;padding:16px 18px;background:var(--cream);border-radius:var(--r-sm);">' + inner + '</div>';
 }
 
 // The full explorer-facing reading order — ported verbatim from the coach page.
@@ -1444,14 +1461,15 @@ function effmapClientCardHtml(group, gi, isCurrentGroup) {
     + '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">' + badge + '</div>'
     + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.25rem;font-weight:600;color:var(--navy);line-height:1.2;">' + escapeHtml(group.goal) + '</div>'
     + '</div>';
-  // Ticket 3: comparison layer for the current Map vs the immediately preceding
-  // same-goal Map (maps[1]). Renders nothing for single-Map goals.
-  var comparison = maps.length >= 2 ? effmapComparisonHtml(primary, maps[1]) : '';
-  var body = effmapOpenerHtml(primary) + effmapReadingOrderHtml(primary, comparison);
+  // Ticket 3: earlier Maps exist for this goal → comparison layer renders, and the
+  // opener collapses behind a disclosure (single-Map goals keep it expanded).
+  var hasEarlier = maps.length >= 2;
+  var comparison = hasEarlier ? effmapComparisonHtml(primary, maps[1]) : '';
+  var body = effmapOpenerHtml(primary, hasEarlier) + effmapReadingOrderHtml(primary, comparison);
   var older = maps.slice(1).map(function(m, ri) {
     var mi = ri + 1;
     var label = 'Earlier Map · ' + effmapDate(m.created_at) + (m.phase ? ' · ' + String(m.phase) + ' phase' : '');
-    return effmapCollapsible('effmap-older-' + gi + '-' + mi, label, effmapOpenerHtml(m) + effmapReadingOrderHtml(m));
+    return effmapCollapsible('effmap-older-' + gi + '-' + mi, label, effmapOpenerHtml(m, hasEarlier) + effmapReadingOrderHtml(m));
   }).join('');
   var olderSection = older
     ? '<div style="margin-top:20px;border-top:1px solid var(--border);padding-top:12px;">'
