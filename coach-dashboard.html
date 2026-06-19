@@ -2277,7 +2277,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
                 <option value="long_text">Long text</option>
                 <option value="multiple_choice">Multiple choice</option>
                 <option value="yes_no">Yes/No</option>
-                <option value="scale">Scale 1-10</option>
+                <option value="scale">Scale (1–10 default)</option>
               </select>
             </div>
             <div class="form-group" style="display:flex;align-items:flex-end;">
@@ -2290,6 +2290,29 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
           <div class="form-group hidden" id="iq-options-group">
             <label for="iq-options">Options (comma-separated)</label>
             <input type="text" id="iq-options" placeholder="Option A, Option B, Option C">
+          </div>
+          <div class="form-group hidden" id="iq-scale-group">
+            <label>Scale Range</label>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+              <div style="flex:1;min-width:80px;">
+                <label for="iq-scale-min" style="font-size:0.8rem;">Min</label>
+                <input type="number" id="iq-scale-min" value="1" min="0" max="99" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.9rem;background:var(--cream);color:var(--ink);">
+              </div>
+              <div style="flex:1;min-width:80px;">
+                <label for="iq-scale-max" style="font-size:0.8rem;">Max</label>
+                <input type="number" id="iq-scale-max" value="10" min="1" max="100" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.9rem;background:var(--cream);color:var(--ink);">
+              </div>
+            </div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;">
+              <div style="flex:1;min-width:120px;">
+                <label for="iq-scale-low-label" style="font-size:0.8rem;">Low end label (optional)</label>
+                <input type="text" id="iq-scale-low-label" placeholder="e.g. Not at all" maxlength="40" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.9rem;background:var(--cream);color:var(--ink);">
+              </div>
+              <div style="flex:1;min-width:120px;">
+                <label for="iq-scale-high-label" style="font-size:0.8rem;">High end label (optional)</label>
+                <input type="text" id="iq-scale-high-label" placeholder="e.g. Completely" maxlength="40" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.9rem;background:var(--cream);color:var(--ink);">
+              </div>
+            </div>
           </div>
           <button class="pill-add-btn" id="add-intake-question-btn">Add Question</button>
         </div>
@@ -2364,7 +2387,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
                   <option value="long_text">Long text</option>
                   <option value="multiple_choice">Multiple choice</option>
                   <option value="yes_no">Yes/No</option>
-                  <option value="scale">Scale 1-10</option>
+                  <option value="scale">Scale (1–10 default)</option>
                 </select>
               </div>
               <div class="form-group" style="display:flex;align-items:flex-end;">
@@ -2377,6 +2400,29 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
             <div class="form-group hidden" id="cq-options-group">
               <label for="cq-options">Options (comma-separated)</label>
               <input type="text" id="cq-options" placeholder="Option A, Option B, Option C">
+            </div>
+            <div class="form-group hidden" id="cq-scale-group">
+              <label>Scale Range</label>
+              <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+                <div style="flex:1;min-width:80px;">
+                  <label for="cq-scale-min" style="font-size:0.8rem;">Min</label>
+                  <input type="number" id="cq-scale-min" value="1" min="0" max="99" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.9rem;background:var(--cream);color:var(--ink);">
+                </div>
+                <div style="flex:1;min-width:80px;">
+                  <label for="cq-scale-max" style="font-size:0.8rem;">Max</label>
+                  <input type="number" id="cq-scale-max" value="10" min="1" max="100" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.9rem;background:var(--cream);color:var(--ink);">
+                </div>
+              </div>
+              <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;">
+                <div style="flex:1;min-width:120px;">
+                  <label for="cq-scale-low-label" style="font-size:0.8rem;">Low end label (optional)</label>
+                  <input type="text" id="cq-scale-low-label" placeholder="e.g. Not at all" maxlength="40" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.9rem;background:var(--cream);color:var(--ink);">
+                </div>
+                <div style="flex:1;min-width:120px;">
+                  <label for="cq-scale-high-label" style="font-size:0.8rem;">High end label (optional)</label>
+                  <input type="text" id="cq-scale-high-label" placeholder="e.g. Completely" maxlength="40" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.9rem;background:var(--cream);color:var(--ink);">
+                </div>
+              </div>
             </div>
             <button class="pill-add-btn" id="add-checkin-question-btn">Add Question</button>
           </div>
@@ -6945,10 +6991,21 @@ async function loadIntakeForms() {
   $('deactivate-intake-btn').onclick = deactivateIntakeForm;
   $('iq-type').onchange = function() {
     $('iq-options-group').classList.toggle('hidden', this.value !== 'multiple_choice');
+    $('iq-scale-group').classList.toggle('hidden', this.value !== 'scale');
   };
 
   // Load responses
   loadIntakeResponses();
+}
+
+function getTypeLabel(q) {
+  var base = { short_text: 'Short text', long_text: 'Long text', multiple_choice: 'Multiple choice', yes_no: 'Yes/No' };
+  if (q.type === 'scale') {
+    var mn = q.scale_min != null ? q.scale_min : 1;
+    var mx = q.scale_max != null ? q.scale_max : 10;
+    return 'Scale ' + mn + '–' + mx;
+  }
+  return base[q.type] || q.type;
 }
 
 function renderIntakeQuestions() {
@@ -6961,12 +7018,11 @@ function renderIntakeQuestions() {
 
   var html = '';
   intakeQuestions.forEach(function(q, idx) {
-    var typeLabels = { short_text: 'Short text', long_text: 'Long text', multiple_choice: 'Multiple choice', yes_no: 'Yes/No', scale: 'Scale 1-10' };
     html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">'
       + '<div style="flex:1;min-width:200px;">'
       + '<div style="font-weight:600;font-size:0.92rem;color:var(--ink);margin-bottom:6px;">' + escapeHtml(q.text) + '</div>'
       + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-      + '<span class="status-pill status-pending" style="font-size:0.7rem;">' + escapeHtml(typeLabels[q.type] || q.type) + '</span>'
+      + '<span class="status-pill status-pending" style="font-size:0.7rem;">' + escapeHtml(getTypeLabel(q)) + '</span>'
       + '<span class="status-pill ' + (q.required ? 'status-confirmed' : 'status-completed') + '" style="font-size:0.7rem;">' + (q.required ? 'Required' : 'Optional') + '</span>'
       + (q.options && q.options.length ? '<span style="font-size:0.75rem;color:var(--muted);">Options: ' + escapeHtml(q.options.join(', ')) + '</span>' : '')
       + '</div></div>'
@@ -7005,6 +7061,19 @@ function addIntakeQuestion() {
     if (!opts.length) { alert('Please enter at least one option.'); return; }
     q.options = opts;
   }
+  if (type === 'scale') {
+    var scaleMin = parseInt($('iq-scale-min').value, 10);
+    var scaleMax = parseInt($('iq-scale-max').value, 10);
+    if (isNaN(scaleMin) || isNaN(scaleMax) || scaleMin >= scaleMax) {
+      alert('Scale min must be less than max.'); return;
+    }
+    q.scale_min = scaleMin;
+    q.scale_max = scaleMax;
+    var lowLbl = $('iq-scale-low-label').value.trim();
+    var highLbl = $('iq-scale-high-label').value.trim();
+    if (lowLbl) q.scale_low_label = lowLbl;
+    if (highLbl) q.scale_high_label = highLbl;
+  }
   intakeQuestions.push(q);
   renderIntakeQuestions();
   $('iq-text').value = '';
@@ -7012,6 +7081,11 @@ function addIntakeQuestion() {
   $('iq-required').checked = true;
   $('iq-type').value = 'short_text';
   $('iq-options-group').classList.add('hidden');
+  $('iq-scale-min').value = '1';
+  $('iq-scale-max').value = '10';
+  $('iq-scale-low-label').value = '';
+  $('iq-scale-high-label').value = '';
+  $('iq-scale-group').classList.add('hidden');
 }
 
 function removeIntakeQuestion(idx) {
@@ -7031,6 +7105,15 @@ function editIntakeQuestion(idx) {
     $('iq-options-group').classList.remove('hidden');
   } else {
     $('iq-options-group').classList.add('hidden');
+  }
+  if (q.type === 'scale') {
+    $('iq-scale-min').value = q.scale_min != null ? q.scale_min : 1;
+    $('iq-scale-max').value = q.scale_max != null ? q.scale_max : 10;
+    $('iq-scale-low-label').value = q.scale_low_label || '';
+    $('iq-scale-high-label').value = q.scale_high_label || '';
+    $('iq-scale-group').classList.remove('hidden');
+  } else {
+    $('iq-scale-group').classList.add('hidden');
   }
   intakeQuestions.splice(idx, 1);
   renderIntakeQuestions();
@@ -10238,14 +10321,13 @@ function renderCheckinQuestions() {
     container.innerHTML = '<div class="empty-state" style="padding:24px;"><p>No questions yet.</p></div>';
     return;
   }
-  var typeLabels = { short_text: 'Short text', long_text: 'Long text', multiple_choice: 'Multiple choice', yes_no: 'Yes/No', scale: 'Scale 1-10' };
   var html = '';
   checkinQuestions.forEach(function(q, idx) {
     html += '<div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">'
       + '<div style="flex:1;min-width:200px;">'
       + '<div style="font-weight:600;font-size:0.92rem;color:var(--ink);margin-bottom:6px;">' + escapeHtml(q.text) + '</div>'
       + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-      + '<span class="status-pill status-pending" style="font-size:0.7rem;">' + escapeHtml(typeLabels[q.type] || q.type) + '</span>'
+      + '<span class="status-pill status-pending" style="font-size:0.7rem;">' + escapeHtml(getTypeLabel(q)) + '</span>'
       + '<span class="status-pill ' + (q.required ? 'status-confirmed' : 'status-completed') + '" style="font-size:0.7rem;">' + (q.required ? 'Required' : 'Optional') + '</span>'
       + '</div></div>'
       + '<div style="display:flex;gap:6px;">'
@@ -10269,6 +10351,15 @@ function renderCheckinQuestions() {
       $('cq-required').checked = q.required;
       $('cq-options-group').classList.toggle('hidden', q.type !== 'multiple_choice');
       if (q.options) $('cq-options').value = q.options.join(', ');
+      if (q.type === 'scale') {
+        $('cq-scale-min').value = q.scale_min != null ? q.scale_min : 1;
+        $('cq-scale-max').value = q.scale_max != null ? q.scale_max : 10;
+        $('cq-scale-low-label').value = q.scale_low_label || '';
+        $('cq-scale-high-label').value = q.scale_high_label || '';
+        $('cq-scale-group').classList.remove('hidden');
+      } else {
+        $('cq-scale-group').classList.add('hidden');
+      }
       checkinQuestions.splice(idx, 1);
       renderCheckinQuestions();
       $('cq-text').focus();
@@ -10350,6 +10441,19 @@ async function loadCheckinForms() {
       if (!opts.length) { alert('Enter at least one option.'); return; }
       q.options = opts;
     }
+    if (q.type === 'scale') {
+      var scaleMin = parseInt($('cq-scale-min').value, 10);
+      var scaleMax = parseInt($('cq-scale-max').value, 10);
+      if (isNaN(scaleMin) || isNaN(scaleMax) || scaleMin >= scaleMax) {
+        alert('Scale min must be less than max.'); return;
+      }
+      q.scale_min = scaleMin;
+      q.scale_max = scaleMax;
+      var lowLbl = $('cq-scale-low-label').value.trim();
+      var highLbl = $('cq-scale-high-label').value.trim();
+      if (lowLbl) q.scale_low_label = lowLbl;
+      if (highLbl) q.scale_high_label = highLbl;
+    }
     checkinQuestions.push(q);
     renderCheckinQuestions();
     $('cq-text').value = '';
@@ -10357,9 +10461,15 @@ async function loadCheckinForms() {
     $('cq-required').checked = true;
     $('cq-type').value = 'long_text';
     $('cq-options-group').classList.add('hidden');
+    $('cq-scale-min').value = '1';
+    $('cq-scale-max').value = '10';
+    $('cq-scale-low-label').value = '';
+    $('cq-scale-high-label').value = '';
+    $('cq-scale-group').classList.add('hidden');
   };
   $('cq-type').onchange = function() {
     $('cq-options-group').classList.toggle('hidden', this.value !== 'multiple_choice');
+    $('cq-scale-group').classList.toggle('hidden', this.value !== 'scale');
   };
   $('save-checkin-form-btn').onclick = async function() {
     var btn = this;
@@ -17291,7 +17401,6 @@ function openIntakePreview() {
     alert('Add at least one question to preview.');
     return;
   }
-  var typeLabels = { short_text: 'Short text', long_text: 'Long text', multiple_choice: 'Multiple choice', yes_no: 'Yes/No', scale: 'Scale 1-10' };
   var html = '';
   intakeQuestions.forEach(function(q, idx) {
     var reqMark = q.required ? ' <span style="color:#c44;">*</span>' : '';
@@ -17319,11 +17428,16 @@ function openIntakePreview() {
           + '</div>';
         break;
       case 'scale':
+        var scaleMin = q.scale_min != null ? q.scale_min : 1;
+        var scaleMax = q.scale_max != null ? q.scale_max : 10;
+        var scaleMid = Math.round((scaleMin + scaleMax) / 2);
+        var lowLbl = q.scale_low_label || String(scaleMin);
+        var highLbl = q.scale_high_label || String(scaleMax);
         html += '<div style="display:flex;align-items:center;gap:12px;">'
-          + '<span style="font-size:0.82rem;color:var(--muted);">1</span>'
-          + '<input type="range" min="1" max="10" value="5" disabled style="flex:1;accent-color:var(--gold);">'
-          + '<span style="font-size:0.82rem;color:var(--muted);">10</span>'
-          + '<span style="font-weight:700;font-size:1rem;color:var(--gold);min-width:24px;text-align:center;">5</span>'
+          + '<span style="font-size:0.82rem;color:var(--muted);">' + escapeHtml(lowLbl) + '</span>'
+          + '<input type="range" min="' + scaleMin + '" max="' + scaleMax + '" value="' + scaleMid + '" disabled style="flex:1;accent-color:var(--gold);">'
+          + '<span style="font-size:0.82rem;color:var(--muted);">' + escapeHtml(highLbl) + '</span>'
+          + '<span style="font-weight:700;font-size:1rem;color:var(--gold);min-width:24px;text-align:center;">' + scaleMid + '</span>'
           + '</div>';
         break;
     }
