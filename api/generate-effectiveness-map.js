@@ -43,6 +43,11 @@ const MODEL = 'claude-sonnet-4-6';
 // first_move + coach_recommended_focus). The therapy T7 depth alone ran output to
 // ~3954 tokens; the deeper coaching paragraphs plus the new coach-facing field run higher.
 const MAX_TOKENS = 8000;
+// Abort the Claude call at 240s so we can return a clean 503 inside the 300s Vercel
+// maxDuration (vercel.json) instead of being killed mid-flight with a raw 504. The
+// 60s of headroom covers logging + the JSON response. v1.7.5 cross_domain output
+// pushed some Maps past the old 120s ceiling.
+const CLAUDE_TIMEOUT_MS = 240000;
 const PHASES = ['Dreaming', 'Building', 'Refining', 'Releasing', 'Sustaining'];
 const PRODUCT_CONTEXTS = ['coaching', 'therapy']; // default 'coaching' (ineedcoaching); 'therapy' = Sprixle
 const ANSWER_KEYS = [
@@ -193,6 +198,8 @@ function buildUserMessage(input) {
 async function callClaude(userMessage) {
   const startTime = Date.now();
   const systemPayload = [{ type: 'text', text: SYNTHESIS_PROMPT, cache_control: { type: 'ephemeral', ttl: '1h' } }];
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), CLAUDE_TIMEOUT_MS);
   let res, data;
   try {
     res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -208,11 +215,21 @@ async function callClaude(userMessage) {
         system: systemPayload,
         messages: [{ role: 'user', content: userMessage }],
       }),
+      signal: controller.signal,
     });
     data = await res.json().catch(() => null);
   } catch (err) {
-    await logAIUsage({ feature: 'effectiveness_map', model: MODEL, status: 'error', errorMessage: err && err.message, durationMs: Date.now() - startTime });
+    // controller.signal.aborted distinguishes our 240s timeout from a network error.
+    const timedOut = controller.signal.aborted;
+    await logAIUsage({ feature: 'effectiveness_map', model: MODEL, status: timedOut ? 'timeout' : 'error', errorMessage: err && err.message, durationMs: Date.now() - startTime });
+    if (timedOut) {
+      const e = new Error(`Claude call exceeded ${CLAUDE_TIMEOUT_MS}ms`);
+      e.code = 'CLAUDE_TIMEOUT';
+      throw e;
+    }
     throw err;
+  } finally {
+    clearTimeout(timer);
   }
   await logAIUsage({
     feature: 'effectiveness_map',
@@ -392,6 +409,20 @@ export default async function handler(req, res) {
       try {
         raw = await callClaude(buildUserMessage({ goal, phase, answers }));
       } catch (err) {
+        // Timeout guard: the call ran past CLAUDE_TIMEOUT_MS and was aborted. Return a
+        // clean 503 now (inside maxDuration) rather than letting Vercel kill us with a
+        // raw 504. No retry — a second full generation would not fit the remaining
+        // budget. map-intake-submit treats any non-ok status as FAIL_MSG, so the client
+        // still sees "answers saved, try again".
+        if (err && err.code === 'CLAUDE_TIMEOUT') {
+          console.error(`[effectiveness-map] synthesis timeout after ${CLAUDE_TIMEOUT_MS}ms (session ${sessionId})`);
+          return res.status(503).json({
+            status: 'failed',
+            error_code: 'SYNTHESIS_TIMEOUT',
+            message: 'The Map is taking longer than expected. Your answers are saved — please try again in a moment.',
+            session_id: sessionId,
+          });
+        }
         if (attempt === 1) {
           console.error('[effectiveness-map] synthesis error:', err && err.message);
           return res.status(200).json({ status: 'failed', error_code: 'SYNTHESIS_FAILURE', session_id: sessionId });

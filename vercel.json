@@ -34,7 +34,7 @@
       "maxDuration": 300
     },
     "api/generate-effectiveness-map.js": {
-      "maxDuration": 120
+      "maxDuration": 300
     },
     "api/cron-interventions.js": {
       "maxDuration": 300
