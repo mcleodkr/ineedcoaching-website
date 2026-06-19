@@ -2278,6 +2278,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
                 <option value="multiple_choice">Multiple choice</option>
                 <option value="yes_no">Yes/No</option>
                 <option value="scale">Scale (1–10 default)</option>
+                <option value="likert_group">Likert Scale (group)</option>
               </select>
             </div>
             <div class="form-group" style="display:flex;align-items:flex-end;">
@@ -2313,6 +2314,30 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
                 <input type="text" id="iq-scale-high-label" placeholder="e.g. Completely" maxlength="40" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.9rem;background:var(--cream);color:var(--ink);">
               </div>
             </div>
+          </div>
+          <div class="form-group hidden" id="iq-likert-group">
+            <label for="iq-likert-size">Number of points</label>
+            <select id="iq-likert-size">
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5" selected>5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="10">10</option>
+            </select>
+            <label style="margin-top:12px;display:block;">Display style</label>
+            <div style="display:flex;gap:16px;margin-bottom:12px;">
+              <label style="display:flex;align-items:center;gap:6px;font-weight:400;text-transform:none;letter-spacing:0;">
+                <input type="radio" name="iq-likert-display" value="radio" checked> Radio buttons
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;font-weight:400;text-transform:none;letter-spacing:0;">
+                <input type="radio" name="iq-likert-display" value="slider"> Sliders
+              </label>
+            </div>
+            <label>Label each point</label>
+            <div id="iq-likert-labels"></div>
+            <label style="margin-top:14px;display:block;">Questions (one per line)</label>
+            <textarea id="iq-likert-items" rows="4" placeholder="I feel supported in my coaching relationship&#10;I am making progress toward my goals" style="width:100%;padding:11px 13px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.88rem;color:var(--ink);background:var(--cream);resize:vertical;"></textarea>
           </div>
           <button class="pill-add-btn" id="add-intake-question-btn">Add Question</button>
         </div>
@@ -2388,6 +2413,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
                   <option value="multiple_choice">Multiple choice</option>
                   <option value="yes_no">Yes/No</option>
                   <option value="scale">Scale (1–10 default)</option>
+                  <option value="likert_group">Likert Scale (group)</option>
                 </select>
               </div>
               <div class="form-group" style="display:flex;align-items:flex-end;">
@@ -2423,6 +2449,30 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
                   <input type="text" id="cq-scale-high-label" placeholder="e.g. Completely" maxlength="40" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.9rem;background:var(--cream);color:var(--ink);">
                 </div>
               </div>
+            </div>
+            <div class="form-group hidden" id="cq-likert-group">
+              <label for="cq-likert-size">Number of points</label>
+              <select id="cq-likert-size">
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5" selected>5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="10">10</option>
+              </select>
+              <label style="margin-top:12px;display:block;">Display style</label>
+              <div style="display:flex;gap:16px;margin-bottom:12px;">
+                <label style="display:flex;align-items:center;gap:6px;font-weight:400;text-transform:none;letter-spacing:0;">
+                  <input type="radio" name="cq-likert-display" value="radio" checked> Radio buttons
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-weight:400;text-transform:none;letter-spacing:0;">
+                  <input type="radio" name="cq-likert-display" value="slider"> Sliders
+                </label>
+              </div>
+              <label>Label each point</label>
+              <div id="cq-likert-labels"></div>
+              <label style="margin-top:14px;display:block;">Questions (one per line)</label>
+              <textarea id="cq-likert-items" rows="4" placeholder="I feel supported in my coaching relationship&#10;I am making progress toward my goals" style="width:100%;padding:11px 13px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.88rem;color:var(--ink);background:var(--cream);resize:vertical;"></textarea>
             </div>
             <button class="pill-add-btn" id="add-checkin-question-btn">Add Question</button>
           </div>
@@ -6992,7 +7042,10 @@ async function loadIntakeForms() {
   $('iq-type').onchange = function() {
     $('iq-options-group').classList.toggle('hidden', this.value !== 'multiple_choice');
     $('iq-scale-group').classList.toggle('hidden', this.value !== 'scale');
+    $('iq-likert-group').classList.toggle('hidden', this.value !== 'likert_group');
+    if (this.value === 'likert_group') renderLikertLabelInputs('iq');
   };
+  $('iq-likert-size').onchange = function() { renderLikertLabelInputs('iq'); };
 
   // Load responses
   loadIntakeResponses();
@@ -7005,7 +7058,23 @@ function getTypeLabel(q) {
     var mx = q.scale_max != null ? q.scale_max : 10;
     return 'Scale ' + mn + '–' + mx;
   }
+  if (q.type === 'likert_group') {
+    return 'Likert ' + (q.scale_size || 5) + '-point (' + (q.items ? q.items.length : 0) + ' items)';
+  }
   return base[q.type] || q.type;
+}
+
+function renderLikertLabelInputs(prefix) {
+  var size = parseInt($(prefix + '-likert-size').value, 10);
+  var container = $(prefix + '-likert-labels');
+  var html = '';
+  for (var i = 1; i <= size; i++) {
+    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
+      + '<span style="font-size:0.82rem;font-weight:700;color:var(--ink);min-width:20px;">' + i + '</span>'
+      + '<input type="text" id="' + prefix + '-likert-lbl-' + i + '" placeholder="Label for ' + i + '" maxlength="60" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:0.88rem;color:var(--ink);background:var(--cream);">'
+      + '</div>';
+  }
+  container.innerHTML = html;
 }
 
 function renderIntakeQuestions() {
@@ -7073,6 +7142,19 @@ function addIntakeQuestion() {
     var highLbl = $('iq-scale-high-label').value.trim();
     if (lowLbl) q.scale_low_label = lowLbl;
     if (highLbl) q.scale_high_label = highLbl;
+  } else if (type === 'likert_group') {
+    var size = parseInt($('iq-likert-size').value, 10);
+    var display = document.querySelector('input[name="iq-likert-display"]:checked').value;
+    var labels = [];
+    for (var i = 1; i <= size; i++) {
+      labels.push(($('iq-likert-lbl-' + i) && $('iq-likert-lbl-' + i).value.trim()) || String(i));
+    }
+    var items = $('iq-likert-items').value.split('\n').map(function(s) { return s.trim(); }).filter(Boolean);
+    if (!items.length) { alert('Add at least one question item.'); return; }
+    q.scale_size = size;
+    q.display = display;
+    q.scale_labels = labels;
+    q.items = items;
   }
   intakeQuestions.push(q);
   renderIntakeQuestions();
@@ -7086,6 +7168,11 @@ function addIntakeQuestion() {
   $('iq-scale-low-label').value = '';
   $('iq-scale-high-label').value = '';
   $('iq-scale-group').classList.add('hidden');
+  $('iq-likert-size').value = '5';
+  $('iq-likert-items').value = '';
+  $('iq-likert-group').classList.add('hidden');
+  var iqRadioOpt = document.querySelector('input[name="iq-likert-display"][value="radio"]');
+  if (iqRadioOpt) iqRadioOpt.checked = true;
 }
 
 function removeIntakeQuestion(idx) {
@@ -7114,6 +7201,20 @@ function editIntakeQuestion(idx) {
     $('iq-scale-group').classList.remove('hidden');
   } else {
     $('iq-scale-group').classList.add('hidden');
+  }
+  if (q.type === 'likert_group') {
+    $('iq-likert-size').value = q.scale_size || 5;
+    renderLikertLabelInputs('iq');
+    (q.scale_labels || []).forEach(function(lbl, i) {
+      var el = $('iq-likert-lbl-' + (i + 1));
+      if (el) el.value = lbl;
+    });
+    var dispEl = document.querySelector('input[name="iq-likert-display"][value="' + (q.display || 'radio') + '"]');
+    if (dispEl) dispEl.checked = true;
+    $('iq-likert-items').value = (q.items || []).join('\n');
+    $('iq-likert-group').classList.remove('hidden');
+  } else {
+    $('iq-likert-group').classList.add('hidden');
   }
   intakeQuestions.splice(idx, 1);
   renderIntakeQuestions();
@@ -10360,6 +10461,20 @@ function renderCheckinQuestions() {
       } else {
         $('cq-scale-group').classList.add('hidden');
       }
+      if (q.type === 'likert_group') {
+        $('cq-likert-size').value = q.scale_size || 5;
+        renderLikertLabelInputs('cq');
+        (q.scale_labels || []).forEach(function(lbl, i) {
+          var el = $('cq-likert-lbl-' + (i + 1));
+          if (el) el.value = lbl;
+        });
+        var dispEl = document.querySelector('input[name="cq-likert-display"][value="' + (q.display || 'radio') + '"]');
+        if (dispEl) dispEl.checked = true;
+        $('cq-likert-items').value = (q.items || []).join('\n');
+        $('cq-likert-group').classList.remove('hidden');
+      } else {
+        $('cq-likert-group').classList.add('hidden');
+      }
       checkinQuestions.splice(idx, 1);
       renderCheckinQuestions();
       $('cq-text').focus();
@@ -10453,6 +10568,19 @@ async function loadCheckinForms() {
       var highLbl = $('cq-scale-high-label').value.trim();
       if (lowLbl) q.scale_low_label = lowLbl;
       if (highLbl) q.scale_high_label = highLbl;
+    } else if (q.type === 'likert_group') {
+      var size = parseInt($('cq-likert-size').value, 10);
+      var display = document.querySelector('input[name="cq-likert-display"]:checked').value;
+      var labels = [];
+      for (var i = 1; i <= size; i++) {
+        labels.push(($('cq-likert-lbl-' + i) && $('cq-likert-lbl-' + i).value.trim()) || String(i));
+      }
+      var items = $('cq-likert-items').value.split('\n').map(function(s) { return s.trim(); }).filter(Boolean);
+      if (!items.length) { alert('Add at least one question item.'); return; }
+      q.scale_size = size;
+      q.display = display;
+      q.scale_labels = labels;
+      q.items = items;
     }
     checkinQuestions.push(q);
     renderCheckinQuestions();
@@ -10466,11 +10594,19 @@ async function loadCheckinForms() {
     $('cq-scale-low-label').value = '';
     $('cq-scale-high-label').value = '';
     $('cq-scale-group').classList.add('hidden');
+    $('cq-likert-size').value = '5';
+    $('cq-likert-items').value = '';
+    $('cq-likert-group').classList.add('hidden');
+    var cqRadioOpt = document.querySelector('input[name="cq-likert-display"][value="radio"]');
+    if (cqRadioOpt) cqRadioOpt.checked = true;
   };
   $('cq-type').onchange = function() {
     $('cq-options-group').classList.toggle('hidden', this.value !== 'multiple_choice');
     $('cq-scale-group').classList.toggle('hidden', this.value !== 'scale');
+    $('cq-likert-group').classList.toggle('hidden', this.value !== 'likert_group');
+    if (this.value === 'likert_group') renderLikertLabelInputs('cq');
   };
+  $('cq-likert-size').onchange = function() { renderLikertLabelInputs('cq'); };
   $('save-checkin-form-btn').onclick = async function() {
     var btn = this;
     var msg = $('save-checkin-msg');
@@ -17439,6 +17575,43 @@ function openIntakePreview() {
           + '<span style="font-size:0.82rem;color:var(--muted);">' + escapeHtml(highLbl) + '</span>'
           + '<span style="font-weight:700;font-size:1rem;color:var(--gold);min-width:24px;text-align:center;">' + scaleMid + '</span>'
           + '</div>';
+        break;
+      case 'likert_group':
+        var sz = q.scale_size || 5;
+        var lbls = q.scale_labels || [];
+        var isSlider = q.display === 'slider';
+        var itms = q.items || [];
+
+        // Legend
+        html += '<div style="display:flex;gap:6px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);">';
+        for (var li = 0; li < sz; li++) {
+          html += '<div style="flex:1;text-align:center;font-size:0.75rem;color:var(--muted);line-height:1.3;">'
+            + '<div style="font-weight:700;color:var(--ink);">' + (li + 1) + '</div>'
+            + escapeHtml(lbls[li] || '') + '</div>';
+        }
+        html += '</div>';
+
+        // Items
+        itms.forEach(function(item) {
+          html += '<div style="margin-bottom:14px;">'
+            + '<div style="font-size:0.9rem;font-weight:600;color:var(--ink);margin-bottom:8px;">' + escapeHtml(item) + '</div>';
+          if (isSlider) {
+            html += '<div style="display:flex;align-items:center;gap:10px;">'
+              + '<span style="font-size:0.78rem;color:var(--muted);">1</span>'
+              + '<input type="range" min="1" max="' + sz + '" value="' + Math.ceil(sz/2) + '" disabled style="flex:1;accent-color:var(--gold);">'
+              + '<span style="font-size:0.78rem;color:var(--muted);">' + sz + '</span>'
+              + '</div>';
+          } else {
+            html += '<div style="display:flex;gap:6px;">';
+            for (var ri = 1; ri <= sz; ri++) {
+              html += '<label style="flex:1;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:0.78rem;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">'
+                + '<input type="radio" disabled style="accent-color:var(--gold);width:16px;height:16px;">'
+                + ri + '</label>';
+            }
+            html += '</div>';
+          }
+          html += '</div>';
+        });
         break;
     }
     html += '</div>';
