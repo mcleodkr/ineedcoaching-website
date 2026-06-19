@@ -134,6 +134,9 @@ function collectExplorerFacing(map) {
   out.how_this_shows_up = ef.how_this_shows_up ?? null;
   out.closing_summary = (ef.closing_summary && typeof ef.closing_summary === 'object') ? ef.closing_summary : null;
   out.release_question = ef.release_question ?? null;
+  // v1.7.5: explorer-facing cross_domain readings + first_move action step.
+  out.cross_domain = Array.isArray(ef.cross_domain) ? ef.cross_domain : [];
+  out.first_move = typeof ef.first_move === 'string' ? ef.first_move : '';
   return out;
 }
 
