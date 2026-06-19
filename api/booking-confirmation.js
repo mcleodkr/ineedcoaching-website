@@ -216,8 +216,15 @@ export default async function handler(req, res) {
     // Part 4: turn the client email's "Access your coaching space" button into a
     // real one-click magic link. Pre-create/confirm the auth user (422 = already
     // exists, treated as success) so the link is immediately usable, then mint the
-    // magic link. Both calls use the service-role key. Best-effort: any failure
-    // falls back to the bare dashboard URL so the confirmation email still sends.
+    // magic link. We do NOT pass redirect_to: admin generate_link ignores the
+    // redirect allowlist and forces redirect_to to the project Site URL
+    // (ineedtherapy.org on this shared Supabase project), which would bounce the
+    // client to the therapy site. Instead we extract the one-time token_hash from
+    // the returned action_link and hand the client a coaching-domain link; the
+    // existing client-dashboard.html callback verifies it against /auth/v1/verify
+    // and establishes the session on this domain. Both calls use the service-role
+    // key. Best-effort: any failure falls back to the bare dashboard URL so the
+    // confirmation email still sends.
     let clientSpaceUrl = 'https://www.ineedcoaching.org/client-dashboard.html';
     if (booking.client_email) {
       try {
@@ -235,13 +242,23 @@ export default async function handler(req, res) {
           body: JSON.stringify({
             type: 'magiclink',
             email: booking.client_email,
-            options: { redirect_to: 'https://www.ineedcoaching.org/client-dashboard.html' },
           }),
         });
         if (linkRes.ok) {
           const linkData = await linkRes.json().catch(() => ({}));
-          if (linkData && linkData.action_link) clientSpaceUrl = linkData.action_link;
-          else console.warn('[booking-confirmation] magic-link generate returned no action_link');
+          const actionLink = linkData && linkData.action_link;
+          if (actionLink) {
+            const parsed = new URL(actionLink);
+            const tokenHash = parsed.searchParams.get('token');
+            const otpType = parsed.searchParams.get('type') || 'magiclink';
+            if (tokenHash) {
+              clientSpaceUrl = `https://www.ineedcoaching.org/client-dashboard.html?token_hash=${encodeURIComponent(tokenHash)}&type=${encodeURIComponent(otpType)}`;
+            } else {
+              console.warn('[booking-confirmation] magic-link had no token_hash');
+            }
+          } else {
+            console.warn('[booking-confirmation] magic-link generate returned no action_link');
+          }
         } else {
           console.warn('[booking-confirmation] magic-link generate failed', linkRes.status);
         }
