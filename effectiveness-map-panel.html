@@ -360,12 +360,73 @@
   function helpTip(text) {
     return '<span class="help-tip" title="' + escapeHtml(text) + '">ⓘ</span>';
   }
-  function effmapIntelHtml(m) {
+  // v1.8.0 coach layer: new field order (coach_synthesis -> working_hypothesis ->
+  // cross_domain_dynamic -> leverage_point -> session_stance -> session_questions ->
+  // interpretation_support, collapsed). Falls through to the legacy render below when the
+  // new fields are absent (old rows), so no Map renders broken. idSuffix keeps the nested
+  // collapsible ids unique across cards.
+  function effmapIntelNew(cf, ds, idSuffix) {
+    var sid = (idSuffix == null ? '' : idSuffix);
+    function label(t) { return '<div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">' + escapeHtml(t) + '</div>'; }
+    function sec(t, s) {
+      if (!s || !String(s).trim()) return '';
+      return '<div style="margin-bottom:14px;">' + label(t)
+        + effmapParas(String(s), 'margin:0 0 12px;font-size:0.88rem;line-height:1.6;color:var(--ink);') + '</div>';
+    }
+    var out = '';
+    out += sec('Coach synthesis', cf.coach_synthesis);
+    out += sec('Working hypothesis', cf.working_hypothesis);
+    out += sec('Cross-domain dynamic', cf.cross_domain_dynamic);
+    out += sec('Leverage point', cf.leverage_point);
+    out += sec('Session stance', cf.session_stance);
+    var qs = Array.isArray(cf.session_questions) ? cf.session_questions.filter(function(q){ return q && String(q).trim(); }) : [];
+    if (qs.length) {
+      out += '<div style="margin-bottom:14px;">' + label('Questions for the session')
+        + '<ol style="margin:0;padding-left:1.1rem;font-size:0.88rem;line-height:1.6;color:var(--ink);">'
+        + qs.map(function(q){ return '<li style="margin:0 0 6px;">' + escapeHtml(String(q)) + '</li>'; }).join('')
+        + '</ol></div>';
+    }
+    // Interpretation support (collapsed). C5: overall = interpretation_support.overall
+    // (strong|moderate|limited), NOT the legacy overall_evidence_strength column (thin|moderate|strong).
+    // C6: per-domain evidence/confidence read from explorer_facing.domains (ds), not from
+    // interpretation_support.by_domain, to avoid drift between the two stored copies.
+    var is = (cf.interpretation_support && typeof cf.interpretation_support === 'object') ? cf.interpretation_support : {};
+    var supRows = '';
+    EFFMAP_DOMAINS.forEach(function(d) {
+      var info = ds[d[0]] || {};
+      supRows += '<tr>'
+        + '<td style="padding:6px 10px;font-size:0.82rem;color:var(--ink);border-bottom:1px solid var(--border);">' + escapeHtml(d[1]) + '</td>'
+        + '<td style="padding:6px 10px;font-size:0.82rem;color:var(--muted);border-bottom:1px solid var(--border);">' + escapeHtml(info.evidence_strength || '—') + '</td>'
+        + '<td style="padding:6px 10px;font-size:0.82rem;color:var(--muted);border-bottom:1px solid var(--border);">' + escapeHtml(info.interpretation_confidence || '—') + '</td>'
+        + '</tr>';
+    });
+    var supInner = '';
+    if (is.overall) supInner += '<div style="font-size:0.85rem;color:var(--ink);margin-bottom:8px;"><strong style="font-weight:600;">Overall:</strong> ' + escapeHtml(is.overall) + '</div>';
+    if (is.rationale) supInner += '<p style="margin:0 0 12px;font-size:0.85rem;line-height:1.55;color:var(--muted);">' + escapeHtml(is.rationale) + '</p>';
+    supInner += '<table style="width:100%;border-collapse:collapse;"><thead><tr>'
+      + '<th style="text-align:left;padding:6px 10px;font-size:0.7rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);">Domain</th>'
+      + '<th style="text-align:left;padding:6px 10px;font-size:0.7rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);">Evidence</th>'
+      + '<th style="text-align:left;padding:6px 10px;font-size:0.7rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);">Confidence</th>'
+      + '</tr></thead><tbody>' + supRows + '</tbody></table>';
+    out += effmapCollapsible('effmap-intel-support-' + sid, 'Interpretation support', supInner);
+    // Opener moved out of the inline layer (C: not displayed inline) — behind a collapsible.
+    if (cf.opener && String(cf.opener).trim()) {
+      out += effmapCollapsible('effmap-intel-opener-' + sid, 'How this Map works',
+        effmapParas(cf.opener, 'margin:0 0 8px;font-size:0.82rem;line-height:1.55;color:var(--muted);'));
+    }
+    return out;
+  }
+  function effmapIntelHtml(m, idSuffix) {
     var raw = (m && m.raw_output && typeof m.raw_output === 'object') ? m.raw_output : {};
     var ef = (raw.explorer_facing && typeof raw.explorer_facing === 'object') ? raw.explorer_facing : {};
     var cf = (raw.coach_facing && typeof raw.coach_facing === 'object') ? raw.coach_facing : {};
     var ds = (raw.domain_statuses && typeof raw.domain_statuses === 'object') ? raw.domain_statuses
       : ((ef.domains && typeof ef.domains === 'object') ? ef.domains : {});
+    // New-contract render when any v1.8.0 coach field is present; else legacy fallback below.
+    if (cf.leverage_point || cf.session_stance || cf.working_hypothesis || cf.cross_domain_dynamic
+        || (cf.session_questions && cf.session_questions.length) || cf.interpretation_support) {
+      return effmapIntelNew(cf, ds, idSuffix);
+    }
     var head = '';
     // v1.7: coach opener ("How this Map works") — fixed copy.
     if (cf.opener && String(cf.opener).trim()) {
@@ -769,7 +830,7 @@
   function effmapMapBodyHtml(m, idSuffix) {
     return effmapOpenerHtml(m)
       + effmapReadingOrderHtml(m)
-      + effmapCollapsible('effmap-intel-' + idSuffix, 'Intelligence Notes (coach only)', effmapIntelHtml(m));
+      + effmapCollapsible('effmap-intel-' + idSuffix, 'Intelligence Notes (coach only)', effmapIntelHtml(m, idSuffix));
   }
 
   function renderGoalCardHtml(group, gi, isCurrentGroup, assignActive) {
