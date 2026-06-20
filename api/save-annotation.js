@@ -14,7 +14,7 @@
 
 import {
   applyCors, parseBody, serviceConfigured, sbHeaders, deriveCoachId, supervises,
-  isUuid, normalizeTargetType, notifyCoach, SB_URL,
+  isUuid, normalizeTargetType, notifyCoach, notifySharedAnnotationEmail, SB_URL,
 } from '../lib/supervision.js';
 
 const FAIL = 'Could not save the annotation.';
@@ -59,11 +59,15 @@ export default async function handler(req, res) {
     const annotation = (await ins.json().catch(() => []))[0] || null;
 
     if (visibility === 'shared_with_supervisee') {
+      // In-app notification + best-effort Resend email (both never block the response).
       await notifyCoach(sid, {
         type: 'supervisor_feedback',
         title: 'New supervisor feedback',
         body: 'Your supervisor left feedback on your work.',
         link_url: '/coach-dashboard.html?tab=supervision',
+      });
+      await notifySharedAnnotationEmail({
+        superviseeId: sid, supervisorId: me, targetType, targetId, annotationType: type,
       });
     }
     return res.status(200).json({ ok: true, annotation });
