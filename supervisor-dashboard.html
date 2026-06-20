@@ -669,6 +669,10 @@
     const userRes = await fetch(SUPABASE_URL + '/auth/v1/user', { headers: { apikey: ANON_KEY, Authorization: 'Bearer ' + token() } });
     if (!userRes.ok) { location.href = '/coach-dashboard.html'; return; }
     const user = await userRes.json();
+    // Provision this supervisor (create coach_profiles + grant supervisor role) and
+    // link any pending Case B invitations addressed to their email. Idempotent;
+    // must run before the profile lookup so a freshly-signed-up supervisor resolves.
+    await api('/api/resolve-supervisor-invite', {});
     const profRes = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles?user_email=eq.' + encodeURIComponent((user.email || '').toLowerCase()) + '&select=id,display_name,full_name', { headers: apiHeaders() });
     const profs = await profRes.json().catch(() => []);
     if (!Array.isArray(profs) || !profs.length) { showError('No coach profile found for ' + esc(user.email || '')); return; }

@@ -11,7 +11,7 @@
 
 import {
   applyCors, parseBody, serviceConfigured, sbHeaders, deriveEmail, resolveCoachIdByEmail,
-  resolveCoachByEmail, isSupervisor, notifyCoach, isEmail, SB_URL,
+  resolveCoachByEmail, ensureSupervisorRole, sendSupervisionInviteEmail, notifyCoach, isEmail, SB_URL,
 } from '../lib/supervision.js';
 
 const FAIL = 'Could not send the supervision request.';
@@ -33,43 +33,71 @@ export default async function handler(req, res) {
     if (!isEmail(supEmail)) return res.status(400).json({ ok: false, error: 'INVALID_EMAIL' });
     if (supEmail === myEmail) return res.status(400).json({ ok: false, error: 'CANNOT_SUPERVISE_SELF' });
 
-    const supervisor = await resolveCoachByEmail(supEmail);
-    if (!supervisor) return res.status(404).json({ ok: false, error: 'No coach with that email was found.' });
-    if (!(await isSupervisor(supervisor.id))) return res.status(400).json({ ok: false, error: 'That email is not a registered supervisor.' });
-    if (supervisor.id === me) return res.status(400).json({ ok: false, error: 'CANNOT_SUPERVISE_SELF' });
+    const myProfile = await resolveCoachByEmail(myEmail);
+    const inviterName = (myProfile && (myProfile.display_name || myProfile.full_name)) || null;
 
-    // Don't create a duplicate (unique(supervisor_id, supervisee_id)); surface state instead.
-    const existRes = await fetch(
-      `${SB_URL}/rest/v1/supervision_relationships?supervisor_id=eq.${encodeURIComponent(supervisor.id)}`
-      + `&supervisee_id=eq.${encodeURIComponent(me)}&select=id,status&limit=1`,
-      { headers: sbHeaders() }
-    );
-    if (existRes.ok) {
-      const existing = (await existRes.json().catch(() => []))[0];
-      if (existing && existing.status === 'active') return res.status(409).json({ ok: false, error: 'This supervisor already supervises you.' });
-      if (existing && existing.status === 'pending') return res.status(409).json({ ok: false, error: 'A request to this supervisor is already pending.' });
-      // archived → fall through and re-invite by reactivating to pending.
-      if (existing && existing.status === 'archived') {
-        const reUpd = await fetch(
-          `${SB_URL}/rest/v1/supervision_relationships?id=eq.${encodeURIComponent(existing.id)}`,
-          { method: 'PATCH', headers: sbHeaders({ Prefer: 'return=representation' }), body: JSON.stringify({ status: 'pending', archived_at: null }) }
-        );
-        if (!reUpd.ok) { const t = await reUpd.text().catch(() => ''); console.error('[invite-supervisor] reactivate', reUpd.status, t.slice(0, 200)); return res.status(200).json({ ok: false, error: FAIL }); }
-        const row = (await reUpd.json().catch(() => []))[0];
-        await notifyCoach(supervisor.id, { type: 'supervision_request', title: 'New supervision request', body: 'A coach requested supervision.', link_url: '/supervisor-dashboard.html' });
-        return res.status(200).json({ ok: true, relationship_id: row && row.id, status: 'pending' });
+    const supervisor = await resolveCoachByEmail(supEmail);
+
+    // ── Case A: the supervisor already has a coach account ──────────────────
+    if (supervisor) {
+      if (supervisor.id === me) return res.status(400).json({ ok: false, error: 'CANNOT_SUPERVISE_SELF' });
+
+      // Don't create a duplicate (unique(supervisor_id, supervisee_id)); surface state instead.
+      const existRes = await fetch(
+        `${SB_URL}/rest/v1/supervision_relationships?supervisor_id=eq.${encodeURIComponent(supervisor.id)}`
+        + `&supervisee_id=eq.${encodeURIComponent(me)}&select=id,status&limit=1`,
+        { headers: sbHeaders() }
+      );
+      let relId = null;
+      if (existRes.ok) {
+        const existing = (await existRes.json().catch(() => []))[0];
+        if (existing && existing.status === 'active') return res.status(409).json({ ok: false, error: 'This supervisor already supervises you.' });
+        if (existing && existing.status === 'pending') return res.status(409).json({ ok: false, error: 'A request to this supervisor is already pending.' });
+        // archived → reactivate to pending.
+        if (existing && existing.status === 'archived') {
+          const reUpd = await fetch(
+            `${SB_URL}/rest/v1/supervision_relationships?id=eq.${encodeURIComponent(existing.id)}`,
+            { method: 'PATCH', headers: sbHeaders({ Prefer: 'return=representation' }), body: JSON.stringify({ status: 'pending', archived_at: null }) }
+          );
+          if (!reUpd.ok) { const t = await reUpd.text().catch(() => ''); console.error('[invite-supervisor] reactivate', reUpd.status, t.slice(0, 200)); return res.status(200).json({ ok: false, error: FAIL }); }
+          relId = ((await reUpd.json().catch(() => []))[0] || {}).id;
+        }
       }
+      if (!relId) {
+        const ins = await fetch(`${SB_URL}/rest/v1/supervision_relationships`, {
+          method: 'POST', headers: sbHeaders({ Prefer: 'return=representation' }),
+          body: JSON.stringify({ supervisor_id: supervisor.id, supervisee_id: me, status: 'pending' }),
+        });
+        if (!ins.ok) { const t = await ins.text().catch(() => ''); console.error('[invite-supervisor] insert', ins.status, t.slice(0, 200)); return res.status(200).json({ ok: false, error: FAIL }); }
+        relId = ((await ins.json().catch(() => []))[0] || {}).id;
+      }
+
+      // The invitee can now act as a supervisor for this request.
+      await ensureSupervisorRole(supervisor.id);
+      await notifyCoach(supervisor.id, { type: 'supervision_request', title: 'New supervision request', body: 'A coach requested supervision.', link_url: '/supervisor-dashboard.html' });
+      await sendSupervisionInviteEmail({ toEmail: supEmail, inviterName, mode: 'existing' });
+      return res.status(200).json({ ok: true, relationship_id: relId, status: 'pending' });
     }
 
-    const ins = await fetch(`${SB_URL}/rest/v1/supervision_relationships`, {
-      method: 'POST', headers: sbHeaders({ Prefer: 'return=representation' }),
-      body: JSON.stringify({ supervisor_id: supervisor.id, supervisee_id: me, status: 'pending' }),
-    });
-    if (!ins.ok) { const t = await ins.text().catch(() => ''); console.error('[invite-supervisor] insert', ins.status, t.slice(0, 200)); return res.status(200).json({ ok: false, error: FAIL }); }
-    const created = (await ins.json().catch(() => []))[0];
+    // ── Case B: no account yet — store the invited email, resolve on signup ──
+    const dupRes = await fetch(
+      `${SB_URL}/rest/v1/supervision_relationships?supervisee_id=eq.${encodeURIComponent(me)}`
+      + `&invited_supervisor_email=ilike.${encodeURIComponent(supEmail)}&supervisor_id=is.null&status=eq.pending&select=id&limit=1`,
+      { headers: sbHeaders() }
+    );
+    if (dupRes.ok && ((await dupRes.json().catch(() => []))[0])) {
+      return res.status(409).json({ ok: false, error: 'A request to this email is already pending.' });
+    }
 
-    await notifyCoach(supervisor.id, { type: 'supervision_request', title: 'New supervision request', body: 'A coach requested supervision.', link_url: '/supervisor-dashboard.html' });
-    return res.status(200).json({ ok: true, relationship_id: created && created.id, status: 'pending' });
+    const insB = await fetch(`${SB_URL}/rest/v1/supervision_relationships`, {
+      method: 'POST', headers: sbHeaders({ Prefer: 'return=representation' }),
+      body: JSON.stringify({ supervisor_id: null, supervisee_id: me, invited_supervisor_email: supEmail, status: 'pending' }),
+    });
+    if (!insB.ok) { const t = await insB.text().catch(() => ''); console.error('[invite-supervisor] insert caseB', insB.status, t.slice(0, 200)); return res.status(200).json({ ok: false, error: FAIL }); }
+    const createdB = (await insB.json().catch(() => []))[0];
+
+    await sendSupervisionInviteEmail({ toEmail: supEmail, inviterName, mode: 'new' });
+    return res.status(200).json({ ok: true, relationship_id: createdB && createdB.id, status: 'pending', invited: true });
   } catch (e) {
     console.error('[invite-supervisor]', e && e.message);
     return res.status(500).json({ ok: false, error: FAIL });

@@ -1400,7 +1400,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
     <button class="tab-btn" data-tab="recommendations">Recommendations</button>
     <a id="admin-console-link" href="/admin-dashboard.html" style="display:none;margin-top:12px;padding:10px 18px;border-top:1px solid #edeae4;font-family:'DM Sans',sans-serif;font-size:0.72rem;font-weight:400;color:#9a9490;text-decoration:none;">Admin Console</a>
     <button class="tab-btn" data-tab="taxonomy-review" id="taxonomy-review-nav" style="display:none;">Taxonomy Review</button>
-    <button class="tab-btn" data-tab="supervision">Supervision</button>
+    <button class="tab-btn" data-tab="supervision" id="supervision-tab-btn" style="display:none;">Supervision</button>
     <a id="supervisor-dashboard-link" href="/supervisor-dashboard.html" style="display:none;margin-top:4px;padding:10px 18px;font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:600;color:#c49a3c;text-decoration:none;">Supervisor Dashboard &rarr;</a>
   </nav>
   <div style="flex:1;min-width:0;">
@@ -1459,6 +1459,16 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 
     <!-- PROFILE TAB -->
     <div id="tab-profile" class="tab-panel">
+
+      <!-- Supervision opt-in (Fix 2): unobtrusive entry point so a coach working
+           under supervision can reveal the Supervision workspace. Hidden once the
+           tab is already visible (relationship exists or already opted in). -->
+      <div class="form-section" id="supervision-optin-section" style="display:none;">
+        <h2 class="form-section-title">Supervision</h2>
+        <p style="font-size:0.88rem;color:#6b6b60;line-height:1.55;margin-bottom:10px;">Working under supervision? Set up your supervision workspace to request a supervisor and review the feedback they leave on your work.</p>
+        <a href="#" id="supervision-optin-link" style="font-family:'DM Sans',sans-serif;font-size:0.88rem;font-weight:600;color:#c49a3c;text-decoration:none;">Set up your supervision workspace &rarr;</a>
+        <span id="supervision-optin-msg" style="font-size:0.82rem;color:#6b6b60;margin-left:10px;"></span>
+      </div>
 
       <!-- Photo -->
       <div class="form-section">
@@ -2847,24 +2857,154 @@ var SUP_TARGET_LABELS = { session: 'Session note', coach_dna: 'Coach DNA', patte
 function supParseBody(body) { var m = String(body || '').match(/^\[([^\]]+)\]\s*([\s\S]*)$/); return m ? { type: m[1], text: m[2] } : { type: 'Comment', text: String(body || '') }; }
 function supFmtDate(iso) { if (!iso) return ''; var d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
 
+/* Fix 2: Supervision tab is hidden by default. It is revealed for coaches who
+   already have a supervision relationship (any status) or who opt in via the
+   Profile entry point. The opt-in preference persists on coach_profiles so the
+   tab stays visible across sessions. */
+function revealSupervisionTab() {
+  var b = document.getElementById('supervision-tab-btn');
+  if (b) b.style.display = '';
+}
+function openSupervisionTab() {
+  var b = document.getElementById('supervision-tab-btn');
+  if (b) { b.style.display = ''; b.click(); }
+}
+async function persistSupervisionOptIn() {
+  if (!coachProfile || !coachProfile.id) return false;
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles?id=eq.' + coachProfile.id, {
+      method: 'PATCH', headers: Object.assign({}, apiHeaders(), { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ supervision_opt_in: true })
+    });
+    if (res.ok) { coachProfile.supervision_opt_in = true; return true; }
+  } catch (e) { /* non-fatal */ }
+  return false;
+}
+async function initSupervisionVisibility() {
+  if (!coachProfile || !coachProfile.id) return;
+  var optedIn = !!coachProfile.supervision_opt_in;
+  var hasRel = false;
+  try {
+    var r = await fetch(SUPABASE_URL + '/rest/v1/supervision_relationships?supervisee_id=eq.' + encodeURIComponent(coachProfile.id) + '&select=id&limit=1', { headers: apiHeaders() });
+    if (r.ok) { var rows = await r.json().catch(function() { return []; }); hasRel = Array.isArray(rows) && rows.length > 0; }
+  } catch (e) { /* non-fatal */ }
+  if (optedIn || hasRel) revealSupervisionTab();
+
+  var section = document.getElementById('supervision-optin-section');
+  var link = document.getElementById('supervision-optin-link');
+  if (section && link) {
+    section.style.display = '';
+    if (hasRel || optedIn) {
+      // Already set up — offer a quiet shortcut into the workspace.
+      link.textContent = 'Open your supervision workspace →';
+      link.addEventListener('click', function(e) { e.preventDefault(); openSupervisionTab(); });
+    } else {
+      link.addEventListener('click', async function(e) {
+        e.preventDefault();
+        var msg = document.getElementById('supervision-optin-msg');
+        if (msg) msg.textContent = 'Setting up…';
+        await persistSupervisionOptIn();
+        if (msg) msg.textContent = '';
+        openSupervisionTab();
+      });
+    }
+  }
+}
+
 async function loadSupervision() {
   var host = document.getElementById('supervision-content');
   if (!host) return;
-  host.innerHTML = ''
-    + '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:10px;padding:18px 20px;margin-bottom:18px;">'
-    +   '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;margin-bottom:6px;">Request supervision</div>'
-    +   '<div style="font-size:0.85rem;color:#6b6b60;margin-bottom:12px;">Enter your supervisor&rsquo;s email. They&rsquo;ll receive a request to accept.</div>'
-    +   '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
-    +     '<input type="email" id="sup-invite-email" placeholder="supervisor@example.com" style="flex:1;min-width:220px;padding:9px 12px;border:1px solid #e8e4dc;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.88rem;">'
-    +     '<button id="sup-invite-btn" style="background:#c49a3c;color:#fff;border:none;padding:9px 18px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.15s ease;">Send request</button>'
-    +   '</div>'
-    +   '<div id="sup-invite-msg" style="font-size:0.8rem;margin-top:8px;min-height:1em;"></div>'
-    + '</div>'
+  host.innerHTML = '<div style="padding:40px;text-align:center;color:#7a7570;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;">Loading…</div>';
+  var topHtml = await supTopBlockHtml();
+  host.innerHTML = topHtml
     + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;margin:0 0 10px;">Supervisor feedback</div>'
     + '<div id="sup-feedback-list"><div style="color:#6b6b60;font-size:0.85rem;">Loading&hellip;</div></div>';
+  supWireTopBlock();
+  await supRenderFeedback();
+}
+
+// Top block: the request form when there is no active/pending supervisor, or the
+// relationship status + revoke control when one exists.
+async function supTopBlockHtml() {
+  var meId = coachProfile && coachProfile.id;
+  var rels = [];
+  if (meId) {
+    try {
+      var r = await fetch(SUPABASE_URL + '/rest/v1/supervision_relationships?supervisee_id=eq.' + encodeURIComponent(meId) + '&status=in.(active,pending)&select=id,supervisor_id,invited_supervisor_email,status,created_at&order=created_at.desc', { headers: apiHeaders() });
+      if (r.ok) rels = await r.json().catch(function() { return []; });
+    } catch (e) { /* non-fatal */ }
+  }
+  rels = Array.isArray(rels) ? rels : [];
+
+  if (!rels.length) {
+    return ''
+      + '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:10px;padding:18px 20px;margin-bottom:18px;">'
+      +   '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;margin-bottom:6px;">Request supervision</div>'
+      +   '<div style="font-size:0.85rem;color:#6b6b60;margin-bottom:12px;">Enter your supervisor&rsquo;s email. They&rsquo;ll receive a request to accept. If they don&rsquo;t have an account yet, they&rsquo;ll be invited to create a free one.</div>'
+      +   '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
+      +     '<input type="email" id="sup-invite-email" placeholder="supervisor@example.com" style="flex:1;min-width:220px;padding:9px 12px;border:1px solid #e8e4dc;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.88rem;">'
+      +     '<button id="sup-invite-btn" style="background:#c49a3c;color:#fff;border:none;padding:9px 18px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.15s ease;">Send request</button>'
+      +   '</div>'
+      +   '<div id="sup-invite-msg" style="font-size:0.8rem;margin-top:8px;min-height:1em;"></div>'
+      + '</div>';
+  }
+
+  var supIds = Array.from(new Set(rels.map(function(x) { return x.supervisor_id; }).filter(Boolean)));
+  var names = {};
+  if (supIds.length) {
+    try {
+      var pRes = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles?id=in.(' + supIds.map(encodeURIComponent).join(',') + ')&select=id,display_name,full_name,user_email', { headers: apiHeaders() });
+      if (pRes.ok) (await pRes.json().catch(function() { return []; })).forEach(function(p) { names[p.id] = p.display_name || p.full_name || p.user_email; });
+    } catch (e) { /* non-fatal */ }
+  }
+
+  var html = '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:10px;padding:18px 20px;margin-bottom:18px;">'
+    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;margin-bottom:6px;">Your supervision</div>';
+  rels.forEach(function(rel) {
+    var who = rel.supervisor_id ? (names[rel.supervisor_id] || 'Supervisor') : (rel.invited_supervisor_email || 'Invited supervisor');
+    var isActive = rel.status === 'active';
+    var label = isActive ? 'Active' : 'Pending';
+    var color = isActive ? '#2f6168' : '#9a7a1f';
+    var bg = isActive ? 'rgba(47,97,104,0.12)' : 'rgba(196,154,60,0.16)';
+    var sub = isActive ? 'Supervising your practice.' : (rel.supervisor_id ? 'Waiting for them to accept.' : 'Invitation sent — waiting for them to create an account.');
+    html += '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 0;border-top:1px solid #f0ece4;">'
+      + '<div style="min-width:0;flex:1;">'
+      +   '<div style="font-size:0.92rem;font-weight:600;color:#1a3a52;word-break:break-word;">' + escapeHtml(who) + '</div>'
+      +   '<div style="font-size:0.78rem;color:#6b6b60;">' + escapeHtml(sub) + '</div>'
+      + '</div>'
+      + '<span style="font-size:0.62rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:' + color + ';background:' + bg + ';border-radius:999px;padding:3px 10px;">' + label + '</span>'
+      + '<button class="sup-revoke-btn" data-rel="' + escapeHtml(rel.id) + '" data-active="' + (isActive ? '1' : '0') + '" style="background:none;border:1px solid #e8e4dc;color:#9a2b2b;padding:6px 12px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:600;cursor:pointer;">' + (isActive ? 'End' : 'Cancel') + '</button>'
+      + '</div>';
+  });
+  html += '<div id="sup-revoke-msg" style="font-size:0.8rem;margin-top:8px;min-height:1em;"></div></div>';
+  return html;
+}
+
+function supWireTopBlock() {
   var inviteBtn = document.getElementById('sup-invite-btn');
   if (inviteBtn) inviteBtn.addEventListener('click', supSendInvite);
-  await supRenderFeedback();
+  document.querySelectorAll('.sup-revoke-btn').forEach(function(b) {
+    b.addEventListener('click', function() { supRevoke(b.getAttribute('data-rel'), b.getAttribute('data-active') === '1'); });
+  });
+}
+
+// Revoke (end an active supervision) or cancel (a pending request). RLS allows the
+// supervisee to archive their own relationship rows.
+async function supRevoke(relId, isActive) {
+  if (!relId) return;
+  if (!window.confirm('Are you sure you want to ' + (isActive ? 'end this supervision' : 'cancel this request') + '?')) return;
+  var msg = document.getElementById('sup-revoke-msg');
+  if (msg) { msg.style.color = '#6b6b60'; msg.textContent = 'Updating…'; }
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/supervision_relationships?id=eq.' + encodeURIComponent(relId), {
+      method: 'PATCH', headers: Object.assign({}, apiHeaders(), { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ status: 'archived', archived_at: new Date().toISOString() })
+    });
+    if (!res.ok) throw new Error('PATCH ' + res.status);
+    await loadSupervision();
+  } catch (e) {
+    if (msg) { msg.style.color = '#9a2b2b'; msg.textContent = 'Could not update. Please try again.'; }
+  }
 }
 
 async function supSendInvite() {
@@ -2877,10 +3017,13 @@ async function supSendInvite() {
   try {
     var r = await fetch('/api/invite-supervisor', { method: 'POST', headers: apiHeaders(), body: JSON.stringify({ supervisor_email: email }) });
     var d = await r.json().catch(function() { return null; });
-    if (!d || !d.ok) { msg.style.color = '#9a2b2b'; msg.textContent = (d && d.error) || 'Could not send the request.'; }
-    else { msg.style.color = '#2f6168'; msg.textContent = 'Request sent. Your supervisor will accept it on their end.'; if (input) input.value = ''; }
-  } catch (e) { msg.style.color = '#9a2b2b'; msg.textContent = 'Network error. Please try again.'; }
-  btn.disabled = false;
+    if (!d || !d.ok) { msg.style.color = '#9a2b2b'; msg.textContent = (d && d.error) || 'Could not send the request.'; btn.disabled = false; return; }
+    msg.style.color = '#2f6168';
+    msg.textContent = d.invited ? 'Invitation sent. They’ll create a free supervisor account to accept.' : 'Request sent. Your supervisor will accept it on their end.';
+    if (input) input.value = '';
+    // Reflect the new pending relationship as status + revoke.
+    await loadSupervision();
+  } catch (e) { msg.style.color = '#9a2b2b'; msg.textContent = 'Network error. Please try again.'; btn.disabled = false; }
 }
 
 async function supRenderFeedback() {
@@ -3342,6 +3485,9 @@ async function init() {
       .then(function(rows) { if (Array.isArray(rows) && rows.length) { var l = $('supervisor-dashboard-link'); if (l) l.style.display = 'block'; } })
       .catch(function() {});
   }
+  // Supervision tab visibility + settings opt-in (Fix 2). Hidden by default; shown
+  // only for coaches who have a supervision relationship or have opted in.
+  if (typeof initSupervisionVisibility === 'function') { initSupervisionVisibility(); }
 
   // Brief 2b: warm the pattern-name → taxonomy_id cache so dna_tag pills
   // can carry data-pattern-id and surface the canonical Gestalt definition
