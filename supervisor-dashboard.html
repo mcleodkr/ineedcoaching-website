@@ -162,28 +162,149 @@
     } catch (e) { return { ok: false, error: 'Network error.' }; }
   }
 
-  /* ---- generic JSON renderer for the jsonb intelligence fields (null-safe) ---- */
-  function renderRich(v) {
-    if (v == null || v === '') return '<span style="color:var(--muted);font-style:italic;">Not yet available</span>';
+  /* =========================================================================
+     Structured renderers for the jsonb intelligence fields. These mirror the
+     card treatment in coach-dashboard.html (gold eyebrow label + Cormorant title
+     + body) instead of dumping raw objects: each meaningful field becomes a titled
+     section card, arrays of pattern-like objects become individual mini-cards with
+     a title + category badge + evidence disclosure. All null-safe.
+     ========================================================================= */
+  function humanize(k) { var s = String(k).replace(/_/g, ' ').trim(); return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+  function isStrArr(a) { return a.every(function (x) { return x == null || typeof x === 'string' || typeof x === 'number'; }); }
+  var TITLE_KEYS = ['pattern_name', 'pattern', 'technique', 'bias', 'name', 'response_type', 'moment', 'trigger'];
+  var META_KEYS = ['frequency', 'trajectory'];
+  function isPatternObj(o) {
+    return o && typeof o === 'object' && !Array.isArray(o) &&
+      (o.classification || o.pattern_name || o.pattern || o.technique || o.bias || o.response_type || o.moment);
+  }
+  function badge(cat) {
+    if (!cat) return '';
+    return '<span style="font-size:0.6rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--gold);background:rgba(196,154,60,0.14);border-radius:999px;padding:2px 9px;">' + esc(cat) + '</span>';
+  }
+  function metaLine(o) {
+    var p = [];
+    META_KEYS.forEach(function (k) { if (o[k]) p.push(esc(String(o[k]))); });
+    return p.length ? '<span style="font-size:0.72rem;color:var(--muted);">' + p.join(' · ') + '</span>' : '';
+  }
+  function objTitle(o) { for (var i = 0; i < TITLE_KEYS.length; i++) { if (o[TITLE_KEYS[i]]) return String(o[TITLE_KEYS[i]]); } return ''; }
+  function fieldRow(label, valHtml) {
+    return '<div style="margin:0 0 6px;"><span style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);">' + esc(label) + '</span>'
+      + '<div style="font-size:0.84rem;line-height:1.55;color:var(--ink);">' + valHtml + '</div></div>';
+  }
+  function renderClassification(c) {
+    if (!c || typeof c !== 'object') return '';
+    var rows = '';
+    ['impact', 'evidence', 'recommendation'].forEach(function (k) { if (c[k]) rows += fieldRow(humanize(k), esc(String(c[k])).replace(/\n/g, '<br>')); });
+    if (!rows) return '';
+    return '<details style="margin-top:8px;"><summary style="cursor:pointer;font-size:0.72rem;color:var(--gold);font-weight:600;list-style:none;">Evidence &amp; recommendation</summary>'
+      + '<div style="margin-top:6px;padding:8px 10px;background:var(--cream);border:1px solid var(--border);border-radius:var(--r-sm);">' + rows + '</div></details>';
+  }
+  function renderObjCard(o) {
+    var title = objTitle(o);
+    var cat = (o.classification && o.classification.category) || o.category;
+    var ml = metaLine(o);
+    var head = (title || cat || ml)
+      ? '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">'
+        + (title ? '<span style="font-family:\'Cormorant Garamond\',serif;font-size:1rem;font-weight:600;color:var(--navy);">' + esc(title) + '</span>' : '')
+        + badge(cat) + ml + '</div>'
+      : '';
+    var rows = '';
+    Object.keys(o).forEach(function (k) {
+      if (TITLE_KEYS.indexOf(k) !== -1 && String(o[k]) === title) return;
+      if (k === 'classification' || k === 'category' || META_KEYS.indexOf(k) !== -1) return;
+      var v = o[k]; if (v == null || v === '' || (Array.isArray(v) && !v.length)) return;
+      rows += fieldRow(humanize(k), renderVal(v));
+    });
+    return '<div style="border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:10px;background:var(--white);">' + head + rows + renderClassification(o.classification) + '</div>';
+  }
+  function renderVal(v) {
+    if (v == null || v === '') return '<span style="color:var(--muted);">&mdash;</span>';
     if (typeof v === 'string') return esc(v).replace(/\n/g, '<br>');
     if (typeof v === 'number' || typeof v === 'boolean') return esc(String(v));
     if (Array.isArray(v)) {
-      if (!v.length) return '<span style="color:var(--muted);font-style:italic;">None</span>';
-      return '<ul class="rich-list">' + v.map(x => '<li>' + (typeof x === 'object' ? renderRich(x) : esc(String(x))) + '</li>').join('') + '</ul>';
+      if (!v.length) return '<span style="color:var(--muted);">None</span>';
+      if (isStrArr(v)) return '<ul style="margin:0;padding-left:1.1rem;">' + v.map(function (x) { return '<li style="margin:0 0 4px;font-size:0.84rem;line-height:1.5;">' + esc(String(x)) + '</li>'; }).join('') + '</ul>';
+      return v.map(function (x) { return (x && typeof x === 'object' && !Array.isArray(x)) ? renderObjCard(x) : '<div style="margin:0 0 6px;font-size:0.84rem;">' + renderVal(x) + '</div>'; }).join('');
     }
     if (typeof v === 'object') {
-      const keys = Object.keys(v);
-      if (!keys.length) return '<span style="color:var(--muted);font-style:italic;">None</span>';
-      return keys.map(k => '<div class="kv"><div class="kv-label">' + esc(k.replace(/_/g, ' ')) + '</div><div class="kv-val">' + renderRich(v[k]) + '</div></div>').join('');
+      if (isPatternObj(v)) return renderObjCard(v);
+      var keys = Object.keys(v).filter(function (k) { return v[k] != null && v[k] !== '' && !(Array.isArray(v[k]) && !v[k].length); });
+      if (!keys.length) return '<span style="color:var(--muted);">None</span>';
+      return keys.map(function (k) { return fieldRow(humanize(k), renderVal(v[k])); }).join('');
     }
     return esc(String(v));
   }
-  function summaryLine(analysis) {
-    if (!analysis) return 'Session note';
-    if (typeof analysis === 'string') { const s = analysis.trim().split(/(?<=[.!?])\s/)[0]; return s.slice(0, 140); }
-    if (typeof analysis === 'object') {
-      for (const k of ['summary', 'headline', 'title', 'overview', 'key_insight']) {
-        if (typeof analysis[k] === 'string' && analysis[k].trim()) return analysis[k].trim().slice(0, 140);
+  function sectionCard(label, bodyHtml) {
+    if (!bodyHtml) return '';
+    return '<div style="border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;margin-bottom:12px;box-shadow:0 1px 2px rgba(0,0,0,0.03);">'
+      + '<div style="padding:10px 16px;background:var(--cream);border-bottom:1px solid var(--border);font-size:0.64rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold);">' + esc(label) + '</div>'
+      + '<div style="padding:14px 16px;">' + bodyHtml + '</div></div>';
+  }
+  function hasVal(v) { return !(v == null || v === '' || (Array.isArray(v) && !v.length) || (typeof v === 'object' && !Array.isArray(v) && !Object.keys(v).length)); }
+  // Render an ordered [key,label] field map of an object as titled section cards.
+  function renderFieldMap(obj, fieldMap) {
+    if (!obj || typeof obj !== 'object') return '';
+    return fieldMap.map(function (f) { return hasVal(obj[f[0]]) ? sectionCard(f[1], renderVal(obj[f[0]])) : ''; }).join('');
+  }
+
+  // post_session_analysis — curated section order with human labels.
+  var SESSION_SECTIONS = [
+    ['key_insights', 'Key insights'], ['core_focus', 'Core focus'], ['what_stood_out', 'What stood out'],
+    ['what_this_session_revealed', 'What this session revealed'], ['breakthrough', 'What shifted'],
+    ['pattern', 'Recurring pattern'], ['patterns_and_your_role', 'Patterns & your role'],
+    ['strategic_direction', 'Strategic direction'], ['early_cues', 'Early cues'], ['opening_question', 'Opening question'],
+    ['next_session', 'Next session'], ['friction_points', 'Friction points'], ['if_stuck', 'If stuck'],
+    ['approaches_to_explore', 'Approaches to explore'], ['frameworks', 'Approaches that emerged'],
+    ['coaching_interventions', 'Your interventions'], ['curiosity_edges', 'Curiosity edges'],
+    ['missed_windows', 'Going deeper'], ['emotional_anchor', 'Emotional anchor'], ['goals', 'Goals'],
+    ['commitments', 'Homework'], ['between_session', 'Between-session'],
+    ['reflection_and_growth', 'Reflection & growth'], ['coaching_reflection', 'Coaching reflection'],
+  ];
+  // coach_client_patterns.pattern_map
+  var PATTERN_MAP_FIELDS = [
+    ['core_patterns', 'Core patterns'], ['behavioral_tendencies', 'Behavioral tendencies'],
+    ['emotional_style', 'Emotional style'], ['likely_drivers', 'Likely drivers'],
+    ['where_they_get_stuck', 'Where they get stuck'], ['recurring_stuck_points', 'Recurring stuck points'],
+    ['what_moves_them_forward', 'What moves them forward'], ['signs_of_growth', 'Signs of growth'],
+    ['canonical_patterns', 'Canonical patterns'],
+  ];
+  // coach_dna_profiles.signal_patterns sub-sections
+  var SIGNAL_SECTIONS = [
+    ['blind_spots', 'Blind spots'], ['bias_profile', 'Bias profile'], ['growth_edges', 'Growth edges'],
+    ['technique_profile', 'Technique profile'], ['pattern_activation_map', 'Pattern activation map'],
+    ['coaching_decision_model', 'Coaching decision model'], ['missed_leverage_moments', 'Missed leverage moments'],
+    ['client_response_signature', 'Client response signature'], ['evolution_signal', 'Evolution signal'],
+    ['default_intervention_sequence', 'Default intervention sequence'],
+  ];
+
+  function renderSessionAnalysis(psa) {
+    if (!psa || typeof psa !== 'object') return '';
+    var lead = psa.session_in_one_line || psa.session_summary;
+    var html = lead ? '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:600;color:var(--navy);line-height:1.35;margin-bottom:14px;">' + esc(lead) + '</div>' : '';
+    html += renderFieldMap(psa, SESSION_SECTIONS);
+    return html || '<div style="color:var(--muted);font-size:0.85rem;font-style:italic;">No displayable analysis.</div>';
+  }
+  function renderDna(dna) {
+    if (!dna || typeof dna !== 'object') return '';
+    var html = '';
+    if (hasVal(dna.declared_orientation)) html += sectionCard('Declared orientation', renderVal(dna.declared_orientation));
+    if (hasVal(dna.framework_distribution)) html += sectionCard('Framework distribution', renderVal(dna.framework_distribution));
+    var sp = dna.signal_patterns;
+    if (sp && typeof sp === 'object') html += renderFieldMap(sp, SIGNAL_SECTIONS);
+    // top-level growth_edges only if not already nested under signal_patterns
+    if ((!sp || !sp.growth_edges) && hasVal(dna.growth_edges)) html += sectionCard('Growth edges', renderVal(dna.growth_edges));
+    return html || '<div style="color:var(--muted);font-size:0.85rem;font-style:italic;">No DNA detail yet.</div>';
+  }
+
+  function summaryLine(a) {
+    if (!a) return 'Session note';
+    if (typeof a === 'string') { return a.trim().split(/(?<=[.!?])\s/)[0].slice(0, 160); }
+    if (typeof a === 'object') {
+      if (a.session_in_one_line) return String(a.session_in_one_line).slice(0, 160);
+      if (Array.isArray(a.key_insights) && a.key_insights[0]) return String(a.key_insights[0]).slice(0, 160);
+      if (a.core_focus && a.core_focus.summary) return String(a.core_focus.summary).slice(0, 160);
+      for (var i = 0, ks = ['summary', 'headline', 'title', 'overview']; i < ks.length; i++) {
+        if (typeof a[ks[i]] === 'string' && a[ks[i]].trim()) return a[ks[i]].trim().slice(0, 160);
       }
     }
     return 'Session note';
@@ -260,18 +381,13 @@
   function renderOverview() {
     const dna = state.ws.dna;
     if (!dna) return '<div class="empty-state">No Coach DNA profile yet for this supervisee.</div>';
-    const fields = [
-      ['Declared orientation', dna.declared_orientation],
-      ['Framework distribution', dna.framework_distribution],
-      ['Signal patterns', dna.signal_patterns],
-      ['Growth edges', dna.growth_edges],
-    ];
-    let html = '<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:12px;">'
-      + '<div class="kv-label" style="color:var(--navy);font-size:0.74rem;">Coach DNA</div>'
-      + '<div class="meta" style="text-transform:none;">' + esc(dna.session_count || 0) + ' sessions · analyzed ' + esc(fmtDate(dna.last_analyzed)) + '</div></div>';
-    fields.forEach(f => { html += '<div class="kv"><div class="kv-label">' + esc(f[0]) + '</div><div class="kv-val">' + renderRich(f[1]) + '</div></div>'; });
-    html += '<div class="ann-area" id="ann-dna"></div></div>';
-    return html;
+    return '<div class="card">'
+      + '<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:10px;">'
+      +   '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.25rem;font-weight:600;color:var(--navy);">Coach DNA</div>'
+      +   '<div class="meta" style="text-transform:none;">' + esc(dna.session_count || 0) + ' sessions · analyzed ' + esc(fmtDate(dna.last_analyzed)) + '</div>'
+      + '</div>'
+      + renderDna(dna)
+      + '<div class="ann-area" id="ann-dna"></div></div>';
   }
 
   function renderSessions() {
@@ -282,9 +398,9 @@
       html += '<div class="sess" id="sess-' + i + '">'
         + '<button class="sess-head" data-sess="' + i + '"><span class="sess-title">' + esc(s.client_email || 'Session') + ' — <span style="font-weight:400;color:var(--muted);">' + esc(summaryLine(s.post_session_analysis)) + '</span></span><span class="sess-date">' + esc(fmtDate(s.created_at)) + '</span></button>'
         + '<div class="sess-body">'
-        +   '<div class="kv"><div class="kv-label">Post-session analysis</div><div class="kv-val">' + renderRich(s.post_session_analysis) + '</div></div>'
-        +   '<div class="kv"><div class="kv-label">Coaching signals</div><div class="kv-val">' + renderRich(s.coaching_signals) + '</div></div>'
-        +   '<div class="kv"><div class="kv-label">DNA manifestations</div><div class="kv-val">' + renderRich(s.dna_manifestations) + '</div></div>'
+        +   renderSessionAnalysis(s.post_session_analysis)
+        +   (hasVal(s.coaching_signals) ? sectionCard('Coaching signals', renderVal(s.coaching_signals)) : '')
+        +   (hasVal(s.dna_manifestations) ? sectionCard('DNA manifestations', renderVal(s.dna_manifestations)) : '')
         +   '<div class="ann-area" id="ann-sess-' + esc(s.id) + '" data-target-id="' + esc(s.id) + '"></div>'
         + '</div></div>';
     });
@@ -301,7 +417,7 @@
         +   '<div class="sess-title">' + esc(c.client_email || 'Client') + '</div>'
         +   '<div class="meta" style="text-transform:none;">' + esc(c.session_count || 0) + ' sessions · ' + esc(fmtDate(c.last_analyzed)) + '</div>'
         + '</div>'
-        + '<div class="kv"><div class="kv-label">Pattern map</div><div class="kv-val">' + renderRich(c.pattern_map) + '</div></div>'
+        + (renderFieldMap(c.pattern_map, PATTERN_MAP_FIELDS) || '<div style="color:var(--muted);font-size:0.85rem;font-style:italic;">No pattern detail yet.</div>')
         + '<div class="ann-area" id="ann-client-' + esc(c.id) + '" data-target-id="' + esc(c.id) + '"></div>'
         + '</div>';
     });
