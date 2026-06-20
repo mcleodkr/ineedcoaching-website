@@ -1400,6 +1400,8 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
     <button class="tab-btn" data-tab="recommendations">Recommendations</button>
     <a id="admin-console-link" href="/admin-dashboard.html" style="display:none;margin-top:12px;padding:10px 18px;border-top:1px solid #edeae4;font-family:'DM Sans',sans-serif;font-size:0.72rem;font-weight:400;color:#9a9490;text-decoration:none;">Admin Console</a>
     <button class="tab-btn" data-tab="taxonomy-review" id="taxonomy-review-nav" style="display:none;">Taxonomy Review</button>
+    <button class="tab-btn" data-tab="supervision">Supervision</button>
+    <a id="supervisor-dashboard-link" href="/supervisor-dashboard.html" style="display:none;margin-top:4px;padding:10px 18px;font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:600;color:#c49a3c;text-decoration:none;">Supervisor Dashboard &rarr;</a>
   </nav>
   <div style="flex:1;min-width:0;">
 
@@ -2694,6 +2696,19 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
       </div>
     </div>
 
+    <!-- SUPERVISION TAB (supervisee side) -->
+    <div id="tab-supervision" class="tab-panel">
+      <div style="padding:24px;max-width:820px;margin:0 auto;">
+        <div style="margin-bottom:20px;border-bottom:1px solid #e8e4dc;padding-bottom:14px;">
+          <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:600;color:#1a3a52;margin:0 0 4px 0;">Supervision</h2>
+          <div style="font-family:'DM Sans',sans-serif;font-size:0.82rem;color:#7a7570;">Request supervision from a supervisor, and review the feedback they leave on your work.</div>
+        </div>
+        <div id="supervision-content">
+          <div style="padding:40px;text-align:center;color:#7a7570;font-family:'DM Sans',sans-serif;font-size:0.9rem;">Loading…</div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div><!-- /dash-layout -->
 </div>
@@ -2819,6 +2834,117 @@ function apiHeaders(token) {
     'Authorization': 'Bearer ' + (token || currentToken),
     'Content-Type': 'application/json'
   };
+}
+
+/* ================================================
+   SUPERVISION (supervisee side) — Ticket 2.
+   Request supervision (invite a supervisor) + review the shared feedback a
+   supervisor has left, and respond with a reflection. Feedback is read directly
+   via RLS (shared annotations addressed to this coach + own reflections);
+   reflections are written through /api/save-reflection.
+   ================================================ */
+var SUP_TARGET_LABELS = { session: 'Session note', coach_dna: 'Coach DNA', pattern_map: 'Client pattern', effectiveness_map: 'Effectiveness Map', booking: 'Booking', client: 'Client', general: 'General' };
+function supParseBody(body) { var m = String(body || '').match(/^\[([^\]]+)\]\s*([\s\S]*)$/); return m ? { type: m[1], text: m[2] } : { type: 'Comment', text: String(body || '') }; }
+function supFmtDate(iso) { if (!iso) return ''; var d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+
+async function loadSupervision() {
+  var host = document.getElementById('supervision-content');
+  if (!host) return;
+  host.innerHTML = ''
+    + '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:10px;padding:18px 20px;margin-bottom:18px;">'
+    +   '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;margin-bottom:6px;">Request supervision</div>'
+    +   '<div style="font-size:0.85rem;color:#6b6b60;margin-bottom:12px;">Enter your supervisor&rsquo;s email. They&rsquo;ll receive a request to accept.</div>'
+    +   '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
+    +     '<input type="email" id="sup-invite-email" placeholder="supervisor@example.com" style="flex:1;min-width:220px;padding:9px 12px;border:1px solid #e8e4dc;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.88rem;">'
+    +     '<button id="sup-invite-btn" style="background:#c49a3c;color:#fff;border:none;padding:9px 18px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.15s ease;">Send request</button>'
+    +   '</div>'
+    +   '<div id="sup-invite-msg" style="font-size:0.8rem;margin-top:8px;min-height:1em;"></div>'
+    + '</div>'
+    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;margin:0 0 10px;">Supervisor feedback</div>'
+    + '<div id="sup-feedback-list"><div style="color:#6b6b60;font-size:0.85rem;">Loading&hellip;</div></div>';
+  var inviteBtn = document.getElementById('sup-invite-btn');
+  if (inviteBtn) inviteBtn.addEventListener('click', supSendInvite);
+  await supRenderFeedback();
+}
+
+async function supSendInvite() {
+  var btn = document.getElementById('sup-invite-btn');
+  var input = document.getElementById('sup-invite-email');
+  var msg = document.getElementById('sup-invite-msg');
+  var email = (input && input.value || '').trim();
+  if (!email) { msg.style.color = '#9a2b2b'; msg.textContent = 'Enter your supervisor&rsquo;s email.'; return; }
+  btn.disabled = true; msg.style.color = '#6b6b60'; msg.textContent = 'Sending…';
+  try {
+    var r = await fetch('/api/invite-supervisor', { method: 'POST', headers: apiHeaders(), body: JSON.stringify({ supervisor_email: email }) });
+    var d = await r.json().catch(function() { return null; });
+    if (!d || !d.ok) { msg.style.color = '#9a2b2b'; msg.textContent = (d && d.error) || 'Could not send the request.'; }
+    else { msg.style.color = '#2f6168'; msg.textContent = 'Request sent. Your supervisor will accept it on their end.'; if (input) input.value = ''; }
+  } catch (e) { msg.style.color = '#9a2b2b'; msg.textContent = 'Network error. Please try again.'; }
+  btn.disabled = false;
+}
+
+async function supRenderFeedback() {
+  var list = document.getElementById('sup-feedback-list');
+  if (!list || !coachProfile || !coachProfile.id) return;
+  var meId = coachProfile.id;
+  try {
+    var aRes = await fetch(SUPABASE_URL + '/rest/v1/supervision_annotations?supervisee_id=eq.' + encodeURIComponent(meId) + '&visibility=eq.shared_with_supervisee&select=id,supervisor_id,target_type,target_id,body,created_at&order=created_at.desc', { headers: apiHeaders() });
+    var anns = aRes.ok ? await aRes.json().catch(function() { return []; }) : [];
+    if (!Array.isArray(anns) || !anns.length) { list.innerHTML = '<div style="color:#6b6b60;font-size:0.85rem;font-style:italic;">No feedback yet. When a supervisor leaves shared feedback, it appears here.</div>'; return; }
+
+    var rRes = await fetch(SUPABASE_URL + '/rest/v1/supervisee_reflections?select=id,annotation_id,content', { headers: apiHeaders() });
+    var refls = rRes.ok ? await rRes.json().catch(function() { return []; }) : [];
+    var reflBy = {}; (refls || []).forEach(function(x) { reflBy[x.annotation_id] = x; });
+
+    var supIds = Array.from(new Set(anns.map(function(a) { return a.supervisor_id; }).filter(Boolean)));
+    var names = {};
+    if (supIds.length) {
+      var pRes = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles?id=in.(' + supIds.map(encodeURIComponent).join(',') + ')&select=id,display_name,full_name,user_email', { headers: apiHeaders() });
+      if (pRes.ok) { (await pRes.json().catch(function() { return []; })).forEach(function(p) { names[p.id] = p.display_name || p.full_name || p.user_email; }); }
+    }
+
+    var html = '';
+    anns.forEach(function(a) {
+      var p = supParseBody(a.body);
+      var refl = reflBy[a.id];
+      var label = SUP_TARGET_LABELS[a.target_type] || a.target_type;
+      html += '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:8px;padding:14px 16px;margin-bottom:12px;">'
+        + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">'
+        +   '<span style="font-size:0.62rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#c49a3c;background:rgba(196,154,60,0.14);border-radius:999px;padding:2px 9px;">' + escapeHtml(p.type) + '</span>'
+        +   '<span style="font-size:0.78rem;color:#6b6b60;">on ' + escapeHtml(label) + '</span>'
+        +   '<span style="font-size:0.74rem;color:#6b6b60;margin-left:auto;">' + escapeHtml(names[a.supervisor_id] || 'Supervisor') + ' &middot; ' + escapeHtml(supFmtDate(a.created_at)) + '</span>'
+        + '</div>'
+        + '<div style="font-size:0.9rem;line-height:1.55;color:#1a1a1a;">' + escapeHtml(p.text).replace(/\n/g, '<br>') + '</div>';
+      if (refl) {
+        html += '<div style="margin-top:10px;padding:8px 10px;background:#f7f4ee;border-left:2px solid #c49a3c;border-radius:0 6px 6px 0;">'
+          + '<div style="font-size:0.62rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#2f6168;margin-bottom:3px;">Your reflection</div>'
+          + '<div style="font-size:0.85rem;line-height:1.5;color:#1a1a1a;">' + escapeHtml(refl.content).replace(/\n/g, '<br>') + '</div></div>';
+      } else {
+        html += '<div style="margin-top:10px;">'
+          + '<textarea id="refl-' + escapeHtml(a.id) + '" placeholder="Your reflection…" style="width:100%;min-height:56px;padding:8px 10px;border:1px solid #e8e4dc;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.86rem;resize:vertical;box-sizing:border-box;"></textarea>'
+          + '<div style="margin-top:6px;display:flex;align-items:center;gap:10px;"><button data-refl="' + escapeHtml(a.id) + '" style="background:#c49a3c;color:#fff;border:none;padding:7px 16px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.8rem;font-weight:600;cursor:pointer;">Save reflection</button><span data-msg="' + escapeHtml(a.id) + '" style="font-size:0.78rem;"></span></div></div>';
+      }
+      html += '</div>';
+    });
+    list.innerHTML = html;
+    list.querySelectorAll('[data-refl]').forEach(function(b) { b.addEventListener('click', function() { supSaveReflection(b.getAttribute('data-refl')); }); });
+  } catch (e) {
+    list.innerHTML = '<div style="color:#9a2b2b;font-size:0.85rem;">Could not load feedback right now.</div>';
+  }
+}
+
+async function supSaveReflection(annId) {
+  var ta = document.getElementById('refl-' + annId);
+  var msg = document.querySelector('[data-msg="' + annId + '"]');
+  var content = (ta && ta.value || '').trim();
+  if (content.length < 2) { if (msg) { msg.style.color = '#9a2b2b'; msg.textContent = 'Write a reflection first.'; } return; }
+  if (msg) { msg.style.color = '#6b6b60'; msg.textContent = 'Saving…'; }
+  try {
+    var r = await fetch('/api/save-reflection', { method: 'POST', headers: apiHeaders(), body: JSON.stringify({ annotation_id: annId, content: content }) });
+    var d = await r.json().catch(function() { return null; });
+    if (!d || !d.ok) { if (msg) { msg.style.color = '#9a2b2b'; msg.textContent = (d && d.error) || 'Could not save.'; } return; }
+    supRenderFeedback();
+  } catch (e) { if (msg) { msg.style.color = '#9a2b2b'; msg.textContent = 'Network error.'; } }
 }
 
 async function supabaseGet(path, token) {
@@ -3171,6 +3297,15 @@ async function init() {
     taxonomyNav.style.display = '';
   }
 
+  // Supervisor Dashboard nav — revealed only for coaches with the 'supervisor' role
+  // (user_roles read is RLS-scoped to the caller's own rows). Best-effort.
+  if (coachProfile && coachProfile.id) {
+    fetch(SUPABASE_URL + '/rest/v1/user_roles?coach_id=eq.' + encodeURIComponent(coachProfile.id) + '&role=eq.supervisor&select=id&limit=1', { headers: apiHeaders() })
+      .then(function(r) { return r.ok ? r.json() : []; })
+      .then(function(rows) { if (Array.isArray(rows) && rows.length) { var l = $('supervisor-dashboard-link'); if (l) l.style.display = 'block'; } })
+      .catch(function() {});
+  }
+
   // Brief 2b: warm the pattern-name → taxonomy_id cache so dna_tag pills
   // can carry data-pattern-id and surface the canonical Gestalt definition
   // on hover. Best-effort; failure falls back to the local glossary.
@@ -3332,6 +3467,10 @@ function setupTabs() {
       if (btn.dataset.tab === 'bookings' && !btn._loaded) {
         btn._loaded = true;
         loadBookings();
+      }
+      if (btn.dataset.tab === 'supervision' && !btn._loaded) {
+        btn._loaded = true;
+        loadSupervision();
       }
       if (btn.dataset.tab === 'clients') {
         // Always return to the clients list view when the sidebar Clients

@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supervision · Coach Clarity</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #1a3a52; --gold: #c49a3c; --teal: #2f6168;
+      --cream: #f7f4ee; --bg: #f7f5f1; --white: #ffffff;
+      --border: #e8e4dc; --ink: #1a1a1a; --muted: #6b6b60; --r-sm: 6px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'DM Sans', sans-serif; font-size: 17px; background: var(--bg); color: var(--ink); line-height: 1.5; }
+    h1, h2, h3 { font-family: 'Cormorant Garamond', serif; color: var(--navy); font-weight: 600; margin: 0 0 8px; }
+    h1 { font-size: 1.8rem; }
+    .panel { max-width: 1140px; margin: 0 auto; padding: 24px 22px 80px; }
+    .top-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+    .top-bar a { font-size: 0.85rem; color: var(--muted); text-decoration: none; }
+    .top-bar a:hover { color: var(--ink); }
+    .meta { font-size: 0.76rem; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+    .card { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+    .loader { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .spinner { display: inline-block; width: 26px; height: 26px; border: 3px solid rgba(196,154,60,0.2); border-top-color: var(--gold); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 12px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-box { background: #fff5f5; border: 1px solid #c44; color: #8a2222; padding: 14px 18px; border-radius: var(--r-sm); margin-bottom: 18px; font-size: 0.9rem; }
+    .btn { font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 0.82rem; cursor: pointer; border-radius: var(--r-sm); border: 1px solid transparent; transition: all 0.15s ease; padding: 8px 16px; }
+    .btn-primary { background: var(--gold); color: #fff; }
+    .btn-primary:hover { opacity: 0.92; }
+    .btn-secondary { background: none; border-color: var(--gold); color: var(--gold); }
+    .btn-secondary:hover { background: rgba(196,154,60,0.08); }
+    .btn-ghost { background: none; border-color: var(--border); color: var(--muted); }
+    .btn-ghost:hover { border-color: var(--muted); color: var(--ink); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-pill { border-radius: 999px; padding: 6px 14px; }
+
+    /* Workspace layout */
+    .ws-layout { display: flex; align-items: flex-start; gap: 20px; }
+    .ws-rail { flex: 0 0 248px; position: sticky; top: 16px; }
+    .ws-main { flex: 1; min-width: 0; }
+    .rail-label { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; padding: 0 4px; }
+    .rail-section { margin-bottom: 22px; }
+    .supervisee-item { display: block; width: 100%; text-align: left; background: var(--white); border: 1px solid var(--border); border-left: 3px solid transparent; border-radius: var(--r-sm); padding: 10px 12px; margin-bottom: 6px; cursor: pointer; transition: all 0.15s ease; }
+    .supervisee-item:hover { background: var(--cream); }
+    .supervisee-item.active { border-left-color: var(--gold); background: rgba(196,154,60,0.10); }
+    .supervisee-name { display: block; font-family: 'Cormorant Garamond', serif; font-size: 1.02rem; font-weight: 600; color: var(--navy); line-height: 1.2; }
+    .supervisee-sub { display: block; font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+    .pending-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px; margin-bottom: 8px; }
+    .pending-actions { display: flex; gap: 6px; margin-top: 8px; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 18px; flex-wrap: wrap; }
+    .tab { background: none; border: none; border-bottom: 2px solid transparent; padding: 9px 14px; font-family: 'DM Sans', sans-serif; font-size: 0.86rem; font-weight: 600; color: var(--muted); cursor: pointer; transition: all 0.15s ease; }
+    .tab:hover { color: var(--ink); }
+    .tab.active { color: var(--navy); border-bottom-color: var(--gold); }
+
+    .ws-header { margin-bottom: 16px; }
+    .empty-state { text-align: center; color: var(--muted); padding: 50px 20px; font-style: italic; }
+    .kv { margin: 0 0 12px; }
+    .kv-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); margin-bottom: 4px; }
+    .kv-val { font-size: 0.92rem; line-height: 1.6; color: var(--ink); }
+    .rich-list { margin: 0; padding-left: 1.1rem; }
+    .rich-list li { margin: 0 0 4px; }
+
+    /* Session items */
+    .sess { border: 1px solid var(--border); border-radius: var(--r-sm); margin-bottom: 10px; overflow: hidden; }
+    .sess-head { width: 100%; text-align: left; background: var(--cream); border: none; cursor: pointer; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .sess-head:hover { background: rgba(196,154,60,0.10); }
+    .sess-title { font-family: 'Cormorant Garamond', serif; font-size: 1rem; font-weight: 600; color: var(--navy); }
+    .sess-date { font-size: 0.74rem; color: var(--muted); white-space: nowrap; }
+    .sess-body { display: none; padding: 14px; border-top: 1px solid var(--border); }
+    .sess.open .sess-body { display: block; }
+
+    /* Annotations */
+    .ann-area { margin-top: 14px; border-top: 1px dashed var(--border); padding-top: 12px; }
+    .ann { background: var(--cream); border-radius: var(--r-sm); padding: 10px 12px; margin-bottom: 8px; }
+    .ann-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 5px; }
+    .ann-type { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); background: rgba(196,154,60,0.14); border-radius: 999px; padding: 2px 9px; }
+    .ann-vis { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+    .ann-vis.private { color: #9a2b2b; }
+    .ann-date { font-size: 0.72rem; color: var(--muted); margin-left: auto; }
+    .ann-body { font-size: 0.88rem; line-height: 1.55; color: var(--ink); }
+    .ann-reply { margin-top: 8px; padding: 8px 10px; background: var(--white); border-left: 2px solid var(--gold); border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+    .ann-reply-label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--teal); margin-bottom: 3px; }
+    .ann-reply-body { font-size: 0.85rem; line-height: 1.5; color: var(--ink); }
+
+    /* Composer + forms */
+    .composer { margin-top: 12px; background: var(--white); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px; }
+    .composer-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+    label.fld { font-size: 0.74rem; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+    select, input[type="text"], input[type="number"], input[type="date"], textarea {
+      font-family: 'DM Sans', sans-serif; font-size: 0.86rem; color: var(--ink); background: var(--white);
+      border: 1px solid var(--border); border-radius: var(--r-sm); padding: 7px 10px;
+    }
+    textarea { width: 100%; min-height: 64px; resize: vertical; line-height: 1.5; }
+    .msg { font-size: 0.78rem; margin-top: 6px; min-height: 1em; }
+    .msg.err { color: #9a2b2b; }
+    .msg.ok { color: var(--teal); }
+
+    /* Hours */
+    .hours-totals { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+    .total-chip { background: var(--cream); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px 14px; }
+    .total-num { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 700; color: var(--navy); line-height: 1; }
+    .total-label { font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+    table.hours { width: 100%; border-collapse: collapse; }
+    table.hours th { text-align: left; font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); padding: 7px 8px; }
+    table.hours td { font-size: 0.84rem; color: var(--ink); border-bottom: 1px solid var(--border); padding: 8px; vertical-align: top; }
+    .verified-badge { font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--teal); }
+
+    /* Toast */
+    #toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--navy); color: #fff; padding: 12px 20px; border-radius: var(--r-sm); font-size: 0.86rem; box-shadow: 0 6px 24px rgba(26,58,82,0.25); opacity: 0; pointer-events: none; transition: all 0.25s ease; z-index: 100; }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 760px) {
+      .ws-layout { flex-direction: column; }
+      .ws-rail { position: static; flex: 1 1 auto; width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <div class="top-bar">
+      <div>
+        <div class="meta" style="margin-bottom:6px;">Supervision</div>
+        <h1 id="page-heading">Supervisor Dashboard</h1>
+        <div class="meta" id="header-meta" style="text-transform:none;letter-spacing:0;font-size:0.82rem;">&nbsp;</div>
+      </div>
+      <a href="/coach-dashboard.html">← Back to dashboard</a>
+    </div>
+    <div id="content"><div class="loader"><div class="spinner"></div><div>Loading supervision…</div></div></div>
+  </div>
+  <div id="toast"></div>
+
+  <script>
+  const SUPABASE_URL = 'https://qroizygknxdjsstkezsf.supabase.co';
+  const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyb2l6eWdrbnhkanNzdGtlenNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTQ3MTEsImV4cCI6MjA5MDI5MDcxMX0.ZnSxf8LIDe_HPedgMPTwRpVE_VJmYSSFecwqrlNvjQ4';
+  const TOKEN_KEY = 'sb_access_token';
+
+  const DOMAIN_LABELS = { physical: 'Physical', intellectual: 'Intellectual', psychological: 'Psychological', environmental: 'Environmental', social: 'Social' };
+
+  let me = null, myName = '';
+  const state = { active: [], pending: [], current: null, ws: null, tab: 'overview' };
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { if (s == null) return ''; return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+  function token() { return localStorage.getItem(TOKEN_KEY); }
+  function apiHeaders() { const t = token(); return { apikey: ANON_KEY, Authorization: t ? ('Bearer ' + t) : ('Bearer ' + ANON_KEY), 'Content-Type': 'application/json' }; }
+  function fmtDate(iso) { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+  function showError(msg) { $('content').innerHTML = '<div class="error-box">' + esc(msg) + '</div>'; }
+  let toastT = null;
+  function toast(msg) { const el = $('toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 3200); }
+
+  async function api(path, body) {
+    try {
+      const r = await fetch(path, { method: 'POST', headers: apiHeaders(), body: JSON.stringify(body || {}) });
+      const d = await r.json().catch(() => null);
+      return d || { ok: false, error: 'No response.' };
+    } catch (e) { return { ok: false, error: 'Network error.' }; }
+  }
+
+  /* ---- generic JSON renderer for the jsonb intelligence fields (null-safe) ---- */
+  function renderRich(v) {
+    if (v == null || v === '') return '<span style="color:var(--muted);font-style:italic;">Not yet available</span>';
+    if (typeof v === 'string') return esc(v).replace(/\n/g, '<br>');
+    if (typeof v === 'number' || typeof v === 'boolean') return esc(String(v));
+    if (Array.isArray(v)) {
+      if (!v.length) return '<span style="color:var(--muted);font-style:italic;">None</span>';
+      return '<ul class="rich-list">' + v.map(x => '<li>' + (typeof x === 'object' ? renderRich(x) : esc(String(x))) + '</li>').join('') + '</ul>';
+    }
+    if (typeof v === 'object') {
+      const keys = Object.keys(v);
+      if (!keys.length) return '<span style="color:var(--muted);font-style:italic;">None</span>';
+      return keys.map(k => '<div class="kv"><div class="kv-label">' + esc(k.replace(/_/g, ' ')) + '</div><div class="kv-val">' + renderRich(v[k]) + '</div></div>').join('');
+    }
+    return esc(String(v));
+  }
+  function summaryLine(analysis) {
+    if (!analysis) return 'Session note';
+    if (typeof analysis === 'string') { const s = analysis.trim().split(/(?<=[.!?])\s/)[0]; return s.slice(0, 140); }
+    if (typeof analysis === 'object') {
+      for (const k of ['summary', 'headline', 'title', 'overview', 'key_insight']) {
+        if (typeof analysis[k] === 'string' && analysis[k].trim()) return analysis[k].trim().slice(0, 140);
+      }
+    }
+    return 'Session note';
+  }
+  // Annotation bodies are stored as "[Type] text" (no annotation_type column).
+  function parseAnnotation(body) {
+    const m = String(body || '').match(/^\[([^\]]+)\]\s*([\s\S]*)$/);
+    return m ? { type: m[1], text: m[2] } : { type: 'Comment', text: String(body || '') };
+  }
+
+  /* ---- annotation area (list + composer), mounted into a target element ---- */
+  const ANN_TYPES = ['Comment', 'Observation', 'Question', 'Recommendation'];
+  async function hydrateAnnotations(mountId, targetType, targetId) {
+    const mount = $(mountId);
+    if (!mount) return;
+    mount.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;">Loading notes…</div>';
+    const data = await api('/api/get-annotations', { target_type: targetType, target_id: targetId });
+    const anns = (data.ok && Array.isArray(data.annotations)) ? data.annotations : [];
+    let html = '';
+    anns.forEach(a => {
+      const p = parseAnnotation(a.body);
+      const shared = a.visibility === 'shared_with_supervisee';
+      html += '<div class="ann">'
+        + '<div class="ann-meta"><span class="ann-type">' + esc(p.type) + '</span>'
+        + '<span class="ann-vis' + (shared ? '' : ' private') + '">' + (shared ? 'Shared' : 'Private') + '</span>'
+        + '<span class="ann-date">' + esc(fmtDate(a.created_at)) + '</span></div>'
+        + '<div class="ann-body">' + esc(p.text).replace(/\n/g, '<br>') + '</div>'
+        + (a.reflection ? '<div class="ann-reply"><div class="ann-reply-label">Supervisee reflection</div><div class="ann-reply-body">' + esc(a.reflection.content).replace(/\n/g, '<br>') + '</div></div>' : '')
+        + '</div>';
+    });
+    // composer
+    const cid = mountId + '-c';
+    html += '<div class="composer" id="' + cid + '">'
+      + '<div class="composer-row">'
+      +   '<label class="fld">Type <select data-c="type">' + ANN_TYPES.map(t => '<option>' + t + '</option>').join('') + '</select></label>'
+      +   '<label class="fld"><input type="checkbox" data-c="shared" checked> Shared with supervisee</label>'
+      + '</div>'
+      + '<textarea data-c="body" placeholder="Add a note (min 10 characters)…"></textarea>'
+      + '<div style="margin-top:8px;display:flex;align-items:center;gap:10px;">'
+      +   '<button class="btn btn-primary" data-c="submit">Add note</button>'
+      +   '<span class="msg" data-c="msg"></span>'
+      + '</div>'
+      + '</div>';
+    mount.innerHTML = html || '';
+    const c = $(cid);
+    c.querySelector('[data-c="submit"]').addEventListener('click', () => submitAnnotation(c, mountId, targetType, targetId));
+  }
+  async function submitAnnotation(c, mountId, targetType, targetId) {
+    const type = c.querySelector('[data-c="type"]').value;
+    const shared = c.querySelector('[data-c="shared"]').checked;
+    const body = c.querySelector('[data-c="body"]').value.trim();
+    const msg = c.querySelector('[data-c="msg"]');
+    const btn = c.querySelector('[data-c="submit"]');
+    if (body.length < 10) { msg.className = 'msg err'; msg.textContent = 'Please write at least 10 characters.'; return; }
+    btn.disabled = true; msg.className = 'msg'; msg.textContent = 'Saving…';
+    const data = await api('/api/save-annotation', {
+      supervisee_id: state.current.supervisee.id, target_type: targetType, target_id: targetId,
+      body, visibility: shared ? 'shared_with_supervisee' : 'supervisor_only', annotation_type: type,
+    });
+    btn.disabled = false;
+    if (!data.ok) { msg.className = 'msg err'; msg.textContent = data.error || 'Could not save.'; return; }
+    toast('Note added.');
+    hydrateAnnotations(mountId, targetType, targetId);
+  }
+
+  /* ---- tabs ---- */
+  function renderTabs() {
+    const tabs = [['overview', 'Overview'], ['sessions', 'Sessions'], ['clients', 'Clients'], ['hours', 'Hours']];
+    return '<div class="tabs">' + tabs.map(t =>
+      '<button class="tab' + (state.tab === t[0] ? ' active' : '') + '" data-tab="' + t[0] + '">' + t[1] + '</button>'
+    ).join('') + '</div>';
+  }
+
+  function renderOverview() {
+    const dna = state.ws.dna;
+    if (!dna) return '<div class="empty-state">No Coach DNA profile yet for this supervisee.</div>';
+    const fields = [
+      ['Declared orientation', dna.declared_orientation],
+      ['Framework distribution', dna.framework_distribution],
+      ['Signal patterns', dna.signal_patterns],
+      ['Growth edges', dna.growth_edges],
+    ];
+    let html = '<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:12px;">'
+      + '<div class="kv-label" style="color:var(--navy);font-size:0.74rem;">Coach DNA</div>'
+      + '<div class="meta" style="text-transform:none;">' + esc(dna.session_count || 0) + ' sessions · analyzed ' + esc(fmtDate(dna.last_analyzed)) + '</div></div>';
+    fields.forEach(f => { html += '<div class="kv"><div class="kv-label">' + esc(f[0]) + '</div><div class="kv-val">' + renderRich(f[1]) + '</div></div>'; });
+    html += '<div class="ann-area" id="ann-dna"></div></div>';
+    return html;
+  }
+
+  function renderSessions() {
+    const list = state.ws.sessions || [];
+    if (!list.length) return '<div class="empty-state">No session notes for this supervisee yet.</div>';
+    let html = '';
+    list.forEach((s, i) => {
+      html += '<div class="sess" id="sess-' + i + '">'
+        + '<button class="sess-head" data-sess="' + i + '"><span class="sess-title">' + esc(s.client_email || 'Session') + ' — <span style="font-weight:400;color:var(--muted);">' + esc(summaryLine(s.post_session_analysis)) + '</span></span><span class="sess-date">' + esc(fmtDate(s.created_at)) + '</span></button>'
+        + '<div class="sess-body">'
+        +   '<div class="kv"><div class="kv-label">Post-session analysis</div><div class="kv-val">' + renderRich(s.post_session_analysis) + '</div></div>'
+        +   '<div class="kv"><div class="kv-label">Coaching signals</div><div class="kv-val">' + renderRich(s.coaching_signals) + '</div></div>'
+        +   '<div class="kv"><div class="kv-label">DNA manifestations</div><div class="kv-val">' + renderRich(s.dna_manifestations) + '</div></div>'
+        +   '<div class="ann-area" id="ann-sess-' + esc(s.id) + '" data-target-id="' + esc(s.id) + '"></div>'
+        + '</div></div>';
+    });
+    return html;
+  }
+
+  function renderClients() {
+    const list = state.ws.clients || [];
+    if (!list.length) return '<div class="empty-state">No client pattern maps for this supervisee yet.</div>';
+    let html = '';
+    list.forEach(c => {
+      html += '<div class="card">'
+        + '<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:10px;">'
+        +   '<div class="sess-title">' + esc(c.client_email || 'Client') + '</div>'
+        +   '<div class="meta" style="text-transform:none;">' + esc(c.session_count || 0) + ' sessions · ' + esc(fmtDate(c.last_analyzed)) + '</div>'
+        + '</div>'
+        + '<div class="kv"><div class="kv-label">Pattern map</div><div class="kv-val">' + renderRich(c.pattern_map) + '</div></div>'
+        + '<div class="ann-area" id="ann-client-' + esc(c.id) + '" data-target-id="' + esc(c.id) + '"></div>'
+        + '</div>';
+    });
+    return html;
+  }
+
+  function renderHours() {
+    const t = state.ws.totals || {};
+    const rows = state.ws.hours || [];
+    let html = '<div class="card">'
+      + '<div class="hours-totals">'
+      +   '<div class="total-chip"><div class="total-num">' + esc(t.individual_hours || 0) + '</div><div class="total-label">Individual hrs</div></div>'
+      +   '<div class="total-chip"><div class="total-num">' + esc(t.group_hours || 0) + '</div><div class="total-label">Group hrs</div></div>'
+      +   '<div class="total-chip"><div class="total-num">' + esc(t.total_hours || 0) + '</div><div class="total-label">Total hrs</div></div>'
+      + '</div>';
+    if (rows.length) {
+      html += '<table class="hours"><thead><tr><th>Date</th><th>Type</th><th>Minutes</th><th>Notes</th><th>Status</th></tr></thead><tbody>';
+      rows.forEach(h => {
+        html += '<tr><td>' + esc(fmtDate(h.session_date)) + '</td><td style="text-transform:capitalize;">' + esc(h.hours_type || '') + '</td><td>' + esc(h.duration_minutes) + '</td><td>' + esc(h.notes || '') + '</td><td>'
+          + (h.verified_at ? '<span class="verified-badge">✓ Verified</span>' : '<button class="btn btn-secondary btn-pill" data-verify="' + esc(h.id) + '">Verify</button>')
+          + '</td></tr>';
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<div class="empty-state" style="padding:24px;">No hours logged yet.</div>';
+    }
+    // log form
+    const today = new Date().toISOString().slice(0, 10);
+    html += '<div class="composer" style="margin-top:16px;">'
+      + '<div class="kv-label" style="color:var(--navy);margin-bottom:10px;">Log hours</div>'
+      + '<div class="composer-row">'
+      +   '<label class="fld">Date <input type="date" id="h-date" value="' + today + '"></label>'
+      +   '<label class="fld">Duration (minutes) <input type="number" id="h-dur" min="1" step="1" style="width:90px;"></label>'
+      +   '<label class="fld"><input type="radio" name="h-type" value="individual" checked> Individual</label>'
+      +   '<label class="fld"><input type="radio" name="h-type" value="group"> Group</label>'
+      + '</div>'
+      + '<textarea id="h-notes" placeholder="Notes (optional)…" style="min-height:48px;"></textarea>'
+      + '<div style="margin-top:8px;display:flex;align-items:center;gap:10px;"><button class="btn btn-primary" id="h-submit">Log hours</button><span class="msg" id="h-msg"></span></div>'
+      + '</div></div>';
+    return html;
+  }
+
+  function renderWorkspaceBody() {
+    if (state.tab === 'overview') return renderOverview();
+    if (state.tab === 'sessions') return renderSessions();
+    if (state.tab === 'clients') return renderClients();
+    if (state.tab === 'hours') return renderHours();
+    return '';
+  }
+
+  function wireWorkspace() {
+    document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { state.tab = b.getAttribute('data-tab'); renderMain(); }));
+    if (state.tab === 'overview' && state.ws.dna) hydrateAnnotations('ann-dna', 'coach_dna', state.ws.dna.id);
+    if (state.tab === 'sessions') {
+      document.querySelectorAll('[data-sess]').forEach(b => b.addEventListener('click', () => {
+        const i = b.getAttribute('data-sess'); const el = $('sess-' + i); const wasOpen = el.classList.contains('open');
+        el.classList.toggle('open');
+        if (!wasOpen) { const s = state.ws.sessions[i]; hydrateAnnotations('ann-sess-' + s.id, 'session', s.id); }
+      }));
+    }
+    if (state.tab === 'clients') (state.ws.clients || []).forEach(c => hydrateAnnotations('ann-client-' + c.id, 'pattern_map', c.id));
+    if (state.tab === 'hours') {
+      document.querySelectorAll('[data-verify]').forEach(b => b.addEventListener('click', () => verifyHours(b.getAttribute('data-verify'))));
+      const sub = $('h-submit'); if (sub) sub.addEventListener('click', logHours);
+    }
+  }
+
+  async function logHours() {
+    const date = $('h-date').value;
+    const dur = parseInt($('h-dur').value, 10);
+    const type = (document.querySelector('input[name="h-type"]:checked') || {}).value;
+    const notes = $('h-notes').value.trim();
+    const msg = $('h-msg'); const btn = $('h-submit');
+    if (!date) { msg.className = 'msg err'; msg.textContent = 'Pick a date.'; return; }
+    if (!(dur > 0)) { msg.className = 'msg err'; msg.textContent = 'Enter minutes greater than 0.'; return; }
+    btn.disabled = true; msg.className = 'msg'; msg.textContent = 'Saving…';
+    const data = await api('/api/log-supervision-hours', { supervisee_id: state.current.supervisee.id, session_date: date, duration_minutes: dur, hours_type: type, notes });
+    btn.disabled = false;
+    if (!data.ok) { msg.className = 'msg err'; msg.textContent = data.error || 'Could not log hours.'; return; }
+    toast('Hours logged.');
+    await loadWorkspace(state.current); // refresh totals + table
+  }
+  async function verifyHours(id) {
+    const data = await api('/api/verify-hours', { hours_id: id });
+    if (!data.ok) { toast(data.error || 'Could not verify.'); return; }
+    toast('Hours verified.');
+    await loadWorkspace(state.current);
+  }
+
+  /* ---- main render ---- */
+  function renderRail() {
+    let html = '';
+    html += '<div class="rail-section"><div class="rail-label">Active supervisees</div>';
+    if (state.active.length) {
+      state.active.forEach(s => {
+        const active = state.current && state.current.relationship_id === s.relationship_id;
+        html += '<button class="supervisee-item' + (active ? ' active' : '') + '" data-rel="' + esc(s.relationship_id) + '">'
+          + '<span class="supervisee-name">' + esc(s.supervisee.display_name || s.supervisee.full_name || s.supervisee.user_email || 'Coach') + '</span>'
+          + '<span class="supervisee-sub">' + esc(s.supervisee.user_email || '') + '</span></button>';
+      });
+    } else { html += '<div style="color:var(--muted);font-size:0.82rem;font-style:italic;padding:4px;">No active supervisees yet.</div>'; }
+    html += '</div>';
+    if (state.pending.length) {
+      html += '<div class="rail-section"><div class="rail-label">Pending invitations</div>';
+      state.pending.forEach(s => {
+        html += '<div class="pending-card"><div class="supervisee-name">' + esc(s.supervisee.display_name || s.supervisee.user_email || 'Coach') + '</div>'
+          + '<div class="supervisee-sub">' + esc(s.supervisee.user_email || '') + ' · ' + esc(fmtDate(s.created_at)) + '</div>'
+          + '<div class="pending-actions"><button class="btn btn-primary btn-pill" data-accept="' + esc(s.relationship_id) + '">Accept</button>'
+          + '<button class="btn btn-ghost btn-pill" data-decline="' + esc(s.relationship_id) + '">Decline</button></div></div>';
+      });
+      html += '</div>';
+    }
+    return html;
+  }
+
+  function renderMain() {
+    const main = $('ws-main');
+    if (!state.current) { main.innerHTML = '<div class="empty-state">Select a supervisee to view their workspace.</div>'; return; }
+    if (!state.ws) { main.innerHTML = '<div class="loader"><div class="spinner"></div><div>Loading workspace…</div></div>'; return; }
+    const s = state.current.supervisee;
+    main.innerHTML = '<div class="ws-header"><h2 style="font-size:1.4rem;margin:0;">' + esc(s.display_name || s.full_name || s.user_email || 'Coach') + '</h2>'
+      + '<div class="meta" style="text-transform:none;">' + esc(s.user_email || '') + '</div></div>'
+      + renderTabs() + '<div>' + renderWorkspaceBody() + '</div>';
+    wireWorkspace();
+  }
+
+  function render() {
+    $('header-meta').textContent = myName ? ('Signed in as ' + myName) : '';
+    $('content').innerHTML = '<div class="ws-layout"><div class="ws-rail" id="ws-rail"></div><div class="ws-main" id="ws-main"></div></div>';
+    $('ws-rail').innerHTML = renderRail();
+    document.querySelectorAll('[data-rel]').forEach(b => b.addEventListener('click', () => {
+      const rel = b.getAttribute('data-rel');
+      const s = state.active.find(x => x.relationship_id === rel);
+      if (s) loadWorkspace(s);
+    }));
+    document.querySelectorAll('[data-accept]').forEach(b => b.addEventListener('click', () => respondInvite(b.getAttribute('data-accept'), 'accept')));
+    document.querySelectorAll('[data-decline]').forEach(b => b.addEventListener('click', () => respondInvite(b.getAttribute('data-decline'), 'decline')));
+    renderMain();
+  }
+
+  async function loadWorkspace(supervisee) {
+    state.current = supervisee; state.ws = null;
+    render();
+    const data = await api('/api/get-supervisee-workspace', { supervisee_id: supervisee.supervisee.id });
+    if (!data.ok) { state.ws = { dna: null, sessions: [], clients: [], hours: [], totals: {} }; toast(data.error || 'Could not load workspace.'); }
+    else { state.ws = data; }
+    renderMain();
+  }
+
+  async function respondInvite(relId, action) {
+    const data = await api('/api/accept-supervision', { relationship_id: relId, action });
+    if (!data.ok) { toast(data.error || 'Could not update.'); return; }
+    toast(action === 'accept' ? 'Invitation accepted.' : 'Invitation declined.');
+    await reload();
+  }
+
+  async function reload() {
+    const data = await api('/api/get-supervisees', {});
+    if (!data.ok) {
+      if (data.error === 'NOT_A_SUPERVISOR') { showError('You don’t have supervisor access. Redirecting…'); setTimeout(() => location.href = '/coach-dashboard.html', 1600); return false; }
+      if (data.error === 'UNAUTHORIZED') { location.href = '/coach-dashboard.html'; return false; }
+      showError(data.error || 'Could not load supervision.'); return false;
+    }
+    state.active = data.active || []; state.pending = data.pending || [];
+    // keep current selection if still active
+    if (state.current) {
+      const still = state.active.find(s => s.relationship_id === state.current.relationship_id);
+      state.current = still || null; state.ws = still ? state.ws : null;
+    }
+    render();
+    return true;
+  }
+
+  async function init() {
+    if (!token()) { location.href = '/coach-dashboard.html'; return; }
+    const userRes = await fetch(SUPABASE_URL + '/auth/v1/user', { headers: { apikey: ANON_KEY, Authorization: 'Bearer ' + token() } });
+    if (!userRes.ok) { location.href = '/coach-dashboard.html'; return; }
+    const user = await userRes.json();
+    const profRes = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles?user_email=eq.' + encodeURIComponent((user.email || '').toLowerCase()) + '&select=id,display_name,full_name', { headers: apiHeaders() });
+    const profs = await profRes.json().catch(() => []);
+    if (!Array.isArray(profs) || !profs.length) { showError('No coach profile found for ' + esc(user.email || '')); return; }
+    me = profs[0].id; myName = profs[0].display_name || profs[0].full_name || user.email;
+    await reload();
+  }
+
+  init();
+  </script>
+</body>
+</html>
