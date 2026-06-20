@@ -48,6 +48,9 @@
     "api/generate-lesson-content.js": {
       "maxDuration": 60
     },
+    "api/generate-supervision-snapshot.js": {
+      "maxDuration": 120
+    },
     "api/*.js": {
       "maxDuration": 30
     }

@@ -378,7 +378,61 @@
     ).join('') + '</div>';
   }
 
-  function renderOverview() {
+  function superviseeName() {
+    const s = state.current && state.current.supervisee;
+    return (s && (s.display_name || s.full_name || s.user_email)) || 'this coach';
+  }
+
+  /* ---- supervision snapshot (Ticket 3) ---- */
+  function renderSnapshotBody(snap) {
+    const t = (snap && snap.snapshot_text) || {};
+    const prose = (v) => esc(String(v || '')).replace(/\n/g, '<br>');
+    const prompts = Array.isArray(t.supervisor_prompts) ? t.supervisor_prompts : [];
+    let h = '';
+    h += '<div style="border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;margin-bottom:12px;background:var(--white);">'
+      + '<div style="font-size:0.62rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">Practice Context</div>'
+      + '<div style="font-size:0.9rem;line-height:1.6;color:var(--ink);">' + prose(t.practice_context) + '</div></div>';
+    h += '<div style="border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:var(--r-sm);padding:14px 16px;margin-bottom:12px;background:var(--white);">'
+      + '<div style="font-size:0.62rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">Coach Development</div>'
+      + '<div style="font-size:0.9rem;line-height:1.6;color:var(--ink);">' + prose(t.coach_development) + '</div></div>';
+    h += '<div style="border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;background:var(--cream);">'
+      + '<div style="font-size:0.62rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">To Explore in Supervision</div>'
+      + '<ul style="margin:0;padding-left:1.15rem;">'
+      + prompts.map(p => '<li style="margin:0 0 10px;font-size:1rem;line-height:1.5;color:var(--navy);">' + esc(p) + '</li>').join('')
+      + '</ul></div>';
+    h += '<div style="margin-top:10px;font-size:0.78rem;color:var(--muted);">Generated ' + esc(fmtDate(snap.generated_at))
+      + ' · <a href="#" id="snap-regen" style="color:var(--gold);font-weight:600;text-decoration:none;">Regenerate</a></div>';
+    return h;
+  }
+  function renderSnapshotPlaceholder() {
+    return '<div style="text-align:center;padding:10px 0 6px;">'
+      + '<p style="font-size:0.9rem;color:var(--muted);line-height:1.55;margin:0 auto 14px;max-width:520px;">Generate a supervision snapshot to prepare for your next session with ' + esc(superviseeName()) + '.</p>'
+      + '<button class="btn btn-primary" id="snap-gen">Generate Supervision Snapshot</button></div>';
+  }
+  function renderSnapshot() {
+    const snap = state.ws && state.ws.snapshot;
+    return '<div class="card" id="snapshot-card" style="margin-bottom:16px;">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.25rem;font-weight:600;color:var(--navy);border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:14px;">Supervision Snapshot</div>'
+      + '<div id="snap-body">' + (snap ? renderSnapshotBody(snap) : renderSnapshotPlaceholder()) + '</div>'
+      + '</div>';
+  }
+  function wireSnapshot() {
+    const g = $('snap-gen'); if (g) g.addEventListener('click', generateSnapshot);
+    const r = $('snap-regen'); if (r) r.addEventListener('click', (e) => { e.preventDefault(); generateSnapshot(); });
+  }
+  async function generateSnapshot() {
+    if (!state.current) return;
+    const body = $('snap-body');
+    if (body) body.innerHTML = '<div class="loader" style="padding:24px 0;"><div class="spinner"></div><div>Preparing snapshot…</div></div>';
+    const data = await api('/api/generate-supervision-snapshot', { relationship_id: state.current.relationship_id });
+    const restore = () => { const b = $('snap-body'); if (b) { const s = state.ws && state.ws.snapshot; b.innerHTML = s ? renderSnapshotBody(s) : renderSnapshotPlaceholder(); wireSnapshot(); } };
+    if (!data.ok) { toast(data.error || 'Could not build snapshot.'); restore(); return; }
+    if (state.ws) state.ws.snapshot = data.snapshot;
+    restore();
+    toast('Snapshot ready.');
+  }
+
+  function renderDnaSection() {
     const dna = state.ws.dna;
     if (!dna) return '<div class="empty-state">No Coach DNA profile yet for this supervisee.</div>';
     return '<div class="card">'
@@ -388,6 +442,10 @@
       + '</div>'
       + renderDna(dna)
       + '<div class="ann-area" id="ann-dna"></div></div>';
+  }
+
+  function renderOverview() {
+    return renderSnapshot() + renderDnaSection();
   }
 
   function renderSessions() {
@@ -470,7 +528,7 @@
 
   function wireWorkspace() {
     document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { state.tab = b.getAttribute('data-tab'); renderMain(); }));
-    if (state.tab === 'overview' && state.ws.dna) hydrateAnnotations('ann-dna', 'coach_dna', state.ws.dna.id);
+    if (state.tab === 'overview') { wireSnapshot(); if (state.ws.dna) hydrateAnnotations('ann-dna', 'coach_dna', state.ws.dna.id); }
     if (state.tab === 'sessions') {
       document.querySelectorAll('[data-sess]').forEach(b => b.addEventListener('click', () => {
         const i = b.getAttribute('data-sess'); const el = $('sess-' + i); const wasOpen = el.classList.contains('open');
@@ -564,7 +622,22 @@
     const data = await api('/api/get-supervisee-workspace', { supervisee_id: supervisee.supervisee.id });
     if (!data.ok) { state.ws = { dna: null, sessions: [], clients: [], hours: [], totals: {} }; toast(data.error || 'Could not load workspace.'); }
     else { state.ws = data; }
+    state.ws.snapshot = await fetchSnapshot(supervisee.relationship_id);
     renderMain();
+  }
+
+  // Read the current cached snapshot for a relationship. RLS admits only the
+  // supervisor (supervisor_id = current_coach_id()), so the supervisee can never
+  // read it via this path. Returns the row or null.
+  async function fetchSnapshot(relId) {
+    if (!relId) return null;
+    try {
+      const r = await fetch(SUPABASE_URL + '/rest/v1/supervision_snapshots?relationship_id=eq.' + encodeURIComponent(relId)
+        + '&select=window_start,window_end,session_count,client_count,snapshot_text,generated_at&limit=1', { headers: apiHeaders() });
+      if (!r.ok) return null;
+      const rows = await r.json().catch(() => null);
+      return (Array.isArray(rows) && rows[0]) || null;
+    } catch (e) { return null; }
   }
 
   async function respondInvite(relId, action) {
