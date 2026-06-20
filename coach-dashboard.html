@@ -2903,16 +2903,51 @@ async function supRenderFeedback() {
       if (pRes.ok) { (await pRes.json().catch(function() { return []; })).forEach(function(p) { names[p.id] = p.display_name || p.full_name || p.user_email; }); }
     }
 
+    // Resolve artifact context from target_id so each card names WHICH session/client.
+    var sessIds = Array.from(new Set(anns.filter(function(a) { return a.target_type === 'session' && a.target_id; }).map(function(a) { return a.target_id; })));
+    var sessionById = {};
+    if (sessIds.length) {
+      var sRes = await fetch(SUPABASE_URL + '/rest/v1/coach_session_notes?coach_id=eq.' + encodeURIComponent(meId) + '&id=in.(' + sessIds.map(encodeURIComponent).join(',') + ')&select=id,client_email,created_at', { headers: apiHeaders() });
+      if (sRes.ok) { (await sRes.json().catch(function() { return []; })).forEach(function(s) { sessionById[s.id] = s; }); }
+    }
+    // This coach's client patterns: resolves pattern_map annotations AND builds the
+    // email -> display-name map (pattern_map.display_name) used as the client identifier.
+    var patternById = {}, nameByEmail = {};
+    var cpRes = await fetch(SUPABASE_URL + '/rest/v1/coach_client_patterns?coach_id=eq.' + encodeURIComponent(meId) + '&select=id,client_email,dn:pattern_map->>display_name', { headers: apiHeaders() });
+    if (cpRes.ok) { (await cpRes.json().catch(function() { return []; })).forEach(function(c) { patternById[c.id] = c; if (c.client_email && c.dn) nameByEmail[String(c.client_email).toLowerCase()] = c.dn; }); }
+    function clientLabel(email) { return email ? (nameByEmail[String(email).toLowerCase()] || email) : ''; }
+    function artifactContext(a) {
+      if (a.target_type === 'session') {
+        var s = sessionById[a.target_id];
+        if (s) return { text: 'Session &middot; ' + escapeHtml(clientLabel(s.client_email)) + ' &middot; ' + escapeHtml(supFmtDate(s.created_at)), email: s.client_email, nav: 'client', cta: 'View session' };
+        return { text: 'Session note (no longer available)' };
+      }
+      if (a.target_type === 'pattern_map') {
+        var c = patternById[a.target_id];
+        var nm = c ? clientLabel(c.client_email) : '';
+        return { text: 'Client pattern' + (nm ? ' &middot; ' + escapeHtml(nm) : ''), email: c && c.client_email, nav: 'client', cta: 'View client' };
+      }
+      if (a.target_type === 'coach_dna') return { text: 'Coach DNA', nav: 'dna', cta: 'View Coach DNA' };
+      if (a.target_type === 'effectiveness_map') return { text: 'Effectiveness Map' };
+      return { text: escapeHtml(SUP_TARGET_LABELS[a.target_type] || a.target_type) };
+    }
+
     var html = '';
     anns.forEach(function(a) {
       var p = supParseBody(a.body);
       var refl = reflBy[a.id];
-      var label = SUP_TARGET_LABELS[a.target_type] || a.target_type;
+      var ctx = artifactContext(a);
+      var navBtn = ctx.nav
+        ? '<button data-nav-' + ctx.nav + '="' + escapeHtml(ctx.email || '') + '" style="background:none;border:none;color:#c49a3c;font-family:\'DM Sans\',sans-serif;font-size:0.74rem;font-weight:600;cursor:pointer;padding:0;white-space:nowrap;">' + escapeHtml(ctx.cta) + ' &rarr;</button>'
+        : '';
       html += '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:8px;padding:14px 16px;margin-bottom:12px;">'
-        + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">'
+        + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">'
         +   '<span style="font-size:0.62rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#c49a3c;background:rgba(196,154,60,0.14);border-radius:999px;padding:2px 9px;">' + escapeHtml(p.type) + '</span>'
-        +   '<span style="font-size:0.78rem;color:#6b6b60;">on ' + escapeHtml(label) + '</span>'
         +   '<span style="font-size:0.74rem;color:#6b6b60;margin-left:auto;">' + escapeHtml(names[a.supervisor_id] || 'Supervisor') + ' &middot; ' + escapeHtml(supFmtDate(a.created_at)) + '</span>'
+        + '</div>'
+        + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;padding:7px 11px;background:#f7f4ee;border-radius:6px;">'
+        +   '<span style="font-size:0.78rem;font-weight:600;color:#1a3a52;">' + ctx.text + '</span>'
+        +   (navBtn ? '<span style="margin-left:auto;">' + navBtn + '</span>' : '')
         + '</div>'
         + '<div style="font-size:0.9rem;line-height:1.55;color:#1a1a1a;">' + escapeHtml(p.text).replace(/\n/g, '<br>') + '</div>';
       if (refl) {
@@ -2928,6 +2963,8 @@ async function supRenderFeedback() {
     });
     list.innerHTML = html;
     list.querySelectorAll('[data-refl]').forEach(function(b) { b.addEventListener('click', function() { supSaveReflection(b.getAttribute('data-refl')); }); });
+    list.querySelectorAll('[data-nav-client]').forEach(function(b) { b.addEventListener('click', function() { var em = b.getAttribute('data-nav-client'); if (em && typeof jumpToClientDetail === 'function') jumpToClientDetail(em); }); });
+    list.querySelectorAll('[data-nav-dna]').forEach(function(b) { b.addEventListener('click', function() { var t = document.querySelector('.tab-btn[data-tab="coach-dna"]'); if (t) t.click(); }); });
   } catch (e) {
     list.innerHTML = '<div style="color:#9a2b2b;font-size:0.85rem;">Could not load feedback right now.</div>';
   }
