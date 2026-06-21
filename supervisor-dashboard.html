@@ -444,9 +444,11 @@
     state.agendaItems = (ag && Array.isArray(ag.items)) ? JSON.parse(JSON.stringify(ag.items)) : [];
   }
   function agBadge() {
-    return '<span style="font-size:0.55rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--gold);background:rgba(196,154,60,0.14);border-radius:999px;padding:2px 7px;margin-left:6px;white-space:nowrap;">AI suggested</span>';
+    return '<span style="font-size:0.55rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--gold);background:rgba(196,154,60,0.14);border-radius:999px;padding:2px 7px;margin-left:6px;white-space:nowrap;">Coach Clarity suggested</span>';
   }
   const AG_MV = 'background:var(--white);border:1px solid var(--border);border-radius:5px;width:24px;height:20px;line-height:1;cursor:pointer;color:var(--navy);font-size:0.7rem;';
+  // Grow an agenda textarea to fit its content (min-height:80px floors empties; no max).
+  function agAutosize(t) { if (!t) return; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }
 
   function renderAgendaDraftEditor() {
     const items = state.agendaItems || [];
@@ -459,7 +461,7 @@
         +   '<button class="ag-move" data-dir="down" data-i="' + i + '" ' + (i === items.length - 1 ? 'disabled' : '') + ' style="' + AG_MV + (i===items.length-1?'opacity:0.4;cursor:default;':'') + '">&#9660;</button>'
         + '</div>'
         + '<div style="flex:1;min-width:0;">'
-        +   '<textarea class="ag-text" data-i="' + i + '" style="width:100%;min-height:44px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:\'DM Sans\',sans-serif;font-size:0.86rem;line-height:1.5;resize:vertical;box-sizing:border-box;">' + esc(it.text) + '</textarea>'
+        +   '<textarea class="ag-text" data-i="' + i + '" style="width:100%;min-height:80px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:\'DM Sans\',sans-serif;font-size:0.86rem;line-height:1.5;resize:vertical;overflow:hidden;box-sizing:border-box;">' + esc(it.text) + '</textarea>'
         +   (it.source === 'snapshot' ? '<div style="margin-top:3px;">' + agBadge() + '</div>' : '')
         + '</div>'
         + '<button class="ag-del" data-i="' + i + '" style="background:none;border:1px solid var(--border);color:#9a2b2b;padding:6px 10px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.74rem;font-weight:600;cursor:pointer;white-space:nowrap;">Delete</button>'
@@ -533,9 +535,13 @@
     const save = $('ag-save'); if (save) save.addEventListener('click', () => agendaSaveDraft(true));
     const send = $('ag-send'); if (send) send.addEventListener('click', agendaSend);
     const complete = $('ag-complete'); if (complete) complete.addEventListener('click', agendaComplete);
-    document.querySelectorAll('.ag-text').forEach(t => t.addEventListener('input', () => {
-      const i = +t.getAttribute('data-i'); if (state.agendaItems[i]) state.agendaItems[i].text = t.value;
-    }));
+    document.querySelectorAll('.ag-text').forEach(t => {
+      agAutosize(t); // fit to content on render (no scrolling to read an item)
+      t.addEventListener('input', () => {
+        const i = +t.getAttribute('data-i'); if (state.agendaItems[i]) state.agendaItems[i].text = t.value;
+        agAutosize(t);
+      });
+    });
     document.querySelectorAll('.ag-del').forEach(b => b.addEventListener('click', () => {
       const i = +b.getAttribute('data-i'); state.agendaItems.splice(i, 1); refreshAgendaBody();
     }));
