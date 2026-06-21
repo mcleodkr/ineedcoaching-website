@@ -51,6 +51,9 @@
     "api/generate-supervision-snapshot.js": {
       "maxDuration": 120
     },
+    "api/generate-agenda.js": {
+      "maxDuration": 120
+    },
     "api/*.js": {
       "maxDuration": 30
     }

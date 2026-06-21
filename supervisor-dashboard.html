@@ -432,6 +432,166 @@
     toast('Snapshot ready.');
   }
 
+  /* ---- supervision agenda (Ticket 4) ---- */
+  function curRelId() { return state.current && state.current.relationship_id; }
+  function superviseeFirst() {
+    const s = state.current && state.current.supervisee;
+    const n = (s && (s.display_name || s.full_name || s.user_email)) || 'your supervisee';
+    return String(n).split(/\s+/)[0] || n;
+  }
+  function syncAgendaEdit() {
+    const ag = state.ws && state.ws.agenda;
+    state.agendaItems = (ag && Array.isArray(ag.items)) ? JSON.parse(JSON.stringify(ag.items)) : [];
+  }
+  function agBadge() {
+    return '<span style="font-size:0.55rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--gold);background:rgba(196,154,60,0.14);border-radius:999px;padding:2px 7px;margin-left:6px;white-space:nowrap;">AI suggested</span>';
+  }
+  const AG_MV = 'background:var(--white);border:1px solid var(--border);border-radius:5px;width:24px;height:20px;line-height:1;cursor:pointer;color:var(--navy);font-size:0.7rem;';
+
+  function renderAgendaDraftEditor() {
+    const items = state.agendaItems || [];
+    let h = '<div style="font-size:0.84rem;color:var(--muted);margin-bottom:12px;">Edit, reorder, add, or remove items. Send when you&rsquo;re ready.</div>';
+    if (!items.length) h += '<div class="empty-state" style="padding:14px;">No items yet — add one below or generate from the snapshot.</div>';
+    items.forEach((it, i) => {
+      h += '<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;">'
+        + '<div style="display:flex;flex-direction:column;gap:3px;padding-top:2px;">'
+        +   '<button class="ag-move" data-dir="up" data-i="' + i + '" ' + (i === 0 ? 'disabled' : '') + ' style="' + AG_MV + (i===0?'opacity:0.4;cursor:default;':'') + '">&#9650;</button>'
+        +   '<button class="ag-move" data-dir="down" data-i="' + i + '" ' + (i === items.length - 1 ? 'disabled' : '') + ' style="' + AG_MV + (i===items.length-1?'opacity:0.4;cursor:default;':'') + '">&#9660;</button>'
+        + '</div>'
+        + '<div style="flex:1;min-width:0;">'
+        +   '<textarea class="ag-text" data-i="' + i + '" style="width:100%;min-height:44px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:\'DM Sans\',sans-serif;font-size:0.86rem;line-height:1.5;resize:vertical;box-sizing:border-box;">' + esc(it.text) + '</textarea>'
+        +   (it.source === 'snapshot' ? '<div style="margin-top:3px;">' + agBadge() + '</div>' : '')
+        + '</div>'
+        + '<button class="ag-del" data-i="' + i + '" style="background:none;border:1px solid var(--border);color:#9a2b2b;padding:6px 10px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.74rem;font-weight:600;cursor:pointer;white-space:nowrap;">Delete</button>'
+        + '</div>';
+    });
+    h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">'
+      + '<button class="btn btn-secondary btn-pill" id="ag-add">+ Add item</button>'
+      + '<button class="btn btn-secondary btn-pill" id="ag-generate">Generate from snapshot</button>'
+      + '<button class="btn btn-secondary btn-pill" id="ag-save">Save draft</button>'
+      + '<button class="btn btn-primary btn-pill" id="ag-send">Send to ' + esc(superviseeFirst()) + '</button>'
+      + '</div><div class="msg" id="ag-msg" style="margin-top:8px;"></div>';
+    return h;
+  }
+
+  function renderAgendaItemsReadonly(items, allowDiscuss) {
+    return (items || []).map((it) => {
+      const control = allowDiscuss
+        ? '<label style="font-size:0.74rem;color:var(--muted);display:inline-flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap;"><input type="checkbox" class="ag-discuss" data-id="' + esc(it.id) + '" ' + (it.discussed ? 'checked' : '') + '> Discussed</label>'
+        : '<span style="font-size:0.66rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:' + (it.discussed ? '#2f6168' : 'var(--muted)') + ';">' + (it.discussed ? '✓ Discussed' : 'Not discussed') + '</span>';
+      const refl = it.supervisee_reflection
+        ? '<div style="margin-top:8px;padding:8px 10px;background:var(--cream);border-left:2px solid var(--gold);border-radius:0 6px 6px 0;"><div style="font-size:0.58rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--gold);margin-bottom:3px;">Supervisee reflection</div><div style="font-size:0.85rem;line-height:1.5;color:var(--ink);">' + esc(it.supervisee_reflection).replace(/\n/g, '<br>') + '</div></div>'
+        : '<div style="margin-top:6px;font-size:0.76rem;color:var(--muted);font-style:italic;">No reflection yet.</div>';
+      return '<div style="border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:10px;background:var(--white);">'
+        + '<div style="display:flex;gap:12px;align-items:flex-start;justify-content:space-between;">'
+        +   '<div style="font-size:0.9rem;line-height:1.5;color:var(--ink);flex:1;min-width:0;">' + esc(it.text) + (it.source === 'snapshot' ? agBadge() : '') + '</div>'
+        +   '<div style="flex-shrink:0;">' + control + '</div>'
+        + '</div>' + refl + '</div>';
+    }).join('');
+  }
+
+  function renderAgendaBody() {
+    const ag = state.ws && state.ws.agenda;
+    if (!ag) {
+      return '<div style="text-align:center;padding:8px 0 4px;">'
+        + '<p style="font-size:0.9rem;color:var(--muted);line-height:1.55;margin:0 auto 14px;max-width:520px;">Build an agenda for your next session with ' + esc(superviseeFirst()) + '. It starts from the latest snapshot, or from Coach DNA if there isn&rsquo;t one yet — then you can edit before sending.</p>'
+        + '<button class="btn btn-primary" id="ag-build">Build Agenda</button>'
+        + '<div class="msg" id="ag-msg" style="margin-top:10px;"></div></div>';
+    }
+    if (ag.status === 'draft') return renderAgendaDraftEditor();
+    const items = Array.isArray(ag.items) ? ag.items : [];
+    if (ag.status === 'sent') {
+      return '<div style="font-size:0.82rem;color:var(--muted);margin-bottom:12px;">Shared ' + esc(fmtDate(ag.sent_at)) + ' · awaiting your session. Mark items discussed, then complete when you&rsquo;re done.</div>'
+        + renderAgendaItemsReadonly(items, true)
+        + '<div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><button class="btn btn-primary btn-pill" id="ag-complete">Mark Session Complete</button><span class="msg" id="ag-msg"></span></div>';
+    }
+    return '<div style="font-size:0.82rem;color:var(--muted);margin-bottom:12px;">Session completed ' + esc(fmtDate(ag.completed_at)) + '.</div>'
+      + renderAgendaItemsReadonly(items, false);
+  }
+
+  function renderAgenda() {
+    return '<div class="card" id="agenda-card" style="margin-bottom:16px;">'
+      + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.25rem;font-weight:600;color:var(--navy);border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:14px;">Supervision Agenda</div>'
+      + '<div id="agenda-body">' + renderAgendaBody() + '</div></div>';
+  }
+
+  function refreshAgendaBody() {
+    const el = $('agenda-body');
+    if (el) { el.innerHTML = renderAgendaBody(); wireAgenda(); }
+  }
+
+  function agMsg(text, ok) {
+    const m = $('ag-msg'); if (!m) return;
+    m.className = 'msg' + (ok === true ? '' : (ok === false ? ' err' : ''));
+    m.textContent = text || '';
+  }
+
+  function wireAgenda() {
+    const build = $('ag-build'); if (build) build.addEventListener('click', () => agendaGenerate(build));
+    const gen = $('ag-generate'); if (gen) gen.addEventListener('click', () => agendaGenerate(gen));
+    const add = $('ag-add'); if (add) add.addEventListener('click', agendaAddItem);
+    const save = $('ag-save'); if (save) save.addEventListener('click', () => agendaSaveDraft(true));
+    const send = $('ag-send'); if (send) send.addEventListener('click', agendaSend);
+    const complete = $('ag-complete'); if (complete) complete.addEventListener('click', agendaComplete);
+    document.querySelectorAll('.ag-text').forEach(t => t.addEventListener('input', () => {
+      const i = +t.getAttribute('data-i'); if (state.agendaItems[i]) state.agendaItems[i].text = t.value;
+    }));
+    document.querySelectorAll('.ag-del').forEach(b => b.addEventListener('click', () => {
+      const i = +b.getAttribute('data-i'); state.agendaItems.splice(i, 1); refreshAgendaBody();
+    }));
+    document.querySelectorAll('.ag-move').forEach(b => b.addEventListener('click', () => {
+      const i = +b.getAttribute('data-i'); const dir = b.getAttribute('data-dir');
+      const j = dir === 'up' ? i - 1 : i + 1;
+      if (j < 0 || j >= state.agendaItems.length) return;
+      const arr = state.agendaItems; const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp; refreshAgendaBody();
+    }));
+    document.querySelectorAll('.ag-discuss').forEach(c => c.addEventListener('change', () => agendaDiscuss(c.getAttribute('data-id'), c.checked)));
+  }
+
+  function agendaAddItem() {
+    state.agendaItems.push({ id: '', text: '', source: 'supervisor', discussed: false, supervisee_reflection: null });
+    refreshAgendaBody();
+  }
+
+  async function agendaGenerate(btn) {
+    if (btn) btn.disabled = true; agMsg('Building agenda…');
+    const d = await api('/api/generate-agenda', { relationship_id: curRelId() });
+    if (!d.ok) { agMsg(d.error || 'Could not build the agenda.', false); if (btn) btn.disabled = false; return; }
+    state.ws.agenda = d.agenda; syncAgendaEdit(); refreshAgendaBody();
+    toast('Agenda ready.');
+  }
+
+  // Persist the local draft edits (action 'edit'). Returns true on success.
+  async function agendaSaveDraft(showToast) {
+    const d = await api('/api/update-agenda', { relationship_id: curRelId(), action: 'edit', items: state.agendaItems });
+    if (!d.ok) { agMsg(d.error || 'Could not save.', false); return false; }
+    state.ws.agenda = d.agenda; syncAgendaEdit();
+    if (showToast) { refreshAgendaBody(); toast('Draft saved.'); }
+    return true;
+  }
+
+  async function agendaSend() {
+    const send = $('ag-send'); if (send) send.disabled = true; agMsg('Sending…');
+    if (!(await agendaSaveDraft(false))) { if (send) send.disabled = false; return; }
+    const d = await api('/api/update-agenda', { relationship_id: curRelId(), action: 'send' });
+    if (!d.ok) { agMsg(d.error || 'Could not send.', false); if (send) send.disabled = false; return; }
+    state.ws.agenda = d.agenda; syncAgendaEdit(); refreshAgendaBody();
+    toast('Agenda sent to ' + superviseeFirst() + '.');
+  }
+
+  async function agendaDiscuss(itemId, discussed) {
+    const d = await api('/api/update-agenda', { relationship_id: curRelId(), action: 'discuss', item_id: itemId, discussed: discussed });
+    if (!d.ok) { toast(d.error || 'Could not update.'); return; }
+    state.ws.agenda = d.agenda; // checkbox already reflects state; no re-render needed
+  }
+
+  async function agendaComplete() {
+    const btn = $('ag-complete'); if (btn) btn.disabled = true; agMsg('Completing…');
+    const d = await api('/api/update-agenda', { relationship_id: curRelId(), action: 'complete' });
+    if (!d.ok) { agMsg(d.error || 'Could not complete.', false); if (btn) btn.disabled = false; return; }
+    state.ws.agenda = d.agenda; refreshAgendaBody(); toast('Session marked complete.');
+  }
+
   function renderDnaSection() {
     const dna = state.ws.dna;
     if (!dna) return '<div class="empty-state">No Coach DNA profile yet for this supervisee.</div>';
@@ -445,7 +605,7 @@
   }
 
   function renderOverview() {
-    return renderSnapshot() + renderDnaSection();
+    return renderSnapshot() + renderAgenda() + renderDnaSection();
   }
 
   function renderSessions() {
@@ -528,7 +688,7 @@
 
   function wireWorkspace() {
     document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { state.tab = b.getAttribute('data-tab'); renderMain(); }));
-    if (state.tab === 'overview') { wireSnapshot(); if (state.ws.dna) hydrateAnnotations('ann-dna', 'coach_dna', state.ws.dna.id); }
+    if (state.tab === 'overview') { wireSnapshot(); wireAgenda(); if (state.ws.dna) hydrateAnnotations('ann-dna', 'coach_dna', state.ws.dna.id); }
     if (state.tab === 'sessions') {
       document.querySelectorAll('[data-sess]').forEach(b => b.addEventListener('click', () => {
         const i = b.getAttribute('data-sess'); const el = $('sess-' + i); const wasOpen = el.classList.contains('open');
@@ -623,7 +783,17 @@
     if (!data.ok) { state.ws = { dna: null, sessions: [], clients: [], hours: [], totals: {} }; toast(data.error || 'Could not load workspace.'); }
     else { state.ws = data; }
     state.ws.snapshot = await fetchSnapshot(supervisee.relationship_id);
+    state.ws.agenda = await fetchAgenda(supervisee.relationship_id);
+    syncAgendaEdit();
     renderMain();
+  }
+
+  // Current agenda for a relationship (role-aware on the server; supervisor sees any
+  // status). Returns the row or null.
+  async function fetchAgenda(relId) {
+    if (!relId) return null;
+    const d = await api('/api/get-agenda', { relationship_id: relId });
+    return (d && d.ok) ? (d.agenda || null) : null;
   }
 
   // Read the current cached snapshot for a relationship. RLS admits only the

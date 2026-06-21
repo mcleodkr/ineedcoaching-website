@@ -2918,9 +2918,78 @@ async function loadSupervision() {
   var topHtml = await supTopBlockHtml();
   host.innerHTML = topHtml
     + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;margin:0 0 10px;">Supervisor feedback</div>'
-    + '<div id="sup-feedback-list"><div style="color:#6b6b60;font-size:0.85rem;">Loading&hellip;</div></div>';
+    + '<div id="sup-feedback-list"><div style="color:#6b6b60;font-size:0.85rem;">Loading&hellip;</div></div>'
+    + '<div id="sup-agenda-section"></div>';
   supWireTopBlock();
   await supRenderFeedback();
+  await supRenderAgenda();
+}
+
+// Upcoming Supervision (Ticket 4): sent agendas the supervisee can review and reflect
+// on. Read directly via RLS (agendas_supervisee_read admits only non-draft rows for the
+// owning supervisee). Drafts are never returned. Supports multiple supervisors.
+async function supRenderAgenda() {
+  var host = document.getElementById('sup-agenda-section');
+  if (!host || !coachProfile || !coachProfile.id) return;
+  var meId = coachProfile.id;
+  var agendas = [];
+  try {
+    var r = await fetch(SUPABASE_URL + '/rest/v1/supervision_agendas?supervisee_id=eq.' + encodeURIComponent(meId) + '&status=eq.sent&select=id,relationship_id,supervisor_id,items,sent_at&order=sent_at.desc', { headers: apiHeaders() });
+    agendas = r.ok ? await r.json().catch(function() { return []; }) : [];
+  } catch (e) { /* non-fatal */ }
+  agendas = Array.isArray(agendas) ? agendas : [];
+  if (!agendas.length) { host.innerHTML = ''; return; }
+
+  var supIds = Array.from(new Set(agendas.map(function(a) { return a.supervisor_id; }).filter(Boolean)));
+  var names = {};
+  if (supIds.length) {
+    try {
+      var pRes = await fetch(SUPABASE_URL + '/rest/v1/coach_profiles?id=in.(' + supIds.map(encodeURIComponent).join(',') + ')&select=id,display_name,full_name,user_email', { headers: apiHeaders() });
+      if (pRes.ok) (await pRes.json().catch(function() { return []; })).forEach(function(p) { names[p.id] = p.display_name || p.full_name || p.user_email; });
+    } catch (e) { /* non-fatal */ }
+  }
+
+  var html = '<div style="margin-top:24px;">'
+    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;margin:0 0 4px;">Upcoming Supervision</div>'
+    + '<div style="font-size:0.82rem;color:#6b6b60;margin-bottom:12px;">Your supervisor has shared an agenda for your next session. Add your reflections before you meet.</div>';
+  agendas.forEach(function(a) {
+    var items = Array.isArray(a.items) ? a.items : [];
+    html += '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:10px;padding:16px 18px;margin-bottom:14px;">'
+      + '<div style="font-size:0.78rem;color:#6b6b60;margin-bottom:6px;">From ' + escapeHtml(names[a.supervisor_id] || 'your supervisor') + ' &middot; shared ' + escapeHtml(supFmtDate(a.sent_at)) + '</div>';
+    items.forEach(function(it) {
+      var saved = !!it.supervisee_reflection;
+      html += '<div style="border-top:1px solid #f0ece4;padding:12px 0;">'
+        + '<div style="font-size:0.9rem;line-height:1.5;color:#1a1a1a;margin-bottom:8px;">' + escapeHtml(it.text) + '</div>'
+        + '<textarea class="sup-refl-text" data-id="' + escapeHtml(it.id) + '" placeholder="Add your reflection…" style="width:100%;min-height:54px;padding:8px 10px;border:1px solid #e8e4dc;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.86rem;resize:vertical;box-sizing:border-box;">' + escapeHtml(it.supervisee_reflection || '') + '</textarea>'
+        + '<div style="display:flex;align-items:center;gap:10px;margin-top:6px;">'
+        +   '<button class="sup-refl-save" data-rel="' + escapeHtml(a.relationship_id) + '" data-id="' + escapeHtml(it.id) + '" style="background:#c49a3c;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:600;cursor:pointer;">Save reflection</button>'
+        +   '<span class="sup-refl-msg" data-id="' + escapeHtml(it.id) + '" style="font-size:0.78rem;color:' + (saved ? '#2f6168' : '#6b6b60') + ';">' + (saved ? 'Saved' : '') + '</span>'
+        + '</div></div>';
+    });
+    html += '</div>';
+  });
+  html += '</div>';
+  host.innerHTML = html;
+  host.querySelectorAll('.sup-refl-save').forEach(function(b) {
+    b.addEventListener('click', function() { supSaveReflection(b.getAttribute('data-rel'), b.getAttribute('data-id')); });
+  });
+}
+
+async function supSaveReflection(relId, itemId) {
+  var ta = document.querySelector('.sup-refl-text[data-id="' + itemId + '"]');
+  var msg = document.querySelector('.sup-refl-msg[data-id="' + itemId + '"]');
+  var btn = document.querySelector('.sup-refl-save[data-id="' + itemId + '"]');
+  if (!ta) return;
+  var text = ta.value.trim();
+  if (btn) btn.disabled = true;
+  if (msg) { msg.style.color = '#6b6b60'; msg.textContent = 'Saving…'; }
+  try {
+    var r = await fetch('/api/update-agenda', { method: 'POST', headers: apiHeaders(), body: JSON.stringify({ relationship_id: relId, action: 'reflect', item_id: itemId, reflection: text }) });
+    var d = await r.json().catch(function() { return null; });
+    if (!d || !d.ok) { if (msg) { msg.style.color = '#9a2b2b'; msg.textContent = (d && d.error) || 'Could not save.'; } if (btn) btn.disabled = false; return; }
+    if (msg) { msg.style.color = '#2f6168'; msg.textContent = 'Saved'; }
+  } catch (e) { if (msg) { msg.style.color = '#9a2b2b'; msg.textContent = 'Network error.'; } }
+  if (btn) btn.disabled = false;
 }
 
 // Top block: the request form when there is no active/pending supervisor, or the
