@@ -18925,54 +18925,112 @@ function toggleDcDetail(detailId, btn) {
 }
 window.toggleDcDetail = toggleDcDetail;
 
-// Fix 6: a 3–4 sentence natural-language summary computed from the check-in
-// rows already fetched (no extra API call). Mood trend compares the oldest vs
-// newest scored mood in the 14-day window; one-words and pattern reflections
-// pull from the most recent entries. All dynamic values are escaped.
-function buildDailyCheckinSummary(rows, clientEmail) {
-  var possessive = 'This client’s';
-  try {
-    var c = (typeof clientsData !== 'undefined' && Array.isArray(clientsData)) ? clientsData.find(function(x){ return x && x.email === clientEmail; }) : null;
-    if (c && c.name) {
-      var first = String(c.name).trim().split(/\s+/)[0];
-      if (first) possessive = escapeHtml(first) + '’s';
-    }
-  } catch (e) {}
-
-  var now = new Date();
-  var cutoff = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-  var windowRows = rows
-    .filter(function(r){ return r && r.created_at && new Date(r.created_at) >= cutoff; })
-    .slice()
-    .sort(function(a, b){ return new Date(a.created_at) - new Date(b.created_at); });
-  var scored = windowRows.map(function(r){ return dcMoodScore(r.mood); }).filter(function(v){ return v != null; });
-
-  var sentences = [];
-  var lead = windowRows.length >= 1 ? 'Over the last 14 days, ' : 'Across recent check-ins, ';
-  if (scored.length >= 2) {
-    var firstS = scored[0], lastS = scored[scored.length - 1];
-    var trendPhrase = lastS < firstS ? 'trending heavier' : (lastS > firstS ? 'trending steadier' : 'holding steady');
-    sentences.push(lead + possessive + ' check-ins show a mood ' + trendPhrase + '.');
-  } else {
-    sentences.push(lead + possessive + ' check-ins are just getting started — ' + rows.length + ' logged so far.');
-  }
-
-  var words = rows.filter(function(r){ return r && r.one_word; }).slice(0, 3).map(function(r){ return String(r.one_word).trim(); }).filter(Boolean);
-  if (words.length) {
-    var quoted = words.map(function(w){ return '‘' + escapeHtml(w) + '’'; });
-    var wlist = quoted.length === 1 ? quoted[0] : quoted.slice(0, -1).join(', ') + ' and ' + quoted[quoted.length - 1];
-    sentences.push('Recent one-words include ' + wlist + '.');
-  }
-
-  var patterns = rows.filter(function(r){ return r && r.pattern_response; });
-  if (patterns.length) {
-    var latest = String(patterns[0].pattern_response).trim().replace(/\s+/g, ' ');
-    if (latest.length > 140) latest = latest.slice(0, 137).replace(/[\s,;:.]+\S*$/, '') + '…';
-    sentences.push('Their most recent reflection noted ‘' + escapeHtml(latest) + '’.');
-  }
-
-  return '<div style="background:#fff;border:1px solid #e8e4dc;border-left:3px solid #c49a3c;border-radius:8px;padding:14px 16px;margin-bottom:14px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:#1a3a52;line-height:1.65;">' + sentences.join(' ') + '</div>';
+// Coach Clarity check-in synthesis — a real AI read of the client's check-ins
+// (api/coach-checkin-synthesis). Cached per (coach, client): the panel shows the
+// cached read instantly and regenerates only when a new check-in has arrived or
+// the coach hits Refresh. Coaching voice only — no clinical/therapy language.
+function dcEsc(v) { return (typeof escapeHtml === 'function') ? escapeHtml(String(v == null ? '' : v)) : String(v == null ? '' : v); }
+function dcSynthCardShell(inner) {
+  return '<div class="dc-synth-card" style="background:#fff;border:1px solid #e8e4dc;border-radius:10px;padding:16px 18px;margin-bottom:14px;font-family:\'DM Sans\',sans-serif;">' + inner + '</div>';
 }
+function dcSynthHeader(rightHtml) {
+  return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;">'
+    + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+    +   '<span style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;">Check-in synthesis</span>'
+    +   '<span style="font-size:0.6rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#8a6a1c;background:#fdf2da;border:1px solid #ecdcb4;border-radius:50px;padding:3px 8px;">Coach Clarity</span>'
+    + '</div>'
+    + (rightHtml || '')
+    + '</div>';
+}
+function dcSynthRefreshBtn(synthId, clientEmail, label) {
+  var safeEmail = String(clientEmail).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  return '<button type="button" data-dc-refresh onclick="dcRefreshSynthesis(\'' + synthId + '\',\'' + safeEmail + '\')" style="background:transparent;border:1px solid #1a3a52;color:#1a3a52;padding:5px 12px;border-radius:6px;font-size:0.74rem;font-family:\'DM Sans\',sans-serif;font-weight:600;cursor:pointer;white-space:nowrap;">' + (label || '&#8635; Refresh') + '</button>';
+}
+function dcSynthLoadingHtml() {
+  return dcSynthCardShell(dcSynthHeader('') + '<div style="font-size:0.88rem;color:#8a8580;font-style:italic;">Reading the check-ins…</div>');
+}
+function dcSynthLens(label, body) {
+  return '<div style="margin-bottom:13px;">'
+    + '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#c49a3c;margin-bottom:4px;">' + label + '</div>'
+    + '<div style="font-size:0.92rem;color:#1a3a52;line-height:1.6;">' + body + '</div>'
+    + '</div>';
+}
+function renderCheckinSynthesisCard(synthId, data, clientEmail) {
+  var el = document.getElementById(synthId); if (!el) return;
+  var s = data && data.synthesis;
+  if (!s) {
+    var canGen = data && data.current_count > 0;
+    el.innerHTML = dcSynthCardShell(
+      dcSynthHeader(canGen ? dcSynthRefreshBtn(synthId, clientEmail, '&#8635; Generate') : '')
+      + '<div style="font-size:0.88rem;color:#8a8580;line-height:1.55;">Not enough check-ins yet to read a pattern. A synthesis appears once this client has logged a check-in.</div>'
+    );
+    return;
+  }
+  var updating = !!(data && data._updating);
+  var genDate = '';
+  if (data && data.generated_at) {
+    try { genDate = new Date(data.generated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); } catch (e) {}
+  }
+  var footMeta = updating
+    ? '<span style="font-style:italic;color:#8a8580;">Updating with the latest check-in…</span>'
+    : (genDate ? '<span style="color:#8a8580;">Generated ' + dcEsc(genDate) + '</span>' : '');
+  el.innerHTML = dcSynthCardShell(
+    dcSynthHeader(dcSynthRefreshBtn(synthId, clientEmail))
+    + dcSynthLens('Pattern noticed', dcEsc(s.pattern_noticed))
+    + dcSynthLens('Possible connection', dcEsc(s.possible_connection))
+    + dcSynthLens('Coaching direction', dcEsc(s.coaching_direction))
+    + '<div style="border-top:1px solid #e8e4dc;margin:14px 0 12px;"></div>'
+    + '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#5a5560;margin-bottom:5px;">Suggested session question</div>'
+    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.12rem;font-style:italic;color:#1a3a52;line-height:1.5;">' + dcEsc(s.session_question) + '</div>'
+    + (footMeta ? '<div style="font-size:0.7rem;margin-top:12px;">' + footMeta + '</div>' : '')
+  );
+}
+async function loadCheckinSynthesis(synthId, clientEmail) {
+  var errHtml = function () { return dcSynthCardShell(dcSynthHeader(dcSynthRefreshBtn(synthId, clientEmail, '&#8635; Retry')) + '<div style="font-size:0.86rem;color:#c44;">Could not load the synthesis.</div>'); };
+  try {
+    var res = await fetch('/api/coach-checkin-synthesis?client_email=' + encodeURIComponent(clientEmail), { headers: { Authorization: 'Bearer ' + (localStorage.getItem(TOKEN_KEY) || '') } });
+    var data = await res.json().catch(function () { return null; });
+    var el = document.getElementById(synthId); if (!el) return;
+    if (!data) { el.innerHTML = errHtml(); return; }
+    if (data.synthesis) {
+      renderCheckinSynthesisCard(synthId, data, clientEmail);
+      // A new check-in arrived since the cached read: keep showing the cached card,
+      // mark it updating, and regenerate in the background.
+      if (data.stale) {
+        renderCheckinSynthesisCard(synthId, Object.assign({ _updating: true }, data), clientEmail);
+        generateCheckinSynthesis(synthId, clientEmail, false);
+      }
+    } else if (data.current_count > 0) {
+      el.innerHTML = dcSynthLoadingHtml();
+      generateCheckinSynthesis(synthId, clientEmail, false);
+    } else {
+      renderCheckinSynthesisCard(synthId, data, clientEmail);
+    }
+  } catch (err) {
+    var ee = document.getElementById(synthId); if (ee) ee.innerHTML = errHtml();
+  }
+}
+async function generateCheckinSynthesis(synthId, clientEmail, force) {
+  try {
+    var res = await fetch('/api/coach-checkin-synthesis', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + (localStorage.getItem(TOKEN_KEY) || ''), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ client_email: clientEmail, force: !!force }),
+    });
+    var data = await res.json().catch(function () { return null; });
+    if (data && data.synthesis) { renderCheckinSynthesisCard(synthId, data, clientEmail); return; }
+    // No synthesis returned (thin data or a soft failure). Only overwrite if we are
+    // not already showing a good card — never blank out a cached read.
+    var el = document.getElementById(synthId);
+    if (el && !el.querySelector('.dc-synth-card')) renderCheckinSynthesisCard(synthId, data || {}, clientEmail);
+  } catch (err) { /* keep whatever is currently shown */ }
+}
+window.loadCheckinSynthesis = loadCheckinSynthesis;
+window.generateCheckinSynthesis = generateCheckinSynthesis;
+window.dcRefreshSynthesis = function (synthId, clientEmail) {
+  var el = document.getElementById(synthId); if (el) el.innerHTML = dcSynthLoadingHtml();
+  generateCheckinSynthesis(synthId, clientEmail, true);
+};
 
 async function loadDailyCheckins(bodyId, clientEmail) {
   var el = document.getElementById(bodyId);
@@ -19002,42 +19060,76 @@ async function loadDailyCheckins(bodyId, clientEmail) {
       .slice()
       .sort(function(a, b) { return new Date(a.created_at) - new Date(b.created_at); });
 
+    // Mood DOT PLOT — one dot per real check-in. X by ACTUAL date across the
+    // 14-day window (uneven gaps read as uneven spacing); Y from dcMoodScore on
+    // the 1–5 scale (Heavy/Steady/Thriving at 1/3/5). The connector is a faint
+    // dashed line — it shows direction only, never measured values between
+    // points. The most recent check-in is emphasized; a multi-day gap before it
+    // is labelled.
     var trendHtml = '';
-    if (trendRows.length >= 2) {
-      var w = 480, h = 90, padX = 8, padY = 12;
-      var pts = trendRows.map(function(r, i) {
-        var s = dcMoodScore(r.mood);
-        return { x: i, y: s == null ? 3 : s, raw: r };
-      }).filter(function(p) { return p.y != null; });
-      if (pts.length >= 2) {
-        var maxY = 5, minY = 1;
-        var stepX = (w - padX * 2) / Math.max(1, (pts.length - 1));
-        var path = pts.map(function(p, i) {
-          var x = padX + i * stepX;
-          var y = padY + (h - padY * 2) * (1 - (p.y - minY) / (maxY - minY));
-          return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1);
-        }).join(' ');
-        var dotsSvg = pts.map(function(p, i) {
-          var x = padX + i * stepX;
-          var y = padY + (h - padY * 2) * (1 - (p.y - minY) / (maxY - minY));
-          return '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="3" fill="#c49a3c"></circle>';
-        }).join('');
-        trendHtml = '<div style="margin-bottom:18px;">'
-          + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#5a5560;margin-bottom:8px;">Mood — last 14 days</div>'
-          + '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:8px;padding:14px;">'
-          +   '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" style="width:100%;height:90px;display:block;">'
-          +     '<path d="' + path + '" fill="none" stroke="#1a3a52" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>'
-          +     dotsSvg
-          +   '</svg>'
-          +   '<div style="display:flex;justify-content:space-between;font-family:\'DM Sans\',sans-serif;font-size:0.7rem;color:#8a8580;margin-top:6px;">'
-          +     '<span>Heavy</span><span>Steady</span><span>Thriving</span>'
-          +   '</div>'
-          + '</div>'
-          + '</div>';
+    var dpts = trendRows.map(function(r) {
+      return { ms: r.created_at ? new Date(r.created_at).getTime() : NaN, s: dcMoodScore(r.mood), raw: r };
+    }).filter(function(p) { return p.s != null && isFinite(p.ms); });
+    if (dpts.length >= 1) {
+      var W = 480, H = 120, padL = 62, padR = 22, padT = 16, padB = 26;
+      var plotW = W - padL - padR, plotH = H - padT - padB;
+      var nowMs = now.getTime(), cutoffMs = cutoff.getTime();
+      var span = Math.max(1, nowMs - cutoffMs);
+      var DAY = 86400000;
+      var xFor = function(ms) { var t = (ms - cutoffMs) / span; if (t < 0) t = 0; if (t > 1) t = 1; return padL + t * plotW; };
+      var yFor = function(s) { return padT + plotH * (1 - (s - 1) / 4); };
+
+      var grid = '';
+      [[1, 'Heavy'], [3, 'Steady'], [5, 'Thriving']].forEach(function(g) {
+        var gy = yFor(g[0]).toFixed(1);
+        grid += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (W - padR) + '" y2="' + gy + '" stroke="#efe9df" stroke-width="1"></line>'
+          + '<text x="' + (padL - 8) + '" y="' + gy + '" text-anchor="end" dominant-baseline="middle" font-family="DM Sans, sans-serif" font-size="9" fill="#8a8580">' + g[1] + '</text>';
+      });
+
+      var connector = '';
+      if (dpts.length >= 2) {
+        var d = dpts.map(function(p, i) { return (i === 0 ? 'M' : 'L') + xFor(p.ms).toFixed(1) + ' ' + yFor(p.s).toFixed(1); }).join(' ');
+        connector = '<path d="' + d + '" fill="none" stroke="#c9bfa8" stroke-width="1.2" stroke-dasharray="3 4" stroke-linecap="round"></path>';
       }
+
+      var dots = dpts.map(function(p, i) {
+        var x = xFor(p.ms).toFixed(1), y = yFor(p.s).toFixed(1);
+        if (i === dpts.length - 1) {
+          return '<circle cx="' + x + '" cy="' + y + '" r="9" fill="none" stroke="#c49a3c" stroke-width="1.5" opacity="0.5"></circle>'
+            + '<circle cx="' + x + '" cy="' + y + '" r="5.5" fill="#1a3a52"></circle>';
+        }
+        return '<circle cx="' + x + '" cy="' + y + '" r="4" fill="#c49a3c"></circle>';
+      }).join('');
+
+      var gapLabel = '';
+      if (dpts.length >= 2) {
+        var lastP = dpts[dpts.length - 1], prevP = dpts[dpts.length - 2];
+        var gapDays = Math.round((lastP.ms - prevP.ms) / DAY);
+        if (gapDays >= 3) {
+          var mx = ((xFor(prevP.ms) + xFor(lastP.ms)) / 2).toFixed(1);
+          gapLabel = '<text x="' + mx + '" y="' + (padT + 9) + '" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="9" font-style="italic" fill="#b3a98f">' + gapDays + ' days</text>';
+        }
+      }
+
+      var leftDate = new Date(dpts[0].ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      var rightDate = new Date(dpts[dpts.length - 1].ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      var axis = '<text x="' + padL + '" y="' + (H - 7) + '" text-anchor="start" font-family="DM Sans, sans-serif" font-size="9" fill="#8a8580">' + escapeHtml(leftDate) + '</text>'
+        + '<text x="' + (W - padR) + '" y="' + (H - 7) + '" text-anchor="end" font-family="DM Sans, sans-serif" font-size="9" fill="#8a8580">' + escapeHtml(rightDate) + '</text>';
+
+      var oneNote = dpts.length === 1 ? '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.72rem;color:#8a8580;margin-top:6px;">One check-in so far.</div>' : '';
+
+      trendHtml = '<div style="margin-bottom:18px;">'
+        + '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#5a5560;margin-bottom:8px;">Mood — last 14 days</div>'
+        + '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:8px;padding:14px;">'
+        +   '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block;">'
+        +     grid + connector + dots + gapLabel + axis
+        +   '</svg>'
+        + '</div>'
+        + oneNote
+        + '</div>';
     }
     if (!trendHtml) {
-      trendHtml = '<div style="margin-bottom:18px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#8a8580;font-style:italic;">A trend will appear after a few check-ins.</div>';
+      trendHtml = '<div style="margin-bottom:18px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;color:#8a8580;font-style:italic;">A mood plot will appear once this client logs a check-in.</div>';
     }
 
     // ---- Recent one_words (last 7 with date pills)
@@ -19082,11 +19174,15 @@ async function loadDailyCheckins(bodyId, clientEmail) {
 
     // Fix 6: always-visible summary on top; chart / one-words / pattern
     // reflections collapse behind a "View details" toggle (collapsed default).
-    var summaryHtml = buildDailyCheckinSummary(rows, clientEmail);
+    // Coach Clarity synthesis card on top (loads cached instantly, regenerates on
+    // a new check-in or coach Refresh); the dot-plot chart, one-words, and pattern
+    // reflections stay under "View details".
+    var synthId = bodyId + '-synth';
     var detailId = bodyId + '-detail';
-    el.innerHTML = summaryHtml
+    el.innerHTML = '<div id="' + synthId + '">' + dcSynthLoadingHtml() + '</div>'
       + '<button type="button" onclick="toggleDcDetail(\'' + detailId + '\', this)" style="background:transparent;border:1px solid #1a3a52;color:#1a3a52;padding:6px 14px;border-radius:6px;font-size:0.78rem;font-family:\'DM Sans\',sans-serif;font-weight:600;cursor:pointer;">&#9662; View details</button>'
       + '<div id="' + detailId + '" style="display:none;margin-top:14px;">' + (trendHtml + wordsHtml + patternHtml) + '</div>';
+    loadCheckinSynthesis(synthId, clientEmail);
   } catch (err) {
     console.error('[DailyCheckins] load error', err);
     el.innerHTML = '<div style="font-family:\'DM Sans\',sans-serif;font-size:0.85rem;color:#c44;">Could not load daily check-ins. Please try again.</div>';
