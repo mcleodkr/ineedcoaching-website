@@ -9632,6 +9632,276 @@ async function effmapCancel(container, email, sessionId) {
   }
 }
 
+/* ================================================================
+   PREVIEW CLIENT EXPERIENCE  (read-only; session summary is the one
+   editable surface). Renders ONLY client-safe content returned by
+   /api/coach-client-preview, which enforces coach ownership + the
+   client-safe field discipline server-side. Coach-only panels,
+   private journal/reflections, and the nine coach-only columns never
+   reach here. Ported (read-only) from client-dashboard.html renderers.
+   ================================================================ */
+var pvState = { email: '', data: null };
+
+function pvFmtDate(s) {
+  if (!s) return '';
+  try { return new Date(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+  catch (e) { return ''; }
+}
+
+function openPreviewClientModal(email) {
+  if (!email) return;
+  pvState.email = email;
+  pvState.data = null;
+  var modal = document.getElementById('preview-client-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'preview-client-modal';
+    modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:600;align-items:flex-start;justify-content:center;overflow-y:auto;padding:32px 16px;';
+    modal.innerHTML =
+      '<div style="background:#f7f5f1;border-radius:12px;max-width:860px;width:100%;max-height:90vh;overflow-y:auto;position:relative;box-shadow:0 12px 40px rgba(0,0,0,0.2);">'
+      + '<div style="position:sticky;top:0;z-index:2;background:linear-gradient(135deg,#1a3a52 0%,#0f2535 100%);padding:18px 24px;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:space-between;gap:12px;">'
+      +   '<div><div style="font-family:\'Cormorant Garamond\',serif;font-size:1.3rem;font-weight:700;color:#fff;">Client Experience Preview</div>'
+      +   '<div id="pv-subtitle" style="font-family:\'DM Sans\',sans-serif;font-size:0.8rem;color:rgba(247,244,238,0.6);margin-top:2px;"></div></div>'
+      +   '<button id="pv-close" aria-label="Close preview" style="background:rgba(247,244,238,0.1);border:1px solid rgba(247,244,238,0.25);color:#f7f4ee;border-radius:6px;font-size:1.2rem;line-height:1;padding:6px 12px;cursor:pointer;">&times;</button>'
+      + '</div>'
+      + '<div style="background:#fdf2da;border-bottom:1px solid #e8d9a8;color:#8a6a1c;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;padding:10px 24px;">&#128274; You are previewing client-facing content only. Private client content is hidden.</div>'
+      + '<div id="pv-content" style="padding:24px;font-family:\'DM Sans\',sans-serif;"></div>'
+      + '</div>';
+    document.body.appendChild(modal);
+    document.getElementById('pv-close').addEventListener('click', function() { modal.style.display = 'none'; });
+    modal.addEventListener('click', function(e) { if (e.target === modal) modal.style.display = 'none'; });
+  }
+  var sub = document.getElementById('pv-subtitle');
+  if (sub) sub.textContent = email;
+  document.getElementById('pv-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);">Loading the client view&hellip;</div>';
+  modal.style.display = 'flex';
+
+  fetch('/api/coach-client-preview?client_email=' + encodeURIComponent(email), { headers: apiHeaders() })
+    .then(function(r) {
+      if (r.status === 403) throw new Error('You can only preview clients you are actively coaching.');
+      if (!r.ok) throw new Error('Could not load the preview.');
+      return r.json();
+    })
+    .then(function(data) { pvState.data = data; pvRender(); })
+    .catch(function(err) {
+      document.getElementById('pv-content').innerHTML =
+        '<div style="padding:32px;text-align:center;color:#b3261e;font-size:0.9rem;">' + escapeHtml(err.message || 'Something went wrong.') + '</div>';
+    });
+}
+
+function pvSection(title, bodyHtml) {
+  return '<div style="margin-bottom:26px;">'
+    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.15rem;font-weight:600;color:#1a3a52;border-bottom:1px solid #e8e4dc;padding-bottom:6px;margin-bottom:14px;">' + escapeHtml(title) + '</div>'
+    + bodyHtml + '</div>';
+}
+function pvEmpty(msg) {
+  return '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:10px;padding:18px 20px;font-size:0.88rem;color:var(--muted);font-style:italic;">' + escapeHtml(msg) + '</div>';
+}
+
+// Ported from client-dashboard.html renderClientSummary — client-safe recap.
+function pvRenderSummary(cs) {
+  if (!cs || typeof cs !== 'object') return '';
+  var out = '';
+  function block(label, text) {
+    return '<div style="margin-bottom:12px;"><div style="font-size:0.72rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#c49a3c;margin-bottom:3px;">' + escapeHtml(label) + '</div><div style="font-size:0.92rem;color:#1a2e1a;line-height:1.55;">' + escapeHtml(text) + '</div></div>';
+  }
+  if (typeof cs.headline === 'string' && cs.headline) out += block('This session', cs.headline);
+  if (typeof cs.recap === 'string' && cs.recap) out += block('What we explored', cs.recap);
+  if (typeof cs.what_stood_out === 'string' && cs.what_stood_out) out += block('What stood out', cs.what_stood_out);
+  var practice = Array.isArray(cs.practice) ? cs.practice.filter(function(t) { return t && typeof t === 'string'; }) : [];
+  if (practice.length) {
+    out += '<div style="margin-bottom:12px;"><div style="font-size:0.72rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#c49a3c;margin-bottom:3px;">Your practice right now</div><ul style="margin:0;padding-left:18px;font-size:0.92rem;color:#1a2e1a;line-height:1.55;">';
+    practice.forEach(function(t) { out += '<li>' + escapeHtml(t) + '</li>'; });
+    out += '</ul></div>';
+  }
+  var commitments = Array.isArray(cs.commitments) ? cs.commitments.filter(function(t) { return t && typeof t === 'string'; }) : [];
+  if (commitments.length) {
+    out += '<div style="margin-bottom:12px;"><div style="font-size:0.72rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#c49a3c;margin-bottom:3px;">Your commitments</div><ul style="margin:0;padding-left:18px;font-size:0.92rem;color:#1a2e1a;line-height:1.55;">';
+    commitments.forEach(function(t) { out += '<li>' + escapeHtml(t) + '</li>'; });
+    out += '</ul></div>';
+  }
+  var goals = Array.isArray(cs.goals) ? cs.goals.filter(function(g) { return g && g.title; }) : [];
+  if (goals.length) {
+    out += '<div style="margin-bottom:12px;"><div style="font-size:0.72rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#c49a3c;margin-bottom:3px;">Goals this session moved forward</div>';
+    goals.forEach(function(g) {
+      out += '<div style="font-size:0.92rem;color:#1a2e1a;font-weight:600;">' + escapeHtml(g.title) + '</div>';
+      if (g.relevance) out += '<div style="font-size:0.85rem;color:var(--muted);margin-bottom:4px;">' + escapeHtml(g.relevance) + '</div>';
+    });
+    out += '</div>';
+  }
+  if (typeof cs.closing === 'string' && cs.closing) out += '<div style="font-size:0.9rem;font-style:italic;color:var(--muted);">' + escapeHtml(cs.closing) + '</div>';
+  if (!out) out = '<div style="font-size:0.88rem;color:var(--muted);font-style:italic;">No client-facing summary for this session yet.</div>';
+  return out;
+}
+
+function pvSessionByBooking(bookingId) {
+  var list = (pvState.data && pvState.data.sessions) || [];
+  for (var i = 0; i < list.length; i++) { if (list[i].booking_id === bookingId) return list[i]; }
+  return null;
+}
+
+function pvRenderSessions() {
+  var bookings = (pvState.data && pvState.data.bookings) || [];
+  if (!bookings.length) return pvEmpty('No sessions yet.');
+  var html = '';
+  bookings.forEach(function(b) {
+    var when = b.scheduled_at ? pvFmtDate(b.scheduled_at) : (b.created_at ? pvFmtDate(b.created_at) : '');
+    var statusLabel = b.status ? (b.status.charAt(0).toUpperCase() + b.status.slice(1)) : '';
+    var sess = pvSessionByBooking(b.id);
+    var recapHtml = (sess && sess.client_summary)
+      ? '<div id="pv-recap-' + escapeHtml(b.id) + '">' + pvRenderSummary(sess.client_summary) + '</div>'
+        + '<div style="margin-top:10px;"><button type="button" onclick="pvEditSummary(\'' + escapeHtml(b.id) + '\')" style="background:transparent;border:1px solid #c49a3c;color:#8a6a1c;border-radius:6px;padding:6px 12px;font-family:\'DM Sans\',sans-serif;font-size:0.78rem;font-weight:600;cursor:pointer;">Edit client summary</button></div>'
+      : '<div style="font-size:0.86rem;color:var(--muted);font-style:italic;">This session\'s summary is not available to the client yet.</div>';
+    html += '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:10px;padding:16px 20px;margin-bottom:12px;">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">'
+      +   '<span style="font-family:\'Cormorant Garamond\',serif;font-size:1.05rem;font-weight:600;color:#1a3a52;">' + escapeHtml(when || 'Session') + '</span>'
+      +   (statusLabel ? '<span style="font-size:0.72rem;font-weight:600;padding:3px 10px;border-radius:50px;background:rgba(26,58,82,0.1);color:#1a3a52;">' + escapeHtml(statusLabel) + '</span>' : '')
+      + '</div>' + recapHtml + '</div>';
+  });
+  return html;
+}
+
+function pvRenderGoals() {
+  var goals = (pvState.data && pvState.data.goals) || [];
+  if (!goals.length) return pvEmpty('Goals you and your coach set together appear here.');
+  var html = '';
+  goals.forEach(function(g) {
+    if (!g) return;
+    var status = g.status || '';
+    var label = status ? (status.charAt(0).toUpperCase() + status.slice(1)) : '';
+    var added = g.created_at ? pvFmtDate(g.created_at) : '';
+    var updated = g.updated_at ? pvFmtDate(g.updated_at) : '';
+    var meta = (added && updated && updated !== added) ? ('Added ' + added + ' · Last updated ' + updated) : (added ? 'Added ' + added : '');
+    html += '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:10px;padding:16px 20px;margin-bottom:10px;">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
+      +   '<span style="font-size:0.98rem;font-weight:600;color:#1a2e1a;">' + escapeHtml(g.title || 'Goal') + '</span>'
+      +   (label ? '<span style="font-size:0.72rem;font-weight:600;padding:3px 10px;border-radius:50px;background:rgba(196,154,60,0.15);color:#8a6a1c;">' + escapeHtml(label) + '</span>' : '')
+      + '</div>'
+      + (meta ? '<div style="font-size:0.74rem;color:var(--muted);margin-top:4px;">' + escapeHtml(meta) + '</div>' : '')
+      + (g.description ? '<div style="font-size:0.88rem;color:#1a2e1a;line-height:1.5;margin-top:8px;">' + escapeHtml(g.description) + '</div>' : '')
+      + '</div>';
+  });
+  return html;
+}
+
+function pvRenderHomework() {
+  var rows = (pvState.data && pvState.data.homework) || [];
+  if (!rows.length) return pvEmpty('No homework assigned right now.');
+  var html = '';
+  rows.forEach(function(h) {
+    var done = h.completed === true;
+    var typeLabel = (h.type || 'other').toUpperCase();
+    var completedAt = done && h.completed_at ? pvFmtDate(h.completed_at) : '';
+    html += '<div style="background:#fff;border:1px solid #e8e4dc;border-left:3px solid ' + (done ? '#2d6a4f' : '#c49a3c') + ';border-radius:10px;padding:16px 20px;margin-bottom:10px;">'
+      + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap;">'
+      +   '<span style="font-size:0.66rem;font-weight:700;letter-spacing:0.05em;color:var(--muted);">' + escapeHtml(typeLabel) + '</span>'
+      +   (done ? '<span style="font-size:0.66rem;padding:2px 8px;border-radius:10px;background:rgba(45,106,79,0.15);color:#2d6a4f;font-weight:600;">&#10003; Done' + (completedAt ? ' &middot; ' + escapeHtml(completedAt) : '') + '</span>'
+            : '<span style="font-size:0.66rem;padding:2px 8px;border-radius:10px;background:rgba(196,154,60,0.15);color:#8a6a1c;font-weight:600;">Assigned</span>') + '</div>'
+      + '<div style="font-size:0.95rem;color:#1a2e1a;line-height:1.55;' + (done ? 'opacity:0.7;' : '') + '">' + escapeHtml(h.assignment_text || '') + '</div>'
+      + '</div>';
+  });
+  return html;
+}
+
+function pvRenderCheckins() {
+  var rows = (pvState.data && pvState.data.checkins) || [];
+  if (!rows.length) return pvEmpty('This client\'s check-ins appear here.');
+  var html = '';
+  rows.forEach(function(c) {
+    var done = c.status === 'completed';
+    var when = done && c.completed_at ? pvFmtDate(c.completed_at) : (c.created_at ? pvFmtDate(c.created_at) : '');
+    html += '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:10px;padding:12px 18px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
+      + '<span style="font-size:0.9rem;color:#1a2e1a;">Check-in' + (when ? ' &middot; ' + escapeHtml(when) : '') + '</span>'
+      + '<span style="font-size:0.72rem;font-weight:600;padding:3px 10px;border-radius:50px;' + (done ? 'background:rgba(45,106,79,0.15);color:#2d6a4f;' : 'background:rgba(196,154,60,0.15);color:#8a6a1c;') + '">' + (done ? 'Completed' : 'Assigned') + '</span>'
+      + '</div>';
+  });
+  return html;
+}
+
+function pvRenderCourses() {
+  var rows = (pvState.data && pvState.data.courses) || [];
+  var withTitle = rows.filter(function(c) { return c && c.title; });
+  if (!withTitle.length) return pvEmpty('Courses or materials assigned to this client appear here.');
+  var html = '';
+  withTitle.forEach(function(c) {
+    var done = !!c.completed_at;
+    html += '<div style="background:#fff;border:1px solid #e8e4dc;border-radius:10px;padding:12px 18px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
+      + '<span style="font-size:0.92rem;font-weight:600;color:#1a2e1a;">' + escapeHtml(c.title) + '</span>'
+      + '<span style="font-size:0.72rem;font-weight:600;padding:3px 10px;border-radius:50px;' + (done ? 'background:rgba(45,106,79,0.15);color:#2d6a4f;' : 'background:rgba(26,58,82,0.1);color:#1a3a52;') + '">' + (done ? 'Completed' : 'Enrolled') + '</span>'
+      + '</div>';
+  });
+  return html;
+}
+
+function pvRender() {
+  var el = document.getElementById('pv-content');
+  if (!el) return;
+  var html = '';
+  html += pvSection('Sessions & Summaries', pvRenderSessions());
+  html += pvSection('Goals', pvRenderGoals());
+  html += pvSection('Homework', pvRenderHomework());
+  html += pvSection('Check-ins', pvRenderCheckins());
+  html += pvSection('Courses & Materials', pvRenderCourses());
+  el.innerHTML = html;
+}
+
+// ── Session summary edit — the ONE editable surface. Writes only client_summary. ──
+function pvEditSummary(bookingId) {
+  var sess = pvSessionByBooking(bookingId);
+  var host = document.getElementById('pv-recap-' + bookingId);
+  if (!sess || !host) return;
+  var cs = (sess.client_summary && typeof sess.client_summary === 'object') ? sess.client_summary : {};
+  function area(id, label, val) {
+    return '<label style="display:block;font-size:0.72rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#c49a3c;margin:10px 0 3px;">' + label + '</label>'
+      + '<textarea id="' + id + '" rows="2" style="width:100%;border:1px solid #d8d2c4;border-radius:6px;padding:8px 10px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:#1a2e1a;resize:vertical;">' + escapeHtml(val || '') + '</textarea>';
+  }
+  var practiceVal = Array.isArray(cs.practice) ? cs.practice.join('\n') : '';
+  var commitVal = Array.isArray(cs.commitments) ? cs.commitments.join('\n') : '';
+  host.innerHTML =
+      area('pv-ed-headline-' + bookingId, 'This session', cs.headline)
+    + area('pv-ed-recap-' + bookingId, 'What we explored', cs.recap)
+    + area('pv-ed-stood-' + bookingId, 'What stood out', cs.what_stood_out)
+    + '<label style="display:block;font-size:0.72rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#c49a3c;margin:10px 0 3px;">Your practice right now <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);">(one per line)</span></label>'
+    + '<textarea id="pv-ed-practice-' + bookingId + '" rows="3" style="width:100%;border:1px solid #d8d2c4;border-radius:6px;padding:8px 10px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:#1a2e1a;resize:vertical;">' + escapeHtml(practiceVal) + '</textarea>'
+    + '<label style="display:block;font-size:0.72rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#c49a3c;margin:10px 0 3px;">Your commitments <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);">(one per line)</span></label>'
+    + '<textarea id="pv-ed-commit-' + bookingId + '" rows="3" style="width:100%;border:1px solid #d8d2c4;border-radius:6px;padding:8px 10px;font-family:\'DM Sans\',sans-serif;font-size:0.9rem;color:#1a2e1a;resize:vertical;">' + escapeHtml(commitVal) + '</textarea>'
+    + area('pv-ed-closing-' + bookingId, 'Closing', cs.closing)
+    + '<div id="pv-ed-msg-' + bookingId + '" style="font-size:0.8rem;color:#b3261e;margin-top:8px;min-height:1em;"></div>'
+    + '<div style="display:flex;gap:10px;margin-top:10px;">'
+    +   '<button type="button" onclick="pvSaveSummary(\'' + bookingId + '\')" style="background:#c49a3c;color:#1a2e1a;border:none;border-radius:6px;padding:8px 16px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer;">Save</button>'
+    +   '<button type="button" onclick="pvRender()" style="background:transparent;border:1px solid #d8d2c4;color:var(--muted);border-radius:6px;padding:8px 16px;font-family:\'DM Sans\',sans-serif;font-size:0.82rem;font-weight:600;cursor:pointer;">Cancel</button>'
+    + '</div>';
+}
+
+function pvSaveSummary(bookingId) {
+  var sess = pvSessionByBooking(bookingId);
+  var msg = document.getElementById('pv-ed-msg-' + bookingId);
+  function val(id) { var e = document.getElementById(id); return e ? e.value : ''; }
+  function lines(id) { return val(id).split('\n').map(function(t) { return t.trim(); }).filter(function(t) { return t; }); }
+  var existing = (sess && sess.client_summary && typeof sess.client_summary === 'object') ? sess.client_summary : {};
+  var summary = {
+    headline: val('pv-ed-headline-' + bookingId).trim(),
+    recap: val('pv-ed-recap-' + bookingId).trim(),
+    what_stood_out: val('pv-ed-stood-' + bookingId).trim(),
+    practice: lines('pv-ed-practice-' + bookingId),
+    commitments: lines('pv-ed-commit-' + bookingId),
+    closing: val('pv-ed-closing-' + bookingId).trim()
+  };
+  if (Array.isArray(existing.goals)) summary.goals = existing.goals; // preserve goals (not editable in V1)
+  if (msg) { msg.style.color = 'var(--muted)'; msg.textContent = 'Saving…'; }
+  fetch('/api/coach-client-summary', {
+    method: 'PATCH',
+    headers: apiHeaders(),
+    body: JSON.stringify({ client_email: pvState.email, booking_id: bookingId, client_summary: summary })
+  })
+    .then(function(r) { if (!r.ok) throw new Error('Save failed'); return r.json(); })
+    .then(function(resp) {
+      if (sess) sess.client_summary = (resp && resp.client_summary) ? resp.client_summary : summary;
+      pvRender();
+    })
+    .catch(function() { if (msg) { msg.style.color = '#b3261e'; msg.textContent = 'Could not save. Please try again.'; } });
+}
+
 function renderClientDetail(client, goals, intakeFeed, checkinResponses, messages, notesByBooking, checkinForms, officialHomework) {
   var statusLabels = { not_started: 'Not Started', in_progress: 'In Progress', proposed: 'Proposed', active: 'Active', progressing: 'Progressing', stalled: 'Stalled', blocked: 'Blocked', revised: 'Revised', completed: 'Completed', archived: 'Archived' };
   var statusColors = { not_started: 'background:rgba(107,107,96,0.15);color:var(--muted)', in_progress: 'background:#c49a3c;color:#fff', proposed: 'background:rgba(107,107,96,0.15);color:var(--muted)', active: 'background:rgba(26,58,82,0.12);color:var(--ink)', progressing: 'background:#c49a3c;color:#fff', stalled: 'background:#b8860b;color:#fff', blocked: 'background:#c44;color:#fff', revised: 'background:#7b5ea7;color:#fff', completed: 'background:#2d6a4f;color:#fff', archived: 'background:rgba(107,107,96,0.25);color:var(--muted)' };
@@ -9654,6 +9924,9 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
         return '<div style="font-size:0.85rem;color:rgba(247,244,238,0.6);">' + line + '</div>';
       })()
     + '<div style="font-size:0.8rem;color:rgba(247,244,238,0.5);margin-top:6px;">Client since ' + escapeHtml(firstStr) + ' &bull; ' + client.sessions.length + ' session' + (client.sessions.length !== 1 ? 's' : '') + '</div>'
+    + '<div style="margin-top:18px;">'
+    +   '<button class="preview-client-btn" data-preview-client="' + escapeHtml(client.email) + '" style="background:#c49a3c;color:#1a2e1a;border:none;border-radius:6px;padding:9px 18px;font-family:\'DM Sans\',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer;transition:all 0.15s ease;" onmouseenter="this.style.background=\'#d4aa4c\'" onmouseleave="this.style.background=\'#c49a3c\'">&#128065; Preview Client Experience</button>'
+    + '</div>'
     + '</div></div>';
 
   // Messages — moved directly under the header card (Fix 5) so an unread
@@ -10150,6 +10423,14 @@ function renderClientDetail(client, goals, intakeFeed, checkinResponses, message
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
       openEditClientModal(this.dataset.editClient);
+    });
+  });
+
+  // Wire "Preview Client Experience" — read-only client-facing preview.
+  $('clients-detail-view').querySelectorAll('[data-preview-client]').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      openPreviewClientModal(this.dataset.previewClient);
     });
   });
 
