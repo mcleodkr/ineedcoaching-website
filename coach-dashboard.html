@@ -2390,9 +2390,15 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
         <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
           <button class="save-btn" id="save-intake-form-btn">Save Form</button>
           <button class="save-btn" id="preview-intake-btn" style="background:var(--ink);">Preview Form</button>
+          <button class="save-btn" id="copy-intake-link-btn" style="background:var(--gold);">Copy Client Link</button>
           <span class="save-msg" id="save-intake-msg">Saved</span>
           <button class="action-btn action-decline" id="deactivate-intake-btn" style="display:none;padding:12px 20px;">Deactivate</button>
         </div>
+        <div id="intake-link-row" style="display:none;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap;">
+          <input type="text" readonly id="intake-link-input" style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:0.8rem;color:var(--ink);background:var(--white);">
+          <button type="button" class="save-btn" id="intake-link-copy-btn" style="padding:8px 16px;font-size:0.8rem;background:var(--gold);white-space:nowrap;">Copy</button>
+        </div>
+        <p style="font-size:0.78rem;color:var(--muted);margin-top:8px;">Share one link with a client to complete this intake. Their answers appear under Intake Responses below.</p>
       </div>
 
       <div class="form-section" style="margin-top:24px;">
@@ -7478,6 +7484,7 @@ async function loadIntakeForms() {
   $('add-intake-question-btn').onclick = addIntakeQuestion;
   $('save-intake-form-btn').onclick = saveIntakeForm;
   $('preview-intake-btn').onclick = openIntakePreview;
+  $('copy-intake-link-btn').onclick = copyIntakeLink;
   $('deactivate-intake-btn').onclick = deactivateIntakeForm;
   $('iq-type').onchange = function() {
     $('iq-options-group').classList.toggle('hidden', this.value !== 'multiple_choice');
@@ -7520,7 +7527,7 @@ function renderLikertLabelInputs(prefix) {
 function renderIntakeQuestions() {
   var container = $('intake-questions-list');
   if (!intakeQuestions.length) {
-    container.innerHTML = '<div class="empty-state" style="padding:24px;"><p>No questions yet. Add up to 10 questions.</p></div>';
+    container.innerHTML = '<div class="empty-state" style="padding:24px;"><p>No questions yet. Add up to 30 questions.</p></div>';
     $('add-intake-question-btn').disabled = false;
     return;
   }
@@ -7542,8 +7549,8 @@ function renderIntakeQuestions() {
   });
   container.innerHTML = html;
 
-  // Disable add if at 10
-  $('add-intake-question-btn').disabled = intakeQuestions.length >= 10;
+  // Disable add if at 30
+  $('add-intake-question-btn').disabled = intakeQuestions.length >= 30;
 
   // Wire edit/delete
   container.querySelectorAll('[data-iq-remove]').forEach(function(btn) {
@@ -7559,7 +7566,7 @@ function renderIntakeQuestions() {
 }
 
 function addIntakeQuestion() {
-  if (intakeQuestions.length >= 10) return;
+  if (intakeQuestions.length >= 30) return;
   var text = $('iq-text').value.trim();
   if (!text) { alert('Question text is required.'); return; }
   var type = $('iq-type').value;
@@ -7715,12 +7722,62 @@ async function deactivateIntakeForm() {
   }
 }
 
+// Mint a single shareable client link for the current intake form, mirroring the
+// proven check-in send flow. Generic link (no client bound) — the client identifies
+// themselves on the fill page. Writes to coach_intake_responses, never check-in data.
+async function copyIntakeLink() {
+  var btn = $('copy-intake-link-btn');
+  if (!intakeFormId) {
+    alert('Please save the form first, then copy a client link.');
+    return;
+  }
+  var original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+  try {
+    var res = await fetch('/api/send-intake', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ formId: intakeFormId, coachId: coachProfile.id })
+    });
+    var data = await res.json();
+    if (!res.ok || !data.intakeUrl) throw new Error(data.error || 'Failed to generate link');
+
+    var input = $('intake-link-input');
+    input.value = data.intakeUrl;
+    $('intake-link-row').style.display = 'flex';
+
+    try { await navigator.clipboard.writeText(data.intakeUrl); } catch (clipErr) { /* fall back to manual copy */ }
+
+    var copyBtn = $('intake-link-copy-btn');
+    copyBtn.onclick = function() {
+      input.select();
+      navigator.clipboard.writeText(input.value);
+      this.textContent = 'Copied!';
+      setTimeout(function() { copyBtn.textContent = 'Copy'; }, 1500);
+    };
+
+    btn.textContent = 'Link Copied!';
+    setTimeout(function() { btn.textContent = original; btn.disabled = false; }, 1800);
+  } catch (e) {
+    console.error('[copyIntakeLink] error:', e);
+    alert('Could not generate the link. Please try again.');
+    btn.textContent = original;
+    btn.disabled = false;
+  }
+}
+
 async function loadIntakeResponses() {
   try {
     var data = await supabaseGet(
       'coach_intake_responses?coach_id=eq.' + coachProfile.id + '&order=created_at.desc&select=*'
     );
     var container = $('intake-responses-list');
+    // Hide pending mints: a token row with no submission yet is a link the client
+    // hasn't completed. Legacy rows (no token) and submitted rows still show.
+    if (Array.isArray(data)) {
+      data = data.filter(function(r) { return !(r.token && !r.submitted_at); });
+    }
     if (!data || data.length === 0) {
       container.innerHTML = '<div class="empty-state"><p>No intake responses yet.</p></div>';
       return;

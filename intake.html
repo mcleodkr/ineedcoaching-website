@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Intake Form — ineedcoaching.org</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root { --ink: #1a3a52; --gold: #c49a3c; --gold-hover: #a87d1f; --cream: #f7f4ee; --white: #ffffff; --muted: #6b6b60; --border: #e0ddd5; --r: 14px; --r-sm: 8px; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; font-size: 18px; background: var(--cream); color: var(--ink); min-height: 100vh; }
+.container { max-width: 600px; margin: 0 auto; padding: 60px 24px 80px; }
+h1 { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+.subtitle { font-size: 0.9rem; color: var(--muted); margin-bottom: 32px; line-height: 1.6; }
+.form-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 36px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+.form-group { margin-bottom: 24px; }
+.form-group label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+.form-group label .req { color: #c44; }
+.form-group input[type="text"], .form-group input[type="email"], .form-group textarea { width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--ink); background: var(--cream); transition: border-color 0.2s; }
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: var(--gold); }
+.form-group textarea { min-height: 100px; resize: vertical; }
+.form-group select { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--ink); background: var(--cream); }
+.identity-block { border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 28px; }
+.scale-wrap { display: flex; align-items: center; gap: 12px; }
+.scale-wrap span { font-size: 0.82rem; color: var(--muted); }
+.scale-wrap input[type="range"] { flex: 1; accent-color: var(--gold); }
+.scale-val { font-weight: 700; font-size: 1.1rem; color: var(--gold); min-width: 28px; text-align: center; }
+.scale-endlabels { display: flex; justify-content: space-between; font-size: 0.74rem; color: var(--muted); margin-top: 4px; }
+.radio-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.radio-row label { display: flex; align-items: center; gap: 6px; font-size: 0.92rem; color: var(--ink); cursor: pointer; text-transform: none; letter-spacing: normal; font-weight: 400; margin-bottom: 0; }
+.radio-row input[type="radio"] { accent-color: var(--gold); width: 18px; height: 18px; }
+.likert-item { padding: 12px 0; border-bottom: 1px dashed var(--border); }
+.likert-item:last-child { border-bottom: none; }
+.likert-item .li-text { font-size: 0.9rem; font-weight: 500; color: var(--ink); margin-bottom: 8px; text-transform: none; letter-spacing: normal; }
+.submit-btn { width: 100%; padding: 16px 24px; background: var(--gold); color: var(--white); border: none; border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.2s; margin-top: 8px; }
+.submit-btn:hover { background: var(--gold-hover); }
+.submit-btn:disabled { opacity: 0.55; cursor: default; }
+.success { text-align: center; padding: 60px 24px; }
+.success h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; color: var(--ink); margin-bottom: 8px; }
+.success p { color: var(--muted); font-size: 0.95rem; }
+.error { text-align: center; padding: 80px 24px; }
+.error h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; color: var(--ink); margin-bottom: 8px; }
+.error p { color: var(--muted); font-size: 0.95rem; }
+.loading { text-align: center; padding: 80px 24px; }
+.spinner { width: 44px; height: 44px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.branding { text-align: center; margin-top: 40px; font-size: 0.78rem; color: var(--muted); }
+.branding a { color: var(--gold); text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div id="loading" class="loading">
+    <div class="spinner"></div>
+    <p style="color:var(--muted);font-size:0.88rem;">Loading your intake form...</p>
+  </div>
+
+  <div id="error" class="error" style="display:none;">
+    <h2>Intake form not found</h2>
+    <p>This link may have expired or already been submitted.</p>
+  </div>
+
+  <div id="form-view" style="display:none;">
+    <h1 id="form-title">Intake Form</h1>
+    <p class="subtitle" id="form-subtitle">Take a few minutes to share where you're starting from.</p>
+    <div class="form-card">
+      <div id="identity-container"></div>
+      <div id="questions-container"></div>
+      <button class="submit-btn" id="submit-btn">Submit Intake</button>
+    </div>
+  </div>
+
+  <div id="success" class="success" style="display:none;">
+    <h2>Thank you!</h2>
+    <p>Your intake has been submitted. Your coach will review it before your first session.</p>
+  </div>
+
+  <div class="branding">
+    <a href="/">ineedcoaching.org</a>
+  </div>
+</div>
+
+<script>
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  var d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+var intakeId = null;
+var formQuestions = [];
+var needsIdentity = false;
+
+async function loadIntake() {
+  var params = new URLSearchParams(window.location.search);
+  var token = params.get('token');
+  console.log('[Intake] Token from URL:', token);
+  if (!token) { showError(); return; }
+
+  try {
+    console.log('[Intake] Fetching via /api/get-intake?token=' + token);
+    var res = await fetch('/api/get-intake?token=' + encodeURIComponent(token));
+    var data = await res.json();
+    console.log('[Intake] Server response:', res.status, data);
+
+    if (!res.ok || !data.questions || !data.questions.length) {
+      showError();
+      return;
+    }
+
+    intakeId = data.id;
+    formQuestions = data.questions;
+
+    document.getElementById('form-title').textContent = data.formName || 'Intake Form';
+    if (data.clientName) {
+      document.getElementById('form-subtitle').textContent = 'Hi ' + data.clientName + ', take a few minutes to share where you\'re starting from.';
+    }
+
+    // Generic (form-level) links arrive with no bound client — ask who's filling it.
+    needsIdentity = !data.clientName && !data.clientEmail;
+    renderIdentity();
+    renderQuestions();
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('form-view').style.display = '';
+  } catch(e) {
+    console.error('[Intake] Load error:', e);
+    showError();
+  }
+}
+
+function showError() {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('error').style.display = '';
+}
+
+function renderIdentity() {
+  if (!needsIdentity) { document.getElementById('identity-container').innerHTML = ''; return; }
+  document.getElementById('identity-container').innerHTML =
+    '<div class="identity-block">'
+    + '<div class="form-group" style="margin-bottom:16px;"><label>Your name <span class="req">*</span></label>'
+    + '<input type="text" id="identity-name"></div>'
+    + '<div class="form-group" style="margin-bottom:8px;"><label>Your email <span class="req">*</span></label>'
+    + '<input type="email" id="identity-email"></div>'
+    + '</div>';
+}
+
+function renderQuestions() {
+  var html = '';
+  formQuestions.forEach(function(q, idx) {
+    var reqMark = q.required ? ' <span class="req">*</span>' : '';
+    html += '<div class="form-group">';
+    html += '<label>' + escapeHtml(q.text) + reqMark + '</label>';
+
+    switch(q.type) {
+      case 'short_text':
+        html += '<input type="text" class="iq-answer" data-idx="' + idx + '">';
+        break;
+      case 'long_text':
+        html += '<textarea class="iq-answer" data-idx="' + idx + '"></textarea>';
+        break;
+      case 'multiple_choice':
+        html += '<div class="radio-row">';
+        (q.options || []).forEach(function(opt) {
+          html += '<label><input type="radio" name="iq-q-' + idx + '" class="iq-radio" data-idx="' + idx + '" value="' + escapeHtml(opt) + '"> ' + escapeHtml(opt) + '</label>';
+        });
+        html += '</div>';
+        break;
+      case 'yes_no':
+        html += '<div class="radio-row">';
+        html += '<label><input type="radio" name="iq-q-' + idx + '" class="iq-radio" data-idx="' + idx + '" value="Yes"> Yes</label>';
+        html += '<label><input type="radio" name="iq-q-' + idx + '" class="iq-radio" data-idx="' + idx + '" value="No"> No</label>';
+        html += '</div>';
+        break;
+      case 'scale': {
+        var mn = q.scale_min != null ? q.scale_min : 1;
+        var mx = q.scale_max != null ? q.scale_max : 10;
+        var mid = Math.round((mn + mx) / 2);
+        html += '<div class="scale-wrap">';
+        html += '<span>' + mn + '</span>';
+        html += '<input type="range" min="' + mn + '" max="' + mx + '" value="' + mid + '" class="iq-answer" data-idx="' + idx + '" oninput="document.getElementById(\'sv-' + idx + '\').textContent=this.value">';
+        html += '<span>' + mx + '</span>';
+        html += '<span class="scale-val" id="sv-' + idx + '">' + mid + '</span>';
+        html += '</div>';
+        if (q.scale_low_label || q.scale_high_label) {
+          html += '<div class="scale-endlabels"><span>' + escapeHtml(q.scale_low_label || '') + '</span><span>' + escapeHtml(q.scale_high_label || '') + '</span></div>';
+        }
+        break;
+      }
+      case 'likert_group': {
+        var size = q.scale_size || 5;
+        var labels = q.scale_labels || [];
+        var display = q.display || 'radio';
+        (q.items || []).forEach(function(item, itemIdx) {
+          html += '<div class="likert-item">';
+          html += '<div class="li-text">' + escapeHtml(item) + '</div>';
+          if (display === 'dropdown') {
+            html += '<select class="iq-likert" data-idx="' + idx + '" data-item="' + itemIdx + '">';
+            html += '<option value="">Select...</option>';
+            for (var s = 1; s <= size; s++) {
+              var lbl = labels[s - 1] ? (s + ' — ' + labels[s - 1]) : String(s);
+              html += '<option value="' + escapeHtml(labels[s - 1] || String(s)) + '">' + escapeHtml(lbl) + '</option>';
+            }
+            html += '</select>';
+          } else {
+            html += '<div class="radio-row">';
+            for (var r = 1; r <= size; r++) {
+              var rlbl = labels[r - 1] || String(r);
+              html += '<label><input type="radio" name="iq-lk-' + idx + '-' + itemIdx + '" class="iq-likert" data-idx="' + idx + '" data-item="' + itemIdx + '" value="' + escapeHtml(rlbl) + '"> ' + escapeHtml(rlbl) + '</label>';
+            }
+            html += '</div>';
+          }
+          html += '</div>';
+        });
+        break;
+      }
+    }
+    html += '</div>';
+  });
+  document.getElementById('questions-container').innerHTML = html;
+}
+
+function collectResponses() {
+  var responses = [];
+  var valid = true;
+
+  formQuestions.forEach(function(q, idx) {
+    if (q.type === 'likert_group') {
+      (q.items || []).forEach(function(item, itemIdx) {
+        var answer = '';
+        if ((q.display || 'radio') === 'dropdown') {
+          var sel = document.querySelector('.iq-likert[data-idx="' + idx + '"][data-item="' + itemIdx + '"]');
+          answer = sel ? sel.value : '';
+        } else {
+          var checked = document.querySelector('input[name="iq-lk-' + idx + '-' + itemIdx + '"]:checked');
+          answer = checked ? checked.value : '';
+        }
+        if (q.required && !answer) valid = false;
+        responses.push({ question: q.text + ' — ' + item, type: 'likert', answer: answer });
+      });
+      return;
+    }
+
+    var answer = '';
+    if (q.type === 'multiple_choice' || q.type === 'yes_no') {
+      var sel = document.querySelector('input[name="iq-q-' + idx + '"]:checked');
+      answer = sel ? sel.value : '';
+    } else {
+      var el = document.querySelector('.iq-answer[data-idx="' + idx + '"]');
+      answer = el ? el.value : '';
+    }
+    if (q.required && !answer) valid = false;
+    responses.push({ question: q.text, type: q.type, answer: answer });
+  });
+
+  return { responses: responses, valid: valid };
+}
+
+document.getElementById('submit-btn').addEventListener('click', async function() {
+  var btn = this;
+  var clientName = '';
+  var clientEmail = '';
+
+  if (needsIdentity) {
+    clientName = (document.getElementById('identity-name').value || '').trim();
+    clientEmail = (document.getElementById('identity-email').value || '').trim();
+    if (!clientName || !clientEmail) {
+      alert('Please enter your name and email.');
+      return;
+    }
+  }
+
+  var collected = collectResponses();
+  if (!collected.valid) {
+    alert('Please complete all required fields.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+
+  try {
+    var payload = { intakeId: intakeId, responses: collected.responses };
+    if (needsIdentity) { payload.clientName = clientName; payload.clientEmail = clientEmail; }
+    var submitRes = await fetch('/api/submit-intake', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    var submitData = await submitRes.json();
+    if (!submitRes.ok) throw new Error(submitData.error || 'Failed to submit');
+    document.getElementById('form-view').style.display = 'none';
+    document.getElementById('success').style.display = '';
+  } catch(e) {
+    console.error('[Intake] Submit error:', e);
+    alert('Something went wrong. Please try again.');
+    btn.disabled = false;
+    btn.textContent = 'Submit Intake';
+  }
+});
+
+loadIntake();
+</script>
+<script src="/bug-report-widget.js" defer></script>
+</body>
+</html>
