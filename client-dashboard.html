@@ -2700,20 +2700,53 @@ async function submitDailyCheckin() {
       coach_id: coachId,
       created_at: new Date().toISOString()
     };
-    const res = await fetch(SUPABASE_URL + '/rest/v1/explorer_checkins', {
+    // POST to the server endpoint, which inserts the row first (a check-in is
+    // never lost) and then runs an additive crisis safety screen. A screen
+    // failure never blocks the save — the endpoint returns crisis:false.
+    const res = await fetch('/api/submit-daily-checkin', {
       method: 'POST',
-      headers: Object.assign({}, apiHeaders(), { 'Prefer': 'return=minimal' }),
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
       body: JSON.stringify(body)
     });
-    if (!res.ok) throw new Error('insert ' + res.status);
+    const data = await res.json().catch(function () { return null; });
+    if (!res.ok || !data || data.ok !== true) throw new Error('save ' + res.status);
     // Mark today as done so the modal won't re-open after a reload.
     try { sessionStorage.setItem(dailyCheckinSkipKey(), '1'); } catch (e) {}
-    closeDailyCheckin();
+    // Check-in is saved. If the screen flagged crisis, surface safety resources
+    // in place of closing; otherwise close as usual.
+    if (data.crisis === true) {
+      renderCheckinSafetyPanel();
+    } else {
+      closeDailyCheckin();
+    }
   } catch (err) {
     console.error('[Checkin] save error:', err);
     if (msgEl) msgEl.textContent = 'We had trouble saving. Please try again in a moment.';
     if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save reflection'; }
   }
+}
+
+// Crisis safety panel — reuses the Effectiveness Map's existing safety-resources
+// copy VERBATIM (map/intake.html renderCrisis), minus the "Your coach will also
+// reach out" line: this check-in path has no coach notification, so that promise
+// would not be kept here. The check-in is already saved before this shows.
+function renderCheckinSafetyPanel() {
+  const overlay = document.getElementById('daily-checkin-overlay');
+  if (!overlay) return;
+  overlay.innerHTML = '<div class="dc-modal" role="dialog" aria-labelledby="dc-safety-h" aria-modal="true">'
+    + '<h2 class="dc-title" id="dc-safety-h">Thank you for sharing</h2>'
+    + '<p class="dc-sub" style="font-size:0.95rem;line-height:1.7;">'
+    +   'Some of what you wrote suggests you may be carrying something heavy right now. '
+    +   'If you’re in crisis or thinking about harming yourself, you deserve immediate support — '
+    +   'in the U.S. you can call or text <strong>988</strong> (the Suicide &amp; Crisis Lifeline), any time. '
+    +   'If you are outside the US, please contact your local emergency services or a trusted person in your life.'
+    + '</p>'
+    + '<div class="dc-actions">'
+    +   '<button type="button" class="dc-submit" id="dc-safety-close">Close</button>'
+    + '</div>'
+    + '</div>';
+  const closeBtn = overlay.querySelector('#dc-safety-close');
+  if (closeBtn) closeBtn.addEventListener('click', closeDailyCheckin);
 }
 window.skipDailyCheckin = skipDailyCheckin;
 window.submitDailyCheckin = submitDailyCheckin;
