@@ -18986,9 +18986,25 @@ function dcSynthConsiderationBlock(text) {
     + '<div style="font-size:0.9rem;color:#1a3a52;line-height:1.6;">' + dcEsc(body) + '</div>'
     + '</div>';
 }
+// Coach-facing crisis alert (Kim-authored copy, verbatim). Shown in place of the
+// synthesis when a check-in in the window contained crisis language and the server
+// returned a content-free { crisis: true } marker. On-palette attention treatment,
+// no buttons — a deliberate pause, not the usual card.
+function dcSynthCrisisHtml() {
+  return dcSynthCardShell(
+    dcSynthHeader('')
+    + '<div style="padding:14px 16px;background:#fbf3e6;border:1px solid #e6c98a;border-left:4px solid #c49a3c;border-radius:8px;">'
+    +   '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.12rem;font-weight:700;color:#1a3a52;margin-bottom:8px;">A check-in needs your attention.</div>'
+    +   '<div style="font-size:0.9rem;color:#1a3a52;line-height:1.65;">Coach Clarity paused the synthesis for this client because a recent check-in includes language that may point to distress. Please review this client’s check-ins directly and consider reaching out to see how they are doing, using your professional judgment and any protocols for your role. If you believe they may be in immediate danger, they can call or text <strong>988</strong> (the U.S. Suicide &amp; Crisis Lifeline) any time, or contact local emergency services.</div>'
+    + '</div>'
+  );
+}
 function renderCheckinSynthesisCard(synthId, data, clientEmail) {
   var el = document.getElementById(synthId); if (!el) return;
   var s = data && data.synthesis;
+  // Crisis marker takes precedence over every other state: a windowed check-in
+  // contained crisis language, so we show the attention alert, never a synthesis.
+  if (s && s.crisis) { el.innerHTML = dcSynthCrisisHtml(); return; }
   if (!s) {
     // No synthesis to show — resolve to one of the non-loading terminal states.
     // failed: generation errored/timed out -> calm retry (state 3).
