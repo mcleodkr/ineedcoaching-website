@@ -18949,6 +18949,14 @@ function dcSynthRefreshBtn(synthId, clientEmail, label) {
 function dcSynthLoadingHtml() {
   return dcSynthCardShell(dcSynthHeader('') + '<div style="font-size:0.88rem;color:#8a8580;font-style:italic;">Reading the check-ins…</div>');
 }
+// fetch with a bounded client-side timeout so a slow or hung request always
+// resolves (to an error state) instead of leaving the card spinning forever.
+function dcSynthFetch(url, opts, timeoutMs) {
+  var controller = new AbortController();
+  var timer = setTimeout(function () { controller.abort(); }, timeoutMs);
+  return fetch(url, Object.assign({}, opts || {}, { signal: controller.signal }))
+    .finally(function () { clearTimeout(timer); });
+}
 // Light evidence-strength tag for the two observation lenses only. Informative,
 // not loud: muted text + hairline pill, no fill. Renders nothing for an unknown
 // or absent strength (e.g. an old cached row shown briefly while it regenerates).
@@ -18982,10 +18990,26 @@ function renderCheckinSynthesisCard(synthId, data, clientEmail) {
   var el = document.getElementById(synthId); if (!el) return;
   var s = data && data.synthesis;
   if (!s) {
-    var canGen = data && data.current_count > 0;
+    // No synthesis to show — resolve to one of the non-loading terminal states.
+    // failed: generation errored/timed out -> calm retry (state 3).
+    // hasData but not failed: check-ins exist, none generated yet -> offer Generate.
+    // otherwise: no check-ins to read -> calm empty state (state 2).
+    var failed = !!(data && (data.status === 'failed' || data.error_code || data._error));
+    var hasData = !!(data && data.current_count > 0);
+    var rightBtn = '';
+    var msg = '';
+    if (failed) {
+      rightBtn = dcSynthRefreshBtn(synthId, clientEmail, '&#8635; Try again');
+      msg = 'We couldn’t read the check-ins just now. Please try again in a moment.';
+    } else if (hasData) {
+      rightBtn = dcSynthRefreshBtn(synthId, clientEmail, '&#8635; Generate');
+      msg = 'A synthesis is ready to generate from this client’s check-ins.';
+    } else {
+      msg = 'No check-ins yet for this client. A synthesis appears once they’ve logged a check-in.';
+    }
     el.innerHTML = dcSynthCardShell(
-      dcSynthHeader(canGen ? dcSynthRefreshBtn(synthId, clientEmail, '&#8635; Generate') : '')
-      + '<div style="font-size:0.88rem;color:#8a8580;line-height:1.55;">Not enough check-ins yet to read a pattern. A synthesis appears once this client has logged a check-in.</div>'
+      dcSynthHeader(rightBtn)
+      + '<div style="font-size:0.88rem;color:#8a8580;line-height:1.55;">' + msg + '</div>'
     );
     return;
   }
@@ -19014,44 +19038,66 @@ function renderCheckinSynthesisCard(synthId, data, clientEmail) {
   );
 }
 async function loadCheckinSynthesis(synthId, clientEmail) {
-  var errHtml = function () { return dcSynthCardShell(dcSynthHeader(dcSynthRefreshBtn(synthId, clientEmail, '&#8635; Retry')) + '<div style="font-size:0.86rem;color:#c44;">Could not load the synthesis.</div>'); };
   try {
-    var res = await fetch('/api/coach-checkin-synthesis?client_email=' + encodeURIComponent(clientEmail), { headers: { Authorization: 'Bearer ' + (localStorage.getItem(TOKEN_KEY) || '') } });
+    // Cached read is instant server-side; a short timeout still guarantees the
+    // card resolves to an error state if the request hangs.
+    var res = await dcSynthFetch('/api/coach-checkin-synthesis?client_email=' + encodeURIComponent(clientEmail),
+      { headers: { Authorization: 'Bearer ' + (localStorage.getItem(TOKEN_KEY) || '') } }, 20000);
     var data = await res.json().catch(function () { return null; });
     var el = document.getElementById(synthId); if (!el) return;
-    if (!data) { el.innerHTML = errHtml(); return; }
+    // No parseable response -> error state (state 3), never leave loading.
+    if (!data) { renderCheckinSynthesisCard(synthId, { _error: true, current_count: 1 }, clientEmail); return; }
     if (data.synthesis) {
       renderCheckinSynthesisCard(synthId, data, clientEmail);
       // A new check-in arrived since the cached read: keep showing the cached card,
-      // mark it updating, and regenerate in the background.
+      // mark it updating, and regenerate in the background. Pass the cached data as
+      // a fallback so a failed regen reverts to the good card, never sticks on
+      // "Updating…".
       if (data.stale) {
         renderCheckinSynthesisCard(synthId, Object.assign({ _updating: true }, data), clientEmail);
-        generateCheckinSynthesis(synthId, clientEmail, false);
+        generateCheckinSynthesis(synthId, clientEmail, false, data);
       }
     } else if (data.current_count > 0) {
       el.innerHTML = dcSynthLoadingHtml();
       generateCheckinSynthesis(synthId, clientEmail, false);
     } else {
+      // No owned check-ins (none logged, or none under this coach) -> empty state.
       renderCheckinSynthesisCard(synthId, data, clientEmail);
     }
   } catch (err) {
-    var ee = document.getElementById(synthId); if (ee) ee.innerHTML = errHtml();
+    // GET failed or timed out -> clean error state, never an endless spinner.
+    renderCheckinSynthesisCard(synthId, { _error: true, current_count: 1 }, clientEmail);
   }
 }
-async function generateCheckinSynthesis(synthId, clientEmail, force) {
+// fallbackData (optional): a known-good cached synthesis to revert to if this
+// (background) regeneration produces nothing. Foreground calls omit it and
+// resolve to the empty/error state instead.
+async function generateCheckinSynthesis(synthId, clientEmail, force, fallbackData) {
+  var revert = function () {
+    var el = document.getElementById(synthId); if (!el) return;
+    if (fallbackData && fallbackData.synthesis) { renderCheckinSynthesisCard(synthId, fallbackData, clientEmail); return; }
+    renderCheckinSynthesisCard(synthId, { _error: true, current_count: 1 }, clientEmail);
+  };
   try {
-    var res = await fetch('/api/coach-checkin-synthesis', {
+    // Timeout sits above the endpoint's ~60s Claude budget so a genuine in-flight
+    // generation completes, but a hung request still resolves to an error state.
+    var res = await dcSynthFetch('/api/coach-checkin-synthesis', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + (localStorage.getItem(TOKEN_KEY) || ''), 'Content-Type': 'application/json' },
       body: JSON.stringify({ client_email: clientEmail, force: !!force }),
-    });
+    }, 75000);
     var data = await res.json().catch(function () { return null; });
-    if (data && data.synthesis) { renderCheckinSynthesisCard(synthId, data, clientEmail); return; }
-    // No synthesis returned (thin data or a soft failure). Only overwrite if we are
-    // not already showing a good card — never blank out a cached read.
-    var el = document.getElementById(synthId);
-    if (el && !el.querySelector('.dc-synth-card')) renderCheckinSynthesisCard(synthId, data || {}, clientEmail);
-  } catch (err) { /* keep whatever is currently shown */ }
+    var el = document.getElementById(synthId); if (!el) return;
+    if (data && data.synthesis) { renderCheckinSynthesisCard(synthId, data, clientEmail); return; } // state 1
+    // No synthesis: always resolve to a terminal state. Revert to a good cached
+    // card if we have one (background regen), otherwise render the server's
+    // empty/failed signal directly. Never leave the loading shell in place.
+    if (fallbackData && fallbackData.synthesis) { renderCheckinSynthesisCard(synthId, fallbackData, clientEmail); return; }
+    renderCheckinSynthesisCard(synthId, data || { _error: true, current_count: 1 }, clientEmail);
+  } catch (err) {
+    // Timeout / network failure -> terminal state, never a hang.
+    revert();
+  }
 }
 window.loadCheckinSynthesis = loadCheckinSynthesis;
 window.generateCheckinSynthesis = generateCheckinSynthesis;
