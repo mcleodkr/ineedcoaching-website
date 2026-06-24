@@ -1458,8 +1458,8 @@ function effmapClientCardHtml(group, gi, isCurrentGroup) {
   var badge = (isCurrentGroup ? 'Current Map' : 'Map') + ' · ' + escapeHtml(effmapDate(primary.created_at))
     + (primary.phase ? ' · ' + escapeHtml(primary.phase) + ' phase' : '');
   var head = '<div style="margin-bottom:18px;">'
-    + '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">' + badge + '</div>'
-    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.25rem;font-weight:600;color:var(--navy);line-height:1.2;">' + escapeHtml(group.goal) + '</div>'
+    + '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);margin-bottom:6px;overflow-wrap:break-word;">' + badge + '</div>'
+    + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.25rem;font-weight:600;color:var(--navy);line-height:1.2;overflow-wrap:break-word;word-break:break-word;">' + escapeHtml(group.goal) + '</div>'
     + '</div>';
   // Ticket 3: earlier Maps exist for this goal → comparison layer renders, and the
   // opener collapses behind a disclosure (single-Map goals keep it expanded).
@@ -1476,16 +1476,28 @@ function effmapClientCardHtml(group, gi, isCurrentGroup) {
       + '<p style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;">Earlier Maps for this goal</p>'
       + older + '</div>'
     : '';
-  return '<div class="card" id="effmap-goal-' + gi + '" style="scroll-margin-top:16px;">' + head + body + olderSection + '</div>';
+  // Current goal (gi === 0) reads as the live Map at a glance: a quiet gold left
+  // accent + subtle cream wash. Archived goal cards keep the plain white card.
+  var cardStyle = 'scroll-margin-top:16px;'
+    + (isCurrentGroup ? 'border-left:4px solid var(--gold);background:var(--cream);' : '');
+  return '<div class="card" id="effmap-goal-' + gi + '" style="' + cardStyle + '">' + head + body + olderSection + '</div>';
 }
 
 // Compact jump-nav above the cards — one entry per goal, only when 2+ goals.
 function effmapJumpNavHtml(groups) {
   if (groups.length < 2) return '';
   var items = groups.map(function(g, gi) {
-    return '<a href="#effmap-goal-' + gi + '" class="effmap-jump"'
+    // Pills are navigation, not content: show a short label, full goal on hover.
+    // "· Current" sits OUTSIDE the truncation so it is never cut off.
+    var full = String(g.goal || '');
+    var label = full;
+    if (label.length > 38) {
+      var cut = label.slice(0, 36).replace(/\s+\S*$/, '').trim();
+      label = (cut || label.slice(0, 36)) + '…';
+    }
+    return '<a href="#effmap-goal-' + gi + '" class="effmap-jump" title="' + escapeHtml(full) + '"'
       + ' style="display:inline-block;padding:6px 12px;border:1px solid var(--border);border-radius:999px;font-size:0.8rem;color:var(--navy);text-decoration:none;background:var(--white);transition:all 0.15s ease;">'
-      + escapeHtml(g.goal) + (gi === 0 ? ' · Current' : '') + '</a>';
+      + escapeHtml(label) + (gi === 0 ? ' · Current' : '') + '</a>';
   }).join('');
   return '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;">' + items + '</div>';
 }
