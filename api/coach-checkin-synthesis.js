@@ -30,8 +30,16 @@ import { logAIUsage } from '../lib/ai-usage.js';
 import { jsonrepair } from 'jsonrepair';
 
 const MODEL = 'claude-sonnet-4-6';
-// The output is three short lenses plus one question — small. 800 is ample.
-const MAX_TOKENS = 800;
+// Three short lenses + one question + two one-word strength tags + a rare two-
+// sentence consideration. 1100 leaves headroom so the consideration is never
+// truncated mid-sentence.
+const MAX_TOKENS = 1100;
+// Prompt-shape version. Bump this whenever SYSTEM_PROMPT or the output schema
+// changes. It is stamped into every stored synthesis and checked on read so that
+// existing cached rows (whose check-in count is unchanged) still regenerate
+// against the new prompt instead of rendering in the old shape. See
+// cacheIsCurrentVersion + the GET stale flag and the POST reuse guard.
+const PROMPT_VERSION = 'v2-strength-consideration';
 // Abort well inside Vercel's limit; this call is small so a clean failure beats a
 // raw timeout. No retry budget concern at this size.
 const CLAUDE_TIMEOUT_MS = 60000;
@@ -40,15 +48,21 @@ const WINDOW_DAYS = 14;
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://qroizygknxdjsstkezsf.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// VERBATIM synthesis system prompt (clinical-gate approved). Do not reword.
+// VERBATIM synthesis system prompt (clinical-gate approved). The original three-
+// lens body is unchanged; the EVIDENCE STRENGTH and COACH CONSIDERATION sections
+// are added per Ticket 2. The Coach Consideration interpretation rule, scaffold,
+// and bypass language are Kim-authored verbatim — do not reword them.
 const SYSTEM_PROMPT = `You are Coach Clarity, generating a check-in synthesis for a coach reviewing a client's between-session check-ins. This is a coaching context, never therapy. You never use clinical, diagnostic, or therapy language. You never name any therapeutic modality.
 
-You produce exactly three lenses and one question, returned as JSON:
+You produce three lenses, one question, an evidence-strength tag on the two observations, and a rare conditional consideration, returned as JSON:
 {
   "pattern_noticed": "...",
+  "pattern_strength": "strong" | "moderate" | "emerging",
   "possible_connection": "...",
+  "connection_strength": "strong" | "moderate" | "emerging",
   "coaching_direction": "...",
-  "session_question": "..."
+  "session_question": "...",
+  "coach_consideration": "..." or null
 }
 
 Rules for every lens:
@@ -64,9 +78,48 @@ coaching_direction: One thing worth exploring in session, framed as exploration,
 
 session_question: One open question, generated from THIS client's actual words and patterns, that the coach could use to open the next session. Never a generic or reusable question. It must reference something specific from these check-ins.
 
-Keep each lens to two or three sentences. Be plain and direct. If the check-in data is thin (one or two entries), say so honestly and keep the synthesis brief rather than over-reading.`;
+Keep each lens to two or three sentences. Be plain and direct. If the check-in data is thin (one or two entries), say so honestly and keep the synthesis brief rather than over-reading.
 
+EVIDENCE STRENGTH. Add a strength tag to the two observations ONLY: pattern_strength for pattern_noticed, connection_strength for possible_connection. coaching_direction and session_question are actions, not observations, and get no tag. Calibrate strength against how many check-in entries actually exist in this window, so the top tier is reachable even on a sparse window:
+- "strong": the pattern repeats across 4 or more entries, or across most entries when the window has fewer than 4.
+- "moderate": present across 2 to 3 entries.
+- "emerging": present in 1 entry, or suggested by a single recent shift.
+Do not overstate emerging patterns. If the whole window is too thin to support a strong read, say so plainly in the observation itself and tag it accordingly. Each strength value must be exactly one of: strong, moderate, emerging.
+
+COACH CONSIDERATION (coach_consideration). This is rare. In the common case it is null. The better this synthesis gets at finding cross-domain connections, the more an over-sensitive trigger would hurt — intersection between areas of life is the baseline, not the signal. The threshold is converging strain, not connected domains. When in doubt, leave it null.
+
+Ordinary interaction between areas of life is expected and should not trigger a Coach Consideration. This consideration should appear only when multiple domains show sustained difficulty, the challenges appear to be reinforcing one another, and the pattern is supported across more than one check-in. The presence of multiple domains alone is not sufficient.
+
+Populate coach_consideration ONLY when ALL THREE of these gates hold:
+1. Domain count: two or more distinct P.I.P.E.S. domains each show genuine strain (real difficulty, not mere presence), and at least one of them is Physical (sleep, appetite, energy, body tension, fatigue, somatic stress).
+2. Direction: the strained domains are moving in the same negative direction, reinforcing one another — not one improving while another worsens. Judge direction from the reflection content itself: a domain described as getting harder across entries, not merely mentioned. The bar is "repeatedly declining" or "worsening across entries."
+3. Evidence: the clustering is moderate or strong — supported across more than one entry. A single emerging occurrence never fires it.
+
+If all three gates hold, set coach_consideration using EXACTLY this template, changing nothing except the two bracketed slots, which you fill with the specific signals you actually detected:
+Coach Consideration: [specific physical signal] appears to be moving alongside [specific other-domain signal]. This may still be appropriate for coaching, but it is worth pausing to consider whether the client may also benefit from additional support, resources, or referral, based on your role, training, and professional judgment.
+Do not alter the framing or the closing "based on your role, training, and professional judgment." Fill only the two bracketed slots with the real domains you found; do not default to "sleep, appetite" unless those are what you actually observed.
+
+Fire / no-fire guide:
+- Bad sleep one day -> null
+- A tough week emotionally, one domain -> null
+- Sleep and mood mentioned once -> null
+- One difficult reflection -> null
+- Sleep, appetite, and mood repeatedly declining -> populated
+- Energy, isolation, and a worsening heavy mood across multiple entries -> populated
+
+Bypass: if any reflection in the window contains urgent safety language or suicidal intent, self-harm language, intent to harm others, or a genuine inability to function (meaning the person cannot carry out basic daily functioning such as getting out of bed or caring for themselves or their dependents), do NOT produce a coach_consideration — leave it null. That content is handled separately at submission time; the synthesis never owns that response.
+
+When the three gates are not all met, coach_consideration MUST be null (JSON null, not the string "null").`;
+
+// The four prose fields are hard-required. Strength tags and coach_consideration
+// are handled separately in parseSynthesis (strengths coerce to a conservative
+// default; coach_consideration is nullable).
 const SYNTHESIS_FIELDS = ['pattern_noticed', 'possible_connection', 'coaching_direction', 'session_question'];
+const STRENGTHS = ['strong', 'moderate', 'emerging'];
+function normStrength(v) {
+  const s = String(v == null ? '' : v).trim().toLowerCase();
+  return STRENGTHS.includes(s) ? s : null;
+}
 
 function sbHeaders(extra) {
   return { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'content-type': 'application/json', ...(extra || {}) };
@@ -89,6 +142,13 @@ async function deriveCoachEmail(req) {
   } catch {
     return null;
   }
+}
+
+// A cached row is current only if it was generated by the live prompt shape.
+// Old rows (pre-Ticket-2) have no prompt_version and never match, so they are
+// treated as stale and regenerate on next load.
+function cacheIsCurrentVersion(cache) {
+  return !!(cache && cache.synthesis && cache.synthesis.prompt_version === PROMPT_VERSION);
 }
 
 async function loadCoachId(coachEmail) {
@@ -166,9 +226,21 @@ function parseSynthesis(text) {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
   const out = {};
   for (const k of SYNTHESIS_FIELDS) {
-    if (!obj[k] || !String(obj[k]).trim()) return null; // all four fields required
+    if (!obj[k] || !String(obj[k]).trim()) return null; // four prose fields required
     out[k] = String(obj[k]).trim();
   }
+  // Strength tags: required on the two observations, but never discard an otherwise
+  // good synthesis over a missing/garbled tag — coerce to the most conservative
+  // tier ('emerging' never overstates) so the card still renders honestly.
+  out.pattern_strength = normStrength(obj.pattern_strength) || 'emerging';
+  out.connection_strength = normStrength(obj.connection_strength) || 'emerging';
+  // coach_consideration: nullable, null in the common case. Accept a non-empty
+  // string only; treat JSON null, empty, or a literal "null" as no consideration.
+  const cc = obj.coach_consideration;
+  const ccStr = cc == null ? '' : String(cc).trim();
+  out.coach_consideration = (ccStr && ccStr.toLowerCase() !== 'null') ? ccStr : null;
+  // Stamp the prompt-shape version so cached rows regenerate after a prompt change.
+  out.prompt_version = PROMPT_VERSION;
   return out;
 }
 
@@ -218,6 +290,11 @@ async function callClaude(userMessage, coachId) {
   return text;
 }
 
+// Named exports for the offline verification harness (replicates buildUserMessage
+// + prompt + parse against Claude to test the Coach Consideration gates without a
+// coach JWT). Inert for the Vercel serverless handler, which is the default export.
+export { SYSTEM_PROMPT, buildUserMessage, parseSynthesis, MODEL, MAX_TOKENS, PROMPT_VERSION };
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -248,9 +325,13 @@ export default async function handler(req, res) {
     const cache = await loadCache(coachId, clientEmail);
     const storedCount = cache ? Number(cache.source_count || 0) : null;
 
+    // A prompt-shape change makes an existing cached row stale even when the
+    // check-in count is unchanged, so it regenerates against the new prompt.
+    const versionStale = !!cache && !cacheIsCurrentVersion(cache);
+
     // ---- READ MODE: instant, no Claude call ----
     if (req.method === 'GET') {
-      const stale = cache ? currentCount > storedCount : currentCount > 0;
+      const stale = cache ? (currentCount > storedCount || versionStale) : currentCount > 0;
       return res.status(200).json({
         status: 'ok',
         synthesis: cache ? cache.synthesis : null,
@@ -269,8 +350,10 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: 'ok', synthesis: null, source_count: storedCount, current_count: 0, message: 'no_checkins' });
     }
 
-    // Cost guard: a still-fresh cache is reused unless the coach forced a refresh.
-    if (!force && cache && storedCount >= currentCount) {
+    // Cost guard: a still-fresh cache is reused unless the coach forced a refresh
+    // OR the cached row predates the current prompt shape (versionStale), in which
+    // case it must regenerate rather than serve the old shape.
+    if (!force && cache && storedCount >= currentCount && !versionStale) {
       return res.status(200).json({ status: 'ok', synthesis: cache.synthesis, source_count: storedCount, current_count: currentCount, stale: false, generated_at: cache.generated_at, reused: true });
     }
 
