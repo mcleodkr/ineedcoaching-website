@@ -18998,7 +18998,11 @@ function renderCheckinSynthesisCard(synthId, data, clientEmail) {
     ? '<span style="font-style:italic;color:#8a8580;">Updating with the latest check-in…</span>'
     : (genDate ? '<span style="color:#8a8580;">Generated ' + dcEsc(genDate) + '</span>' : '');
   el.innerHTML = dcSynthCardShell(
-    dcSynthHeader(dcSynthRefreshBtn(synthId, clientEmail))
+    // No Refresh control on a loaded card: the synthesis auto-regenerates on new
+    // check-in data (cache staleness), so a manual refresh only invites pointless
+    // re-rolls of identical data. The generate/force path and dcRefreshSynthesis
+    // remain in code for future use; only this button is removed.
+    dcSynthHeader('')
     + dcSynthLens('Pattern noticed', dcEsc(s.pattern_noticed), s.pattern_strength)
     + dcSynthLens('Possible connection', dcEsc(s.possible_connection), s.connection_strength)
     + dcSynthLens('Coaching direction', dcEsc(s.coaching_direction))
