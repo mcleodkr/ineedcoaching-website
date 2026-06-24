@@ -39,7 +39,7 @@ const MAX_TOKENS = 1100;
 // existing cached rows (whose check-in count is unchanged) still regenerate
 // against the new prompt instead of rendering in the old shape. See
 // cacheIsCurrentVersion + the GET stale flag and the POST reuse guard.
-const PROMPT_VERSION = 'v2-strength-consideration';
+const PROMPT_VERSION = 'v3-crisis-override';
 // Abort well inside Vercel's limit; this call is small so a clean failure beats a
 // raw timeout. No retry budget concern at this size.
 const CLAUDE_TIMEOUT_MS = 60000;
@@ -52,7 +52,9 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 // lens body is unchanged; the EVIDENCE STRENGTH and COACH CONSIDERATION sections
 // are added per Ticket 2. The Coach Consideration interpretation rule, scaffold,
 // and bypass language are Kim-authored verbatim — do not reword them.
-const SYSTEM_PROMPT = `You are Coach Clarity, generating a check-in synthesis for a coach reviewing a client's between-session check-ins. This is a coaching context, never therapy. You never use clinical, diagnostic, or therapy language. You never name any therapeutic modality.
+const SYSTEM_PROMPT = `CRISIS OVERRIDE — HIGHEST PRIORITY, CHECK THIS FIRST. If ANY reflection in the check-ins contains urgent safety language or suicidal intent, self-harm language, intent to harm others, or a genuine inability to function (meaning the person cannot carry out basic daily functioning such as getting out of bed or caring for themselves or their dependents), do NOT produce a synthesis. Output EXACTLY this JSON and nothing else: {"crisis": true}. No other text, no explanation, no additional fields. Ordinary hard weeks, stress, sadness, frustration, exhaustion, low energy, or venting are NOT a crisis and do not trigger this override.
+
+You are Coach Clarity, generating a check-in synthesis for a coach reviewing a client's between-session check-ins. This is a coaching context, never therapy. You never use clinical, diagnostic, or therapy language. You never name any therapeutic modality.
 
 You produce three lenses, one question, an evidence-strength tag on the two observations, and a rare conditional consideration, returned as JSON:
 {
@@ -224,6 +226,14 @@ function parseSynthesis(text) {
   try { obj = JSON.parse(t); } catch { /* fall through */ }
   if (!obj) { try { obj = JSON.parse(jsonrepair(t)); } catch { /* fall through */ } }
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+  // Crisis override: a reflection in the window contained crisis language, so the
+  // model returned the sanctioned {"crisis": true} instead of a synthesis. Return a
+  // content-free marker (flag + version only — no reflection text, no reasoning,
+  // mirroring the Ticket 1 / Effectiveness Map crisis discipline). The endpoint
+  // caches and returns it; the coach card renders the attention alert.
+  if (obj.crisis === true) {
+    return { crisis: true, prompt_version: PROMPT_VERSION };
+  }
   const out = {};
   for (const k of SYNTHESIS_FIELDS) {
     if (!obj[k] || !String(obj[k]).trim()) return null; // four prose fields required
