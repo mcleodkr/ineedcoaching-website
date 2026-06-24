@@ -18949,10 +18949,33 @@ function dcSynthRefreshBtn(synthId, clientEmail, label) {
 function dcSynthLoadingHtml() {
   return dcSynthCardShell(dcSynthHeader('') + '<div style="font-size:0.88rem;color:#8a8580;font-style:italic;">Reading the check-ins…</div>');
 }
-function dcSynthLens(label, body) {
+// Light evidence-strength tag for the two observation lenses only. Informative,
+// not loud: muted text + hairline pill, no fill. Renders nothing for an unknown
+// or absent strength (e.g. an old cached row shown briefly while it regenerates).
+function dcSynthStrengthTag(strength) {
+  var labels = { strong: 'Strong', moderate: 'Moderate', emerging: 'Emerging' };
+  var label = labels[String(strength == null ? '' : strength).toLowerCase()];
+  if (!label) return '';
+  return '<span style="font-size:0.58rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#8a8580;border:1px solid #e3ddd2;border-radius:50px;padding:1px 7px;margin-left:8px;vertical-align:middle;white-space:nowrap;">' + label + '</span>';
+}
+function dcSynthLens(label, body, strength) {
   return '<div style="margin-bottom:13px;">'
-    + '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#c49a3c;margin-bottom:4px;">' + label + '</div>'
+    + '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#c49a3c;margin-bottom:4px;">' + label + dcSynthStrengthTag(strength) + '</div>'
     + '<div style="font-size:0.92rem;color:#1a3a52;line-height:1.6;">' + body + '</div>'
+    + '</div>';
+}
+// Coach Consideration — rare, conditional block. Renders nothing when absent so
+// there is never an empty header or placeholder. Set apart from the lenses (warm
+// tint + navy left rule) so it reads as a deliberate pause, not another lens. The
+// stored text self-labels with "Coach Consideration:"; strip that prefix for
+// display since the block carries its own header.
+function dcSynthConsiderationBlock(text) {
+  var body = String(text == null ? '' : text).trim();
+  if (!body) return '';
+  body = body.replace(/^Coach Consideration:\s*/i, '');
+  return '<div style="margin-top:16px;padding:13px 15px;background:#faf6ee;border:1px solid #e8ddc4;border-left:3px solid #1a3a52;border-radius:8px;">'
+    + '<div style="font-size:0.7rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#1a3a52;margin-bottom:5px;">Coach Consideration</div>'
+    + '<div style="font-size:0.9rem;color:#1a3a52;line-height:1.6;">' + dcEsc(body) + '</div>'
     + '</div>';
 }
 function renderCheckinSynthesisCard(synthId, data, clientEmail) {
@@ -18976,12 +18999,13 @@ function renderCheckinSynthesisCard(synthId, data, clientEmail) {
     : (genDate ? '<span style="color:#8a8580;">Generated ' + dcEsc(genDate) + '</span>' : '');
   el.innerHTML = dcSynthCardShell(
     dcSynthHeader(dcSynthRefreshBtn(synthId, clientEmail))
-    + dcSynthLens('Pattern noticed', dcEsc(s.pattern_noticed))
-    + dcSynthLens('Possible connection', dcEsc(s.possible_connection))
+    + dcSynthLens('Pattern noticed', dcEsc(s.pattern_noticed), s.pattern_strength)
+    + dcSynthLens('Possible connection', dcEsc(s.possible_connection), s.connection_strength)
     + dcSynthLens('Coaching direction', dcEsc(s.coaching_direction))
     + '<div style="border-top:1px solid #e8e4dc;margin:14px 0 12px;"></div>'
     + '<div style="font-size:0.72rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#5a5560;margin-bottom:5px;">Suggested session question</div>'
     + '<div style="font-family:\'Cormorant Garamond\',serif;font-size:1.12rem;font-style:italic;color:#1a3a52;line-height:1.5;">' + dcEsc(s.session_question) + '</div>'
+    + dcSynthConsiderationBlock(s.coach_consideration)
     + (footMeta ? '<div style="font-size:0.7rem;margin-top:12px;">' + footMeta + '</div>' : '')
   );
 }
