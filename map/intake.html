@@ -91,6 +91,17 @@
       max-width: 56ch;
       margin: 0 0 2rem;
     }
+    .consent-note {
+      color: var(--muted);
+      max-width: 56ch;
+      margin: 0 0 2rem;
+      padding: 0.85rem 1.1rem;
+      background: var(--gold-tint);
+      border-left: 3px solid var(--gold);
+      border-radius: 6px;
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
 
     /* Questions */
     .field { margin: 0 0 2rem; }
@@ -302,11 +313,13 @@
       // phase is asked fresh below — phase can change over time.
       const goalSection = carriedGoal
         ? '<p class="intro-copy">Your coach has asked for an updated Effectiveness Map on the goal below. Take a fresh look at where you are with it now — there are no right or wrong answers.</p>' +
+          '<p class="consent-note">When you complete this Map, your coach will see your results and a coaching summary, including suggested focus areas for your sessions together. This helps them support you.</p>' +
           '<div class="field">' +
             '<p class="summary-label">Your goal</p>' +
             '<p class="summary-value">' + esc(carriedGoal) + '</p>' +
           '</div>'
         : '<p class="intro-copy">Your coach has invited you to complete your Effectiveness Map — a reflection on how your whole system is showing up in service of your goal right now. There are no right or wrong answers. Just answer honestly in your own words.</p>' +
+          '<p class="consent-note">When you complete this Map, your coach will see your results and a coaching summary, including suggested focus areas for your sessions together. This helps them support you.</p>' +
           '<div class="field">' +
             '<label class="question" for="goal">What goal are you working toward right now?</label>' +
             '<textarea id="goal" rows="4">' + esc(answers.goal || '') + '</textarea>' +
