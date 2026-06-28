@@ -321,7 +321,7 @@
         <h1 id="client-heading">Loading…</h1>
         <div class="meta" id="header-meta" style="text-transform:none;letter-spacing:0;font-size:0.82rem;color:var(--muted);">&nbsp;</div>
       </div>
-      <a href="/coach-dashboard.html" id="back-link" onclick="if(document.referrer && document.referrer.indexOf('/coach-dashboard.html') !== -1){history.back();return false;}">← Back to dashboard</a>
+      <a href="/coach-dashboard.html?tab=clients" id="back-link">← Back to client profile</a>
     </div>
 
     <div class="privacy-banner">
@@ -443,7 +443,10 @@
     const did = mw.what_you_did || '';
     const stayed = mw.if_you_stayed || '';
     const cost = mw.what_this_cost || '';
-    const alt = mw.alternative_intervention || '';
+    // alternative_intervention is an object {name, what_it_is, why_it_fits_here,
+    // example_lines} or null (its normal state) — keep the raw value so we can
+    // render its fields rather than printing "[object Object]".
+    const alt = mw.alternative_intervention;
     let html = '<details class="missed-window">';
     html += '<summary>';
     html += '<span class="caret">▶</span>';
@@ -464,7 +467,26 @@
       html += '<div class="missed-detail-row"><span class="missed-detail-label">What this cost</span>'
         + '<span class="missed-detail-value">' + escapeHtml(cost) + '</span></div>';
     }
-    if (alt) {
+    if (alt && typeof alt === 'object') {
+      // Render the object's fields. why_it_fits_here is the missed-window field
+      // name; why_it_fits_this_moment is the sibling schema's name — accept both.
+      var altWhy = alt.why_it_fits_here || alt.why_it_fits_this_moment || '';
+      var altBody = '';
+      if (alt.name) altBody += '<div style="font-weight:700;color:var(--ink);margin-bottom:4px;">' + escapeHtml(alt.name) + '</div>';
+      if (alt.what_it_is) altBody += '<div style="margin-bottom:6px;">' + escapeHtml(alt.what_it_is) + '</div>';
+      if (altWhy) altBody += '<div style="margin-bottom:6px;"><span class="reflection-meta-label">Why this fits:</span> ' + escapeHtml(altWhy) + '</div>';
+      if (Array.isArray(alt.example_lines)) {
+        alt.example_lines.forEach(function(line) {
+          if (!line) return;
+          altBody += '<div style="font-style:italic;color:var(--ink);padding:2px 0 2px 10px;border-left:2px solid var(--gold);margin-top:4px;">“' + escapeHtml(line) + '”</div>';
+        });
+      }
+      if (altBody) {
+        html += '<div class="missed-detail-row"><span class="missed-detail-label">Alternative intervention</span>'
+          + '<span class="missed-detail-value">' + altBody + '</span></div>';
+      }
+    } else if (alt) {
+      // String fallback — still works if the value ever arrives as plain text.
       html += '<div class="missed-detail-row"><span class="missed-detail-label">Alternative intervention</span>'
         + '<span class="missed-detail-value">' + escapeHtml(alt) + '</span></div>';
     }
@@ -582,6 +604,12 @@
       let bestName = data && data.display_name ? data.display_name : null;
       if (!bestName) bestName = await loadClientName(clientEmail);
       $('client-heading').textContent = bestName || clientEmail;
+      // Back link returns to this client's dashboard profile, not the default.
+      var backLink = $('back-link');
+      if (backLink) {
+        backLink.href = '/coach-dashboard.html?tab=clients&client=' + encodeURIComponent(clientEmail);
+        backLink.textContent = '← Back to ' + (bestName || 'client profile');
+      }
       $('header-meta').textContent =
         (bestName && clientEmail !== bestName ? clientEmail + ' · ' : '')
         + sessionCount + ' session' + (sessionCount === 1 ? '' : 's') + ' analyzed';

@@ -106,7 +106,7 @@
         <h1 id="client-heading">Loading…</h1>
         <div class="meta" id="header-meta" style="text-transform:none;letter-spacing:0;font-size:0.82rem;color:var(--muted);">&nbsp;</div>
       </div>
-      <a href="/coach-dashboard.html" id="back-link" onclick="if(document.referrer && document.referrer.indexOf('/coach-dashboard.html') !== -1){history.back();return false;}">← Back to dashboard</a>
+      <a href="/coach-dashboard.html?tab=clients" id="back-link">← Back to client profile</a>
     </div>
 
     <div id="content">
@@ -188,6 +188,12 @@
     let name = await loadClientNameFallback(clientEmail);
     if (!name) name = clientEmail;
     $('client-heading').textContent = name;
+    // Back link returns to this client's dashboard profile, not the default.
+    var backLink = $('back-link');
+    if (backLink) {
+      backLink.href = '/coach-dashboard.html?tab=clients&client=' + encodeURIComponent(clientEmail);
+      backLink.textContent = '← Back to ' + (name && name !== clientEmail ? name : 'client profile');
+    }
     const parts = [];
     if (clientEmail && name !== clientEmail) parts.push(clientEmail);
     parts.push(maps.length + ' Map' + (maps.length === 1 ? '' : 's'));

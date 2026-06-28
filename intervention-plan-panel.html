@@ -278,7 +278,7 @@
         <h1 id="client-heading">Loading…</h1>
         <div class="meta" id="header-meta" style="text-transform:none;letter-spacing:0;font-size:0.82rem;color:var(--muted);">&nbsp;</div>
       </div>
-      <a href="/coach-dashboard.html" id="back-link" onclick="if(document.referrer && document.referrer.indexOf('/coach-dashboard.html') !== -1){history.back();return false;}">← Back to dashboard</a>
+      <a href="/coach-dashboard.html?tab=clients" id="back-link">← Back to client profile</a>
     </div>
     <div id="content">
       <div class="loader">
@@ -1252,6 +1252,12 @@
     const displayName = clientName || visibleEmail || 'Client';
     _cachedClientDisplayName = displayName;
     $('client-heading').textContent = displayName;
+    // Back link returns to this client's dashboard profile, not the default.
+    var backLink = $('back-link');
+    if (backLink) {
+      backLink.href = '/coach-dashboard.html?tab=clients&client=' + encodeURIComponent(clientEmail);
+      backLink.textContent = '← Back to ' + (clientName || 'client profile');
+    }
     const coachLine = 'coach: ' + (profile.display_name || '');
     $('header-meta').textContent = visibleEmail ? (visibleEmail + ' · ' + coachLine) : coachLine;
     document.title = 'Intervention Plan · ' + displayName;
