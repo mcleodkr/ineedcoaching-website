@@ -3605,19 +3605,31 @@ async function init() {
   setupStripeConnectCard();
   setupClientAcquisitionCards();
 
-  // Clients is the default active tab — the setupTabs lazy-loader
-  // only fires on click, so kick off the initial clients fetch here.
+  // Deep-link params read up front: ?tab=<name> selects a tab; ?client=<email>
+  // jumps straight to that client's detail view (used by the "← Back to
+  // [client]" links on the client artifact panels).
+  var deepParams = new URLSearchParams(window.location.search);
+  var deepTab = deepParams.get('tab');
+  var deepClient = deepParams.get('client');
+
+  // Clients is the default active tab — the setupTabs lazy-loader only fires
+  // on click, so kick off the initial clients fetch here. Skip it when a
+  // ?client deep link is present: jumpToClientDetail owns the *awaited* clients
+  // load so openClientDetail runs only after clientsData is populated —
+  // otherwise it would race an empty list and silently land on the default view.
   var clientsBtn = document.querySelector('.tab-btn[data-tab="clients"]');
-  if (clientsBtn && !clientsBtn._loaded) {
+  if (clientsBtn && !clientsBtn._loaded && !deepClient) {
     clientsBtn._loaded = true;
     loadClientsTab();
   }
 
-  // Deep link: a ?tab=<name> param (e.g. from the "new message" notification
-  // email's link) selects that tab on load by delegating to its real button,
-  // which reuses setupTabs()' switch + lazy-load. No-op when absent or unknown.
-  var deepTab = new URLSearchParams(window.location.search).get('tab');
-  if (deepTab) {
+  // Deep link: ?client=<email> reuses the tested bookings-flow jump (clicks the
+  // Clients tab, awaits its load, opens the detail). Otherwise a ?tab=<name>
+  // param (e.g. from the "new message" notification email) selects that tab by
+  // delegating to its real button. No-op when both are absent or unknown.
+  if (deepClient && typeof jumpToClientDetail === 'function') {
+    jumpToClientDetail(decodeURIComponent(deepClient));
+  } else if (deepTab) {
     var deepBtn = document.querySelector('.tab-btn[data-tab="' + deepTab.replace(/[^a-z0-9-]/gi, '') + '"]');
     if (deepBtn) deepBtn.click();
   }
