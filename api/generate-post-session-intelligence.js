@@ -268,10 +268,12 @@ SESSION TRANSCRIPT:
 ${sessionContent}${priorPatternContext}${activeGoalsContext}`;
 
     // ── Pass 1: Extraction ──────────────────────────────────────────────
-    const extractionOutput = await callClaude(
+    let extractionOutput;
+    try {
+    extractionOutput = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
-      1500,
+      4000,
       buildSystem(
         sharedPrefix,
         `You are an evidence extraction engine. Extract only what is explicitly present. Do not interpret. ${CONCISE} ${JSON_ONLY}${priorPatternContext}`
@@ -286,6 +288,27 @@ ${sessionContent}`,
       'Pass 1: Extraction'
     , { feature: 'coaching_mirror', coachId }
       );
+    } catch (err) {
+      if (err && err.rawText) {
+        console.warn('[Pass 1: Extraction] parse failed, attempting repair:', err.parseError);
+        const repaired = await callClaude(
+          ANTHROPIC_API_KEY,
+          'claude-sonnet-4-6',
+          4000,
+          'You repair malformed or truncated JSON. Return only the corrected, complete, valid JSON object. No commentary, no code fences.',
+          'This JSON was truncated or malformed. Return the complete, valid JSON object only:\n\n' + err.rawText,
+          'Pass 1: Extraction (repair)',
+          { feature: 'coaching_mirror', coachId }
+        ).catch(function() { return null; });
+        if (repaired) {
+          extractionOutput = repaired;
+        } else {
+          throw err;
+        }
+      } else {
+        throw err;
+      }
+    }
 
     // ── Pass 2a: Core Intelligence ──────────────────────────────────────
     const synthesisSystem = `${IDENTITY} ${TONE} ${PRONOUNS} ${CONCISE} ${CLARITY} ${JSON_ONLY}${priorPatternContext}${activeGoalsContext}`;
