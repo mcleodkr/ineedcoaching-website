@@ -534,10 +534,12 @@ Return ONLY:
     }
 
     // ── Pass 2c: Curiosity + Missed Windows ───────────────────────────
-    const pass2cOutput = await callClaude(
+    let pass2cOutput;
+    try {
+    pass2cOutput = await callClaude(
       ANTHROPIC_API_KEY,
       'claude-sonnet-4-6',
-      1500,
+      3000,
       buildSystem(
         sharedPrefix,
         `${MIRROR_RULES} Feedback style: ${fbStyle}. If reflective: lead with "There was an opening to...", "You might notice...". If direct: lead with "You stayed at the surface.", "You moved past a deeper opening.". Both: never shame, never say "you should have" or "you missed". Anchor in observable behavior. PLAIN LANGUAGE REQUIRED: Never use coaching jargon. Replace "slow into" with "stay with" or "explore more closely". Replace "under visibility pressure" with "in moments where they are being watched". Replace "legitimacy fear" with "fear of not being taken seriously". Every sentence must be complete and standalone. No fragments. No implied subjects. Each field value must make sense when read alone.`
@@ -584,6 +586,31 @@ Return ONLY:
       'Pass 2c: Curiosity + Missed Windows'
     , { feature: 'coaching_mirror', coachId }
       );
+    } catch (err) {
+      // Same failure mode Pass 1 had: a bare call that throws on truncated or
+      // malformed JSON. Recover if possible, otherwise degrade to an empty
+      // object -- pass2cOutput is spread into synthesisOutput, so {} is safe
+      // (this mirrors how Pass 2d degrades on failure).
+      let recovered = err && err.rawText ? tryParseJson(err.rawText) : null;
+      if (!recovered && err && err.rawText) {
+        console.warn('[Pass 2c] parse failed, firing repair call:', err.parseError);
+        recovered = await callClaude(
+          ANTHROPIC_API_KEY,
+          'claude-sonnet-4-6',
+          3000,
+          'You repair malformed or truncated JSON. Return only the corrected, complete, valid JSON object. No commentary, no code fences.',
+          'This JSON was truncated or malformed. Return the complete, valid JSON object only:\n\n' + err.rawText,
+          'Pass 2c: JSON Repair',
+          { feature: 'coaching_mirror', coachId }
+        ).catch(function() { return null; });
+      }
+      if (recovered) {
+        pass2cOutput = recovered;
+      } else {
+        console.error('[Pass 2c] All recovery exhausted, using empty stub:', err && err.message);
+        pass2cOutput = { curiosity_edges: [], missed_windows: [] };
+      }
+    }
 
     // ── Pass 2d: Patterns + Goals + Frameworks (fault-tolerant) ────────
     let pass2dOutput = {};
