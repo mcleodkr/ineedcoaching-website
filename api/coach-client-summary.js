@@ -114,7 +114,15 @@ export default async function handler(req, res) {
       {
         method: 'PATCH',
         headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=representation' },
-        body: JSON.stringify({ client_summary: summary, updated_at: new Date().toISOString() }),
+        // A coach saving here IS the approval -- this is the one editable
+        // surface before a summary auto-sends. Harmless for coaches who
+        // haven't opted into review_summaries_before_send: the column just
+        // sits unused until they do.
+        body: JSON.stringify({
+          client_summary: summary,
+          client_summary_approved_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }),
       });
     if (!patchRes.ok) {
       const t = await patchRes.text().catch(() => '');
