@@ -32,6 +32,10 @@ const HALF_WIDTH_MIN = 15;
 // retrying a booking that has no post-session content yet (coach hasn't run
 // analysis / approved homework). Idempotency: coach_bookings.post_session_email_sent_at.
 const POST_SESSION_MIN_AFTER_MIN = 90;
+// Opt-in review gate: if a coach has review_summaries_before_send=true, a
+// summary auto-sends once either the coach approves it OR this many minutes
+// have passed since client_summary_generated_at, whichever comes first.
+const CLIENT_SUMMARY_REVIEW_TIMEOUT_MIN = 48 * 60;
 const POST_SESSION_LOOKBACK_MIN = 14 * 24 * 60;
 
 function isoOffset(now, minutes) {
@@ -188,7 +192,7 @@ export default async function handler(req, res) {
       + `&post_session_email_sent_at=is.null`
       + `&scheduled_at=gte.${encodeURIComponent(fromIso)}`
       + `&scheduled_at=lte.${encodeURIComponent(toIso)}`
-      + `&select=id`;
+      + `&select=id,coach_id`;
     let rows = [];
     try {
       const lookup = await fetch(url, { headers });
@@ -199,6 +203,55 @@ export default async function handler(req, res) {
       errors.push({ stage: 'post_session_lookup', error: e.message });
       rows = [];
     }
+
+    // -- Opt-in review gate --
+    // Default behavior (review_summaries_before_send=false) is completely
+    // unchanged: those rows pass straight through, same as before this ticket.
+    // For coaches who opted in, hold the row back until client_summary is
+    // approved or the timeout has elapsed.
+    if (rows.length) {
+      try {
+        const coachIds = [...new Set(rows.map(r => r.coach_id).filter(Boolean))];
+        const reviewCoaches = coachIds.length
+          ? await fetch(
+              `${SUPABASE_URL}/rest/v1/coach_profiles?id=in.(${coachIds.map(encodeURIComponent).join(',')})`
+                + `&review_summaries_before_send=eq.true&select=id`,
+              { headers }
+            ).then(r => r.ok ? r.json() : [])
+          : [];
+        const reviewCoachIds = new Set((reviewCoaches || []).map(c => c.id));
+
+        if (reviewCoachIds.size) {
+          const gatedBookingIds = rows.filter(r => reviewCoachIds.has(r.coach_id)).map(r => r.id);
+          const notes = gatedBookingIds.length
+            ? await fetch(
+                `${SUPABASE_URL}/rest/v1/coach_session_notes?booking_id=in.(${gatedBookingIds.map(encodeURIComponent).join(',')})`
+                  + `&select=booking_id,client_summary_generated_at,client_summary_approved_at`,
+                { headers }
+              ).then(r => r.ok ? r.json() : [])
+            : [];
+          const noteByBooking = {};
+          (notes || []).forEach(n => { noteByBooking[n.booking_id] = n; });
+          const timeoutMs = CLIENT_SUMMARY_REVIEW_TIMEOUT_MIN * 60 * 1000;
+
+          rows = rows.filter(r => {
+            if (!reviewCoachIds.has(r.coach_id)) return true;
+            const n = noteByBooking[r.id];
+            if (!n) return false;
+            if (n.client_summary_approved_at) return true;
+            if (n.client_summary_generated_at) {
+              const age = now.getTime() - new Date(n.client_summary_generated_at).getTime();
+              return age >= timeoutMs;
+            }
+            return false;
+          });
+        }
+      } catch (e) {
+        console.error('[process-reminders] review gate lookup failed', e.message);
+        errors.push({ stage: 'review_gate_lookup', error: e.message });
+      }
+    }
+
     for (const row of rows) {
       try {
         const sendRes = await fetch(`${origin}/api/post-session-email`, {
