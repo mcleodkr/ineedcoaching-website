@@ -1134,7 +1134,14 @@ Limits: max 3 goal_proposals, max 3 goal_status_updates. Return empty arrays if 
             frameworks_detected: formattedOutput.frameworks || null,
             dna_manifestations: formattedOutput.dna_manifestations,
             ...(homeworkExtracted.length ? { homework: homeworkExtracted } : {}),
-            ...(clientSummaryOutput ? { client_summary: clientSummaryOutput } : {}),
+            ...(clientSummaryOutput ? {
+              client_summary: clientSummaryOutput,
+              client_summary_generated_at: new Date().toISOString(),
+              // Clear any prior approval -- a regenerated summary is new
+              // content and must be re-reviewed, not auto-sent on the
+              // strength of an approval that applied to different text.
+              client_summary_approved_at: null,
+            } : {}),
           }),
         }
       );
