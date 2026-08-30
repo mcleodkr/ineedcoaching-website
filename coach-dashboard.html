@@ -6013,9 +6013,10 @@ async function initCalendar() {
     eventDurationEditable: false,
     eventDrop: handleCalendarEventDrop,
     height: 'auto',
-    slotMinTime: '06:00:00',
-    slotMaxTime: '22:00:00',
+    slotMinTime: computeCalendarSlotWindow().min,
+    slotMaxTime: computeCalendarSlotWindow().max,
     allDaySlot: false,
+    expandRows: true,
     nowIndicator: true,
     dayMaxEvents: true,
     datesSet: function (info) {
@@ -6117,6 +6118,52 @@ async function populateServiceFilter() {
   calendarServiceFilterPopulated = true;
 }
 
+// Derive the visible time window from the coach's weekly availability AND the
+// bookings actually loaded, padded by an hour on each side. Availability alone
+// is not enough: FullCalendar hides events outside the window entirely, so a
+// manually-added 7am booking would silently vanish from a 9-to-7 grid.
+function computeCalendarSlotWindow() {
+  var minMin = null, maxMin = null;
+  var consider = function (h, m) {
+    if (!Number.isFinite(h)) return;
+    var v = h * 60 + (Number.isFinite(m) ? m : 0);
+    if (minMin === null || v < minMin) minMin = v;
+    if (maxMin === null || v > maxMin) maxMin = v;
+  };
+  var avail = (coachProfile && Array.isArray(coachProfile.weekly_availability)) ? coachProfile.weekly_availability : [];
+  avail.forEach(function (a) {
+    if (!a || !a.start || !a.end) return;
+    consider(parseInt(String(a.start).slice(0, 2), 10), parseInt(String(a.start).slice(3, 5), 10));
+    consider(parseInt(String(a.end).slice(0, 2), 10), parseInt(String(a.end).slice(3, 5), 10));
+  });
+  calendarBookingsCache.forEach(function (b) {
+    if (!b || !b.scheduled_at) return;
+    var durationText = (b.coach_services && b.coach_services.duration) || '60 minutes';
+    [utcIsoToCoachNaive(b.scheduled_at), calendarEventEnd(b.scheduled_at, durationText)].forEach(function (iso) {
+      var t = String(iso).split('T')[1] || '';
+      consider(parseInt(t.slice(0, 2), 10), parseInt(t.slice(3, 5), 10));
+    });
+  });
+  if (minMin === null || maxMin === null) return { min: '06:00:00', max: '22:00:00' };
+  var minHour = Math.max(0, Math.floor(minMin / 60) - 1);
+  var maxHour = Math.min(24, Math.ceil(maxMin / 60) + 1);
+  if (maxHour <= minHour) return { min: '06:00:00', max: '22:00:00' };
+  var padHour = function (n) { return (n < 10 ? '0' : '') + n; };
+  return {
+    min: padHour(minHour) + ':00:00',
+    max: (maxHour === 24 ? '24:00:00' : padHour(maxHour) + ':00:00'),
+  };
+}
+
+// Re-apply the window after the booking cache changes, so a newly loaded
+// early or late session widens the grid rather than being hidden by it.
+function applyCalendarSlotWindow() {
+  if (!calendar) return;
+  var win = computeCalendarSlotWindow();
+  calendar.setOption('slotMinTime', win.min);
+  calendar.setOption('slotMaxTime', win.max);
+}
+
 async function refreshCalendarEvents() {
   if (!coachProfile || !coachProfile.id) {
     calendarBookingsCache = [];
@@ -6135,7 +6182,7 @@ async function refreshCalendarEvents() {
   try {
     var rows = await supabaseGet(path);
     calendarBookingsCache = Array.isArray(rows) ? rows : [];
-    if (calendar) calendar.refetchEvents();
+    if (calendar) { calendar.refetchEvents(); applyCalendarSlotWindow(); }
   } catch (e) {
     console.error('[calendar] refresh failed', e);
     calendarBookingsCache = [];
