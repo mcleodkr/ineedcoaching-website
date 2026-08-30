@@ -186,23 +186,22 @@ export default async function handler(req, res) {
     const blkRes = await fetch(
       `${SUPABASE_URL}/rest/v1/coach_blocked_times`
       + `?coach_id=eq.${coachId}`
-      + `&blocked_date=gte.${startDateStr}`
       + `&blocked_date=lte.${endDateStr}`
-      + `&select=blocked_date,start_time,end_time,all_day`,
+      + `&or=(end_date.gte.${startDateStr},and(end_date.is.null,blocked_date.gte.${startDateStr}))`
+      + `&select=blocked_date,end_date,start_time,end_time,all_day`,
       { headers });
     if (!blkRes.ok) return res.status(500).json({ error: 'blocked_fetch_failed', status: blkRes.status });
     const blocked = await blkRes.json();
-    // Bucket by date string for fast lookup
-    const blockedByDate = new Map();
-    for (const b of blocked) {
-      const list = blockedByDate.get(b.blocked_date) || [];
-      list.push({
-        allDay: !!b.all_day,
-        startMin: b.all_day ? null : timeToMinutes(b.start_time),
-        endMin: b.all_day ? null : timeToMinutes(b.end_time),
-      });
-      blockedByDate.set(b.blocked_date, list);
-    }
+    // Normalize to [startDate, endDate] spans. end_date is null for
+    // single-day blocks, in which case the span collapses to blocked_date.
+    // ISO date strings compare correctly with < and >, so no Date objects.
+    const blockSpans = blocked.map((b) => ({
+      startDate: b.blocked_date,
+      endDate: b.end_date || b.blocked_date,
+      allDay: !!b.all_day,
+      startMin: b.all_day ? null : timeToMinutes(b.start_time),
+      endMin: b.all_day ? null : timeToMinutes(b.end_time),
+    }));
 
     // 5. Existing bookings in window — fetch as UTC instants, derive [start, end] in UTC
     const winStartUtcIso = now.toISOString();
@@ -238,7 +237,7 @@ export default async function handler(req, res) {
       const dow = coachLocalDow(cursorUtc, tz);
       const dayBlocks = blocksByDow.get(dow) || [];
       if (!dayBlocks.length) continue;
-      const dateBlocks = blockedByDate.get(dateStr) || [];
+      const dateBlocks = blockSpans.filter((b) => dateStr >= b.startDate && dateStr <= b.endDate);
       const allDayBlocked = dateBlocks.some((b) => b.allDay);
       if (allDayBlocked) continue;
       for (const block of dayBlocks) {

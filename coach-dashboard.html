@@ -2004,6 +2004,10 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
               <input type="date" id="block-date" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'Cabinet Grotesk',sans-serif;font-size:0.85rem;background:var(--cream);color:var(--ink);">
             </div>
             <div style="display:flex;flex-direction:column;gap:4px;">
+              <label for="block-end-date" style="font-size:0.76rem;color:var(--muted);">Through (optional)</label>
+              <input type="date" id="block-end-date" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'Cabinet Grotesk',sans-serif;font-size:0.85rem;background:var(--cream);color:var(--ink);">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
               <label style="font-size:0.76rem;color:var(--muted);">Type</label>
               <select id="block-mode" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'Cabinet Grotesk',sans-serif;font-size:0.85rem;background:var(--cream);color:var(--ink);">
                 <option value="all_day" selected>All day</option>
@@ -5306,9 +5310,9 @@ async function loadBlockedTimes() {
   try {
     var todayIso = new Date().toISOString().slice(0, 10);
     var url = SUPABASE_URL + '/rest/v1/coach_blocked_times?coach_id=eq.' + coachProfile.id
-      + '&blocked_date=gte.' + todayIso
+      + '&or=(end_date.gte.' + todayIso + ',and(end_date.is.null,blocked_date.gte.' + todayIso + '))'
       + '&order=blocked_date.asc'
-      + '&select=id,blocked_date,start_time,end_time,all_day,reason';
+      + '&select=id,blocked_date,end_date,start_time,end_time,all_day,reason';
     var res = await fetch(url, { headers: apiHeaders() });
     if (!res.ok) throw new Error('Failed to load blocked times: ' + res.status);
     var rows = await res.json();
@@ -5317,7 +5321,10 @@ async function loadBlockedTimes() {
       return;
     }
     listEl.innerHTML = rows.map(function(r) {
-      var dateStr = new Date(r.blocked_date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+      var fmtBlockDate = function(d) { return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }); };
+      var dateStr = (r.end_date && r.end_date !== r.blocked_date)
+        ? (fmtBlockDate(r.blocked_date) + ' – ' + fmtBlockDate(r.end_date))
+        : fmtBlockDate(r.blocked_date);
       var timeLabel = r.all_day ? 'All day' : (formatTimeShort(r.start_time) + ' – ' + formatTimeShort(r.end_time));
       var reason = r.reason ? '<span style="color:var(--muted);font-style:italic;margin-left:8px;">' + escapeHtml(r.reason) + '</span>' : '';
       return '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);">'
@@ -5353,8 +5360,15 @@ async function addBlockedTime() {
   var btn = $('add-blocked-time-btn');
   var msg = $('add-blocked-time-msg');
   var date = $('block-date').value;
+  var endDate = $('block-end-date').value;
   var mode = $('block-mode').value;
   var reason = $('block-reason').value.trim();
+  if (endDate && endDate < date) {
+    msg.textContent = 'End date must be on or after the start date.';
+    msg.style.color = '#c44';
+    msg.classList.add('show');
+    return;
+  }
   if (!date) {
     msg.textContent = 'Pick a date.';
     msg.style.color = '#c44';
@@ -5377,6 +5391,7 @@ async function addBlockedTime() {
     var row = {
       coach_id: coachProfile.id,
       blocked_date: date,
+      end_date: endDate || null,
       all_day: allDay,
       start_time: startTime,
       end_time: endTime,
@@ -5393,6 +5408,7 @@ async function addBlockedTime() {
     }
     // Clear the form, reload list
     $('block-date').value = '';
+    $('block-end-date').value = '';
     $('block-reason').value = '';
     msg.textContent = 'Added.';
     msg.style.color = 'var(--forest)';
