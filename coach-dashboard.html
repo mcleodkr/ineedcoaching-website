@@ -2014,6 +2014,21 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
                 <option value="range">Time range</option>
               </select>
             </div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <label for="block-repeat" style="font-size:0.76rem;color:var(--muted);">Repeats</label>
+              <select id="block-repeat" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'Cabinet Grotesk',sans-serif;font-size:0.85rem;background:var(--cream);color:var(--ink);">
+                <option value="never" selected>Never</option>
+                <option value="daily">Every day</option>
+                <option value="weekly">Every week</option>
+                <option value="biweekly">Every 2 weeks</option>
+                <option value="monthly">Every month</option>
+                <option value="yearly">Every year</option>
+              </select>
+            </div>
+            <div id="block-repeat-until-field" style="display:none;flex-direction:column;gap:4px;">
+              <label for="block-repeat-until" style="font-size:0.76rem;color:var(--muted);">Until (optional)</label>
+              <input type="date" id="block-repeat-until" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'Cabinet Grotesk',sans-serif;font-size:0.85rem;background:var(--cream);color:var(--ink);">
+            </div>
             <div id="block-range-fields" style="display:none;flex-direction:row;gap:8px;align-items:flex-end;">
               <div style="display:flex;flex-direction:column;gap:4px;">
                 <label for="block-start" style="font-size:0.76rem;color:var(--muted);">From</label>
@@ -5212,6 +5227,19 @@ function loadScheduling() {
       $('block-range-fields').style.display = this.value === 'range' ? 'flex' : 'none';
     });
   }
+  // Repeats: showing "Until" only for a rule, and hiding "Through" because the
+  // database forbids a block being both a multi-day span and a repeating rule.
+  var blockRepeat = $('block-repeat');
+  if (blockRepeat) {
+    blockRepeat.addEventListener('change', function() {
+      var repeating = this.value !== 'never';
+      $('block-repeat-until-field').style.display = repeating ? 'flex' : 'none';
+      var throughField = $('block-end-date').parentNode;
+      throughField.style.display = repeating ? 'none' : 'flex';
+      if (repeating) $('block-end-date').value = '';
+      if (!repeating) $('block-repeat-until').value = '';
+    });
+  }
   var addBlockBtn = $('add-blocked-time-btn');
   if (addBlockBtn) addBlockBtn.onclick = addBlockedTime;
   loadBlockedTimes();
@@ -5310,9 +5338,9 @@ async function loadBlockedTimes() {
   try {
     var todayIso = new Date().toISOString().slice(0, 10);
     var url = SUPABASE_URL + '/rest/v1/coach_blocked_times?coach_id=eq.' + coachProfile.id
-      + '&or=(end_date.gte.' + todayIso + ',and(end_date.is.null,blocked_date.gte.' + todayIso + '))'
+      + '&or=(end_date.gte.' + todayIso + ',and(end_date.is.null,blocked_date.gte.' + todayIso + '),repeat_freq.neq.never)'
       + '&order=blocked_date.asc'
-      + '&select=id,blocked_date,end_date,start_time,end_time,all_day,reason';
+      + '&select=id,blocked_date,end_date,start_time,end_time,all_day,reason,repeat_freq,repeat_until,repeat_exceptions';
     var res = await fetch(url, { headers: apiHeaders() });
     if (!res.ok) throw new Error('Failed to load blocked times: ' + res.status);
     var rows = await res.json();
@@ -5322,9 +5350,31 @@ async function loadBlockedTimes() {
     }
     listEl.innerHTML = rows.map(function(r) {
       var fmtBlockDate = function(d) { return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }); };
-      var dateStr = (r.end_date && r.end_date !== r.blocked_date)
-        ? (fmtBlockDate(r.blocked_date) + ' – ' + fmtBlockDate(r.end_date))
-        : fmtBlockDate(r.blocked_date);
+      var anchorDate = new Date(r.blocked_date + 'T12:00:00');
+      var ordinalDay = function(n) {
+        var s = ['th', 'st', 'nd', 'rd'];
+        var v = n % 100;
+        return n + (s[(v - 20) % 10] || s[v] || s[0]);
+      };
+      var repeatLabel = function() {
+        var weekday = anchorDate.toLocaleDateString('en-US', { weekday: 'long' });
+        switch (r.repeat_freq) {
+          case 'daily': return 'Every day';
+          case 'weekly': return 'Every ' + weekday;
+          case 'biweekly': return 'Every other ' + weekday;
+          case 'monthly': return 'Monthly on the ' + ordinalDay(anchorDate.getDate());
+          case 'yearly': return 'Every ' + anchorDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+          default: return '';
+        }
+      };
+      var dateStr;
+      if (r.repeat_freq && r.repeat_freq !== 'never') {
+        dateStr = repeatLabel() + (r.repeat_until ? ', until ' + fmtBlockDate(r.repeat_until) : '');
+      } else if (r.end_date && r.end_date !== r.blocked_date) {
+        dateStr = fmtBlockDate(r.blocked_date) + ' – ' + fmtBlockDate(r.end_date);
+      } else {
+        dateStr = fmtBlockDate(r.blocked_date);
+      }
       var timeLabel = r.all_day ? 'All day' : (formatTimeShort(r.start_time) + ' – ' + formatTimeShort(r.end_time));
       var reason = r.reason ? '<span style="color:var(--muted);font-style:italic;margin-left:8px;">' + escapeHtml(r.reason) + '</span>' : '';
       return '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);">'
@@ -5361,6 +5411,19 @@ async function addBlockedTime() {
   var msg = $('add-blocked-time-msg');
   var date = $('block-date').value;
   var endDate = $('block-end-date').value;
+  var repeatFreq = $('block-repeat').value;
+  var repeatUntil = $('block-repeat-until').value;
+  if (repeatFreq !== 'never') {
+    endDate = '';
+    if (repeatUntil && repeatUntil < $('block-date').value) {
+      msg.textContent = 'Repeat end must be on or after the start date.';
+      msg.style.color = '#c44';
+      msg.classList.add('show');
+      return;
+    }
+  } else {
+    repeatUntil = '';
+  }
   var mode = $('block-mode').value;
   var reason = $('block-reason').value.trim();
   if (endDate && endDate < date) {
@@ -5392,6 +5455,8 @@ async function addBlockedTime() {
       coach_id: coachProfile.id,
       blocked_date: date,
       end_date: endDate || null,
+      repeat_freq: repeatFreq,
+      repeat_until: repeatUntil || null,
       all_day: allDay,
       start_time: startTime,
       end_time: endTime,
@@ -5409,6 +5474,10 @@ async function addBlockedTime() {
     // Clear the form, reload list
     $('block-date').value = '';
     $('block-end-date').value = '';
+    $('block-repeat').value = 'never';
+    $('block-repeat-until').value = '';
+    $('block-repeat-until-field').style.display = 'none';
+    $('block-end-date').parentNode.style.display = 'flex';
     $('block-reason').value = '';
     msg.textContent = 'Added.';
     msg.style.color = 'var(--forest)';
