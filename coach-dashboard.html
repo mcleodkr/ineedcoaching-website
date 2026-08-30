@@ -1996,9 +1996,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
         <h2 class="form-section-title">Blocked Dates</h2>
         <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">Mark vacations, personal appointments, or any specific times you do not want to be bookable. Each entry overrides your weekly availability.</p>
 
-        <div id="blocked-times-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;"></div>
-
-        <div style="border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;background:var(--white);">
+        <div style="border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;background:var(--white);margin-bottom:18px;">
           <div style="font-size:0.82rem;font-weight:600;color:var(--ink);margin-bottom:10px;">Block a new date</div>
           <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
             <div style="display:flex;flex-direction:column;gap:4px;">
@@ -2032,6 +2030,8 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
             <span class="save-msg" id="add-blocked-time-msg">Saved</span>
           </div>
         </div>
+
+        <div id="blocked-times-list" style="display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;padding-right:4px;"></div>
       </div>
     </div>
 
