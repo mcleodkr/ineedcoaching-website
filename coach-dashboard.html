@@ -655,7 +655,8 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 
 /* FullCalendar brand alignment */
 #calendar .fc { --fc-border-color: #e0ddd5; --fc-today-bg-color: rgba(196,154,60,0.08); --fc-now-indicator-color: #c44; }
-#calendar .fc-event { border: none !important; border-radius: 4px !important; padding: 2px 6px !important; font-size: 0.82rem !important; cursor: pointer; }
+#calendar .fc-event { border: none !important; border-radius: 4px !important; padding: 2px 6px !important; font-size: 0.82rem !important; cursor: pointer; line-height: 1.25; }
+#calendar .fc-timegrid-event .fc-event-time, #calendar .fc-timegrid-event .fc-event-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #calendar .fc-event:hover { filter: brightness(0.92); }
 #calendar .fc-event.session-type-0 { background: #4a7c59 !important; color: #fff !important; }
 #calendar .fc-event.session-type-1 { background: #c49a3c !important; color: #fff !important; }
@@ -5956,6 +5957,14 @@ async function disconnectZoomOAuth() {
 // so a coach who cancels/rebooks elsewhere sees the calendar update.
 
 var calendar = null; // shared FullCalendar instance
+// The date range currently rendered, as YYYY-MM-DD strings (end exclusive).
+// Set by datesSet; scopes the slot-window calculation to the visible week so
+// a stray late booking from months ago cannot stretch every other week.
+var calendarVisibleRange = null;
+// Last window handed to FullCalendar. setOption triggers a re-render, which
+// fires datesSet again, so applyCalendarSlotWindow must no-op when the value
+// is unchanged or it loops forever.
+var calendarAppliedWindow = { min: '06:00:00', max: '22:00:00' };
 var calendarBookingsCache = []; // last fetched bookings, used by event-click modal lookups
 // Calendar filter state (PR 2.A). Defaults match the pre-filter behavior so a
 // coach who never touches a filter sees the same calendar they had before.
@@ -5993,6 +6002,7 @@ async function initCalendar() {
   section.style.display = '';
   await refreshCalendarEvents();
 
+  calendarAppliedWindow = computeCalendarSlotWindow();
   calendar = new FullCalendar.Calendar(calEl, {
     initialView: 'timeGridWeek',
     headerToolbar: false, // we render our own controls
@@ -6013,15 +6023,23 @@ async function initCalendar() {
     eventDurationEditable: false,
     eventDrop: handleCalendarEventDrop,
     height: 'auto',
-    slotMinTime: computeCalendarSlotWindow().min,
-    slotMaxTime: computeCalendarSlotWindow().max,
+    slotMinTime: calendarAppliedWindow.min,
+    slotMaxTime: calendarAppliedWindow.max,
     allDaySlot: false,
     expandRows: true,
+    // Floor in pixels for short sessions. Without this a 15-minute event is a
+    // quarter the height of an hour and unreadable at any grid height.
+    eventMinHeight: 34,
     nowIndicator: true,
     dayMaxEvents: true,
     datesSet: function (info) {
       var t = $('cal-title');
       if (t && info.view) t.textContent = info.view.title;
+      calendarVisibleRange = {
+        start: String(info.startStr).slice(0, 10),
+        end: String(info.endStr).slice(0, 10),
+      };
+      applyCalendarSlotWindow();
     },
   });
   calendar.render();
@@ -6138,6 +6156,10 @@ function computeCalendarSlotWindow() {
   });
   calendarBookingsCache.forEach(function (b) {
     if (!b || !b.scheduled_at) return;
+    if (calendarVisibleRange) {
+      var visDay = String(utcIsoToCoachNaive(b.scheduled_at)).slice(0, 10);
+      if (visDay < calendarVisibleRange.start || visDay >= calendarVisibleRange.end) return;
+    }
     var durationText = (b.coach_services && b.coach_services.duration) || '60 minutes';
     [utcIsoToCoachNaive(b.scheduled_at), calendarEventEnd(b.scheduled_at, durationText)].forEach(function (iso) {
       var t = String(iso).split('T')[1] || '';
@@ -6160,6 +6182,8 @@ function computeCalendarSlotWindow() {
 function applyCalendarSlotWindow() {
   if (!calendar) return;
   var win = computeCalendarSlotWindow();
+  if (win.min === calendarAppliedWindow.min && win.max === calendarAppliedWindow.max) return;
+  calendarAppliedWindow = win;
   calendar.setOption('slotMinTime', win.min);
   calendar.setOption('slotMaxTime', win.max);
 }
