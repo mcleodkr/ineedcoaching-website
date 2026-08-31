@@ -22,6 +22,8 @@
 //
 // Response: { slots: [...], coach_timezone: 'America/Chicago' }
 
+import { BLOCK_SELECT, blockWindowFilter, normalizeBlockRows, blockCoversDate } from './_lib/blocks.js';
+
 const DEFAULT_DAYS = 14;
 const MAX_DAYS = 60;
 const DEFAULT_DURATION_MIN = 60;
@@ -113,35 +115,6 @@ function timeToMinutes(t) {
   return h * 60 + m;
 }
 
-// "YYYY-MM-DD" -> whole days since the epoch, via UTC so no timezone drift.
-function isoToUtcDays(d) {
-  const p = String(d).split('-');
-  return Date.UTC(Number(p[0]), Number(p[1]) - 1, Number(p[2])) / 86400000;
-}
-
-// Does this block cover the given coach-local ISO date?
-// repeat_freq 'never' -> covers [startDate, endDate] inclusive (endDate collapses
-// to startDate for single-day blocks). Otherwise the block is a rule anchored on
-// startDate: it covers dates on or after the anchor that match the frequency,
-// stopping at repeatUntil when set, minus any explicit exception dates.
-function blockCoversDate(b, dateStr) {
-  if (b.repeatFreq === 'never') {
-    return dateStr >= b.startDate && dateStr <= b.endDate;
-  }
-  if (dateStr < b.startDate) return false;
-  if (b.repeatUntil && dateStr > b.repeatUntil) return false;
-  if (b.repeatExceptions.indexOf(dateStr) !== -1) return false;
-  const diffDays = isoToUtcDays(dateStr) - isoToUtcDays(b.startDate);
-  switch (b.repeatFreq) {
-    case 'daily': return true;
-    case 'weekly': return diffDays % 7 === 0;
-    case 'biweekly': return diffDays % 14 === 0;
-    case 'monthly': return dateStr.slice(8, 10) === b.startDate.slice(8, 10);
-    case 'yearly': return dateStr.slice(5, 10) === b.startDate.slice(5, 10);
-    default: return false;
-  }
-}
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -215,25 +188,15 @@ export default async function handler(req, res) {
     const blkRes = await fetch(
       `${SUPABASE_URL}/rest/v1/coach_blocked_times`
       + `?coach_id=eq.${coachId}`
-      + `&blocked_date=lte.${endDateStr}`
-      + `&or=(end_date.gte.${startDateStr},and(end_date.is.null,blocked_date.gte.${startDateStr}),repeat_freq.neq.never)`
-      + `&select=blocked_date,end_date,start_time,end_time,all_day,repeat_freq,repeat_until,repeat_exceptions`,
+      + blockWindowFilter(startDateStr, endDateStr)
+      + `&select=${BLOCK_SELECT}`,
       { headers });
     if (!blkRes.ok) return res.status(500).json({ error: 'blocked_fetch_failed', status: blkRes.status });
     const blocked = await blkRes.json();
     // Normalize to [startDate, endDate] spans. end_date is null for
     // single-day blocks, in which case the span collapses to blocked_date.
     // ISO date strings compare correctly with < and >, so no Date objects.
-    const blockSpans = blocked.map((b) => ({
-      startDate: b.blocked_date,
-      endDate: b.end_date || b.blocked_date,
-      repeatFreq: b.repeat_freq || 'never',
-      repeatUntil: b.repeat_until || null,
-      repeatExceptions: Array.isArray(b.repeat_exceptions) ? b.repeat_exceptions : [],
-      allDay: !!b.all_day,
-      startMin: b.all_day ? null : timeToMinutes(b.start_time),
-      endMin: b.all_day ? null : timeToMinutes(b.end_time),
-    }));
+    const blockSpans = normalizeBlockRows(blocked, timeToMinutes);
 
     // 5. Existing bookings in window — fetch as UTC instants, derive [start, end] in UTC
     const winStartUtcIso = now.toISOString();
