@@ -663,7 +663,8 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 #calendar .fc-event.session-type-2 { background: #1a3a52 !important; color: #fff !important; }
 #calendar .fc-event.session-type-3 { background: #8b7355 !important; color: #fff !important; }
 #calendar .fc-event.session-type-4 { background: #6b6b60 !important; color: #fff !important; }
-#calendar .fc-bg-event.blocked-bg { background: #1a3a52 !important; opacity: 0.10 !important; }
+#calendar .fc-non-business { background: rgba(139, 115, 85, 0.10) !important; }
+#calendar .fc-bg-event.blocked-bg { background: #1a3a52 !important; opacity: 0.16 !important; }
 #calendar .fc-bg-event.blocked-bg .fc-event-title { display: none; }
 
 /* Event modal (PR 1.F) — generic .modal class scoped to #event-modal so it
@@ -6036,6 +6037,7 @@ async function initCalendar() {
     slotMaxTime: calendarAppliedWindow.max,
     allDaySlot: false,
     expandRows: true,
+    businessHours: computeBusinessHours(),
     // Floor in pixels for short sessions. Without this a 15-minute event is a
     // quarter the height of an hour and unreadable at any grid height.
     eventMinHeight: 34,
@@ -6222,6 +6224,27 @@ async function refreshCalendarEvents() {
     calendarBookingsCache = [];
     if (calendar) calendar.refetchEvents();
   }
+}
+
+// Coach availability -> FullCalendar businessHours. Everything outside these
+// ranges dims, so a day the coach does not work (Wednesday, Sunday) reads
+// differently from a working day that happens to be empty.
+// Returns false when nothing is configured, which disables dimming entirely
+// rather than greying out the whole grid for a coach who has not set hours.
+function computeBusinessHours() {
+  var avail = (coachProfile && Array.isArray(coachProfile.weekly_availability)) ? coachProfile.weekly_availability : [];
+  var out = [];
+  avail.forEach(function (a) {
+    if (!a || !a.start || !a.end) return;
+    var dow = DAY_NAME_TO_INDEX[a.day];
+    if (dow === undefined) return;
+    out.push({
+      daysOfWeek: [dow],
+      startTime: String(a.start).slice(0, 5),
+      endTime: String(a.end).slice(0, 5),
+    });
+  });
+  return out.length ? out : false;
 }
 
 // Turn occurrences into FullCalendar background events. All-day blocks shade
