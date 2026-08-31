@@ -663,6 +663,8 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
 #calendar .fc-event.session-type-2 { background: #1a3a52 !important; color: #fff !important; }
 #calendar .fc-event.session-type-3 { background: #8b7355 !important; color: #fff !important; }
 #calendar .fc-event.session-type-4 { background: #6b6b60 !important; color: #fff !important; }
+#calendar .fc-bg-event.blocked-bg { background: #1a3a52 !important; opacity: 0.10 !important; }
+#calendar .fc-bg-event.blocked-bg .fc-event-title { display: none; }
 
 /* Event modal (PR 1.F) — generic .modal class scoped to #event-modal so it
    doesn't collide with the session-type-modal which uses inline styles. */
@@ -1899,7 +1901,7 @@ body { font-family: 'DM Sans', sans-serif; background: #f7f5f1; color: var(--ink
            reschedule are Phase 2 follow-ups. -->
       <div id="calendar-section" class="form-section" style="display:none;">
         <h2 class="form-section-title">Calendar</h2>
-        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">All confirmed and manually-added bookings. Click an event for details and quick actions.</p>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">All confirmed and manually-added bookings. Shaded areas are times you have blocked. Click an event for details and quick actions.</p>
         <div class="calendar-controls">
           <button type="button" id="cal-prev" class="cal-btn">&larr; Previous</button>
           <button type="button" id="cal-today" class="cal-btn">Today</button>
@@ -5961,6 +5963,13 @@ var calendar = null; // shared FullCalendar instance
 // Set by datesSet; scopes the slot-window calculation to the visible week so
 // a stray late booking from months ago cannot stretch every other week.
 var calendarVisibleRange = null;
+// Blocked-time occurrences for the range currently on screen, from
+// /api/blocked-occurrences. Rendered as background events so the coach can see
+// what she has blocked without being able to drag or click it.
+var calendarBlockedCache = [];
+// coachId|start|end of the last successful fetch, so navigating back to a week
+// already loaded does not refetch.
+var calendarBlockedFetchKey = null;
 // Last window handed to FullCalendar. setOption triggers a re-render, which
 // fires datesSet again, so applyCalendarSlotWindow must no-op when the value
 // is unchanged or it loops forever.
@@ -6012,7 +6021,7 @@ async function initCalendar() {
     // `now` is shifted the same way so the current-time indicator lines up.
     timeZone: 'UTC',
     now: function () { return utcIsoToCoachNaive(new Date().toISOString()); },
-    events: function (fetchInfo, success) { success(buildCalendarEvents()); },
+    events: function (fetchInfo, success) { success(buildCalendarEvents().concat(buildBlockedBackgroundEvents())); },
     eventClick: handleCalendarEventClick,
     // PR 3.A: drag-to-reschedule. eventStartEditable lets the coach drag
     // events to a new start; eventDurationEditable=false locks the duration
@@ -6040,6 +6049,7 @@ async function initCalendar() {
         end: String(info.endStr).slice(0, 10),
       };
       applyCalendarSlotWindow();
+      refreshBlockedOccurrences(calendarVisibleRange.start, calendarVisibleRange.end);
     },
   });
   calendar.render();
@@ -6212,6 +6222,47 @@ async function refreshCalendarEvents() {
     calendarBookingsCache = [];
     if (calendar) calendar.refetchEvents();
   }
+}
+
+// Turn occurrences into FullCalendar background events. All-day blocks shade
+// the whole column; time-range blocks shade only their band. Dates are naive
+// coach-local strings, matching how bookings are placed on this grid.
+function buildBlockedBackgroundEvents() {
+  return calendarBlockedCache.map(function (o) {
+    if (o.all_day) {
+      return { start: o.date, allDay: true, display: 'background', className: 'blocked-bg' };
+    }
+    return {
+      start: o.date + 'T' + String(o.start_time).slice(0, 8),
+      end: o.date + 'T' + String(o.end_time).slice(0, 8),
+      display: 'background',
+      className: 'blocked-bg',
+    };
+  });
+}
+
+// Load blocked occurrences for the rendered range. Keyed so repeated datesSet
+// firings for the same week are a no-op. On failure the cache clears and the
+// key resets so the next navigation retries; a missing shade is better than a
+// stale one.
+async function refreshBlockedOccurrences(startStr, endStr) {
+  if (!coachProfile || !coachProfile.id || !startStr || !endStr) return;
+  var key = coachProfile.id + '|' + startStr + '|' + endStr;
+  if (key === calendarBlockedFetchKey) return;
+  calendarBlockedFetchKey = key;
+  try {
+    var url = '/api/blocked-occurrences?coachId=' + encodeURIComponent(coachProfile.id)
+      + '&start=' + encodeURIComponent(startStr) + '&end=' + encodeURIComponent(endStr);
+    var res = await fetch(url);
+    if (!res.ok) throw new Error('status ' + res.status);
+    var data = await res.json();
+    calendarBlockedCache = Array.isArray(data.occurrences) ? data.occurrences : [];
+  } catch (e) {
+    console.error('[calendar] blocked occurrences failed', e);
+    calendarBlockedCache = [];
+    calendarBlockedFetchKey = null;
+  }
+  if (calendar) calendar.refetchEvents();
 }
 
 function buildCalendarEvents() {
