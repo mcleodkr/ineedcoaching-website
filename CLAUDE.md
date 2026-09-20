@@ -1,22 +1,51 @@
 # ineedcoaching.org — Claude Code Rules
 
 ## Design System
-- Colors: Navy #1a3a52 (primary), Gold #c49a3c (accent), Cream #f7f4ee (background), Dark green #1a2e1a (courses only)
-- Fonts: Cormorant Garamond (headlines, display), DM Sans 18px (body)
-- All UI must use these fonts — never Inter, Arial, or system fonts
-- Page background: #f7f5f1. Card backgrounds: #ffffff. Borders: #e8e4dc.
-- All text on dark backgrounds must be white or #f0f0f0 minimum — never dark grey on dark
 
-## UI/UX Standards (Pro Max)
-- Every UI component must be production-grade — not a skeleton, not a placeholder
-- Sidebar navigation over horizontal tab bars for dashboards with more than 5 items
-- Active nav state: gold left border + gold tinted background
-- Buttons must have visual hierarchy: gold filled = primary, navy outlined = secondary, muted = tertiary
-- All buttons: cursor pointer, transition all 0.15s ease, DM Sans 0.85rem
-- Cards: white background, 1px solid #e8e4dc border, 10px border-radius, subtle box-shadow
-- Section headers: Cormorant Garamond 1.15rem 600 navy, border-bottom 1px solid #e8e4dc
-- Tab bars: pill-in-bar pattern (background container, white active tab with shadow)
-- No component ships without hover states, loading states, and empty states
+Palette. Plum and lime. These are the only brand colors. Do not introduce
+new hues, gradients, or tints without asking.
+
+  Plum deep       #2E0F26   hero bands, closing bands, dark cards
+  Plum mid        #4C1F41   secondary dark bands
+  Plum ink        #1A0A15   footer, signed-in app chrome
+  Plum surface    #3A1330   raised surfaces on dark ground
+  Lime            #D4F048   single accent: primary buttons, rules,
+                            active states, numerals, eyebrows
+  Paper           #F7F3F5   default light ground
+  Paper shade     #EFE6EB   alternate light band, muted cards
+  Ink             #241019   body text on light
+  Ink muted       #7D5C6E   secondary text on light
+  Line            #E2D4DB   hairlines and borders on light
+  On-dark text    #F7F3F5   headings and body on plum
+  On-dark muted   #C6AAB9   secondary text on plum
+
+Lime is an accent, never a ground. Never set lime as a page or section
+background. Text on lime is always #2E0F26.
+
+Typography.
+  Display: Fraunces, Georgia, serif. Headings only. Weight 500 to 600,
+           letter-spacing -0.015em to -0.02em.
+  Body:    Schibsted Grotesk, system-ui, sans-serif. Weight 400 to 700.
+  Load:    https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..800&family=Schibsted+Grotesk:wght@400..700&display=swap
+
+Do not use Inter, Roboto, Arial, Cormorant Garamond, DM Sans, Playfair, or
+Instrument Serif anywhere.
+
+Banned visual patterns.
+  No gradient washes or glows.
+  No handwritten or script-face overlays on photography.
+  No generic line icons for category tiles. Use a lime rule plus a label.
+  No pill-shaped buttons. Border radius is 0 to 3px.
+  No emoji in UI.
+
+Buttons.
+  Primary:   background lime, text #2E0F26, radius 2px, weight 700.
+  Secondary: transparent, 1px border in #241019 on light or #7A4568 on
+             dark, weight 600.
+  Minimum touch target 44px.
+
+Contrast. Body text meets 4.5:1. Large text at 24px and above meets 3:1.
+Never place #9C7F90 or lighter on #F7F3F5 for body copy.
 
 ## Architecture Rules
 - Never use Vercel CLI — always deploy via git push
