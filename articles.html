@@ -10,23 +10,19 @@
 <meta property="og:url" content="https://www.ineedcoaching.org/articles.html">
 <meta property="og:type" content="website">
 <link rel="canonical" href="https://www.ineedcoaching.org/articles.html">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..800&family=Schibsted+Grotesk:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/brand.css">
 <style>
 :root {
-  --navy: #1a3a52;
-  --gold: #c49a3c;
-  --gold-hover: #a87d1f;
-  --gold-lt: #faf3e0;
-  --cream: #f7f4ee;
-  --warm: #ffffff;
-  --muted: #8a8a9a;
-  --border: #e0ddd5;
+  /* Brand colours live in /brand.css. Do not redeclare them here. */
   --r: 14px;
   --r-sm: 8px;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
-body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); color: var(--navy); overflow-x: hidden; }
+body { font-family: var(--font-body); background: var(--paper); color: var(--ink); overflow-x: hidden; }
 
 /* ANIMATIONS */
 @keyframes fadeUp {
@@ -40,7 +36,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 
 /* HERO */
 .page-hero {
-  background: var(--navy);
+  background: var(--plum-deep);
   padding: 140px 52px 64px;
   text-align: center;
   position: relative;
@@ -52,7 +48,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-display);
   font-size: clamp(7rem, 14vw, 15rem);
   font-weight: 900;
   color: rgba(255,255,255,0.04);
@@ -60,9 +56,9 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
   white-space: nowrap;
 }
 .page-hero h1 {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-display);
   font-size: clamp(2rem, 4vw, 3rem);
-  color: var(--cream);
+  color: var(--on-dark);
   position: relative;
   z-index: 1;
   margin-bottom: 12px;
@@ -70,12 +66,12 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
   animation: fadeUp 0.6s ease forwards 0.1s;
 }
 .page-hero h1 em {
-  color: var(--gold);
+  color: var(--lime);
   font-style: italic;
 }
 .page-hero p {
   font-size: 0.95rem;
-  color: rgba(247,244,238,0.6);
+  color: rgba(247,243,245,0.6);
   max-width: 480px;
   margin: 0 auto;
   line-height: 1.7;
@@ -87,8 +83,8 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 
 /* SEARCH BAR */
 .search-bar {
-  background: var(--warm);
-  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
   padding: 20px 52px;
   position: sticky;
   top: 54px;
@@ -105,20 +101,20 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
   flex: 1;
   min-width: 240px;
   padding: 12px 20px;
-  border: 1.5px solid var(--border);
+  border: 1.5px solid var(--line);
   border-radius: 50px;
   font-family: inherit;
   font-size: 0.88rem;
   outline: none;
   transition: border-color 0.2s;
-  background: var(--cream);
-  color: var(--navy);
+  background: var(--paper);
+  color: var(--ink);
 }
 .search-inner input:focus {
-  border-color: var(--gold);
+  border-color: var(--plum-mid);
 }
 .search-inner input::placeholder {
-  color: var(--muted);
+  color: var(--ink-muted);
 }
 
 /* TABS */
@@ -130,22 +126,22 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .tabs {
   display: flex;
   gap: 0;
-  border-bottom: 2px solid var(--border);
+  border-bottom: 2px solid var(--line);
 }
 .tab {
   padding: 12px 28px;
-  font-family: 'Cabinet Grotesk', sans-serif;
+  font-family: var(--font-body);
   font-size: 0.88rem;
   font-weight: 700;
-  color: var(--muted);
+  color: var(--ink-muted);
   background: none;
   border: none;
   cursor: pointer;
   position: relative;
   transition: color 0.2s;
 }
-.tab:hover { color: var(--navy); }
-.tab.active { color: var(--navy); }
+.tab:hover { color: var(--ink); }
+.tab.active { color: var(--ink); }
 .tab.active::after {
   content: '';
   position: absolute;
@@ -153,7 +149,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
   left: 0;
   right: 0;
   height: 3px;
-  background: var(--gold);
+  background: var(--lime);
   border-radius: 2px 2px 0 0;
 }
 
@@ -163,18 +159,18 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .articles-filter-pills .filter-pill {
   padding: 8px 18px;
   border-radius: 50px;
-  border: 1.5px solid var(--border);
-  background: var(--warm);
-  color: var(--muted);
-  font-family: 'Cabinet Grotesk', sans-serif;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-muted);
+  font-family: var(--font-body);
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
   min-height: 36px;
 }
-.articles-filter-pills .filter-pill:hover { border-color: var(--gold); color: var(--navy); }
-.articles-filter-pills .filter-pill.active { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+.articles-filter-pills .filter-pill:hover { border-color: var(--plum-mid); color: var(--ink); }
+.articles-filter-pills .filter-pill.active { background: var(--lime); color: var(--plum-deep); border-color: var(--lime); }
 
 /* GRID */
 .page-content {
@@ -190,8 +186,8 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .card {
   display: flex;
   flex-direction: column;
-  background: var(--warm);
-  border: 1.5px solid var(--border);
+  background: var(--surface);
+  border: 1.5px solid var(--line);
   border-radius: var(--r);
   padding: 28px 24px 24px;
   text-decoration: none;
@@ -204,9 +200,9 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
   transform: translateY(0);
 }
 .card:hover {
-  border-color: var(--gold);
+  border-color: var(--plum-mid);
   transform: translateY(-5px);
-  box-shadow: 0 16px 40px rgba(196,154,60,0.1);
+  box-shadow: 0 16px 40px rgba(46,15,38,0.10);
 }
 .card-cat {
   display: inline-block;
@@ -214,24 +210,24 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--gold);
-  background: var(--gold-lt);
+  color: var(--plum-mid);
+  background: var(--paper-shade);
   padding: 4px 12px;
   border-radius: 20px;
   margin-bottom: 14px;
   width: fit-content;
 }
 .card-title {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-display);
   font-size: 1.05rem;
   font-weight: 700;
-  color: var(--navy);
+  color: var(--ink);
   line-height: 1.35;
   margin-bottom: 10px;
 }
 .card-desc {
   font-size: 0.82rem;
-  color: var(--muted);
+  color: var(--ink-muted);
   line-height: 1.6;
   margin-bottom: 16px;
   display: -webkit-box;
@@ -243,15 +239,15 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .card-link {
   font-size: 0.78rem;
   font-weight: 700;
-  color: var(--gold);
+  color: var(--plum-mid);
   transition: color 0.2s;
 }
-.card:hover .card-link { color: var(--gold-hover); }
+.card:hover .card-link { color: var(--link-hover); }
 
 .empty {
   text-align: center;
   padding: 60px 20px;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 0.92rem;
   grid-column: 1 / -1;
 }
@@ -270,7 +266,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 /* FOOTER */
 footer {
   padding: 48px 80px 32px;
-  background: var(--navy);
+  background: var(--plum-ink);
   border-top: 1px solid rgba(255,255,255,0.06);
 }
 .footer-grid {
@@ -283,20 +279,20 @@ footer {
 }
 .footer-brand p {
   font-size: 0.82rem;
-  color: var(--muted);
+  color: var(--on-dark-muted);
   line-height: 1.6;
   max-width: 280px;
   margin-top: 10px;
 }
 .footer-logo {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-display);
   font-size: 1.1rem;
-  color: var(--cream);
+  color: var(--on-dark);
   text-decoration: none;
 }
 .footer-logo .fl-i,
 .footer-logo .fl-c {
-  color: var(--gold);
+  color: var(--lime);
   font-style: italic;
 }
 .footer-col h4 {
@@ -304,18 +300,18 @@ footer {
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--lime);
   margin-bottom: 14px;
 }
 .footer-col a {
   display: block;
   font-size: 0.82rem;
-  color: var(--muted);
+  color: var(--on-dark-muted);
   text-decoration: none;
   padding: 4px 0;
   transition: color 0.2s;
 }
-.footer-col a:hover { color: var(--gold); }
+.footer-col a:hover { color: var(--lime); }
 .footer-bottom {
   max-width: 900px;
   margin: 0 auto;
@@ -328,15 +324,15 @@ footer {
 }
 .footer-note {
   font-size: 0.72rem;
-  color: var(--muted);
+  color: var(--on-dark-muted);
 }
 .footer-note a {
-  color: var(--gold);
+  color: var(--lime);
   text-decoration: none;
 }
 .footer-crisis {
   font-size: 0.68rem;
-  color: var(--muted);
+  color: var(--on-dark-muted);
 }
 
 /* RESPONSIVE */
@@ -374,7 +370,7 @@ footer {
     top: 60px;
     left: 0;
     right: 0;
-    background: rgba(26, 58, 82, 0.98);
+    background: rgba(46, 15, 38, 0.98);
     backdrop-filter: blur(14px);
     flex-direction: column !important;
     align-items: stretch !important;
@@ -393,9 +389,9 @@ footer {
     border-bottom: 1px solid rgba(255,255,255,0.06);
     text-align: left;
   }
-  #nav-links-container > a[style*="background:#c49a3c"],
-  #nav-links-container > a[style*="background: #c49a3c"],
-  #nav-links-container > a[style*="background:var(--gold)"] {
+  #nav-links-container > a[style*="background:#D4F048"],
+  #nav-links-container > a[style*="background: #D4F048"],
+  #nav-links-container > a[style*="background:var(--plum-mid)"] {
     margin-top: 8px;
     border-radius: 8px !important;
     text-align: center;
@@ -409,25 +405,25 @@ footer {
 </head>
 <body>
 
-<nav style="position:fixed;top:0;left:0;right:0;z-index:300;display:flex;align-items:center;justify-content:space-between;padding:14px 52px;background:rgba(26,58,82,0.95);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,0.1);">
-  <a href="/" style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:#f7f4ee;text-decoration:none;"><span style="color:#c49a3c;font-style:italic;">i</span>need<span style="color:#c49a3c;font-style:italic;">coaching</span>.org</a>
+<nav style="position:fixed;top:0;left:0;right:0;z-index:300;display:flex;align-items:center;justify-content:space-between;padding:14px 52px;background:rgba(46,15,38,0.95);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,0.1);">
+  <a href="/" style="font-family:var(--font-display);font-size:1.2rem;font-weight:700;color:#F7F3F5;text-decoration:none;"><span style="color:#D4F048;font-style:italic;">i</span>need<span style="color:#D4F048;font-style:italic;">coaching</span>.org</a>
   <button id="nav-hamburger" aria-label="Open menu" aria-expanded="false" style="display:none;background:none;border:none;cursor:pointer;padding:8px;flex-direction:column;gap:5px;">
-    <span style="width:24px;height:2px;background:#f7f4ee;border-radius:2px;transition:transform 0.2s;"></span>
-    <span style="width:24px;height:2px;background:#f7f4ee;border-radius:2px;transition:opacity 0.2s;"></span>
-    <span style="width:24px;height:2px;background:#f7f4ee;border-radius:2px;transition:transform 0.2s;"></span>
+    <span style="width:24px;height:2px;background:#F7F3F5;border-radius:2px;transition:transform 0.2s;"></span>
+    <span style="width:24px;height:2px;background:#F7F3F5;border-radius:2px;transition:opacity 0.2s;"></span>
+    <span style="width:24px;height:2px;background:#F7F3F5;border-radius:2px;transition:transform 0.2s;"></span>
   </button>
   <div id="nav-links-container" class="nav-links-inner" style="display:flex;align-items:center;gap:22px;">
-    <a href="/coaches.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Coaches</a>
-    <a href="/sessions.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Sessions</a>
-    <a href="/coach-courses.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Courses</a>
-    <a href="/articles.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#f7f4ee;text-decoration:none;border-bottom:2px solid #c49a3c;padding-bottom:2px;">Articles</a>
-    <a href="/coaching-commons.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Commons</a>
+    <a href="/coaches.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#C6AAB9;text-decoration:none;">Coaches</a>
+    <a href="/sessions.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#C6AAB9;text-decoration:none;">Sessions</a>
+    <a href="/coach-courses.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#C6AAB9;text-decoration:none;">Courses</a>
+    <a href="/articles.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#F7F3F5;text-decoration:none;border-bottom:2px solid #D4F048;padding-bottom:2px;">Articles</a>
+    <a href="/coaching-commons.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#C6AAB9;text-decoration:none;">Commons</a>
     <a href="/founding-coaches"
-       style="font-size:0.75rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#ffffff;text-decoration:none;background:#c49a3c;padding:5px 14px;border-radius:50px;white-space:nowrap;">
+       style="font-size:0.75rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#2E0F26;text-decoration:none;background:#D4F048;padding:5px 14px;border-radius:50px;white-space:nowrap;">
       Founding Cohort
     </a>
-    <a href="/coach-dashboard.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Dashboard</a>
-    <a href="/coach-signup.html" style="font-size:0.78rem;font-weight:700;background:#c49a3c;color:#1a3a52;padding:8px 18px;border-radius:50px;text-decoration:none;" class="nav-pill">List Your Practice</a>
+    <a href="/coach-dashboard.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#C6AAB9;text-decoration:none;">Dashboard</a>
+    <a href="/coach-signup.html" style="font-size:0.78rem;font-weight:700;background:#D4F048;color:#2E0F26;padding:8px 18px;border-radius:50px;text-decoration:none;" class="nav-pill">List Your Practice</a>
   </div>
 </nav>
 
