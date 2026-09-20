@@ -1,0 +1,37 @@
+/* ineedcoaching.org brand tokens — plum and lime.
+   Canonical source: the Design System block in CLAUDE.md.
+
+   Tokens only. Page styling stays in the page for now.
+   Do not add a :root colour block to a page — it overrides this file
+   and the page silently keeps its old palette. */
+
+:root {
+  /* Plum — grounds. Lime is an accent, never a ground. */
+  --plum-deep: #2E0F26;      /* hero bands, closing bands, dark cards */
+  --plum-mid: #4C1F41;       /* secondary dark bands */
+  --plum-ink: #1A0A15;       /* footer, signed-in app chrome */
+  --plum-surface: #3A1330;   /* raised surfaces on dark ground */
+
+  /* Lime — the single accent. Text on lime is always --plum-deep. */
+  --lime: #D4F048;
+
+  /* Light grounds and ink */
+  --paper: #F7F3F5;          /* default light ground */
+  --paper-shade: #EFE6EB;    /* alternate light band, muted cards */
+  --ink: #241019;            /* body text on light */
+  --ink-muted: #7D5C6E;      /* secondary text on light */
+  --line: #E2D4DB;           /* hairlines and borders on light */
+
+  /* On plum */
+  --on-dark: #F7F3F5;        /* headings and body on plum */
+  --on-dark-muted: #C6AAB9;  /* secondary text on plum */
+  --on-dark-border: #7A4568; /* secondary button border on dark */
+
+  /* White is not a brand colour. It is retained only where a card has to
+     lift off --paper, per the palette brief. Prefer --paper-shade. */
+  --surface: #FFFFFF;
+
+  /* Type */
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Schibsted Grotesk', system-ui, sans-serif;
+}
