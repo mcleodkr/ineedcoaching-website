@@ -5,72 +5,75 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Your Proposal | ineedcoaching.org</title>
 <meta name="robots" content="noindex, nofollow">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..800&family=Schibsted+Grotesk:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/brand.css">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
-body { font-family: 'Cabinet Grotesk', sans-serif; background: #f7f4ee; color: #1a3a52; min-height: 100vh; }
+body { font-family: var(--font-body); background: var(--paper); color: var(--ink); min-height: 100vh; }
 
 .pv-wrap { max-width: 680px; margin: 0 auto; padding: 40px 24px 60px; }
 .pv-logo { text-align: center; margin-bottom: 32px; }
-.pv-logo a { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: #1a3a52; text-decoration: none; }
-.pv-logo .pl-i { color: #c49a3c; font-style: italic; }
-.pv-logo .pl-c { color: #c49a3c; font-style: italic; }
+.pv-logo a { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; color: var(--ink); text-decoration: none; }
+.pv-logo .pl-i { color: var(--plum-mid); font-style: italic; }
+.pv-logo .pl-c { color: var(--plum-mid); font-style: italic; }
 
-.pv-card { background: #fff; border-radius: 16px; box-shadow: 0 4px 32px rgba(26,58,82,0.10); overflow: hidden; }
+.pv-card { background: var(--surface); border-radius: 16px; box-shadow: 0 4px 32px rgba(46,15,38,0.12); overflow: hidden; }
 .pv-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 40px 40px 0; }
-.pv-date { font-size: 0.72rem; color: #8a8a9a; text-align: right; line-height: 1.6; }
-.pv-divider { border: none; border-top: 2px solid #c49a3c; margin: 20px 40px 32px; }
-.pv-title { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900; color: #1a3a52; margin-bottom: 4px; padding: 0 40px; }
-.pv-subtitle { font-size: 0.9rem; color: #8a8a9a; margin-bottom: 32px; padding: 0 40px; }
+.pv-date { font-size: 0.72rem; color: var(--ink-muted); text-align: right; line-height: 1.6; }
+.pv-divider { border: none; border-top: 2px solid var(--plum-mid); margin: 20px 40px 32px; }
+.pv-title { font-family: var(--font-display); font-size: 2rem; font-weight: 900; color: var(--ink); margin-bottom: 4px; padding: 0 40px; }
+.pv-subtitle { font-size: 0.9rem; color: var(--ink-muted); margin-bottom: 32px; padding: 0 40px; }
 
-.pv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; background: #f7f4ee; border-radius: 10px; padding: 20px; margin: 0 40px 32px; }
-.pv-grid-label { font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #8a8a9a; margin-bottom: 4px; }
-.pv-grid-val { font-size: 0.95rem; font-weight: 700; color: #1a3a52; }
+.pv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; background: var(--paper-shade); border-radius: 10px; padding: 20px; margin: 0 40px 32px; }
+.pv-grid-label { font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 4px; }
+.pv-grid-val { font-size: 0.95rem; font-weight: 700; color: var(--ink); }
 
-.pv-investment { background: #1a3a52; padding: 40px; text-align: center; margin: 0; }
-.pv-investment-label { font-size: 0.65rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #c49a3c; margin-bottom: 8px; }
-.pv-investment-amount { font-family: 'Playfair Display', serif; font-size: 3rem; font-weight: 900; color: #c49a3c; }
+.pv-investment { background: var(--plum-deep); padding: 40px; text-align: center; margin: 0; }
+.pv-investment-label { font-size: 0.65rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--lime); margin-bottom: 8px; }
+.pv-investment-amount { font-family: var(--font-display); font-size: 3rem; font-weight: 900; color: var(--lime); }
 
 .pv-body { padding: 32px 40px; }
-.pv-section-label { font-size: 0.65rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #c49a3c; border-bottom: 1px solid #c49a3c; padding-bottom: 6px; margin-bottom: 16px; margin-top: 28px; }
+.pv-section-label { font-size: 0.65rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--plum-mid); border-bottom: 1px solid var(--plum-mid); padding-bottom: 6px; margin-bottom: 16px; margin-top: 28px; }
 .pv-section-label:first-child { margin-top: 0; }
-.pv-inclusion { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #e0ddd5; font-size: 0.9rem; color: #1a3a52; }
-.pv-inclusion::before { content: '\2713'; color: #c49a3c; font-weight: 900; }
-.pv-scope { font-size: 0.9rem; color: #4a4a5a; line-height: 1.7; }
-.pv-note { background: #faf3e0; border-left: 3px solid #c49a3c; padding: 16px 20px; border-radius: 0 8px 8px 0; font-size: 0.9rem; color: #1a3a52; font-style: italic; line-height: 1.7; }
-.pv-terms { font-size: 0.8rem; color: #8a8a9a; line-height: 1.6; }
+.pv-inclusion { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 0.9rem; color: var(--ink); }
+.pv-inclusion::before { content: '\2713'; color: var(--plum-mid); font-weight: 900; }
+.pv-scope { font-size: 0.9rem; color: var(--ink-muted); line-height: 1.7; }
+.pv-note { background: var(--paper-shade); border-left: 3px solid var(--lime); padding: 16px 20px; border-radius: 0 8px 8px 0; font-size: 0.9rem; color: var(--ink); font-style: italic; line-height: 1.7; }
+.pv-terms { font-size: 0.8rem; color: var(--ink-muted); line-height: 1.6; }
 
-.pv-coach { text-align: center; padding-top: 32px; border-top: 1px solid #e0ddd5; margin-top: 32px; }
-.pv-coach-name { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700; color: #1a3a52; }
-.pv-coach-headline { font-style: italic; color: #8a8a9a; font-size: 0.88rem; margin: 4px 0; }
-.pv-coach-company { font-size: 0.82rem; color: #c49a3c; font-weight: 700; margin-bottom: 8px; }
-.pv-coach-details { font-size: 0.78rem; color: #1a3a52; line-height: 2; }
-.pv-coach-details a { color: #c49a3c; text-decoration: none; font-weight: 500; }
+.pv-coach { text-align: center; padding-top: 32px; border-top: 1px solid var(--line); margin-top: 32px; }
+.pv-coach-name { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; color: var(--ink); }
+.pv-coach-headline { font-style: italic; color: var(--ink-muted); font-size: 0.88rem; margin: 4px 0; }
+.pv-coach-company { font-size: 0.82rem; color: var(--plum-mid); font-weight: 700; margin-bottom: 8px; }
+.pv-coach-details { font-size: 0.78rem; color: var(--ink); line-height: 2; }
+.pv-coach-details a { color: var(--link); text-decoration: none; font-weight: 500; }
 
 .pv-accept { text-align: center; padding: 32px 40px 40px; }
-.pv-accept-btn { display: inline-block; padding: 16px 48px; background: #1a3a52; color: #c49a3c; border: none; border-radius: 8px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 1rem; font-weight: 800; cursor: pointer; letter-spacing: 0.03em; transition: background 0.2s; }
-.pv-accept-btn:hover { background: #24506e; }
+.pv-accept-btn { display: inline-block; padding: 16px 48px; background: var(--lime); color: var(--plum-deep); border: none; border-radius: 8px; font-family: var(--font-body); font-size: 1rem; font-weight: 800; cursor: pointer; letter-spacing: 0.03em; transition: background 0.2s; }
+.pv-accept-btn:hover { background: var(--lime-hover); }
 .pv-accept-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.pv-changes-btn { display: inline-block; padding: 16px 36px; background: transparent; color: #c49a3c; border: 2px solid #c49a3c; border-radius: 8px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
-.pv-changes-btn:hover { background: #faf3e0; }
+.pv-changes-btn { display: inline-block; padding: 16px 36px; background: transparent; color: var(--ink); border: 2px solid var(--ink); border-radius: 8px; font-family: var(--font-body); font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.pv-changes-btn:hover { background: transparent; color: var(--plum-deep); border-color: var(--plum-deep); }
 .pv-btn-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 .pv-changes-form { margin-top: 20px; display: none; }
-.pv-changes-form textarea { width: 100%; padding: 14px; border: 1.5px solid #e0ddd5; border-radius: 8px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem; min-height: 100px; resize: vertical; outline: none; }
-.pv-changes-form textarea:focus { border-color: #c49a3c; }
-.pv-changes-form button { margin-top: 10px; padding: 12px 32px; background: #c49a3c; color: #1a3a52; border: none; border-radius: 8px; font-family: 'Cabinet Grotesk', sans-serif; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
+.pv-changes-form textarea { width: 100%; padding: 14px; border: 1.5px solid var(--line); border-radius: 8px; font-family: var(--font-body); font-size: 0.9rem; min-height: 100px; resize: vertical; outline: none; }
+.pv-changes-form textarea:focus { border-color: var(--plum-mid); }
+.pv-changes-form button { margin-top: 10px; padding: 12px 32px; background: var(--lime); color: var(--plum-deep); border: none; border-radius: 8px; font-family: var(--font-body); font-size: 0.9rem; font-weight: 700; cursor: pointer; }
 .pv-accept-msg { font-size: 0.9rem; margin-top: 12px; min-height: 20px; }
 
 .pv-status { text-align: center; padding: 20px 40px; }
 .pv-status-changes { background: #fff3e0; color: #e67e22; }
 .pv-status-badge { display: inline-block; padding: 8px 24px; border-radius: 50px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
-.pv-status-sent { background: #faf3e0; color: #c49a3c; }
+.pv-status-sent { background: var(--paper-shade); color: var(--plum-mid); }
 .pv-status-accepted { background: #e8f5e9; color: #4a7c59; }
 
-.pv-loading { text-align: center; padding: 80px 40px; color: #8a8a9a; font-size: 0.9rem; }
+.pv-loading { text-align: center; padding: 80px 40px; color: var(--ink-muted); font-size: 0.9rem; }
 .pv-error { text-align: center; padding: 80px 40px; color: #c44; font-size: 0.9rem; }
 
-.pv-footer { text-align: center; margin-top: 32px; font-size: 0.68rem; color: #8a8a9a; letter-spacing: 0.06em; text-transform: uppercase; }
+.pv-footer { text-align: center; margin-top: 32px; font-size: 0.68rem; color: var(--ink-muted); letter-spacing: 0.06em; text-transform: uppercase; }
 
 @media (max-width: 600px) {
   .pv-wrap { padding: 24px 16px 40px; }
@@ -161,7 +164,7 @@ function renderProposal(p, coach) {
 
   // Header
   html += '<div class="pv-header">'
-    + '<div style="font-family:Playfair Display,serif;font-size:1.05rem;color:#1a3a52;"><span class="pl-i">i</span>need<span class="pl-c">coaching</span>.org</div>'
+    + '<div style="font-family:var(--font-display);font-size:1.05rem;color:var(--ink);"><span class="pl-i">i</span>need<span class="pl-c">coaching</span>.org</div>'
     + '<div class="pv-date">' + escHtml(today) + '<br>Prepared for ' + escHtml(p.client_company || 'Client') + '</div>'
     + '</div>';
   html += '<hr class="pv-divider">';
@@ -307,7 +310,7 @@ async function submitChanges(id) {
 
   var msg = document.getElementById('accept-msg');
   msg.textContent = 'Sending...';
-  msg.style.color = '#8a8a9a';
+  msg.style.color = 'var(--ink-muted)';
 
   try {
     var res = await fetch(SUPABASE_URL + '/rest/v1/coach_proposals?id=eq.' + id, {
