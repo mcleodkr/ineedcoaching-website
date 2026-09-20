@@ -12,8 +12,12 @@
   --plum-ink: #1A0A15;       /* footer, signed-in app chrome */
   --plum-surface: #3A1330;   /* raised surfaces on dark ground */
 
-  /* Lime — the single accent. Text on lime is always --plum-deep. */
+  /* Lime — the single accent. Text on lime is always --plum-deep.
+     Lime is never text on a light ground: on paper it appears only as a
+     fill or a shape. Accent text on light is --plum-mid. */
   --lime: #D4F048;
+  --lime-hover: #C2DF3A;          /* hover and pressed state for lime fills */
+  --plum-deep-hover: #3A1330;     /* hover for plum fills */
 
   /* Light grounds and ink */
   --paper: #F7F3F5;          /* default light ground */
@@ -30,6 +34,10 @@
   /* White is not a brand colour. It is retained only where a card has to
      lift off --paper, per the palette brief. Prefer --paper-shade. */
   --surface: #FFFFFF;
+
+  /* Links on light */
+  --link: #4C1F41;
+  --link-hover: #2E0F26;
 
   /* Type */
   --font-display: 'Fraunces', Georgia, serif;

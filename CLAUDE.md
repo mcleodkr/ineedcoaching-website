@@ -22,6 +22,16 @@ new hues, gradients, or tints without asking.
 Lime is an accent, never a ground. Never set lime as a page or section
 background. Text on lime is always #2E0F26.
 
+Lime is never text on a light ground. On paper, lime appears only as a
+fill or a shape: button backgrounds, rules, underlines, dots, markers.
+Accent TEXT on light is --plum-mid #4C1F41.
+On plum grounds, lime may be text.
+
+  Lime hover        #C2DF3A   hover and pressed state for lime fills
+  Plum deep hover   #3A1330   hover for plum fills (same as Plum surface)
+  Link              #4C1F41   inline links on light
+  Link hover        #2E0F26
+
 Typography.
   Display: Fraunces, Georgia, serif. Headings only. Weight 500 to 600,
            letter-spacing -0.015em to -0.02em.
@@ -38,10 +48,19 @@ Banned visual patterns.
   No pill-shaped buttons. Border radius is 0 to 3px.
   No emoji in UI.
 
-Buttons.
+Buttons. Role decides the treatment, not the old colour. Gold-was-primary
+does not survive the swap. Where two buttons sit together, exactly one is
+primary.
   Primary:   background lime, text #2E0F26, radius 2px, weight 700.
-  Secondary: transparent, 1px border in #241019 on light or #7A4568 on
-             dark, weight 600.
+             Hover: background #C2DF3A.
+  Secondary: transparent, 1px border in #241019 on light, weight 600.
+             Hover on light: border and text to #2E0F26, background stays
+             transparent.
+             On dark the border must still clear 3:1 against its ground.
+             #7A4568 measures 2.37:1 and #3A1330 measures 1.09:1 on
+             #2E0F26, so neither is usable; use --on-dark-muted #C6AAB9
+             with #F7F3F5 text, hover to lime. Revisit if a dedicated
+             on-dark border colour is added to the palette.
   Minimum touch target 44px.
 
 Contrast. Body text meets 4.5:1. Large text at 24px and above meets 3:1.
