@@ -51,23 +51,19 @@
   }
 }
 </script>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cabinet+Grotesk:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..800&family=Schibsted+Grotesk:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/brand.css">
 <style>
 :root {
-  --navy: #1a3a52;
-  --gold: #c49a3c;
-  --gold-hover: #a87d1f;
-  --gold-lt: #faf3e0;
-  --cream: #f7f4ee;
-  --warm: #ffffff;
-  --muted: #8a8a9a;
-  --border: #e0ddd5;
+  /* Brand colours live in /brand.css. Do not redeclare them here. */
   --r: 14px;
   --r-sm: 8px;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
-body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); color: var(--navy); overflow-x: hidden; }
+body { font-family: var(--font-body); background: var(--paper); color: var(--ink); overflow-x: hidden; }
 
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(24px); }
@@ -75,7 +71,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 }
 
 .page-hero {
-  background: var(--navy);
+  background: var(--plum-deep);
   padding: 140px 52px 64px;
   text-align: center;
   position: relative;
@@ -87,7 +83,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-display);
   font-size: clamp(7rem, 14vw, 15rem);
   font-weight: 900;
   color: rgba(255,255,255,0.04);
@@ -95,19 +91,19 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
   white-space: nowrap;
 }
 .page-hero h1 {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-display);
   font-size: clamp(2rem, 4vw, 3rem);
-  color: var(--cream);
+  color: var(--on-dark);
   position: relative;
   z-index: 1;
   margin-bottom: 12px;
   opacity: 0;
   animation: fadeUp 0.6s ease forwards 0.1s;
 }
-.page-hero h1 em { color: var(--gold); font-style: italic; }
+.page-hero h1 em { color: var(--lime); font-style: italic; }
 .page-hero p.hero-intro {
   font-size: 0.95rem;
-  color: rgba(247,244,238,0.75);
+  color: rgba(247,243,245,0.75);
   max-width: 620px;
   margin: 0 auto;
   line-height: 1.7;
@@ -122,16 +118,16 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
   margin: 0 auto;
   padding: 16px 52px 0;
   font-size: 0.78rem;
-  color: var(--muted);
+  color: var(--ink-muted);
 }
 .breadcrumb a {
-  color: var(--muted);
+  color: var(--ink-muted);
   text-decoration: none;
   transition: color 0.15s ease;
 }
-.breadcrumb a:hover { color: var(--navy); }
+.breadcrumb a:hover { color: var(--ink); }
 .breadcrumb span.sep { padding: 0 8px; opacity: 0.5; }
-.breadcrumb span.current { color: var(--navy); font-weight: 600; }
+.breadcrumb span.current { color: var(--ink); font-weight: 600; }
 
 .page-content {
   max-width: 1100px;
@@ -146,12 +142,12 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .card {
   display: flex;
   flex-direction: column;
-  background: var(--warm);
-  border: 1px solid var(--border);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: var(--r);
   padding: 24px;
   text-decoration: none;
-  color: var(--navy);
+  color: var(--ink);
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   opacity: 0;
   transform: translateY(12px);
@@ -159,20 +155,20 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .card.visible { opacity: 1; transform: translateY(0); transition: opacity 0.4s ease, transform 0.4s ease; }
 .card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 24px rgba(26,58,82,0.08);
-  border-color: var(--gold);
+  box-shadow: 0 8px 24px rgba(46,15,38,0.10);
+  border-color: var(--plum-mid);
 }
 .card-cat {
-  font-family: 'DM Sans', 'Cabinet Grotesk', sans-serif;
+  font-family: var(--font-body);
   font-size: 0.65rem;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--plum-mid);
   margin-bottom: 12px;
 }
 .card-title {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-display);
   font-size: 1.25rem;
   font-weight: 700;
   line-height: 1.3;
@@ -180,7 +176,7 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 }
 .card-desc {
   font-size: 0.88rem;
-  color: var(--muted);
+  color: var(--ink-muted);
   line-height: 1.6;
   margin-bottom: 16px;
   flex: 1;
@@ -188,22 +184,22 @@ body { font-family: 'Cabinet Grotesk', sans-serif; background: var(--cream); col
 .card-link {
   font-size: 0.78rem;
   font-weight: 700;
-  color: var(--gold);
+  color: var(--plum-mid);
   letter-spacing: 0.04em;
   margin-top: auto;
 }
-.empty { color: var(--muted); font-size: 0.9rem; text-align: center; padding: 60px 0; grid-column: 1/-1; }
+.empty { color: var(--ink-muted); font-size: 0.9rem; text-align: center; padding: 60px 0; grid-column: 1/-1; }
 
-footer { padding: 48px 52px 32px; background: var(--navy); border-top: 1px solid rgba(255,255,255,0.08); color: var(--cream); }
-.footer-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 40px; padding-bottom: 32px; border-bottom: 1px solid rgba(255,255,255,0.08); }
-.footer-brand p { font-size: 0.85rem; color: rgba(247,244,238,0.6); line-height: 1.7; margin-top: 14px; max-width: 360px; }
-.footer-logo { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--cream); text-decoration: none; }
-.fl-i, .fl-c { color: var(--gold); font-style: italic; }
-.footer-col h4 { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); margin-bottom: 14px; }
-.footer-col a { display: block; font-size: 0.85rem; color: rgba(247,244,238,0.65); text-decoration: none; padding: 5px 0; transition: color 0.15s ease; }
-.footer-col a:hover { color: var(--cream); }
-.footer-bottom { max-width: 1100px; margin: 24px auto 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; font-size: 0.75rem; color: rgba(247,244,238,0.5); }
-.footer-note a { color: var(--gold); text-decoration: none; }
+footer { padding: 48px 52px 32px; background: var(--plum-ink); border-top: 1px solid rgba(255,255,255,0.08); color: var(--on-dark); }
+.footer-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 40px; padding-bottom: 32px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.footer-brand p { font-size: 0.85rem; color: rgba(247,243,245,0.6); line-height: 1.7; margin-top: 14px; max-width: 360px; }
+.footer-logo { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; color: var(--on-dark); text-decoration: none; }
+.fl-i, .fl-c { color: var(--lime); font-style: italic; }
+.footer-col h4 { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--lime); margin-bottom: 14px; }
+.footer-col a { display: block; font-size: 0.85rem; color: rgba(247,243,245,0.65); text-decoration: none; padding: 5px 0; transition: color 0.15s ease; }
+.footer-col a:hover { color: var(--on-dark); }
+.footer-bottom { max-width: 1100px; margin: 24px auto 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; font-size: 0.75rem; color: rgba(247,243,245,0.5); }
+.footer-note a { color: var(--lime); text-decoration: none; }
 .footer-bottom .footer-crisis { font-style: italic; }
 
 @media (max-width: 720px) {
@@ -224,7 +220,7 @@ footer { padding: 48px 52px 32px; background: var(--navy); border-top: 1px solid
     top: 60px;
     left: 0;
     right: 0;
-    background: rgba(26, 58, 82, 0.98);
+    background: rgba(46, 15, 38, 0.98);
     backdrop-filter: blur(14px);
     flex-direction: column !important;
     align-items: stretch !important;
@@ -243,9 +239,9 @@ footer { padding: 48px 52px 32px; background: var(--navy); border-top: 1px solid
     border-bottom: 1px solid rgba(255,255,255,0.06);
     text-align: left;
   }
-  #nav-links-container > a[style*="background:#c49a3c"],
-  #nav-links-container > a[style*="background: #c49a3c"],
-  #nav-links-container > a[style*="background:var(--gold)"] {
+  #nav-links-container > a[style*="background:#D4F048"],
+  #nav-links-container > a[style*="background: #D4F048"],
+  #nav-links-container > a[style*="background:var(--plum-mid)"] {
     margin-top: 8px;
     border-radius: 8px !important;
     text-align: center;
@@ -259,21 +255,21 @@ footer { padding: 48px 52px 32px; background: var(--navy); border-top: 1px solid
 </head>
 <body>
 
-<nav style="position:fixed;top:0;left:0;right:0;z-index:300;display:flex;align-items:center;justify-content:space-between;padding:14px 52px;background:rgba(26,58,82,0.95);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,0.1);">
-  <a href="/" style="font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:#f7f4ee;text-decoration:none;"><span style="color:#c49a3c;font-style:italic;">i</span>need<span style="color:#c49a3c;font-style:italic;">coaching</span>.org</a>
+<nav style="position:fixed;top:0;left:0;right:0;z-index:300;display:flex;align-items:center;justify-content:space-between;padding:14px 52px;background:rgba(46,15,38,0.95);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,0.1);">
+  <a href="/" style="font-family:var(--font-display);font-size:1.2rem;font-weight:700;color:#F7F3F5;text-decoration:none;"><span style="color:#D4F048;font-style:italic;">i</span>need<span style="color:#D4F048;font-style:italic;">coaching</span>.org</a>
   <button id="nav-hamburger" aria-label="Open menu" aria-expanded="false" style="display:none;background:none;border:none;cursor:pointer;padding:8px;flex-direction:column;gap:5px;">
-    <span style="width:24px;height:2px;background:#f7f4ee;border-radius:2px;transition:transform 0.2s;"></span>
-    <span style="width:24px;height:2px;background:#f7f4ee;border-radius:2px;transition:opacity 0.2s;"></span>
-    <span style="width:24px;height:2px;background:#f7f4ee;border-radius:2px;transition:transform 0.2s;"></span>
+    <span style="width:24px;height:2px;background:#F7F3F5;border-radius:2px;transition:transform 0.2s;"></span>
+    <span style="width:24px;height:2px;background:#F7F3F5;border-radius:2px;transition:opacity 0.2s;"></span>
+    <span style="width:24px;height:2px;background:#F7F3F5;border-radius:2px;transition:transform 0.2s;"></span>
   </button>
   <div id="nav-links-container" style="display:flex;align-items:center;gap:22px;">
-    <a href="/coaches.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Coaches</a>
-    <a href="/sessions.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Sessions</a>
-    <a href="/coach-courses.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Courses</a>
-    <a href="/articles.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#f7f4ee;text-decoration:none;border-bottom:2px solid #c49a3c;padding-bottom:2px;">Articles</a>
-    <a href="/coaching-commons.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Commons</a>
-    <a href="/coach-dashboard.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#8a8a9a;text-decoration:none;">Dashboard</a>
-    <a href="/coach-signup.html" style="font-size:0.78rem;font-weight:700;background:#c49a3c;color:#1a3a52;padding:8px 18px;border-radius:50px;text-decoration:none;" class="nav-pill">List Your Practice</a>
+    <a href="/coaches.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#C6AAB9;text-decoration:none;">Coaches</a>
+    <a href="/sessions.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#C6AAB9;text-decoration:none;">Sessions</a>
+    <a href="/coach-courses.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#C6AAB9;text-decoration:none;">Courses</a>
+    <a href="/articles.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#F7F3F5;text-decoration:none;border-bottom:2px solid #D4F048;padding-bottom:2px;">Articles</a>
+    <a href="/coaching-commons.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#C6AAB9;text-decoration:none;">Commons</a>
+    <a href="/coach-dashboard.html" style="font-size:0.78rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#C6AAB9;text-decoration:none;">Dashboard</a>
+    <a href="/coach-signup.html" style="font-size:0.78rem;font-weight:700;background:#D4F048;color:#2E0F26;padding:8px 18px;border-radius:50px;text-decoration:none;" class="nav-pill">List Your Practice</a>
   </div>
 </nav>
 
@@ -312,12 +308,6 @@ footer { padding: 48px 52px 32px; background: var(--navy); border-top: 1px solid
       <a href="/coach-dashboard.html">Dashboard</a>
       <a href="/articles.html">Coach Articles</a>
     </div>
-    <div class="footer-col">
-      <h4>Legal</h4>
-      <a href="/privacy-policy.html">Privacy Policy</a>
-      <a href="/terms-of-service.html">Terms of Service</a>
-      <a href="/zoom-integration-help.html">Zoom Integration</a>
-    </div>
   </div>
   <div class="footer-bottom">
     <span class="footer-note">A project from <a href="https://www.ineedtherapy.org">ineedtherapy.org</a></span>
@@ -336,7 +326,7 @@ function esc(s) { var d = document.createElement('div'); d.textContent = s || ''
 async function loadCategoryArticles() {
   var grid = document.getElementById('articles-grid');
   try {
-    var url = SUPABASE_URL + '/rest/v1/articles?audience=eq.consumer&site=eq.ineedcoaching&is_published=eq.true&category=eq.' + encodeURIComponent(CATEGORY_NAME) + '&order=created_at.desc&limit=100&select=title,slug,meta_description,category,read_time_minutes';
+    var url = SUPABASE_URL + '/rest/v1/articles?audience=eq.consumer&category=eq.' + encodeURIComponent(CATEGORY_NAME) + '&order=created_at.desc&limit=100&select=title,slug,meta_description,category,read_time_minutes';
     var res = await fetch(url, {
       headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + ANON_KEY }
     });
@@ -396,7 +386,5 @@ loadCategoryArticles();
   });
 })();
 </script>
-<script src="/hide-coach-cta.js" defer></script>
-<script src="/bug-report-widget.js" defer></script>
 </body>
 </html>
